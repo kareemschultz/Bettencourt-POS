@@ -1,29 +1,29 @@
 {
-  "name": "@Betencourt-POS/api",
-  "type": "module",
-  "exports": {
-    ".": {
-      "default": "./src/index.ts"
-    },
-    "./*": {
-      "default": "./src/*.ts"
-    }
-  },
-  "scripts": {},
-  "dependencies": {
-    "@Betencourt-POS/auth": "workspace:*",
-    "@Betencourt-POS/db": "workspace:*",
-    "@Betencourt-POS/env": "workspace:*",
-    "@orpc/client": "catalog:",
-    "@orpc/openapi": "catalog:",
-    "@orpc/server": "catalog:",
-    "@orpc/zod": "catalog:",
-    "dotenv": "catalog:",
-    "zod": "catalog:"
-  },
-  "devDependencies": {
-    "@Betencourt-POS/config": "workspace:*",
-    "hono": "catalog:",
-    "typescript": "^5"
-  }
+	"name": "@Bettencourt-POS/api",
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./*": {
+			"default": "./src/*.ts"
+		}
+	},
+	"scripts": {},
+	"dependencies": {
+		"@Bettencourt-POS/auth": "workspace:*",
+		"@Bettencourt-POS/db": "workspace:*",
+		"@Bettencourt-POS/env": "workspace:*",
+		"@orpc/client": "catalog:",
+		"@orpc/openapi": "catalog:",
+		"@orpc/server": "catalog:",
+		"@orpc/zod": "catalog:",
+		"dotenv": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@Bettencourt-POS/config": "workspace:*",
+		"hono": "catalog:",
+		"typescript": "^5"
+	}
 }

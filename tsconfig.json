@@ -1,3 +1,3 @@
 {
-  "extends": "@Betencourt-POS/config/tsconfig.base.json"
+	"extends": "@Bettencourt-POS/config/tsconfig.base.json"
 }

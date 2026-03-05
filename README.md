@@ -1,4 +1,4 @@
-# Betencourt-POS
+# Bettencourt-POS
 
 This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, React Router, Hono, ORPC, and more.
 
@@ -63,7 +63,7 @@ See: https://github.com/vite-pwa/vite-plugin-pwa/issues/809
 ## Project Structure
 
 ```
-Betencourt-POS/
+Bettencourt-POS/
 ├── apps/
 │   ├── web/         # Frontend application (React + React Router)
 │   └── server/      # Backend API (Hono, ORPC)

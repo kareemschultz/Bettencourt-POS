@@ -1,24 +1,24 @@
 {
-  "name": "@Betencourt-POS/auth",
-  "type": "module",
-  "exports": {
-    ".": {
-      "default": "./src/index.ts"
-    },
-    "./*": {
-      "default": "./src/*.ts"
-    }
-  },
-  "scripts": {},
-  "dependencies": {
-    "@Betencourt-POS/db": "workspace:*",
-    "@Betencourt-POS/env": "workspace:*",
-    "better-auth": "catalog:",
-    "dotenv": "catalog:",
-    "zod": "catalog:"
-  },
-  "devDependencies": {
-    "@Betencourt-POS/config": "workspace:*",
-    "typescript": "^5"
-  }
+	"name": "@Bettencourt-POS/auth",
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./*": {
+			"default": "./src/*.ts"
+		}
+	},
+	"scripts": {},
+	"dependencies": {
+		"@Bettencourt-POS/db": "workspace:*",
+		"@Bettencourt-POS/env": "workspace:*",
+		"better-auth": "catalog:",
+		"dotenv": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@Bettencourt-POS/config": "workspace:*",
+		"typescript": "^5"
+	}
 }

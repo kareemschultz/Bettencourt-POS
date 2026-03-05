@@ -7,12 +7,12 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import * as MdxConfig from "./source.config";
 
 export default defineConfig({
-  plugins: [
-    mdx(MdxConfig),
-    tailwindcss(),
-    reactRouter(),
-    tsconfigPaths({
-      projects: ["./tsconfig.json"],
-    }),
-  ],
+	plugins: [
+		mdx(MdxConfig),
+		tailwindcss(),
+		reactRouter(),
+		tsconfigPaths({
+			projects: ["./tsconfig.json"],
+		}),
+	],
 });

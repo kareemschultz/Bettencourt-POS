@@ -6,27 +6,27 @@ import { baseOptions } from "@/lib/layout.shared";
 import type { Route } from "./+types/home";
 
 export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
-  ];
+	return [
+		{ title: "New React Router App" },
+		{ name: "description", content: "Welcome to React Router!" },
+	];
 }
 
 export default function Home() {
-  return (
-    <HomeLayout {...baseOptions()}>
-      <div className="p-4 flex flex-col items-center justify-center text-center flex-1">
-        <h1 className="text-xl font-bold mb-2">Fumadocs on React Router.</h1>
-        <p className="text-fd-muted-foreground mb-4">
-          The truly flexible docs framework on React.js.
-        </p>
-        <Link
-          className="text-sm bg-fd-primary text-fd-primary-foreground rounded-full font-medium px-4 py-2.5"
-          to="/docs"
-        >
-          Open Docs
-        </Link>
-      </div>
-    </HomeLayout>
-  );
+	return (
+		<HomeLayout {...baseOptions()}>
+			<div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
+				<h1 className="mb-2 font-bold text-xl">Fumadocs on React Router.</h1>
+				<p className="mb-4 text-fd-muted-foreground">
+					The truly flexible docs framework on React.js.
+				</p>
+				<Link
+					className="rounded-full bg-fd-primary px-4 py-2.5 font-medium text-fd-primary-foreground text-sm"
+					to="/docs"
+				>
+					Open Docs
+				</Link>
+			</div>
+		</HomeLayout>
+	);
 }

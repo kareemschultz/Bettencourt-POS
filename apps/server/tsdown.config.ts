@@ -1,9 +1,9 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  entry: "./src/index.ts",
-  format: "esm",
-  outDir: "./dist",
-  clean: true,
-  noExternal: [/@Betencourt-POS\/.*/],
+	entry: "./src/index.ts",
+	format: "esm",
+	outDir: "./dist",
+	clean: true,
+	noExternal: [/@Bettencourt-POS\/.*/],
 });

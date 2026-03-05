@@ -1,0 +1,89 @@
+import type { Product, CartItem } from "@/lib/types"
+import { formatGYD } from "@/lib/types"
+import { cn } from "@/lib/utils"
+import { Loader2 } from "lucide-react"
+
+interface ProductGridProps {
+  products: Product[]
+  isLoading: boolean
+  onProductTap: (product: Product) => void
+  cart: CartItem[]
+}
+
+const deptColors: Record<string, string> = {
+  Chicken: "bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800",
+  Fish: "bg-sky-50 border-sky-200 dark:bg-sky-950/30 dark:border-sky-800",
+  Beef: "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800",
+  Duck: "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800",
+  Mutton: "bg-rose-50 border-rose-200 dark:bg-rose-950/30 dark:border-rose-800",
+  Veggie: "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800",
+  Specials: "bg-violet-50 border-violet-200 dark:bg-violet-950/30 dark:border-violet-800",
+  Pastries: "bg-pink-50 border-pink-200 dark:bg-pink-950/30 dark:border-pink-800",
+  Snacks: "bg-yellow-50 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800",
+  Beverages: "bg-cyan-50 border-cyan-200 dark:bg-cyan-950/30 dark:border-cyan-800",
+  Sides: "bg-stone-50 border-stone-200 dark:bg-stone-950/30 dark:border-stone-800",
+  "Local Juice": "bg-lime-50 border-lime-200 dark:bg-lime-950/30 dark:border-lime-800",
+  "Meat Cookup": "bg-orange-50 border-orange-300 dark:bg-orange-950/40 dark:border-orange-700",
+  Boxes: "bg-slate-50 border-slate-200 dark:bg-slate-950/30 dark:border-slate-800",
+}
+
+export function ProductGrid({ products, isLoading, onProductTap, cart }: ProductGridProps) {
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (products.length === 0) {
+    return (
+      <div className="flex h-64 items-center justify-center text-muted-foreground">
+        No products found for this register/department.
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 sm:gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+      {products.map((product) => {
+        const qty = cart
+          .filter((item) => item.product.id === product.id)
+          .reduce((sum, item) => sum + item.quantity, 0)
+
+        const colorClass = deptColors[product.department_name || ""] || "bg-secondary border-border"
+
+        return (
+          <button
+            key={product.id}
+            onClick={() => onProductTap(product)}
+            className={cn(
+              "relative flex flex-col items-start gap-0.5 rounded-lg border p-2.5 text-left",
+              "min-h-[68px] touch-manipulation select-none transition-all",
+              "active:scale-[0.97] sm:min-h-[76px] sm:gap-1 sm:p-3",
+              colorClass,
+              qty > 0 && "ring-2 ring-primary ring-offset-1"
+            )}
+          >
+            {qty > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground sm:h-6 sm:w-6 sm:text-xs">
+                {qty}
+              </span>
+            )}
+            <span className="line-clamp-2 text-xs font-medium leading-tight text-foreground sm:text-sm">
+              {product.name}
+            </span>
+            <span className="text-sm font-bold text-foreground sm:text-base">
+              {formatGYD(product.price)}
+            </span>
+            {product.department_name && (
+              <span className="text-[9px] text-muted-foreground sm:text-[10px]">
+                {product.department_name}
+              </span>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
