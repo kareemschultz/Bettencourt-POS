@@ -1,0 +1,31 @@
+// Better-T-Stack
+//
+// Website: https://www.better-t-stack.dev/
+// Stack Builder: https://www.better-t-stack.dev/new
+// Analytics: https://www.better-t-stack.dev/analytics
+// Showcase: https://www.better-t-stack.dev/showcase
+// Sponsor: https://github.com/sponsors/AmanVarshney01
+//
+// Add new addons with: bun create better-t-stack add
+// This file is safe to delete
+
+{
+  "$schema": "https://r2.better-t-stack.dev/schema.json",
+  "version": "3.22.1",
+  "createdAt": "2026-03-05T19:14:15.853Z",
+  "reproducibleCommand": "bun create better-t-stack@latest Betencourt-POS --frontend react-router --backend hono --runtime bun --database postgres --orm drizzle --api orpc --auth better-auth --payments none --addons biome fumadocs husky mcp pwa skills tauri turborepo --examples none --db-setup docker --web-deploy none --server-deploy none --git --package-manager bun --install",
+  "database": "postgres",
+  "orm": "drizzle",
+  "backend": "hono",
+  "runtime": "bun",
+  "frontend": ["react-router"],
+  "addons": ["biome", "fumadocs", "husky", "mcp", "pwa", "skills", "tauri", "turborepo"],
+  "examples": [],
+  "auth": "better-auth",
+  "payments": "none",
+  "packageManager": "bun",
+  "dbSetup": "docker",
+  "api": "orpc",
+  "webDeploy": "none",
+  "serverDeploy": "none",
+}
