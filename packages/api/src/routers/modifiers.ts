@@ -1,0 +1,270 @@
+import { db } from "@Bettencourt-POS/db";
+import * as schema from "@Bettencourt-POS/db/schema";
+import { ORPCError } from "@orpc/server";
+import { asc, eq } from "drizzle-orm";
+import { z } from "zod";
+import { permissionProcedure } from "../index";
+
+// ── listGroups ──────────────────────────────────────────────────────────
+// Returns all modifier groups with their modifiers nested.
+const listGroups = permissionProcedure("modifiers.read")
+	.input(z.object({}).optional())
+	.handler(async () => {
+		const groups = await db.query.modifierGroup.findMany({
+			orderBy: [asc(schema.modifierGroup.name)],
+			with: {
+				modifiers: {
+					where: eq(schema.modifier.isActive, true),
+					orderBy: [asc(schema.modifier.sortOrder), asc(schema.modifier.name)],
+				},
+			},
+		});
+
+		return groups.map((g) => ({
+			id: g.id,
+			organizationId: g.organizationId,
+			name: g.name,
+			required: g.required,
+			minSelect: g.minSelect,
+			maxSelect: g.maxSelect,
+			createdAt: g.createdAt,
+			// Derive selectionType from maxSelect: 1 = single, >1 = multi
+			selectionType:
+				g.maxSelect <= 1 ? ("single" as const) : ("multi" as const),
+			modifiers: g.modifiers,
+		}));
+	});
+
+// ── createGroup ─────────────────────────────────────────────────────────
+const createGroup = permissionProcedure("modifiers.create")
+	.input(
+		z.object({
+			name: z.string().min(1),
+			selectionType: z.enum(["single", "multi"]).default("single"),
+			required: z.boolean().default(false),
+		}),
+	)
+	.handler(async ({ input }) => {
+		// Determine organizationId from the org table
+		const orgRows = await db
+			.select({ id: schema.organization.id })
+			.from(schema.organization)
+			.limit(1);
+
+		if (orgRows.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
+		}
+
+		const organizationId = orgRows[0]!.id;
+		const maxSelect = input.selectionType === "single" ? 1 : 10;
+		const minSelect = input.required ? 1 : 0;
+
+		const rows = await db
+			.insert(schema.modifierGroup)
+			.values({
+				organizationId,
+				name: input.name,
+				required: input.required,
+				minSelect,
+				maxSelect,
+			})
+			.returning({ id: schema.modifierGroup.id });
+
+		return { id: rows[0]?.id };
+	});
+
+// ── updateGroup ─────────────────────────────────────────────────────────
+const updateGroup = permissionProcedure("modifiers.update")
+	.input(
+		z.object({
+			id: z.string().uuid(),
+			name: z.string().min(1).optional(),
+			selectionType: z.enum(["single", "multi"]).optional(),
+			required: z.boolean().optional(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const existing = await db
+			.select()
+			.from(schema.modifierGroup)
+			.where(eq(schema.modifierGroup.id, input.id))
+			.limit(1);
+
+		if (existing.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Modifier group not found" });
+		}
+
+		const updates: Record<string, unknown> = {};
+		if (input.name !== undefined) updates.name = input.name;
+		if (input.required !== undefined) {
+			updates.required = input.required;
+			updates.minSelect = input.required ? 1 : 0;
+		}
+		if (input.selectionType !== undefined) {
+			updates.maxSelect = input.selectionType === "single" ? 1 : 10;
+		}
+
+		await db
+			.update(schema.modifierGroup)
+			.set(updates)
+			.where(eq(schema.modifierGroup.id, input.id));
+
+		return { success: true };
+	});
+
+// ── deleteGroup ─────────────────────────────────────────────────────────
+// Cascade is handled by the DB foreign key (modifiers + productModifierGroup).
+const deleteGroup = permissionProcedure("modifiers.delete")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input }) => {
+		const existing = await db
+			.select({ id: schema.modifierGroup.id })
+			.from(schema.modifierGroup)
+			.where(eq(schema.modifierGroup.id, input.id))
+			.limit(1);
+
+		if (existing.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Modifier group not found" });
+		}
+
+		await db
+			.delete(schema.modifierGroup)
+			.where(eq(schema.modifierGroup.id, input.id));
+
+		return { success: true };
+	});
+
+// ── createModifier ──────────────────────────────────────────────────────
+const createModifier = permissionProcedure("modifiers.create")
+	.input(
+		z.object({
+			groupId: z.string().uuid(),
+			name: z.string().min(1),
+			priceAdjustment: z.number().default(0),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const groupExists = await db
+			.select({ id: schema.modifierGroup.id })
+			.from(schema.modifierGroup)
+			.where(eq(schema.modifierGroup.id, input.groupId))
+			.limit(1);
+
+		if (groupExists.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Modifier group not found" });
+		}
+
+		const rows = await db
+			.insert(schema.modifier)
+			.values({
+				modifierGroupId: input.groupId,
+				name: input.name,
+				price: input.priceAdjustment.toFixed(2),
+			})
+			.returning({ id: schema.modifier.id });
+
+		return { id: rows[0]?.id };
+	});
+
+// ── updateModifier ──────────────────────────────────────────────────────
+const updateModifier = permissionProcedure("modifiers.update")
+	.input(
+		z.object({
+			id: z.string().uuid(),
+			name: z.string().min(1).optional(),
+			priceAdjustment: z.number().optional(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const existing = await db
+			.select({ id: schema.modifier.id })
+			.from(schema.modifier)
+			.where(eq(schema.modifier.id, input.id))
+			.limit(1);
+
+		if (existing.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Modifier not found" });
+		}
+
+		const updates: Record<string, unknown> = {};
+		if (input.name !== undefined) updates.name = input.name;
+		if (input.priceAdjustment !== undefined)
+			updates.price = input.priceAdjustment.toFixed(2);
+
+		await db
+			.update(schema.modifier)
+			.set(updates)
+			.where(eq(schema.modifier.id, input.id));
+
+		return { success: true };
+	});
+
+// ── deleteModifier ──────────────────────────────────────────────────────
+const deleteModifier = permissionProcedure("modifiers.delete")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input }) => {
+		const existing = await db
+			.select({ id: schema.modifier.id })
+			.from(schema.modifier)
+			.where(eq(schema.modifier.id, input.id))
+			.limit(1);
+
+		if (existing.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Modifier not found" });
+		}
+
+		await db.delete(schema.modifier).where(eq(schema.modifier.id, input.id));
+
+		return { success: true };
+	});
+
+// ── linkGroupToProduct ──────────────────────────────────────────────────
+const linkGroupToProduct = permissionProcedure("modifiers.update")
+	.input(
+		z.object({
+			groupId: z.string().uuid(),
+			productId: z.string().uuid(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		await db
+			.insert(schema.productModifierGroup)
+			.values({
+				productId: input.productId,
+				modifierGroupId: input.groupId,
+			})
+			.onConflictDoNothing();
+
+		return { success: true };
+	});
+
+// ── unlinkGroupFromProduct ──────────────────────────────────────────────
+const unlinkGroupFromProduct = permissionProcedure("modifiers.update")
+	.input(
+		z.object({
+			groupId: z.string().uuid(),
+			productId: z.string().uuid(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		await db
+			.delete(schema.productModifierGroup)
+			.where(
+				eq(schema.productModifierGroup.productId, input.productId) &&
+					eq(schema.productModifierGroup.modifierGroupId, input.groupId),
+			);
+
+		return { success: true };
+	});
+
+export const modifiersRouter = {
+	listGroups,
+	createGroup,
+	updateGroup,
+	deleteGroup,
+	createModifier,
+	updateModifier,
+	deleteModifier,
+	linkGroupToProduct,
+	unlinkGroupFromProduct,
+};

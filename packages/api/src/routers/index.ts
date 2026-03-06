@@ -10,20 +10,21 @@ import { dashboardRouter } from "./dashboard";
 import { discountsRouter } from "./discounts";
 import { giftcardsRouter } from "./giftcards";
 import { inventoryRouter } from "./inventory";
+import { invoicesRouter } from "./invoices";
 import { journalRouter } from "./journal";
 import { kitchenRouter } from "./kitchen";
 import { locationsRouter } from "./locations";
 import { loyaltyRouter } from "./loyalty";
 import { menuBoardRouter } from "./menu-board";
 import { menuSchedulesRouter } from "./menu-schedules";
-import { invoicesRouter } from "./invoices";
+import { modifiersRouter } from "./modifiers";
 import { notificationsRouter } from "./notifications";
-import { quotationsRouter } from "./quotations";
 import { onlineOrderRouter } from "./online-order";
 import { ordersRouter } from "./orders";
 import { posRouter } from "./pos";
 import { productionRouter } from "./production";
 import { productsRouter } from "./products";
+import { quotationsRouter } from "./quotations";
 import { reconciliationRouter } from "./reconciliation";
 import { reportsRouter } from "./reports";
 import { settingsRouter } from "./settings";
@@ -46,6 +47,7 @@ export const appRouter = {
 	orders: ordersRouter,
 	products: productsRouter,
 	categories: categoriesRouter,
+	modifiers: modifiersRouter,
 	inventory: inventoryRouter,
 	kitchen: kitchenRouter,
 	cash: cashRouter,

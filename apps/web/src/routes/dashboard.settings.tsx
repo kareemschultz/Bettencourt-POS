@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	Building2,
+	ChevronDown,
+	ChevronRight,
+	Layers,
 	Loader2,
 	MapPin,
 	Monitor,
@@ -8,6 +11,8 @@ import {
 	Plus,
 	ReceiptText,
 	Settings,
+	SlidersHorizontal,
+	Trash2,
 	Users,
 } from "lucide-react";
 import { useState } from "react";
@@ -65,7 +70,7 @@ export default function SettingsPage() {
 			</div>
 
 			<Tabs value={activeTab} onValueChange={setActiveTab}>
-				<TabsList className="grid w-full grid-cols-6 lg:flex lg:w-auto lg:grid-cols-none">
+				<TabsList className="flex h-auto w-full flex-wrap gap-1 lg:flex-nowrap">
 					<TabsTrigger value="organization" className="gap-1.5">
 						<Building2 className="size-3.5" />
 						<span className="hidden sm:inline">Organization</span>
@@ -90,6 +95,14 @@ export default function SettingsPage() {
 						<ReceiptText className="size-3.5" />
 						<span className="hidden sm:inline">Receipt</span>
 					</TabsTrigger>
+					<TabsTrigger value="categories" className="gap-1.5">
+						<Layers className="size-3.5" />
+						<span className="hidden sm:inline">Categories</span>
+					</TabsTrigger>
+					<TabsTrigger value="modifiers" className="gap-1.5">
+						<SlidersHorizontal className="size-3.5" />
+						<span className="hidden sm:inline">Modifiers</span>
+					</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="organization" className="mt-4">
@@ -109,6 +122,12 @@ export default function SettingsPage() {
 				</TabsContent>
 				<TabsContent value="receipt" className="mt-4">
 					<ReceiptConfigTab />
+				</TabsContent>
+				<TabsContent value="categories" className="mt-4">
+					<CategoriesTab />
+				</TabsContent>
+				<TabsContent value="modifiers" className="mt-4">
+					<ModifiersTab />
 				</TabsContent>
 			</Tabs>
 		</div>
@@ -978,6 +997,880 @@ function ReceiptConfigTab() {
 				</CardContent>
 			</Card>
 		</div>
+	);
+}
+
+// ── Categories Tab ────────────────────────────────────────────────────
+
+function CategoriesTab() {
+	const queryClient = useQueryClient();
+	const [showDialog, setShowDialog] = useState(false);
+	const [editingCat, setEditingCat] = useState<{
+		id: string;
+		name: string;
+		sortOrder: number;
+	} | null>(null);
+	const [formName, setFormName] = useState("");
+	const [formSortOrder, setFormSortOrder] = useState("0");
+	const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+	const { data: categories = [], isLoading } = useQuery(
+		orpc.categories.list.queryOptions({ input: {} }),
+	);
+
+	const { data: org } = useQuery(
+		orpc.settings.getOrganization.queryOptions({ input: {} }),
+	);
+
+	const catQueryKey = orpc.categories.list.queryOptions({ input: {} }).queryKey;
+
+	const createCat = useMutation(
+		orpc.categories.create.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: catQueryKey });
+				closeDialog();
+				toast.success("Category created");
+			},
+			onError: (err) => toast.error(err.message || "Failed to create category"),
+		}),
+	);
+
+	const updateCat = useMutation(
+		orpc.categories.update.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: catQueryKey });
+				closeDialog();
+				toast.success("Category updated");
+			},
+			onError: (err) => toast.error(err.message || "Failed to update category"),
+		}),
+	);
+
+	const deleteCat = useMutation(
+		orpc.categories.delete.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: catQueryKey });
+				setDeleteConfirmId(null);
+				toast.success("Category deleted");
+			},
+			onError: (err) => toast.error(err.message || "Failed to delete category"),
+		}),
+	);
+
+	function openCreate() {
+		setEditingCat(null);
+		setFormName("");
+		setFormSortOrder("0");
+		setShowDialog(true);
+	}
+
+	function openEdit(cat: (typeof categories)[number]) {
+		setEditingCat({ id: cat.id, name: cat.name, sortOrder: cat.sortOrder });
+		setFormName(cat.name);
+		setFormSortOrder(String(cat.sortOrder));
+		setShowDialog(true);
+	}
+
+	function closeDialog() {
+		setShowDialog(false);
+		setEditingCat(null);
+	}
+
+	function handleSubmit(e: React.FormEvent) {
+		e.preventDefault();
+		const sortNum = Number.parseInt(formSortOrder, 10);
+		if (editingCat) {
+			updateCat.mutate({
+				id: editingCat.id,
+				name: formName,
+				sortOrder: Number.isNaN(sortNum) ? 0 : sortNum,
+			});
+		} else {
+			createCat.mutate({
+				organizationId: org?.id ?? "",
+				name: formName,
+				sortOrder: Number.isNaN(sortNum) ? 0 : sortNum,
+			});
+		}
+	}
+
+	if (isLoading) return <LoadingCard />;
+
+	return (
+		<>
+			<Card>
+				<CardHeader className="flex flex-row items-center justify-between">
+					<div>
+						<CardTitle>Categories</CardTitle>
+						<CardDescription>
+							{categories.length} categor
+							{categories.length !== 1 ? "ies" : "y"} (departments)
+						</CardDescription>
+					</div>
+					<Button size="sm" className="gap-1.5" onClick={openCreate}>
+						<Plus className="size-3.5" /> Add Category
+					</Button>
+				</CardHeader>
+				<CardContent>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Name</TableHead>
+								<TableHead className="text-right">Sort Order</TableHead>
+								<TableHead>Status</TableHead>
+								<TableHead className="text-right">Actions</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{categories.length === 0 ? (
+								<TableRow>
+									<TableCell
+										colSpan={4}
+										className="py-8 text-center text-muted-foreground"
+									>
+										No categories configured.
+									</TableCell>
+								</TableRow>
+							) : (
+								categories.map((cat) => (
+									<TableRow key={cat.id}>
+										<TableCell className="font-medium">{cat.name}</TableCell>
+										<TableCell className="text-right font-mono text-muted-foreground">
+											{cat.sortOrder}
+										</TableCell>
+										<TableCell>
+											<Badge variant={cat.isActive ? "default" : "secondary"}>
+												{cat.isActive ? "Active" : "Inactive"}
+											</Badge>
+										</TableCell>
+										<TableCell className="text-right">
+											<div className="flex justify-end gap-1">
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={() => openEdit(cat)}
+												>
+													Edit
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													className="text-destructive hover:text-destructive"
+													onClick={() => setDeleteConfirmId(cat.id)}
+												>
+													Delete
+												</Button>
+											</div>
+										</TableCell>
+									</TableRow>
+								))
+							)}
+						</TableBody>
+					</Table>
+				</CardContent>
+			</Card>
+
+			{/* Create / Edit Dialog */}
+			<Dialog open={showDialog} onOpenChange={setShowDialog}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>
+							{editingCat ? "Edit Category" : "Add Category"}
+						</DialogTitle>
+					</DialogHeader>
+					<form onSubmit={handleSubmit} className="flex flex-col gap-4">
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="cat-name">Name</Label>
+							<Input
+								id="cat-name"
+								placeholder="e.g. Mains, Drinks, Sides"
+								value={formName}
+								onChange={(e) => setFormName(e.target.value)}
+								required
+							/>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="cat-sort">Sort Order</Label>
+							<Input
+								id="cat-sort"
+								type="number"
+								min="0"
+								step="1"
+								value={formSortOrder}
+								onChange={(e) => setFormSortOrder(e.target.value)}
+							/>
+						</div>
+						<DialogFooter>
+							<Button type="button" variant="outline" onClick={closeDialog}>
+								Cancel
+							</Button>
+							<Button
+								type="submit"
+								disabled={createCat.isPending || updateCat.isPending}
+							>
+								{(createCat.isPending || updateCat.isPending) && (
+									<Loader2 className="mr-2 size-4 animate-spin" />
+								)}
+								{editingCat ? "Update" : "Create"}
+							</Button>
+						</DialogFooter>
+					</form>
+				</DialogContent>
+			</Dialog>
+
+			{/* Delete Confirmation Dialog */}
+			<Dialog
+				open={deleteConfirmId !== null}
+				onOpenChange={(open) => {
+					if (!open) setDeleteConfirmId(null);
+				}}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Delete Category</DialogTitle>
+					</DialogHeader>
+					<p className="text-muted-foreground text-sm">
+						Are you sure you want to delete this category? Products assigned to
+						it will have their category cleared (set to none).
+					</p>
+					<DialogFooter>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => setDeleteConfirmId(null)}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							disabled={deleteCat.isPending}
+							onClick={() => {
+								if (deleteConfirmId) deleteCat.mutate({ id: deleteConfirmId });
+							}}
+						>
+							{deleteCat.isPending && (
+								<Loader2 className="mr-2 size-4 animate-spin" />
+							)}
+							Delete
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</>
+	);
+}
+
+// ── Modifiers Tab ─────────────────────────────────────────────────────
+
+type ModifierGroupRow = {
+	id: string;
+	name: string;
+	selectionType: "single" | "multi";
+	required: boolean;
+	minSelect: number;
+	maxSelect: number;
+	modifiers: {
+		id: string;
+		name: string;
+		price: string;
+		isActive: boolean;
+		sortOrder: number;
+		modifierGroupId: string;
+	}[];
+};
+
+function ModifiersTab() {
+	const queryClient = useQueryClient();
+
+	// Group dialog state
+	const [showGroupDialog, setShowGroupDialog] = useState(false);
+	const [editingGroup, setEditingGroup] = useState<ModifierGroupRow | null>(
+		null,
+	);
+	const [groupName, setGroupName] = useState("");
+	const [groupSelectionType, setGroupSelectionType] = useState<
+		"single" | "multi"
+	>("single");
+	const [groupRequired, setGroupRequired] = useState(false);
+
+	// Modifier dialog state
+	const [showModDialog, setShowModDialog] = useState(false);
+	const [targetGroupId, setTargetGroupId] = useState<string | null>(null);
+	const [editingMod, setEditingMod] = useState<{
+		id: string;
+		name: string;
+		price: string;
+	} | null>(null);
+	const [modName, setModName] = useState("");
+	const [modPrice, setModPrice] = useState("0");
+
+	// Expanded group rows
+	const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+	// Delete confirm
+	const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null);
+	const [deleteModId, setDeleteModId] = useState<string | null>(null);
+
+	const { data: groups = [], isLoading } = useQuery(
+		orpc.modifiers.listGroups.queryOptions({ input: {} }),
+	);
+
+	const modQueryKey = orpc.modifiers.listGroups.queryOptions({
+		input: {},
+	}).queryKey;
+
+	const createGroup = useMutation(
+		orpc.modifiers.createGroup.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: modQueryKey });
+				closeGroupDialog();
+				toast.success("Modifier group created");
+			},
+			onError: (err) =>
+				toast.error(err.message || "Failed to create modifier group"),
+		}),
+	);
+
+	const updateGroup = useMutation(
+		orpc.modifiers.updateGroup.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: modQueryKey });
+				closeGroupDialog();
+				toast.success("Modifier group updated");
+			},
+			onError: (err) =>
+				toast.error(err.message || "Failed to update modifier group"),
+		}),
+	);
+
+	const deleteGroupMut = useMutation(
+		orpc.modifiers.deleteGroup.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: modQueryKey });
+				setDeleteGroupId(null);
+				toast.success("Modifier group deleted");
+			},
+			onError: (err) =>
+				toast.error(err.message || "Failed to delete modifier group"),
+		}),
+	);
+
+	const createMod = useMutation(
+		orpc.modifiers.createModifier.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: modQueryKey });
+				closeModDialog();
+				toast.success("Modifier added");
+			},
+			onError: (err) => toast.error(err.message || "Failed to add modifier"),
+		}),
+	);
+
+	const updateMod = useMutation(
+		orpc.modifiers.updateModifier.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: modQueryKey });
+				closeModDialog();
+				toast.success("Modifier updated");
+			},
+			onError: (err) => toast.error(err.message || "Failed to update modifier"),
+		}),
+	);
+
+	const deleteModMut = useMutation(
+		orpc.modifiers.deleteModifier.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: modQueryKey });
+				setDeleteModId(null);
+				toast.success("Modifier deleted");
+			},
+			onError: (err) => toast.error(err.message || "Failed to delete modifier"),
+		}),
+	);
+
+	function openCreateGroup() {
+		setEditingGroup(null);
+		setGroupName("");
+		setGroupSelectionType("single");
+		setGroupRequired(false);
+		setShowGroupDialog(true);
+	}
+
+	function openEditGroup(g: ModifierGroupRow) {
+		setEditingGroup(g);
+		setGroupName(g.name);
+		setGroupSelectionType(g.selectionType);
+		setGroupRequired(g.required);
+		setShowGroupDialog(true);
+	}
+
+	function closeGroupDialog() {
+		setShowGroupDialog(false);
+		setEditingGroup(null);
+	}
+
+	function handleGroupSubmit(e: React.FormEvent) {
+		e.preventDefault();
+		if (editingGroup) {
+			updateGroup.mutate({
+				id: editingGroup.id,
+				name: groupName,
+				selectionType: groupSelectionType,
+				required: groupRequired,
+			});
+		} else {
+			createGroup.mutate({
+				name: groupName,
+				selectionType: groupSelectionType,
+				required: groupRequired,
+			});
+		}
+	}
+
+	function openAddModifier(groupId: string) {
+		setTargetGroupId(groupId);
+		setEditingMod(null);
+		setModName("");
+		setModPrice("0");
+		setShowModDialog(true);
+	}
+
+	function openEditModifier(
+		mod: { id: string; name: string; price: string },
+		groupId: string,
+	) {
+		setTargetGroupId(groupId);
+		setEditingMod(mod);
+		setModName(mod.name);
+		setModPrice(mod.price);
+		setShowModDialog(true);
+	}
+
+	function closeModDialog() {
+		setShowModDialog(false);
+		setEditingMod(null);
+		setTargetGroupId(null);
+	}
+
+	function handleModSubmit(e: React.FormEvent) {
+		e.preventDefault();
+		const priceNum = Number.parseFloat(modPrice) || 0;
+		if (editingMod) {
+			updateMod.mutate({
+				id: editingMod.id,
+				name: modName,
+				priceAdjustment: priceNum,
+			});
+		} else if (targetGroupId) {
+			createMod.mutate({
+				groupId: targetGroupId,
+				name: modName,
+				priceAdjustment: priceNum,
+			});
+		}
+	}
+
+	function toggleExpand(groupId: string) {
+		setExpandedGroups((prev) => {
+			const next = new Set(prev);
+			if (next.has(groupId)) {
+				next.delete(groupId);
+			} else {
+				next.add(groupId);
+			}
+			return next;
+		});
+	}
+
+	if (isLoading) return <LoadingCard />;
+
+	return (
+		<>
+			<Card>
+				<CardHeader className="flex flex-row items-center justify-between">
+					<div>
+						<CardTitle>Modifier Groups</CardTitle>
+						<CardDescription>
+							{groups.length} group{groups.length !== 1 ? "s" : ""} — configure
+							options customers can pick at order time (e.g. Size, Extras)
+						</CardDescription>
+					</div>
+					<Button size="sm" className="gap-1.5" onClick={openCreateGroup}>
+						<Plus className="size-3.5" /> Add Group
+					</Button>
+				</CardHeader>
+				<CardContent>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead className="w-8" />
+								<TableHead>Group Name</TableHead>
+								<TableHead>Selection</TableHead>
+								<TableHead>Required</TableHead>
+								<TableHead className="text-right"># Options</TableHead>
+								<TableHead className="text-right">Actions</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{groups.length === 0 ? (
+								<TableRow>
+									<TableCell
+										colSpan={6}
+										className="py-8 text-center text-muted-foreground"
+									>
+										No modifier groups configured.
+									</TableCell>
+								</TableRow>
+							) : (
+								groups.map((group) => {
+									const isExpanded = expandedGroups.has(group.id);
+									return (
+										<>
+											<TableRow key={group.id}>
+												<TableCell>
+													<Button
+														variant="ghost"
+														size="sm"
+														className="h-6 w-6 p-0"
+														onClick={() => toggleExpand(group.id)}
+														aria-label={
+															isExpanded ? "Collapse group" : "Expand group"
+														}
+													>
+														{isExpanded ? (
+															<ChevronDown className="size-3.5" />
+														) : (
+															<ChevronRight className="size-3.5" />
+														)}
+													</Button>
+												</TableCell>
+												<TableCell className="font-medium">
+													{group.name}
+												</TableCell>
+												<TableCell>
+													<Badge variant="outline" className="text-[10px]">
+														{group.selectionType === "single"
+															? "Single"
+															: "Multi"}
+													</Badge>
+												</TableCell>
+												<TableCell>
+													{group.required ? (
+														<Badge variant="secondary">Required</Badge>
+													) : (
+														<span className="text-muted-foreground text-xs">
+															Optional
+														</span>
+													)}
+												</TableCell>
+												<TableCell className="text-right font-mono text-muted-foreground">
+													{group.modifiers.length}
+												</TableCell>
+												<TableCell className="text-right">
+													<div className="flex justify-end gap-1">
+														<Button
+															variant="ghost"
+															size="sm"
+															className="gap-1"
+															onClick={() => openAddModifier(group.id)}
+														>
+															<Plus className="size-3" /> Option
+														</Button>
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={() => openEditGroup(group)}
+														>
+															Edit
+														</Button>
+														<Button
+															variant="ghost"
+															size="sm"
+															className="text-destructive hover:text-destructive"
+															onClick={() => setDeleteGroupId(group.id)}
+														>
+															<Trash2 className="size-3.5" />
+														</Button>
+													</div>
+												</TableCell>
+											</TableRow>
+											{isExpanded &&
+												group.modifiers.map((mod) => (
+													<TableRow
+														key={mod.id}
+														className="bg-muted/30 hover:bg-muted/40"
+													>
+														<TableCell />
+														<TableCell
+															colSpan={3}
+															className="pl-8 text-muted-foreground text-sm"
+														>
+															{mod.name}
+														</TableCell>
+														<TableCell className="text-right font-mono text-sm">
+															{Number(mod.price) === 0
+																? "—"
+																: `+$${Number(mod.price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+														</TableCell>
+														<TableCell className="text-right">
+															<div className="flex justify-end gap-1">
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	onClick={() =>
+																		openEditModifier(
+																			{
+																				id: mod.id,
+																				name: mod.name,
+																				price: mod.price,
+																			},
+																			group.id,
+																		)
+																	}
+																>
+																	Edit
+																</Button>
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	className="text-destructive hover:text-destructive"
+																	onClick={() => setDeleteModId(mod.id)}
+																>
+																	<Trash2 className="size-3.5" />
+																</Button>
+															</div>
+														</TableCell>
+													</TableRow>
+												))}
+											{isExpanded && group.modifiers.length === 0 && (
+												<TableRow className="bg-muted/30">
+													<TableCell />
+													<TableCell
+														colSpan={5}
+														className="pl-8 text-muted-foreground text-sm italic"
+													>
+														No options yet — click "+ Option" to add one.
+													</TableCell>
+												</TableRow>
+											)}
+										</>
+									);
+								})
+							)}
+						</TableBody>
+					</Table>
+				</CardContent>
+			</Card>
+
+			{/* Group Create/Edit Dialog */}
+			<Dialog open={showGroupDialog} onOpenChange={setShowGroupDialog}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>
+							{editingGroup ? "Edit Modifier Group" : "Add Modifier Group"}
+						</DialogTitle>
+					</DialogHeader>
+					<form onSubmit={handleGroupSubmit} className="flex flex-col gap-4">
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="mg-name">Group Name</Label>
+							<Input
+								id="mg-name"
+								placeholder="e.g. Size, Extras, Sauce"
+								value={groupName}
+								onChange={(e) => setGroupName(e.target.value)}
+								required
+							/>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label>Selection Type</Label>
+							<div className="flex gap-4">
+								<label className="flex cursor-pointer items-center gap-2 text-sm">
+									<input
+										type="radio"
+										name="selectionType"
+										value="single"
+										checked={groupSelectionType === "single"}
+										onChange={() => setGroupSelectionType("single")}
+										className="h-4 w-4"
+									/>
+									Single (pick one)
+								</label>
+								<label className="flex cursor-pointer items-center gap-2 text-sm">
+									<input
+										type="radio"
+										name="selectionType"
+										value="multi"
+										checked={groupSelectionType === "multi"}
+										onChange={() => setGroupSelectionType("multi")}
+										className="h-4 w-4"
+									/>
+									Multi (pick many)
+								</label>
+							</div>
+						</div>
+						<div className="flex items-center gap-2">
+							<input
+								id="mg-required"
+								type="checkbox"
+								checked={groupRequired}
+								onChange={(e) => setGroupRequired(e.target.checked)}
+								className="h-4 w-4 rounded border-input"
+							/>
+							<Label htmlFor="mg-required">
+								Required (customer must choose)
+							</Label>
+						</div>
+						<DialogFooter>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={closeGroupDialog}
+							>
+								Cancel
+							</Button>
+							<Button
+								type="submit"
+								disabled={createGroup.isPending || updateGroup.isPending}
+							>
+								{(createGroup.isPending || updateGroup.isPending) && (
+									<Loader2 className="mr-2 size-4 animate-spin" />
+								)}
+								{editingGroup ? "Update" : "Create"}
+							</Button>
+						</DialogFooter>
+					</form>
+				</DialogContent>
+			</Dialog>
+
+			{/* Modifier Create/Edit Dialog */}
+			<Dialog open={showModDialog} onOpenChange={setShowModDialog}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>
+							{editingMod ? "Edit Option" : "Add Option"}
+						</DialogTitle>
+					</DialogHeader>
+					<form onSubmit={handleModSubmit} className="flex flex-col gap-4">
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="mod-name">Option Name</Label>
+							<Input
+								id="mod-name"
+								placeholder="e.g. Large, Extra Cheese, No Onions"
+								value={modName}
+								onChange={(e) => setModName(e.target.value)}
+								required
+							/>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="mod-price">Price Adjustment (GYD)</Label>
+							<Input
+								id="mod-price"
+								type="number"
+								step="0.01"
+								min="0"
+								placeholder="0.00"
+								value={modPrice}
+								onChange={(e) => setModPrice(e.target.value)}
+							/>
+							<p className="text-muted-foreground text-xs">
+								Leave at 0 for no extra charge.
+							</p>
+						</div>
+						<DialogFooter>
+							<Button type="button" variant="outline" onClick={closeModDialog}>
+								Cancel
+							</Button>
+							<Button
+								type="submit"
+								disabled={createMod.isPending || updateMod.isPending}
+							>
+								{(createMod.isPending || updateMod.isPending) && (
+									<Loader2 className="mr-2 size-4 animate-spin" />
+								)}
+								{editingMod ? "Update" : "Add"}
+							</Button>
+						</DialogFooter>
+					</form>
+				</DialogContent>
+			</Dialog>
+
+			{/* Delete Group Confirm */}
+			<Dialog
+				open={deleteGroupId !== null}
+				onOpenChange={(open) => {
+					if (!open) setDeleteGroupId(null);
+				}}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Delete Modifier Group</DialogTitle>
+					</DialogHeader>
+					<p className="text-muted-foreground text-sm">
+						This will permanently delete the group and all its options. Products
+						linked to this group will lose these modifiers.
+					</p>
+					<DialogFooter>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => setDeleteGroupId(null)}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							disabled={deleteGroupMut.isPending}
+							onClick={() => {
+								if (deleteGroupId) deleteGroupMut.mutate({ id: deleteGroupId });
+							}}
+						>
+							{deleteGroupMut.isPending && (
+								<Loader2 className="mr-2 size-4 animate-spin" />
+							)}
+							Delete Group
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Delete Modifier Confirm */}
+			<Dialog
+				open={deleteModId !== null}
+				onOpenChange={(open) => {
+					if (!open) setDeleteModId(null);
+				}}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Delete Option</DialogTitle>
+					</DialogHeader>
+					<p className="text-muted-foreground text-sm">
+						Are you sure you want to delete this modifier option?
+					</p>
+					<DialogFooter>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => setDeleteModId(null)}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							disabled={deleteModMut.isPending}
+							onClick={() => {
+								if (deleteModId) deleteModMut.mutate({ id: deleteModId });
+							}}
+						>
+							{deleteModMut.isPending && (
+								<Loader2 className="mr-2 size-4 animate-spin" />
+							)}
+							Delete
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</>
 	);
 }
 
