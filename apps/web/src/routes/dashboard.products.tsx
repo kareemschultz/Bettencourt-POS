@@ -55,6 +55,7 @@ const emptyProduct = {
 	cost: "",
 	taxRate: "0",
 	reportingCategoryId: "",
+	proteinCategoryId: null as string | null,
 	imageUrl: "",
 	isActive: true,
 };
@@ -145,6 +146,7 @@ export default function ProductsPage() {
 			cost: costStr,
 			taxRate: String(p.taxRate || "0"),
 			reportingCategoryId: p.reportingCategoryId || "",
+			proteinCategoryId: p.proteinCategoryId ?? null,
 			imageUrl: p.imageUrl || "",
 			isActive: p.isActive !== false,
 		});
@@ -182,6 +184,7 @@ export default function ProductsPage() {
 				cost: form.cost || "0",
 				taxRate: form.taxRate || "0",
 				reportingCategoryId: form.reportingCategoryId || null,
+				proteinCategoryId: form.proteinCategoryId ?? undefined,
 				imageUrl: form.imageUrl || null,
 				isActive: form.isActive,
 				supervisorId,
@@ -195,6 +198,7 @@ export default function ProductsPage() {
 				cost: form.cost || "0",
 				taxRate: form.taxRate || "0",
 				reportingCategoryId: form.reportingCategoryId || null,
+				proteinCategoryId: form.proteinCategoryId ?? undefined,
 				imageUrl: form.imageUrl || null,
 			});
 		}
@@ -492,6 +496,36 @@ function ProductDetailsForm({
 						</SelectContent>
 					</Select>
 				</div>
+			</div>
+			<div className="space-y-2">
+				<Label>
+					Protein Category{" "}
+					<span className="text-muted-foreground text-xs">
+						(Production Report)
+					</span>
+				</Label>
+				<Select
+					value={form.proteinCategoryId ?? "none"}
+					onValueChange={(v) =>
+						setForm({ ...form, proteinCategoryId: v === "none" ? null : v })
+					}
+				>
+					<SelectTrigger>
+						<SelectValue placeholder="None (standalone item)" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="none">None</SelectItem>
+						{departments.map((c) => (
+							<SelectItem key={c.id} value={c.id}>
+								{c.name}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				<p className="text-muted-foreground text-xs">
+					E.g. “Cook up BBQ” → “Barbecue Chicken”. Groups protein totals in
+					production report.
+				</p>
 			</div>
 			<div className="grid grid-cols-3 gap-4">
 				<div className="flex flex-col gap-1.5">

@@ -207,6 +207,7 @@ const create = permissionProcedure("products.create")
 		z.object({
 			organizationId: z.string().uuid(),
 			reportingCategoryId: z.string().uuid().nullable().optional(),
+			proteinCategoryId: z.string().uuid().nullable().optional(),
 			name: z.string().min(1),
 			sku: z.string().nullable().optional(),
 			price: z.string(),
@@ -222,6 +223,7 @@ const create = permissionProcedure("products.create")
 			.values({
 				organizationId: input.organizationId,
 				reportingCategoryId: input.reportingCategoryId ?? null,
+				proteinCategoryId: input.proteinCategoryId ?? null,
 				name: input.name,
 				sku: input.sku ?? null,
 				price: input.price,
@@ -246,6 +248,7 @@ const update = permissionProcedure("products.update")
 			cost: z.string().optional(),
 			taxRate: z.string().optional(),
 			reportingCategoryId: z.string().uuid().nullable().optional(),
+			proteinCategoryId: z.string().uuid().nullable().optional(),
 			isActive: z.boolean().optional(),
 			imageUrl: z.string().nullable().optional(),
 			sortOrder: z.number().int().optional(),
