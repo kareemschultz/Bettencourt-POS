@@ -7,7 +7,12 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { Outlet, useNavigate, useOutletContext } from "react-router";
+import {
+	Outlet,
+	useLocation,
+	useNavigate,
+	useOutletContext,
+} from "react-router";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
@@ -53,6 +58,53 @@ const LOCATION_STORAGE_KEY = "bettencourt-selected-location";
 
 const AUTO_LOCK_MS = 5 * 60 * 1000; // 5 minutes of inactivity
 
+// ── Route permission map ──────────────────────────────────────────────
+// Maps URL path prefixes to the permission module required to access them.
+// Routes not listed here are accessible to all authenticated users.
+const ROUTE_MODULE_MAP: Record<string, string> = {
+	"/dashboard/reports": "reports",
+	"/dashboard/reconciliation": "reports",
+	"/dashboard/eod": "reports",
+	"/dashboard/analytics": "reports",
+	"/dashboard/journal": "reports",
+	"/dashboard/labor": "reports",
+	"/dashboard/profitability": "reports",
+	"/dashboard/pnl": "reports",
+	"/dashboard/production-report": "reports",
+	"/dashboard/inventory": "inventory",
+	"/dashboard/stock-alerts": "inventory",
+	"/dashboard/waste": "inventory",
+	"/dashboard/variance": "inventory",
+	"/dashboard/suppliers": "inventory",
+	"/dashboard/settings": "settings",
+	"/dashboard/locations": "settings",
+	"/dashboard/webhooks": "settings",
+	"/dashboard/notifications": "settings",
+	"/dashboard/menu-schedules": "settings",
+	"/dashboard/discounts": "settings",
+	"/dashboard/currency": "settings",
+	"/dashboard/expenses": "settings",
+	"/dashboard/audit": "audit",
+	"/dashboard/invoices": "invoices",
+	"/dashboard/quotations": "quotations",
+	"/dashboard/labels": "products",
+	"/dashboard/tables": "orders",
+	"/dashboard/loyalty": "orders",
+};
+
+function hasRouteAccess(
+	pathname: string,
+	permissions: Record<string, string[]>,
+): boolean {
+	for (const [prefix, module] of Object.entries(ROUTE_MODULE_MAP)) {
+		if (pathname === prefix || pathname.startsWith(prefix + "/")) {
+			const perms = permissions[module];
+			return Array.isArray(perms) && perms.length > 0;
+		}
+	}
+	return true;
+}
+
 /**
  * Map the custom role name from the DB to a sidebar role identifier.
  * Sidebar nav items use these identifiers in their `roles` arrays.
@@ -63,9 +115,11 @@ function mapRoleToSidebarRole(roleName: string): string {
 		case "owner":
 			return "executive";
 		case "manager":
-		case "warehouse clerk":
-		case "accountant":
 			return "admin";
+		case "warehouse clerk":
+			return "warehouse";
+		case "accountant":
+			return "accountant";
 		case "kitchen":
 			return "checkoff";
 		default:
@@ -76,6 +130,7 @@ function mapRoleToSidebarRole(roleName: string): string {
 export default function DashboardLayout() {
 	const { data: session, isPending } = authClient.useSession();
 	const navigate = useNavigate();
+	const { pathname } = useLocation();
 	const [locked, setLocked] = useState(false);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -236,7 +291,23 @@ export default function DashboardLayout() {
 				</header>
 				<main className="flex-1 overflow-auto">
 					<LocationContext.Provider value={locationContext}>
-						<Outlet context={locationContext} />
+						{hasRouteAccess(pathname, user.permissions) ? (
+							<Outlet context={locationContext} />
+						) : (
+							<div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+								<div className="font-bold text-4xl text-destructive">403</div>
+								<h1 className="font-semibold text-xl">Access Denied</h1>
+								<p className="text-muted-foreground text-sm">
+									You do not have permission to view this page.
+								</p>
+								<a
+									href="/dashboard"
+									className="text-primary text-sm underline underline-offset-4"
+								>
+									Return to Dashboard
+								</a>
+							</div>
+						)}
 					</LocationContext.Provider>
 				</main>
 			</SidebarInset>

@@ -230,7 +230,7 @@ const getHistory = permissionProcedure("orders.read")
 	});
 
 // ── delete ────────────────────────────────────────────────────────────
-const deleteCustomer = permissionProcedure("orders.create")
+const deleteCustomer = permissionProcedure("customers.delete")
 	.input(z.object({ id: z.string().uuid() }))
 	.handler(async ({ input }) => {
 		await db.delete(schema.customer).where(eq(schema.customer.id, input.id));

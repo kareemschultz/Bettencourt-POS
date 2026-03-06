@@ -24,6 +24,7 @@ import {
 	Receipt,
 	ReceiptText,
 	Scale,
+	Search,
 	Settings,
 	Shield,
 	ShoppingCart,
@@ -38,6 +39,7 @@ import {
 	Warehouse,
 	Webhook,
 } from "lucide-react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
 	DropdownMenu,
@@ -45,6 +47,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
 	Sidebar,
 	SidebarContent,
@@ -358,10 +361,37 @@ const managementNavItems = [
 	},
 ];
 
+const WAREHOUSE_MODULES = new Set([
+	"dashboard",
+	"inventory",
+	"purchase-orders",
+	"transfers",
+	"stock-counts",
+	"suppliers",
+]);
+
+const ACCOUNTANT_MODULES = new Set([
+	"dashboard",
+	"reports",
+	"expenses",
+	"cash",
+	"invoices",
+	"customers",
+]);
+
 function canSeeItem(
 	user: AppUser,
 	item: { module: string | null; roles?: string[] },
 ): boolean {
+	// Warehouse and accountant roles use module-set gating instead of roles arrays
+	if (user.role === "warehouse") {
+		const mod = item.module ?? "dashboard";
+		return WAREHOUSE_MODULES.has(mod);
+	}
+	if (user.role === "accountant") {
+		const mod = item.module ?? "dashboard";
+		return ACCOUNTANT_MODULES.has(mod);
+	}
 	// If role-restricted, check user role
 	if (item.roles && item.roles.length > 0) {
 		if (!item.roles.includes(user.role)) return false;
@@ -378,6 +408,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
 	const location = useLocation();
 	const pathname = location.pathname;
 	const navigate = useNavigate();
+	const [search, setSearch] = useState("");
 
 	async function handleSignOut() {
 		await signOut();
@@ -385,7 +416,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
 	}
 
 	function renderNavGroup(label: string, items: typeof mainNavItems) {
-		const filtered = items.filter((item) => canSeeItem(user, item));
+		const query = search.trim().toLowerCase();
+		const filtered = items.filter(
+			(item) =>
+				canSeeItem(user, item) &&
+				(query === "" || item.title.toLowerCase().includes(query)),
+		);
 		if (filtered.length === 0) return null;
 
 		return (
@@ -442,6 +478,16 @@ export function AppSidebar({ user }: AppSidebarProps) {
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 				</SidebarMenu>
+				<div className="relative px-2 pb-1 group-data-[collapsible=icon]:hidden">
+					<Search className="absolute top-1/2 left-4 size-3.5 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						placeholder="Search..."
+						className="h-8 pl-7 text-sm"
+						aria-label="Search navigation"
+					/>
+				</div>
 			</SidebarHeader>
 			<SidebarContent>
 				{renderNavGroup("Main", mainNavItems)}
