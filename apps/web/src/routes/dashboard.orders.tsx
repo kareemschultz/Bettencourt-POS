@@ -1,8 +1,35 @@
 import { useQuery } from "@tanstack/react-query";
+import { Download } from "lucide-react";
 import { useState } from "react";
 import { OrdersTable } from "@/components/orders/orders-table";
+import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
+
+function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
+	if (!rows.length) return;
+	const headers = Object.keys(rows[0]);
+	const csv = [
+		headers.join(","),
+		...rows.map((r) =>
+			headers
+				.map((h) => {
+					const v = String(r[h] ?? "");
+					return v.includes(",") || v.includes('"')
+						? `"${v.replace(/"/g, '""')}"`
+						: v;
+				})
+				.join(","),
+		),
+	].join("\n");
+	const blob = new Blob([csv], { type: "text/csv" });
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = filename;
+	a.click();
+	URL.revokeObjectURL(url);
+}
 
 export default function OrdersPage() {
 	const { data: session } = authClient.useSession();
@@ -50,6 +77,28 @@ export default function OrdersPage() {
 		<div className="flex flex-col gap-4 p-4 md:p-6">
 			<div className="flex items-center justify-between">
 				<h1 className="font-bold text-2xl">Orders</h1>
+				<Button
+					size="sm"
+					variant="outline"
+					className="gap-1"
+					onClick={() =>
+						downloadCsv(
+							`orders-${new Date().toISOString().slice(0, 10)}.csv`,
+							orders.map((o) => ({
+								Order: o.order_number,
+								Status: o.status,
+								Type: o.order_type,
+								Total: o.total,
+								Cashier: o.user_name ?? "",
+								Customer: o.customer_name ?? "",
+								Date: o.created_at,
+							})),
+						)
+					}
+				>
+					<Download className="size-4" />
+					Export
+				</Button>
 			</div>
 			<OrdersTable
 				orders={orders}

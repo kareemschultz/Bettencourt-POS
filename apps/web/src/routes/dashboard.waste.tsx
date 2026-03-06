@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	AlertTriangle,
 	ChevronUp,
+	Download,
 	Pencil,
 	Plus,
 	Trash2,
@@ -37,6 +38,31 @@ import {
 import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
+
+function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
+	if (!rows.length) return;
+	const headers = Object.keys(rows[0]);
+	const csv = [
+		headers.join(","),
+		...rows.map((r) =>
+			headers
+				.map((h) => {
+					const v = String(r[h] ?? "");
+					return v.includes(",") || v.includes('"')
+						? `"${v.replace(/"/g, '""')}"`
+						: v;
+				})
+				.join(","),
+		),
+	].join("\n");
+	const blob = new Blob([csv], { type: "text/csv" });
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = filename;
+	a.click();
+	URL.revokeObjectURL(url);
+}
 
 const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 
@@ -289,18 +315,51 @@ export default function WasteTrackingPage() {
 						Track and reduce food waste to improve profitability
 					</p>
 				</div>
-				<Button
-					size="sm"
-					onClick={() => setShowForm(!showForm)}
-					className="gap-1"
-				>
-					{showForm ? (
-						<ChevronUp className="size-4" />
-					) : (
-						<Plus className="size-4" />
-					)}
-					{showForm ? "Hide Form" : "Log Waste"}
-				</Button>
+				<div className="flex items-center gap-2">
+					<Button
+						size="sm"
+						variant="outline"
+						className="gap-1"
+						onClick={() =>
+							downloadCsv(
+								`waste-${new Date().toISOString().slice(0, 10)}.csv`,
+								(
+									logEntries as unknown as Array<{
+										createdAt: string;
+										productName: string;
+										quantity: string;
+										unit: string;
+										estimatedCost: string;
+										reason: string;
+										userName: string | null;
+									}>
+								).map((e) => ({
+									Date: new Date(e.createdAt).toLocaleDateString("en-GY"),
+									Item: e.productName,
+									Quantity: `${e.quantity} ${e.unit}`,
+									Reason: e.reason,
+									Cost: e.estimatedCost,
+									LoggedBy: e.userName ?? "",
+								})),
+							)
+						}
+					>
+						<Download className="size-4" />
+						Export
+					</Button>
+					<Button
+						size="sm"
+						onClick={() => setShowForm(!showForm)}
+						className="gap-1"
+					>
+						{showForm ? (
+							<ChevronUp className="size-4" />
+						) : (
+							<Plus className="size-4" />
+						)}
+						{showForm ? "Hide Form" : "Log Waste"}
+					</Button>
+				</div>
 			</div>
 
 			{/* Date Range Picker */}

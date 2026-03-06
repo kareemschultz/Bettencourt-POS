@@ -24,6 +24,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
 
+function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
+	if (!rows.length) return;
+	const headers = Object.keys(rows[0]);
+	const csv = [
+		headers.join(","),
+		...rows.map((r) =>
+			headers
+				.map((h) => {
+					const v = String(r[h] ?? "");
+					return v.includes(",") || v.includes('"')
+						? `"${v.replace(/"/g, '""')}"`
+						: v;
+				})
+				.join(","),
+		),
+	].join("\n");
+	const blob = new Blob([csv], { type: "text/csv" });
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = filename;
+	a.click();
+	URL.revokeObjectURL(url);
+}
+
 function formatDuration(ms: number) {
 	const totalMins = Math.floor(ms / 60000);
 	const hours = Math.floor(totalMins / 60);
@@ -206,12 +231,43 @@ export default function TimeclockPage() {
 				{/* Today's Shifts Tab */}
 				<TabsContent value="today" className="mt-4">
 					<Card>
-						<CardHeader>
-							<CardTitle>Today's Shifts</CardTitle>
-							<CardDescription>
-								{(todayShifts as unknown[]).length} shift
-								{(todayShifts as unknown[]).length !== 1 ? "s" : ""} today
-							</CardDescription>
+						<CardHeader className="flex flex-row items-center justify-between">
+							<div>
+								<CardTitle>Today's Shifts</CardTitle>
+								<CardDescription>
+									{(todayShifts as unknown[]).length} shift
+									{(todayShifts as unknown[]).length !== 1 ? "s" : ""} today
+								</CardDescription>
+							</div>
+							<Button
+								size="sm"
+								variant="outline"
+								className="gap-1"
+								onClick={() =>
+									downloadCsv(
+										`timeclock-${today}.csv`,
+										(todayShifts as Array<Record<string, unknown>>).map(
+											(s) => ({
+												Employee: String(s.user_name ?? ""),
+												ClockIn: s.clock_in
+													? new Date(s.clock_in as string).toLocaleString(
+															"en-GY",
+														)
+													: "",
+												ClockOut: s.clock_out
+													? new Date(s.clock_out as string).toLocaleString(
+															"en-GY",
+														)
+													: "Active",
+												Break: `${s.break_minutes ?? 0}min`,
+											}),
+										),
+									)
+								}
+							>
+								<Download className="size-4" />
+								Export CSV
+							</Button>
 						</CardHeader>
 						<CardContent>
 							<div className="mb-4">

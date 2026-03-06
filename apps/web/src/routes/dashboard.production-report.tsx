@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight, Printer } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,12 +48,55 @@ export default function ProductionReportPage() {
 							Bakery
 						</button>
 					</div>
-					<Input
-						type="date"
-						value={date}
-						onChange={(e) => setDate(e.target.value)}
-						className="w-40"
-					/>
+					<div className="flex items-center gap-1">
+						<Button
+							size="icon"
+							variant="outline"
+							className="size-8"
+							onClick={() => {
+								const d = new Date(date);
+								d.setDate(d.getDate() - 1);
+								setDate(d.toISOString().split("T")[0]);
+							}}
+						>
+							<ChevronLeft className="size-4" />
+						</Button>
+						<Input
+							type="date"
+							value={date}
+							onChange={(e) => setDate(e.target.value)}
+							className="w-36"
+						/>
+						<Button
+							size="icon"
+							variant="outline"
+							className="size-8"
+							disabled={date >= todayGY()}
+							onClick={() => {
+								const d = new Date(date);
+								d.setDate(d.getDate() + 1);
+								setDate(d.toISOString().split("T")[0]);
+							}}
+						>
+							<ChevronRight className="size-4" />
+						</Button>
+					</div>
+					<Button
+						size="sm"
+						variant={date === todayGY() ? "default" : "outline"}
+						onClick={() => setDate(todayGY())}
+					>
+						Today
+					</Button>
+					<Button
+						size="sm"
+						variant="outline"
+						className="gap-1"
+						onClick={() => window.print()}
+					>
+						<Printer className="size-4" />
+						Print
+					</Button>
 				</div>
 			</div>
 

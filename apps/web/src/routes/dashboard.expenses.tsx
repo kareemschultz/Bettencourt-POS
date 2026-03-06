@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { Download, Pencil, Plus, ReceiptText, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,31 @@ import { authClient } from "@/lib/auth-client";
 import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
+
+function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
+	if (!rows.length) return;
+	const headers = Object.keys(rows[0]);
+	const csv = [
+		headers.join(","),
+		...rows.map((r) =>
+			headers
+				.map((h) => {
+					const v = String(r[h] ?? "");
+					return v.includes(",") || v.includes('"')
+						? `"${v.replace(/"/g, '""')}"`
+						: v;
+				})
+				.join(","),
+		),
+	].join("\n");
+	const blob = new Blob([csv], { type: "text/csv" });
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = filename;
+	a.click();
+	URL.revokeObjectURL(url);
+}
 
 const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 
@@ -223,10 +248,32 @@ export default function ExpensesPage() {
 						Daily expense tracking by supplier
 					</p>
 				</div>
-				<Button onClick={openAdd} className="gap-2">
-					<Plus className="size-4" />
-					Add Expense
-				</Button>
+				<div className="flex items-center gap-2">
+					<Button
+						size="sm"
+						variant="outline"
+						className="gap-1"
+						onClick={() =>
+							downloadCsv(
+								`expenses-${new Date().toISOString().slice(0, 10)}.csv`,
+								filtered.map((e) => ({
+									Date: new Date(e.created_at).toLocaleDateString("en-GY"),
+									Category: e.category,
+									Description: e.description ?? "",
+									Amount: e.amount,
+									Supplier: e.supplier_name ?? "",
+								})),
+							)
+						}
+					>
+						<Download className="size-4" />
+						Export
+					</Button>
+					<Button onClick={openAdd} className="gap-2">
+						<Plus className="size-4" />
+						Add Expense
+					</Button>
+				</div>
 			</div>
 
 			{/* Filters */}
