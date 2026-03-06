@@ -16,7 +16,9 @@ import { locationsRouter } from "./locations";
 import { loyaltyRouter } from "./loyalty";
 import { menuBoardRouter } from "./menu-board";
 import { menuSchedulesRouter } from "./menu-schedules";
+import { invoicesRouter } from "./invoices";
 import { notificationsRouter } from "./notifications";
+import { quotationsRouter } from "./quotations";
 import { onlineOrderRouter } from "./online-order";
 import { ordersRouter } from "./orders";
 import { posRouter } from "./pos";
@@ -68,6 +70,8 @@ export const appRouter = {
 	locations: locationsRouter,
 	webhooks: webhooksRouter,
 	notifications: notificationsRouter,
+	quotations: quotationsRouter,
+	invoices: invoicesRouter,
 };
 export type AppRouter = typeof appRouter;
 export type AppRouterClient = RouterClient<typeof appRouter>;

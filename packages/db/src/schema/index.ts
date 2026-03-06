@@ -11,3 +11,4 @@ export * from "./permissions";
 export * from "./product";
 export * from "./production";
 export * from "./webhook";
+export * from "./invoice";

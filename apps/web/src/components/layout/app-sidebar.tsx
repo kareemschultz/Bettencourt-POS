@@ -170,6 +170,23 @@ const inventoryNavItems = [
 	},
 ];
 
+const financeNavItems = [
+	{
+		title: "Quotations",
+		url: "/dashboard/quotations",
+		icon: FileText,
+		module: "quotations",
+		roles: ["executive", "admin"],
+	},
+	{
+		title: "Invoices",
+		url: "/dashboard/invoices",
+		icon: Receipt,
+		module: "invoices",
+		roles: ["executive", "admin"],
+	},
+];
+
 const customerNavItems = [
 	{
 		title: "Customers",
@@ -416,6 +433,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
 				{renderNavGroup("Restaurant", restaurantNavItems)}
 				{renderNavGroup("Inventory", inventoryNavItems)}
 				{renderNavGroup("Customers", customerNavItems)}
+				{renderNavGroup("Finance", financeNavItems)}
 				{renderNavGroup("Staff", staffNavItems)}
 				{renderNavGroup("Management", managementNavItems)}
 			</SidebarContent>
