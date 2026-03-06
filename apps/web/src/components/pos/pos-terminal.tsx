@@ -332,6 +332,21 @@ export function POSTerminal({
 			notes: item.notes || null,
 		}));
 
+		if (orderMode === "pickup" && !customerPhone.trim()) {
+			toast.error("Phone number required for pickup orders");
+			return;
+		}
+		if (orderMode === "delivery") {
+			if (!customerPhone.trim()) {
+				toast.error("Phone number required for delivery orders");
+				return;
+			}
+			if (!deliveryAddress.trim()) {
+				toast.error("Delivery address required for delivery orders");
+				return;
+			}
+		}
+
 		const isPickupOrDelivery = isBeverageTerminal && orderMode !== "dine_in";
 		const estimatedReadyMs = isPickupOrDelivery
 			? Number.parseInt(estimatedReady, 10) * 60_000
@@ -404,6 +419,19 @@ export function POSTerminal({
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [cart, lastOrder, canApplyDiscount]);
 
+	useEffect(() => {
+		function checkTime() {
+			const now = new Date();
+			const gyHour = (now.getUTCHours() - 4 + 24) % 24;
+			if (gyHour >= 15) {
+				setDepartmentOverrideActive(true);
+			}
+		}
+		checkTime();
+		const interval = setInterval(checkTime, 60_000);
+		return () => clearInterval(interval);
+	}, []);
+
 	// Barcode scanner: lookup via API and add to cart
 	const lookupBarcode = useMutation(
 		orpc.pos.lookupBarcode.mutationOptions({
@@ -442,7 +470,18 @@ export function POSTerminal({
 			}}
 			onClearCart={handleClearCart}
 			onHoldOrder={handleHoldOrder}
-			onOpenDiscount={() => setDiscountOpen(true)}
+			onOpenDiscount={async () => {
+				if (canApplyDiscount) {
+					setDiscountOpen(true);
+				} else {
+					try {
+						await requestOverride("discounts.apply");
+						setDiscountOpen(true);
+					} catch {
+						// cancelled — do nothing
+					}
+				}
+			}}
 			canApplyDiscount={canApplyDiscount}
 			onOpenNotes={(id) => setNotesItemId(id)}
 			onApplyPromo={canApplyDiscount ? handleApplyDiscount : undefined}
@@ -837,18 +876,29 @@ export function POSTerminal({
 									hour12: false,
 								})}
 							</span>
-							{lastOrderMeta.mode === "pickup" && (
-								<span className="font-medium text-amber-600 dark:text-amber-400">
-									Expires:{" "}
-									{new Date(
-										lastOrderMeta.placedAt.getTime() + 45 * 60_000,
-									).toLocaleTimeString("en-GY", {
-										hour: "2-digit",
-										minute: "2-digit",
-										hour12: false,
-									})}
-								</span>
-							)}
+							{lastOrderMeta?.mode === "pickup" &&
+								(() => {
+									const expiresAt = new Date(
+										lastOrderMeta.placedAt.getTime() + 45 * 60 * 1000,
+									);
+									const now = new Date();
+									const minsLeft = Math.max(
+										0,
+										Math.round((expiresAt.getTime() - now.getTime()) / 60000),
+									);
+									return (
+										<div
+											className={`font-medium text-xs ${minsLeft <= 5 ? "text-red-600" : minsLeft <= 10 ? "text-amber-600" : "text-muted-foreground"}`}
+										>
+											Pickup expires:{" "}
+											{expiresAt.toLocaleTimeString("en-GY", {
+												hour: "2-digit",
+												minute: "2-digit",
+											})}
+											{minsLeft > 0 && ` (${minsLeft} min left)`}
+										</div>
+									);
+								})()}
 						</div>
 					)}
 				</div>
