@@ -194,4 +194,11 @@
 	.print\:gap-2 {
 		gap: 0.5rem;
 	}
+	nav, aside, header, .no-print { display: none !important; }
+	.print-area {
+		display: block !important;
+		font-family: sans-serif;
+		font-size: 11pt;
+		color: #000;
+	}
 }
