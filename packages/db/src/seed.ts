@@ -1,0 +1,3283 @@
+import { createHash } from "node:crypto";
+import { hashPassword } from "better-auth/crypto";
+import dotenv from "dotenv";
+import { eq, inArray, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
+import * as schema from "./schema";
+
+// Load env from apps/server/.env (same pattern as drizzle.config.ts)
+dotenv.config({ path: "../../apps/server/.env" });
+
+const db = drizzle(process.env.DATABASE_URL!, { schema });
+
+// ── Fixed IDs (RFC4122 v4 compliant) ──────────────────────────────────
+
+const ORG_ID = "a0000000-0000-4000-8000-000000000001";
+const LOC_ID = "b0000000-0000-4000-8000-000000000001";
+const LOC_QUICK_SERVE = "b0000000-0000-4000-8000-000000000002";
+
+const REG = {
+	meals: "c0000000-0000-4000-8000-000000000001",
+	pastry: "c0000000-0000-4000-8000-000000000002",
+	beverage: "c0000000-0000-4000-8000-000000000003",
+	quickServe: "c0000000-0000-4000-8000-000000000004",
+} as const;
+
+const DEPT = {
+	chicken: "d1000000-0000-4000-8000-000000000001",
+	fish: "d1000000-0000-4000-8000-000000000002",
+	beef: "d1000000-0000-4000-8000-000000000003",
+	duck: "d1000000-0000-4000-8000-000000000004",
+	mutton: "d1000000-0000-4000-8000-000000000005",
+	veggie: "d1000000-0000-4000-8000-000000000006",
+	specials: "d1000000-0000-4000-8000-000000000007",
+	pastries: "d1000000-0000-4000-8000-000000000008",
+	snacks: "d1000000-0000-4000-8000-000000000009",
+	beverages: "d1000000-0000-4000-8000-00000000000a",
+	sides: "d1000000-0000-4000-8000-00000000000b",
+	localJuice: "d1000000-0000-4000-8000-00000000000c",
+	meatCookup: "d1000000-0000-4000-8000-00000000000d",
+	boxes: "d1000000-0000-4000-8000-00000000000e",
+} as const;
+
+const ROLE = {
+	executive: "ac000000-0000-4000-8000-000000000008",
+	owner: "ac000000-0000-4000-8000-000000000001",
+	manager: "ac000000-0000-4000-8000-000000000002",
+	cashier: "ac000000-0000-4000-8000-000000000003",
+	server: "ac000000-0000-4000-8000-000000000004",
+	kitchen: "ac000000-0000-4000-8000-000000000005",
+	warehouseClerk: "ac000000-0000-4000-8000-000000000006",
+	accountant: "ac000000-0000-4000-8000-000000000007",
+} as const;
+
+const USER = {
+	admin: "usr_admin_000000000001",
+	bonita: "usr_bonita_00000000001",
+	cashier: "usr_cashier_00000000001",
+	production: "usr_production_000001",
+	anna: "usr_anna_0000000000001",
+	carl: "usr_carl_0000000000001",
+	renatta: "usr_renatta_000000001",
+} as const;
+
+// Product IDs
+const PROD = {
+	friedRiceBakedChicken: "e1000000-0000-4000-8000-000000000001",
+	raisinRicePineapple: "e1000000-0000-4000-8000-000000000002",
+	vegRiceSweetSour: "e1000000-0000-4000-8000-000000000003",
+	chowmeinBakedChicken: "e1000000-0000-4000-8000-000000000004",
+	chowmeinFryChicken: "e1000000-0000-4000-8000-000000000005",
+	caribbeanRiceBChicken: "e1000000-0000-4000-8000-000000000006",
+	caribbeanRiceFChicken: "e1000000-0000-4000-8000-000000000007",
+	cookupBakedChicken: "e1000000-0000-4000-8000-000000000008",
+	curryChicken: "e1000000-0000-4000-8000-000000000009",
+	macCheeseBakedChick: "e1000000-0000-4000-8000-00000000000a",
+	cookupBakedSnapper: "e1000000-0000-4000-8000-000000000011",
+	cookupFrySnapper: "e1000000-0000-4000-8000-000000000012",
+	currySnapper: "e1000000-0000-4000-8000-000000000013",
+	curryBeef: "e1000000-0000-4000-8000-000000000021",
+	vegChowmein: "e1000000-0000-4000-8000-000000000031",
+	vegMealDholl: "e1000000-0000-4000-8000-000000000032",
+	vegRice: "e1000000-0000-4000-8000-000000000033",
+	veggieCookup: "e1000000-0000-4000-8000-000000000034",
+	spongeCake: "e1000000-0000-4000-8000-000000000041",
+	coconutBuns: "e1000000-0000-4000-8000-000000000042",
+	bakedCustard: "e1000000-0000-4000-8000-000000000043",
+	drink1Lt: "e1000000-0000-4000-8000-000000000051",
+	drink12oz: "e1000000-0000-4000-8000-000000000052",
+	drink20oz: "e1000000-0000-4000-8000-000000000053",
+	coke: "e1000000-0000-4000-8000-000000000054",
+	water: "e1000000-0000-4000-8000-000000000055",
+	vitaMalt: "e1000000-0000-4000-8000-000000000056",
+	xlEnergy: "e1000000-0000-4000-8000-000000000057",
+	tamarindJuice: "e1000000-0000-4000-8000-000000000061",
+	cookUpBBQ: "e1000000-0000-4000-8000-000000000071",
+	cookUpFc: "e1000000-0000-4000-8000-000000000072",
+	cupDhal: "e1000000-0000-4000-8000-000000000081",
+} as const;
+
+// Mock data IDs
+const ORDER = {
+	o1: "f1000000-0000-4000-8000-000000000001",
+	o2: "f1000000-0000-4000-8000-000000000002",
+	o3: "f1000000-0000-4000-8000-000000000003",
+	o4: "f1000000-0000-4000-8000-000000000004",
+	o5: "f1000000-0000-4000-8000-000000000005",
+	o6: "f1000000-0000-4000-8000-000000000006",
+	o7: "f1000000-0000-4000-8000-000000000007",
+	o8: "f1000000-0000-4000-8000-000000000008",
+	o9: "f1000000-0000-4000-8000-000000000009",
+	o10: "f1000000-0000-4000-8000-00000000000a",
+	o11: "f1000000-0000-4000-8000-00000000000b",
+	o12: "f1000000-0000-4000-8000-00000000000c",
+	o13: "f1000000-0000-4000-8000-00000000000d",
+	o14: "f1000000-0000-4000-8000-00000000000e",
+	o15: "f1000000-0000-4000-8000-00000000000f",
+	o16: "f1000000-0000-4000-8000-000000000010",
+	o17: "f1000000-0000-4000-8000-000000000011",
+	o18: "f1000000-0000-4000-8000-000000000012",
+	o19: "f1000000-0000-4000-8000-000000000013",
+	o20: "f1000000-0000-4000-8000-000000000014",
+} as const;
+
+const TABLE = {
+	t1: "fa000000-0000-4000-8000-000000000001",
+	t2: "fa000000-0000-4000-8000-000000000002",
+	t3: "fa000000-0000-4000-8000-000000000003",
+	t4: "fa000000-0000-4000-8000-000000000004",
+	t5: "fa000000-0000-4000-8000-000000000005",
+	t6: "fa000000-0000-4000-8000-000000000006",
+	t7: "fa000000-0000-4000-8000-000000000007",
+	t8: "fa000000-0000-4000-8000-000000000008",
+	t9: "fa000000-0000-4000-8000-000000000009",
+	t10: "fa000000-0000-4000-8000-00000000000a",
+	t11: "fa000000-0000-4000-8000-00000000000b",
+	t12: "fa000000-0000-4000-8000-00000000000c",
+} as const;
+
+const CASH_SESSION = {
+	cs1: "fb000000-0000-4000-8000-000000000001",
+	cs2: "fb000000-0000-4000-8000-000000000002",
+	cs3: "fb000000-0000-4000-8000-000000000003",
+	cs4: "fb000000-0000-4000-8000-000000000004",
+} as const;
+
+const INV_ITEM = {
+	chicken: "fc000000-0000-4000-8000-000000000001",
+	rice: "fc000000-0000-4000-8000-000000000002",
+	flour: "fc000000-0000-4000-8000-000000000003",
+	oil: "fc000000-0000-4000-8000-000000000004",
+	sugar: "fc000000-0000-4000-8000-000000000005",
+	snapper: "fc000000-0000-4000-8000-000000000006",
+	beef: "fc000000-0000-4000-8000-000000000007",
+	coconut: "fc000000-0000-4000-8000-000000000008",
+	onions: "fc000000-0000-4000-8000-000000000009",
+	garlic: "fc000000-0000-4000-8000-00000000000a",
+	peppers: "fc000000-0000-4000-8000-00000000000b",
+	noodles: "fc000000-0000-4000-8000-00000000000c",
+	tamarind: "fc000000-0000-4000-8000-00000000000d",
+	softDrinks: "fc000000-0000-4000-8000-00000000000e",
+	water: "fc000000-0000-4000-8000-00000000000f",
+} as const;
+
+const PO = {
+	po1: "fd000000-0000-4000-8000-000000000001",
+	po2: "fd000000-0000-4000-8000-000000000002",
+	po3: "fd000000-0000-4000-8000-000000000003",
+} as const;
+
+const SUPPLIER = {
+	freshFoods: "aa000000-0000-4000-8000-000000000001",
+	bevDist: "aa000000-0000-4000-8000-000000000002",
+} as const;
+
+// Helper: date N days ago at a specific hour
+function daysAgo(days: number, hour = 12): Date {
+	const d = new Date();
+	d.setDate(d.getDate() - days);
+	d.setHours(hour, 0, 0, 0);
+	return d;
+}
+
+// ── Seed function ──────────────────────────────────────────────────────
+
+async function seed() {
+	console.log("Seeding database...");
+
+	const passwordHash = await hashPassword("password123");
+
+	// 1. Organization
+	console.log("  -> Organization");
+	await db
+		.insert(schema.organization)
+		.values({
+			id: ORG_ID,
+			name: "Bettencourt's Food Inc.",
+			slug: "bettencourts-food-inc",
+			settings: { currency: "GYD", currency_symbol: "$", tax_included: false },
+		})
+		.onConflictDoNothing();
+
+	// 2. Locations
+	console.log("  -> Locations");
+	await db
+		.insert(schema.location)
+		.values([
+			{
+				id: LOC_ID,
+				organizationId: ORG_ID,
+				name: "Food Inc / Main",
+				address: "Bettencourt's, Georgetown, Guyana",
+				phone: "+592-000-0000",
+				timezone: "America/Guyana",
+				receiptHeader: "Bettencourt's Food Inc.",
+				receiptFooter:
+					"Thank you for choosing Bettencourt's! -- A True Guyanese Gem",
+			},
+			{
+				id: LOC_QUICK_SERVE,
+				organizationId: ORG_ID,
+				name: "Quick Serve",
+				address: "Quick Serve, Georgetown, Guyana",
+				timezone: "America/Guyana",
+				receiptHeader: "Bettencourt's Quick Serve",
+				receiptFooter: "Thank you for choosing Bettencourt's!",
+			},
+		])
+		.onConflictDoNothing();
+	// Rename existing location in case it was seeded with the old name
+	await db
+		.update(schema.location)
+		.set({ name: "Food Inc / Main" })
+		.where(eq(schema.location.id, LOC_ID));
+
+	// 3. Registers
+	console.log("  -> Registers");
+	await db
+		.insert(schema.register)
+		.values([
+			{
+				id: REG.meals,
+				locationId: LOC_ID,
+				name: "Meals POS",
+				workflowMode: "standard",
+			},
+			{
+				id: REG.pastry,
+				locationId: LOC_ID,
+				name: "Pastry POS",
+				workflowMode: "standard",
+			},
+			{
+				id: REG.beverage,
+				locationId: LOC_ID,
+				name: "Beverage & Pickup POS",
+				workflowMode: "pickup_delivery",
+			},
+			{
+				id: REG.quickServe,
+				locationId: LOC_QUICK_SERVE,
+				name: "Quick Serve POS",
+				workflowMode: "standard",
+			},
+		])
+		.onConflictDoNothing();
+
+	// 4. Departments
+	console.log("  -> Departments");
+	await db
+		.insert(schema.reportingCategory)
+		.values([
+			{
+				id: DEPT.chicken,
+				organizationId: ORG_ID,
+				name: "Chicken",
+				sortOrder: 1,
+			},
+			{ id: DEPT.fish, organizationId: ORG_ID, name: "Fish", sortOrder: 2 },
+			{ id: DEPT.beef, organizationId: ORG_ID, name: "Beef", sortOrder: 3 },
+			{ id: DEPT.duck, organizationId: ORG_ID, name: "Duck", sortOrder: 4 },
+			{ id: DEPT.mutton, organizationId: ORG_ID, name: "Mutton", sortOrder: 5 },
+			{ id: DEPT.veggie, organizationId: ORG_ID, name: "Veggie", sortOrder: 6 },
+			{
+				id: DEPT.specials,
+				organizationId: ORG_ID,
+				name: "Specials",
+				sortOrder: 7,
+			},
+			{
+				id: DEPT.pastries,
+				organizationId: ORG_ID,
+				name: "Pastries",
+				sortOrder: 8,
+			},
+			{ id: DEPT.snacks, organizationId: ORG_ID, name: "Snacks", sortOrder: 9 },
+			{
+				id: DEPT.beverages,
+				organizationId: ORG_ID,
+				name: "Beverages",
+				sortOrder: 10,
+			},
+			{ id: DEPT.sides, organizationId: ORG_ID, name: "Sides", sortOrder: 11 },
+			{
+				id: DEPT.localJuice,
+				organizationId: ORG_ID,
+				name: "Local Juice",
+				sortOrder: 12,
+			},
+			{
+				id: DEPT.meatCookup,
+				organizationId: ORG_ID,
+				name: "Meat Cookup",
+				sortOrder: 13,
+			},
+			{ id: DEPT.boxes, organizationId: ORG_ID, name: "Boxes", sortOrder: 14 },
+		])
+		.onConflictDoNothing();
+
+	// 5. Register-Department assignments
+	console.log("  -> Register-Department assignments");
+	await db
+		.insert(schema.registerDepartment)
+		.values([
+			{ registerId: REG.meals, departmentId: DEPT.chicken },
+			{ registerId: REG.meals, departmentId: DEPT.fish },
+			{ registerId: REG.meals, departmentId: DEPT.beef },
+			{ registerId: REG.meals, departmentId: DEPT.duck },
+			{ registerId: REG.meals, departmentId: DEPT.mutton },
+			{ registerId: REG.meals, departmentId: DEPT.veggie },
+			{ registerId: REG.meals, departmentId: DEPT.specials },
+			{ registerId: REG.meals, departmentId: DEPT.sides },
+			{ registerId: REG.meals, departmentId: DEPT.meatCookup },
+			{ registerId: REG.pastry, departmentId: DEPT.pastries },
+			{ registerId: REG.pastry, departmentId: DEPT.snacks },
+			{ registerId: REG.pastry, departmentId: DEPT.beverages },
+			{ registerId: REG.beverage, departmentId: DEPT.beverages },
+			{ registerId: REG.beverage, departmentId: DEPT.localJuice },
+			{ registerId: REG.beverage, departmentId: DEPT.boxes },
+		])
+		.onConflictDoNothing();
+
+	// 6. Products
+	console.log("  -> Products");
+	await db
+		.insert(schema.product)
+		.values([
+			{
+				id: PROD.friedRiceBakedChicken,
+				organizationId: ORG_ID,
+				name: "Fried Rice and Baked Chicken",
+				reportingName: "Fried Rice & Baked Chicken",
+				reportingCategoryId: DEPT.chicken,
+				price: "2200",
+				taxRate: "0",
+				sortOrder: 1,
+			},
+			{
+				id: PROD.raisinRicePineapple,
+				organizationId: ORG_ID,
+				name: "Raisin Rice with Pineapple Chicken",
+				reportingName: "Raisin Rice & Pineapple Chicken",
+				reportingCategoryId: DEPT.chicken,
+				price: "2200",
+				taxRate: "0",
+				sortOrder: 2,
+			},
+			{
+				id: PROD.vegRiceSweetSour,
+				organizationId: ORG_ID,
+				name: "Vegetable Rice with Sweet and Sour Chicken",
+				reportingName: "Veg Rice & S&S Chicken",
+				reportingCategoryId: DEPT.chicken,
+				price: "2200",
+				taxRate: "0",
+				sortOrder: 3,
+			},
+			{
+				id: PROD.chowmeinBakedChicken,
+				organizationId: ORG_ID,
+				name: "Chowmein/Baked Chicken",
+				reportingName: "Chowmein/Baked Chicken",
+				reportingCategoryId: DEPT.chicken,
+				price: "2200",
+				taxRate: "0",
+				sortOrder: 4,
+			},
+			{
+				id: PROD.chowmeinFryChicken,
+				organizationId: ORG_ID,
+				name: "Chowmein/Fry Chicken",
+				reportingName: "Chowmein/Fry Chicken",
+				reportingCategoryId: DEPT.chicken,
+				price: "2200",
+				taxRate: "0",
+				sortOrder: 5,
+			},
+			{
+				id: PROD.caribbeanRiceBChicken,
+				organizationId: ORG_ID,
+				name: "Caribbean Rice B/Chicken",
+				reportingName: "Caribbean Rice B/Chicken",
+				reportingCategoryId: DEPT.chicken,
+				price: "2200",
+				taxRate: "0",
+				sortOrder: 6,
+			},
+			{
+				id: PROD.caribbeanRiceFChicken,
+				organizationId: ORG_ID,
+				name: "Caribbean Rice F/Chicken",
+				reportingName: "Caribbean Rice F/Chicken",
+				reportingCategoryId: DEPT.chicken,
+				price: "2200",
+				taxRate: "0",
+				sortOrder: 7,
+			},
+			{
+				id: PROD.cookupBakedChicken,
+				organizationId: ORG_ID,
+				name: "Cookup/Baked Chicken",
+				reportingName: "Cookup/Baked Chicken",
+				reportingCategoryId: DEPT.chicken,
+				price: "2200",
+				taxRate: "0",
+				sortOrder: 8,
+			},
+			{
+				id: PROD.curryChicken,
+				organizationId: ORG_ID,
+				name: "Curry Chicken",
+				reportingName: "Curry Chicken",
+				reportingCategoryId: DEPT.chicken,
+				price: "2000",
+				taxRate: "0",
+				sortOrder: 9,
+			},
+			{
+				id: PROD.macCheeseBakedChick,
+				organizationId: ORG_ID,
+				name: "Mac Cheese W/ Baked Chick",
+				reportingName: "Mac Cheese W/ Baked Chick",
+				reportingCategoryId: DEPT.chicken,
+				price: "2200",
+				taxRate: "0",
+				sortOrder: 10,
+			},
+		])
+		.onConflictDoNothing();
+	await db
+		.insert(schema.product)
+		.values([
+			{
+				id: PROD.cookupBakedSnapper,
+				organizationId: ORG_ID,
+				name: "Cookup Baked Snapper",
+				reportingName: "Cookup Baked Snapper",
+				reportingCategoryId: DEPT.fish,
+				price: "2500",
+				taxRate: "0",
+				sortOrder: 1,
+			},
+			{
+				id: PROD.cookupFrySnapper,
+				organizationId: ORG_ID,
+				name: "Cookup Fry Snapper",
+				reportingName: "Cookup Fry Snapper",
+				reportingCategoryId: DEPT.fish,
+				price: "2500",
+				taxRate: "0",
+				sortOrder: 2,
+			},
+			{
+				id: PROD.currySnapper,
+				organizationId: ORG_ID,
+				name: "Curry Snapper",
+				reportingName: "Curry Snapper",
+				reportingCategoryId: DEPT.fish,
+				price: "2500",
+				taxRate: "0",
+				sortOrder: 3,
+			},
+		])
+		.onConflictDoNothing();
+	await db
+		.insert(schema.product)
+		.values([
+			{
+				id: PROD.curryBeef,
+				organizationId: ORG_ID,
+				name: "Anyrice / Curry Beef",
+				reportingName: "Anyrice / Curry Beef",
+				reportingCategoryId: DEPT.beef,
+				price: "2400",
+				taxRate: "0",
+				sortOrder: 1,
+			},
+		])
+		.onConflictDoNothing();
+	await db
+		.insert(schema.product)
+		.values([
+			{
+				id: PROD.vegChowmein,
+				organizationId: ORG_ID,
+				name: "Veg. Chowmein",
+				reportingName: "Veg. Chowmein",
+				reportingCategoryId: DEPT.veggie,
+				price: "1500",
+				taxRate: "0",
+				sortOrder: 1,
+			},
+			{
+				id: PROD.vegMealDholl,
+				organizationId: ORG_ID,
+				name: "Veg. Meal/Dholl",
+				reportingName: "Veg. Meal/Dholl",
+				reportingCategoryId: DEPT.veggie,
+				price: "1500",
+				taxRate: "0",
+				sortOrder: 2,
+			},
+			{
+				id: PROD.vegRice,
+				organizationId: ORG_ID,
+				name: "Veg. Rice",
+				reportingName: "Veg. Rice",
+				reportingCategoryId: DEPT.veggie,
+				price: "1200",
+				taxRate: "0",
+				sortOrder: 3,
+			},
+			{
+				id: PROD.veggieCookup,
+				organizationId: ORG_ID,
+				name: "Veggie Cookup",
+				reportingName: "Veggie Cookup",
+				reportingCategoryId: DEPT.veggie,
+				price: "1500",
+				taxRate: "0",
+				sortOrder: 4,
+			},
+		])
+		.onConflictDoNothing();
+	await db
+		.insert(schema.product)
+		.values([
+			{
+				id: PROD.spongeCake,
+				organizationId: ORG_ID,
+				name: "Sponge Cake",
+				reportingName: "Sponge Cake",
+				reportingCategoryId: DEPT.pastries,
+				price: "800",
+				taxRate: "0",
+				sortOrder: 1,
+			},
+			{
+				id: PROD.coconutBuns,
+				organizationId: ORG_ID,
+				name: "Coconut Buns",
+				reportingName: "Coconut Buns",
+				reportingCategoryId: DEPT.pastries,
+				price: "500",
+				taxRate: "0",
+				sortOrder: 2,
+			},
+			{
+				id: PROD.bakedCustard,
+				organizationId: ORG_ID,
+				name: "Baked Custard",
+				reportingName: "Baked Custard",
+				reportingCategoryId: DEPT.pastries,
+				price: "600",
+				taxRate: "0",
+				sortOrder: 3,
+			},
+		])
+		.onConflictDoNothing();
+	await db
+		.insert(schema.product)
+		.values([
+			{
+				id: PROD.drink1Lt,
+				organizationId: ORG_ID,
+				name: "1 Lt Drink",
+				reportingName: "1 Lt Drink",
+				reportingCategoryId: DEPT.beverages,
+				price: "600",
+				taxRate: "0",
+				sortOrder: 1,
+			},
+			{
+				id: PROD.drink12oz,
+				organizationId: ORG_ID,
+				name: "12oz Drink",
+				reportingName: "12oz Drink",
+				reportingCategoryId: DEPT.beverages,
+				price: "300",
+				taxRate: "0",
+				sortOrder: 2,
+			},
+			{
+				id: PROD.drink20oz,
+				organizationId: ORG_ID,
+				name: "20oz Drink",
+				reportingName: "20oz Drink",
+				reportingCategoryId: DEPT.beverages,
+				price: "400",
+				taxRate: "0",
+				sortOrder: 3,
+			},
+			{
+				id: PROD.coke,
+				organizationId: ORG_ID,
+				name: "Coke",
+				reportingName: "Coke",
+				reportingCategoryId: DEPT.beverages,
+				price: "300",
+				taxRate: "0",
+				sortOrder: 4,
+			},
+			{
+				id: PROD.water,
+				organizationId: ORG_ID,
+				name: "Water",
+				reportingName: "Water",
+				reportingCategoryId: DEPT.beverages,
+				price: "200",
+				taxRate: "0",
+				sortOrder: 5,
+			},
+			{
+				id: PROD.vitaMalt,
+				organizationId: ORG_ID,
+				name: "Vita Malt",
+				reportingName: "Vita Malt",
+				reportingCategoryId: DEPT.beverages,
+				price: "400",
+				taxRate: "0",
+				sortOrder: 6,
+			},
+			{
+				id: PROD.xlEnergy,
+				organizationId: ORG_ID,
+				name: "XL Energy",
+				reportingName: "XL Energy",
+				reportingCategoryId: DEPT.beverages,
+				price: "500",
+				taxRate: "0",
+				sortOrder: 7,
+			},
+		])
+		.onConflictDoNothing();
+	await db
+		.insert(schema.product)
+		.values([
+			{
+				id: PROD.tamarindJuice,
+				organizationId: ORG_ID,
+				name: "Tamarind Juice",
+				reportingName: "Tamarind Juice",
+				reportingCategoryId: DEPT.localJuice,
+				price: "500",
+				taxRate: "0",
+				sortOrder: 1,
+			},
+		])
+		.onConflictDoNothing();
+	await db
+		.insert(schema.product)
+		.values([
+			{
+				id: PROD.cookUpBBQ,
+				organizationId: ORG_ID,
+				name: "Cook Up BBQ",
+				reportingName: "Cook Up BBQ",
+				reportingCategoryId: DEPT.meatCookup,
+				price: "2000",
+				taxRate: "0",
+				sortOrder: 1,
+			},
+			{
+				id: PROD.cookUpFc,
+				organizationId: ORG_ID,
+				name: "Cook-up Fc",
+				reportingName: "Cook-up Fc",
+				reportingCategoryId: DEPT.meatCookup,
+				price: "2000",
+				taxRate: "0",
+				sortOrder: 2,
+			},
+		])
+		.onConflictDoNothing();
+	await db
+		.insert(schema.product)
+		.values([
+			{
+				id: PROD.cupDhal,
+				organizationId: ORG_ID,
+				name: "Cup Dhal",
+				reportingName: "Cup Dhal",
+				reportingCategoryId: DEPT.snacks,
+				price: "400",
+				taxRate: "0",
+				sortOrder: 1,
+			},
+		])
+		.onConflictDoNothing();
+
+	// 7. Custom Roles
+	console.log("  -> Custom Roles");
+	await db
+		.insert(schema.customRole)
+		.values([
+			{
+				id: ROLE.executive,
+				organizationId: ORG_ID,
+				name: "Executive",
+				isSystem: true,
+				permissions: {
+					orders: [
+						"create",
+						"read",
+						"update",
+						"delete",
+						"void",
+						"refund",
+						"approve",
+						"override",
+					],
+					products: ["create", "read", "update", "delete"],
+					inventory: ["create", "read", "update", "delete"],
+					reports: ["read"],
+					settings: ["create", "read", "update", "delete"],
+					hardware: ["create", "read", "update", "delete"],
+					shifts: ["create", "read", "update", "delete", "approve"],
+					users: ["create", "read", "update", "delete"],
+					audit: ["read"],
+					departments: ["create", "read", "update", "delete", "override"],
+					discounts: ["create", "apply"],
+					prices: ["override"],
+				},
+			},
+			{
+				id: ROLE.owner,
+				organizationId: ORG_ID,
+				name: "Owner",
+				isSystem: true,
+				permissions: {
+					orders: [
+						"create",
+						"read",
+						"update",
+						"delete",
+						"void",
+						"refund",
+						"approve",
+						"override",
+					],
+					products: ["create", "read", "update", "delete"],
+					inventory: ["create", "read", "update", "delete", "approve"],
+					reports: ["read"],
+					settings: ["create", "read", "update", "delete"],
+					hardware: ["create", "read", "update", "delete"],
+					shifts: ["create", "read", "update", "delete", "approve"],
+					users: ["create", "read", "update", "delete"],
+					audit: ["read"],
+					departments: ["create", "read", "update", "delete", "override"],
+					discounts: ["create", "apply"],
+					prices: ["override"],
+				},
+			},
+			{
+				id: ROLE.manager,
+				organizationId: ORG_ID,
+				name: "Manager",
+				isSystem: true,
+				permissions: {
+					orders: ["create", "read", "update", "void", "refund", "approve"],
+					products: ["create", "read", "update"],
+					inventory: ["create", "read", "update", "approve"],
+					reports: ["read"],
+					settings: ["read", "update"],
+					hardware: ["read", "update"],
+					shifts: ["create", "read", "update", "approve"],
+					users: ["create", "read", "update"],
+					audit: ["read"],
+					departments: ["override"],
+					discounts: ["apply"],
+				},
+			},
+			{
+				id: ROLE.cashier,
+				organizationId: ORG_ID,
+				name: "Cashier",
+				isSystem: true,
+				permissions: {
+					orders: ["create", "read"],
+					products: ["read"],
+					inventory: [],
+					reports: [],
+					settings: [],
+					hardware: [],
+					shifts: ["create", "read"],
+					users: [],
+					audit: [],
+					departments: [],
+					discounts: [],
+					prices: [],
+				},
+			},
+			{
+				id: ROLE.server,
+				organizationId: ORG_ID,
+				name: "Server",
+				isSystem: true,
+				permissions: {
+					orders: ["create", "read", "update"],
+					products: ["read"],
+					inventory: [],
+					reports: [],
+					settings: [],
+					hardware: [],
+					shifts: ["create", "read"],
+					users: [],
+					audit: [],
+				},
+			},
+			{
+				id: ROLE.kitchen,
+				organizationId: ORG_ID,
+				name: "Kitchen",
+				isSystem: true,
+				permissions: {
+					orders: ["read", "update"],
+					products: ["read"],
+					inventory: ["read"],
+					reports: [],
+					settings: [],
+					hardware: [],
+					shifts: [],
+					users: [],
+					audit: [],
+				},
+			},
+			{
+				id: ROLE.warehouseClerk,
+				organizationId: ORG_ID,
+				name: "Warehouse Clerk",
+				isSystem: true,
+				permissions: {
+					orders: [],
+					products: ["read"],
+					inventory: ["create", "read", "update"],
+					reports: ["read"],
+					settings: [],
+					hardware: [],
+					shifts: [],
+					users: [],
+					audit: [],
+				},
+			},
+			{
+				id: ROLE.accountant,
+				organizationId: ORG_ID,
+				name: "Accountant",
+				isSystem: true,
+				permissions: {
+					orders: ["read"],
+					products: ["read"],
+					inventory: ["read"],
+					reports: ["read"],
+					settings: [],
+					hardware: [],
+					shifts: ["read"],
+					users: [],
+					audit: ["read"],
+				},
+			},
+		])
+		.onConflictDoNothing();
+
+	// 8. Demo Users
+	console.log("  -> Demo Users");
+	// PINs: Admin=1234, Bonita=5678, Cashier=1111, Production=2222, Anna=3333, Carl=4444, Renatta=5555
+	const pinAdmin = createHash("sha256").update("1234").digest("hex");
+	const pinBonita = createHash("sha256").update("5678").digest("hex");
+	const pinCashier = createHash("sha256").update("1111").digest("hex");
+	const pinProduction = createHash("sha256").update("2222").digest("hex");
+	const pinAnna = createHash("sha256").update("3333").digest("hex");
+	const pinCarl = createHash("sha256").update("4444").digest("hex");
+	const pinRenatta = createHash("sha256").update("5555").digest("hex");
+
+	await db
+		.insert(schema.user)
+		.values([
+			{
+				id: USER.admin,
+				name: "Admin",
+				email: "admin@bettencourt.com",
+				emailVerified: true,
+				role: "admin",
+				organizationId: ORG_ID,
+				pinHash: pinAdmin,
+			},
+			{
+				id: USER.bonita,
+				name: "Bonita",
+				email: "bonita@bettencourt.com",
+				emailVerified: true,
+				role: "admin",
+				organizationId: ORG_ID,
+				pinHash: pinBonita,
+			},
+			{
+				id: USER.cashier,
+				name: "Cashier 1",
+				email: "cashier@bettencourt.com",
+				emailVerified: true,
+				role: "user",
+				organizationId: ORG_ID,
+				pinHash: pinCashier,
+			},
+			{
+				id: USER.production,
+				name: "Production",
+				email: "production@bettencourt.com",
+				emailVerified: true,
+				role: "user",
+				organizationId: ORG_ID,
+				pinHash: pinProduction,
+			},
+			{
+				id: USER.anna,
+				name: "Anna",
+				email: "anna@bettencourt.com",
+				emailVerified: true,
+				role: "user",
+				organizationId: ORG_ID,
+				pinHash: pinAnna,
+			},
+			{
+				id: USER.carl,
+				name: "Carl",
+				email: "carl@bettencourt.com",
+				emailVerified: true,
+				role: "user",
+				organizationId: ORG_ID,
+				pinHash: pinCarl,
+			},
+			{
+				id: USER.renatta,
+				name: "Renatta",
+				email: "renatta@bettencourt.com",
+				emailVerified: true,
+				role: "user",
+				organizationId: ORG_ID,
+				pinHash: pinRenatta,
+			},
+		])
+		.onConflictDoNothing();
+	await db
+		.insert(schema.account)
+		.values([
+			{
+				id: "acct_admin_000000000001",
+				accountId: USER.admin,
+				providerId: "credential",
+				userId: USER.admin,
+				password: passwordHash,
+			},
+			{
+				id: "acct_bonita_00000000001",
+				accountId: USER.bonita,
+				providerId: "credential",
+				userId: USER.bonita,
+				password: passwordHash,
+			},
+			{
+				id: "acct_cashier_0000000001",
+				accountId: USER.cashier,
+				providerId: "credential",
+				userId: USER.cashier,
+				password: passwordHash,
+			},
+			{
+				id: "acct_production_000001",
+				accountId: USER.production,
+				providerId: "credential",
+				userId: USER.production,
+				password: passwordHash,
+			},
+			{
+				id: "acct_anna_0000000000001",
+				accountId: USER.anna,
+				providerId: "credential",
+				userId: USER.anna,
+				password: passwordHash,
+			},
+			{
+				id: "acct_carl_0000000000001",
+				accountId: USER.carl,
+				providerId: "credential",
+				userId: USER.carl,
+				password: passwordHash,
+			},
+			{
+				id: "acct_renatta_000000001",
+				accountId: USER.renatta,
+				providerId: "credential",
+				userId: USER.renatta,
+				password: passwordHash,
+			},
+		])
+		.onConflictDoNothing();
+	await db
+		.insert(schema.member)
+		.values([
+			{
+				id: "mem_admin_0000000000001",
+				organizationId: ORG_ID,
+				userId: USER.admin,
+				role: "owner",
+			},
+			{
+				id: "mem_bonita_000000000001",
+				organizationId: ORG_ID,
+				userId: USER.bonita,
+				role: "owner",
+			},
+			{
+				id: "mem_cashier_000000000001",
+				organizationId: ORG_ID,
+				userId: USER.cashier,
+				role: "member",
+			},
+			{
+				id: "mem_production_00000001",
+				organizationId: ORG_ID,
+				userId: USER.production,
+				role: "member",
+			},
+			{
+				id: "mem_anna_00000000000001",
+				organizationId: ORG_ID,
+				userId: USER.anna,
+				role: "member",
+			},
+			{
+				id: "mem_carl_00000000000001",
+				organizationId: ORG_ID,
+				userId: USER.carl,
+				role: "member",
+			},
+			{
+				id: "mem_renatta_0000000001",
+				organizationId: ORG_ID,
+				userId: USER.renatta,
+				role: "member",
+			},
+		])
+		.onConflictDoNothing();
+	await db
+		.insert(schema.userRole)
+		.values([
+			{ userId: USER.admin, roleId: ROLE.executive, locationId: LOC_ID },
+			{ userId: USER.bonita, roleId: ROLE.executive, locationId: LOC_ID },
+			{ userId: USER.cashier, roleId: ROLE.cashier, locationId: LOC_ID },
+			{ userId: USER.production, roleId: ROLE.kitchen, locationId: LOC_ID },
+			{ userId: USER.anna, roleId: ROLE.cashier, locationId: LOC_ID },
+			{ userId: USER.carl, roleId: ROLE.cashier, locationId: LOC_ID },
+			{
+				userId: USER.renatta,
+				roleId: ROLE.cashier,
+				locationId: LOC_QUICK_SERVE,
+			},
+		])
+		.onConflictDoNothing();
+
+	// Update existing users (names, PIN hashes) in case they already exist from a prior seed
+	console.log("  -> Updating user names & PIN hashes");
+	await db
+		.update(schema.user)
+		.set({ name: "Admin", pinHash: pinAdmin })
+		.where(eq(schema.user.id, USER.admin));
+	await db
+		.update(schema.user)
+		.set({ name: "Bonita", pinHash: pinBonita })
+		.where(eq(schema.user.id, USER.bonita));
+	await db
+		.update(schema.user)
+		.set({ name: "Cashier 1", pinHash: pinCashier })
+		.where(eq(schema.user.id, USER.cashier));
+	await db
+		.update(schema.user)
+		.set({ name: "Production", pinHash: pinProduction })
+		.where(eq(schema.user.id, USER.production));
+	await db
+		.update(schema.user)
+		.set({ name: "Anna", pinHash: pinAnna })
+		.where(eq(schema.user.id, USER.anna));
+	await db
+		.update(schema.user)
+		.set({ name: "Carl", pinHash: pinCarl })
+		.where(eq(schema.user.id, USER.carl));
+	await db
+		.update(schema.user)
+		.set({ name: "Renatta", pinHash: pinRenatta })
+		.where(eq(schema.user.id, USER.renatta));
+
+	// 9. Tax Rates
+	console.log("  -> Tax Rates");
+	await db
+		.insert(schema.taxRate)
+		.values([
+			{
+				id: "af000000-0000-4000-8000-000000000001",
+				organizationId: ORG_ID,
+				name: "Sales Tax",
+				rate: "0.0875",
+				isDefault: true,
+			},
+			{
+				id: "af000000-0000-4000-8000-000000000002",
+				organizationId: ORG_ID,
+				name: "Alcohol Tax",
+				rate: "0.1200",
+				isDefault: false,
+			},
+		])
+		.onConflictDoNothing();
+
+	// 10. Suppliers
+	console.log("  -> Suppliers");
+	await db
+		.insert(schema.supplier)
+		.values([
+			{
+				id: SUPPLIER.freshFoods,
+				organizationId: ORG_ID,
+				name: "Fresh Foods Supply",
+				contactName: "John Smith",
+				email: "john@freshfoods.com",
+				phone: "555-0101",
+			},
+			{
+				id: SUPPLIER.bevDist,
+				organizationId: ORG_ID,
+				name: "Beverage Distributors",
+				contactName: "Jane Doe",
+				email: "jane@bevdist.com",
+				phone: "555-0102",
+			},
+		])
+		.onConflictDoNothing();
+
+	// ═══════════════════════════════════════════════════════════════════════
+	// MOCK TRANSACTIONAL DATA
+	// ═══════════════════════════════════════════════════════════════════════
+	// On re-seed, delete stale transactional data so timestamps refresh to "now".
+	// Static data (org, location, registers, departments, products) uses onConflictDoNothing.
+	console.log("  -> Cleaning stale transactional seed data");
+	const seedOrderIds = Object.values(ORDER);
+	const seedCashIds = Object.values(CASH_SESSION);
+	const seedPOIds = Object.values(PO);
+	// Delete in reverse-dependency order (children before parents)
+	await db.execute(sql`DELETE FROM audit_log WHERE id::text LIKE 'ff000000%'`);
+	await db.execute(
+		sql`DELETE FROM production_log WHERE id::text LIKE 'fe000000%'`,
+	);
+	await db.execute(
+		sql`DELETE FROM kitchen_order_item WHERE id::text LIKE 'f5100000%'`,
+	);
+	await db.execute(
+		sql`DELETE FROM kitchen_order_ticket WHERE id::text LIKE 'f5000000%'`,
+	);
+	await db.execute(
+		sql`DELETE FROM cash_payout WHERE id::text LIKE 'f4100000%'`,
+	);
+	await db.execute(sql`DELETE FROM cash_drop WHERE id::text LIKE 'f4000000%'`);
+	await db
+		.delete(schema.cashSession)
+		.where(inArray(schema.cashSession.id, seedCashIds));
+	await db.execute(sql`DELETE FROM payment WHERE id::text LIKE 'f3000000%'`);
+	await db.execute(
+		sql`DELETE FROM order_line_item WHERE id::text LIKE 'f2000000%'`,
+	);
+	// Clear table references before deleting orders
+	await db.execute(
+		sql`UPDATE table_layout SET current_order_id = NULL, status = 'available' WHERE current_order_id IS NOT NULL`,
+	);
+	await db.delete(schema.order).where(inArray(schema.order.id, seedOrderIds));
+	await db.execute(
+		sql`DELETE FROM purchase_order_line WHERE id::text LIKE 'fd100000%'`,
+	);
+	await db
+		.delete(schema.purchaseOrder)
+		.where(inArray(schema.purchaseOrder.id, seedPOIds));
+
+	// 11. Table Layouts
+	console.log("  -> Table Layouts");
+	await db
+		.insert(schema.tableLayout)
+		.values([
+			{
+				id: TABLE.t1,
+				locationId: LOC_ID,
+				name: "Table 1",
+				section: "Indoor",
+				seats: 4,
+				positionX: 100,
+				positionY: 100,
+				shape: "square",
+				status: "available",
+			},
+			{
+				id: TABLE.t2,
+				locationId: LOC_ID,
+				name: "Table 2",
+				section: "Indoor",
+				seats: 4,
+				positionX: 250,
+				positionY: 100,
+				shape: "square",
+				status: "available",
+			},
+			{
+				id: TABLE.t3,
+				locationId: LOC_ID,
+				name: "Table 3",
+				section: "Indoor",
+				seats: 6,
+				positionX: 400,
+				positionY: 100,
+				shape: "rectangle",
+				status: "available",
+			},
+			{
+				id: TABLE.t4,
+				locationId: LOC_ID,
+				name: "Table 4",
+				section: "Indoor",
+				seats: 2,
+				positionX: 100,
+				positionY: 250,
+				shape: "round",
+				status: "available",
+			},
+			{
+				id: TABLE.t5,
+				locationId: LOC_ID,
+				name: "Table 5",
+				section: "Indoor",
+				seats: 4,
+				positionX: 250,
+				positionY: 250,
+				shape: "square",
+				status: "reserved",
+			},
+			{
+				id: TABLE.t6,
+				locationId: LOC_ID,
+				name: "Table 6",
+				section: "Indoor",
+				seats: 8,
+				positionX: 400,
+				positionY: 250,
+				shape: "rectangle",
+				status: "available",
+			},
+			{
+				id: TABLE.t7,
+				locationId: LOC_ID,
+				name: "Patio 1",
+				section: "Outdoor",
+				seats: 4,
+				positionX: 100,
+				positionY: 100,
+				shape: "round",
+				status: "available",
+			},
+			{
+				id: TABLE.t8,
+				locationId: LOC_ID,
+				name: "Patio 2",
+				section: "Outdoor",
+				seats: 4,
+				positionX: 250,
+				positionY: 100,
+				shape: "round",
+				status: "available",
+			},
+			{
+				id: TABLE.t9,
+				locationId: LOC_ID,
+				name: "Patio 3",
+				section: "Outdoor",
+				seats: 6,
+				positionX: 400,
+				positionY: 100,
+				shape: "rectangle",
+				status: "available",
+			},
+			{
+				id: TABLE.t10,
+				locationId: LOC_ID,
+				name: "Bar 1",
+				section: "Bar",
+				seats: 2,
+				positionX: 100,
+				positionY: 100,
+				shape: "round",
+				status: "available",
+			},
+			{
+				id: TABLE.t11,
+				locationId: LOC_ID,
+				name: "Bar 2",
+				section: "Bar",
+				seats: 2,
+				positionX: 200,
+				positionY: 100,
+				shape: "round",
+				status: "available",
+			},
+			{
+				id: TABLE.t12,
+				locationId: LOC_ID,
+				name: "Bar 3",
+				section: "Bar",
+				seats: 2,
+				positionX: 300,
+				positionY: 100,
+				shape: "round",
+				status: "available",
+			},
+		])
+		.onConflictDoNothing();
+
+	// 12. Orders (spread across last 7 days)
+	console.log("  -> Orders");
+	await db
+		.insert(schema.order)
+		.values([
+			{
+				id: ORDER.o1,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.cashier,
+				orderNumber: "GT-001",
+				type: "sale",
+				status: "completed",
+				subtotal: "6600",
+				taxTotal: "0",
+				total: "6600",
+				createdAt: daysAgo(6, 10),
+			},
+			{
+				id: ORDER.o2,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.cashier,
+				orderNumber: "GT-002",
+				type: "sale",
+				status: "completed",
+				subtotal: "4700",
+				taxTotal: "0",
+				total: "4700",
+				createdAt: daysAgo(6, 11),
+			},
+			{
+				id: ORDER.o3,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.admin,
+				orderNumber: "GT-003",
+				type: "sale",
+				status: "completed",
+				subtotal: "8800",
+				taxTotal: "0",
+				total: "8800",
+				createdAt: daysAgo(5, 12),
+			},
+			{
+				id: ORDER.o4,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.pastry,
+				userId: USER.cashier,
+				orderNumber: "GT-004",
+				type: "sale",
+				status: "completed",
+				subtotal: "2100",
+				taxTotal: "0",
+				total: "2100",
+				createdAt: daysAgo(5, 13),
+			},
+			{
+				id: ORDER.o5,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.cashier,
+				orderNumber: "GT-005",
+				type: "sale",
+				status: "completed",
+				subtotal: "7400",
+				taxTotal: "0",
+				total: "7400",
+				createdAt: daysAgo(4, 11),
+			},
+			{
+				id: ORDER.o6,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.beverage,
+				userId: USER.cashier,
+				orderNumber: "GT-006",
+				type: "sale",
+				status: "completed",
+				subtotal: "1600",
+				taxTotal: "0",
+				total: "1600",
+				createdAt: daysAgo(4, 14),
+			},
+			{
+				id: ORDER.o7,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.admin,
+				orderNumber: "GT-007",
+				type: "sale",
+				status: "completed",
+				subtotal: "9300",
+				taxTotal: "0",
+				total: "9300",
+				createdAt: daysAgo(3, 10),
+			},
+			{
+				id: ORDER.o8,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.cashier,
+				orderNumber: "GT-008",
+				type: "sale",
+				status: "completed",
+				subtotal: "4400",
+				taxTotal: "0",
+				total: "4400",
+				createdAt: daysAgo(3, 12),
+			},
+			{
+				id: ORDER.o9,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.pastry,
+				userId: USER.cashier,
+				orderNumber: "GT-009",
+				type: "sale",
+				status: "completed",
+				subtotal: "1900",
+				taxTotal: "0",
+				total: "1900",
+				createdAt: daysAgo(3, 15),
+			},
+			{
+				id: ORDER.o10,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.cashier,
+				orderNumber: "GT-010",
+				type: "sale",
+				status: "completed",
+				subtotal: "6800",
+				taxTotal: "0",
+				total: "6800",
+				createdAt: daysAgo(2, 11),
+			},
+			{
+				id: ORDER.o11,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.admin,
+				orderNumber: "GT-011",
+				type: "sale",
+				status: "completed",
+				subtotal: "5000",
+				taxTotal: "0",
+				total: "5000",
+				createdAt: daysAgo(2, 13),
+			},
+			{
+				id: ORDER.o12,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.beverage,
+				userId: USER.cashier,
+				orderNumber: "GT-012",
+				type: "sale",
+				status: "completed",
+				subtotal: "2400",
+				taxTotal: "0",
+				total: "2400",
+				createdAt: daysAgo(2, 14),
+			},
+			{
+				id: ORDER.o13,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.cashier,
+				orderNumber: "GT-013",
+				type: "sale",
+				status: "completed",
+				subtotal: "11000",
+				taxTotal: "0",
+				total: "11000",
+				createdAt: daysAgo(1, 10),
+			},
+			{
+				id: ORDER.o14,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.admin,
+				orderNumber: "GT-014",
+				type: "sale",
+				status: "completed",
+				subtotal: "5000",
+				taxTotal: "0",
+				total: "5000",
+				createdAt: daysAgo(1, 12),
+			},
+			{
+				id: ORDER.o15,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.pastry,
+				userId: USER.cashier,
+				orderNumber: "GT-015",
+				type: "sale",
+				status: "completed",
+				subtotal: "2700",
+				taxTotal: "0",
+				total: "2700",
+				createdAt: daysAgo(1, 14),
+			},
+			{
+				id: ORDER.o16,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.cashier,
+				orderNumber: "GT-016",
+				type: "sale",
+				status: "voided",
+				subtotal: "2200",
+				taxTotal: "0",
+				total: "2200",
+				notes: "Customer changed mind",
+				createdAt: daysAgo(1, 15),
+			},
+			{
+				id: ORDER.o17,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.cashier,
+				orderNumber: "GT-017",
+				type: "dine_in",
+				status: "open",
+				subtotal: "4400",
+				taxTotal: "0",
+				total: "4400",
+				tableId: TABLE.t1,
+				createdAt: daysAgo(0, 11),
+			},
+			{
+				id: ORDER.o18,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.admin,
+				orderNumber: "GT-018",
+				type: "dine_in",
+				status: "open",
+				subtotal: "7200",
+				taxTotal: "0",
+				total: "7200",
+				tableId: TABLE.t4,
+				customerName: "Mr. Singh",
+				createdAt: daysAgo(0, 11),
+			},
+			{
+				id: ORDER.o19,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.cashier,
+				orderNumber: "GT-019",
+				type: "sale",
+				status: "completed",
+				subtotal: "6600",
+				taxTotal: "0",
+				total: "6600",
+				createdAt: daysAgo(0, 9),
+			},
+			{
+				id: ORDER.o20,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.beverage,
+				userId: USER.cashier,
+				orderNumber: "GT-020",
+				type: "pickup",
+				status: "open",
+				subtotal: "3100",
+				taxTotal: "0",
+				total: "3100",
+				customerName: "Maria",
+				customerPhone: "592-600-1234",
+				fulfillmentStatus: "preparing",
+				createdAt: daysAgo(0, 11),
+			},
+		])
+		.onConflictDoNothing();
+
+	// Update tables with current order IDs
+	console.log("  -> Table assignments");
+	await db
+		.update(schema.tableLayout)
+		.set({ currentOrderId: ORDER.o17, status: "occupied" })
+		.where(eq(schema.tableLayout.id, TABLE.t1));
+	await db
+		.update(schema.tableLayout)
+		.set({ currentOrderId: ORDER.o18, status: "occupied" })
+		.where(eq(schema.tableLayout.id, TABLE.t4));
+	await db
+		.update(schema.tableLayout)
+		.set({ currentOrderId: ORDER.o20, status: "occupied" })
+		.where(eq(schema.tableLayout.id, TABLE.t8));
+
+	// 13. Order Line Items
+	console.log("  -> Order Line Items");
+	const LI = (n: number) =>
+		`f2000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.orderLineItem)
+		.values([
+			{
+				id: LI(1),
+				orderId: ORDER.o1,
+				productId: PROD.friedRiceBakedChicken,
+				productNameSnapshot: "Fried Rice and Baked Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 2,
+				unitPrice: "2200",
+				total: "4400",
+			},
+			{
+				id: LI(2),
+				orderId: ORDER.o1,
+				productId: PROD.curryChicken,
+				productNameSnapshot: "Curry Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 1,
+				unitPrice: "2200",
+				total: "2200",
+			},
+			{
+				id: LI(3),
+				orderId: ORDER.o2,
+				productId: PROD.cookupBakedSnapper,
+				productNameSnapshot: "Cookup Baked Snapper",
+				reportingCategorySnapshot: "Fish",
+				quantity: 1,
+				unitPrice: "2500",
+				total: "2500",
+			},
+			{
+				id: LI(4),
+				orderId: ORDER.o2,
+				productId: PROD.curryChicken,
+				productNameSnapshot: "Curry Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 1,
+				unitPrice: "2200",
+				total: "2200",
+			},
+			{
+				id: LI(5),
+				orderId: ORDER.o3,
+				productId: PROD.chowmeinBakedChicken,
+				productNameSnapshot: "Chowmein/Baked Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 2,
+				unitPrice: "2200",
+				total: "4400",
+			},
+			{
+				id: LI(6),
+				orderId: ORDER.o3,
+				productId: PROD.curryBeef,
+				productNameSnapshot: "Anyrice / Curry Beef",
+				reportingCategorySnapshot: "Beef",
+				quantity: 1,
+				unitPrice: "2400",
+				total: "2400",
+			},
+			{
+				id: LI(7),
+				orderId: ORDER.o3,
+				productId: PROD.curryChicken,
+				productNameSnapshot: "Curry Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 1,
+				unitPrice: "2000",
+				total: "2000",
+			},
+			{
+				id: LI(8),
+				orderId: ORDER.o4,
+				productId: PROD.spongeCake,
+				productNameSnapshot: "Sponge Cake",
+				reportingCategorySnapshot: "Pastries",
+				quantity: 1,
+				unitPrice: "800",
+				total: "800",
+			},
+			{
+				id: LI(9),
+				orderId: ORDER.o4,
+				productId: PROD.coconutBuns,
+				productNameSnapshot: "Coconut Buns",
+				reportingCategorySnapshot: "Pastries",
+				quantity: 2,
+				unitPrice: "500",
+				total: "1000",
+			},
+			{
+				id: LI(10),
+				orderId: ORDER.o4,
+				productId: PROD.drink12oz,
+				productNameSnapshot: "12oz Drink",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 1,
+				unitPrice: "300",
+				total: "300",
+			},
+			{
+				id: LI(11),
+				orderId: ORDER.o5,
+				productId: PROD.cookupBakedSnapper,
+				productNameSnapshot: "Cookup Baked Snapper",
+				reportingCategorySnapshot: "Fish",
+				quantity: 2,
+				unitPrice: "2500",
+				total: "5000",
+			},
+			{
+				id: LI(12),
+				orderId: ORDER.o5,
+				productId: PROD.curryBeef,
+				productNameSnapshot: "Anyrice / Curry Beef",
+				reportingCategorySnapshot: "Beef",
+				quantity: 1,
+				unitPrice: "2400",
+				total: "2400",
+			},
+			{
+				id: LI(13),
+				orderId: ORDER.o6,
+				productId: PROD.coke,
+				productNameSnapshot: "Coke",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 2,
+				unitPrice: "300",
+				total: "600",
+			},
+			{
+				id: LI(14),
+				orderId: ORDER.o6,
+				productId: PROD.tamarindJuice,
+				productNameSnapshot: "Tamarind Juice",
+				reportingCategorySnapshot: "Local Juice",
+				quantity: 2,
+				unitPrice: "500",
+				total: "1000",
+			},
+			{
+				id: LI(15),
+				orderId: ORDER.o7,
+				productId: PROD.friedRiceBakedChicken,
+				productNameSnapshot: "Fried Rice and Baked Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 3,
+				unitPrice: "2200",
+				total: "6600",
+			},
+			{
+				id: LI(16),
+				orderId: ORDER.o7,
+				productId: PROD.vegChowmein,
+				productNameSnapshot: "Veg. Chowmein",
+				reportingCategorySnapshot: "Veggie",
+				quantity: 1,
+				unitPrice: "1500",
+				total: "1500",
+			},
+			{
+				id: LI(17),
+				orderId: ORDER.o7,
+				productId: PROD.water,
+				productNameSnapshot: "Water",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 4,
+				unitPrice: "200",
+				total: "800",
+			},
+			{
+				id: LI(18),
+				orderId: ORDER.o7,
+				productId: PROD.cupDhal,
+				productNameSnapshot: "Cup Dhal",
+				reportingCategorySnapshot: "Snacks",
+				quantity: 1,
+				unitPrice: "400",
+				total: "400",
+			},
+			{
+				id: LI(19),
+				orderId: ORDER.o8,
+				productId: PROD.caribbeanRiceBChicken,
+				productNameSnapshot: "Caribbean Rice B/Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 2,
+				unitPrice: "2200",
+				total: "4400",
+			},
+			{
+				id: LI(20),
+				orderId: ORDER.o9,
+				productId: PROD.bakedCustard,
+				productNameSnapshot: "Baked Custard",
+				reportingCategorySnapshot: "Pastries",
+				quantity: 2,
+				unitPrice: "600",
+				total: "1200",
+			},
+			{
+				id: LI(21),
+				orderId: ORDER.o9,
+				productId: PROD.coconutBuns,
+				productNameSnapshot: "Coconut Buns",
+				reportingCategorySnapshot: "Pastries",
+				quantity: 1,
+				unitPrice: "500",
+				total: "500",
+			},
+			{
+				id: LI(22),
+				orderId: ORDER.o9,
+				productId: PROD.water,
+				productNameSnapshot: "Water",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 1,
+				unitPrice: "200",
+				total: "200",
+			},
+			{
+				id: LI(23),
+				orderId: ORDER.o10,
+				productId: PROD.cookUpBBQ,
+				productNameSnapshot: "Cook Up BBQ",
+				reportingCategorySnapshot: "Meat Cookup",
+				quantity: 2,
+				unitPrice: "2000",
+				total: "4000",
+			},
+			{
+				id: LI(24),
+				orderId: ORDER.o10,
+				productId: PROD.currySnapper,
+				productNameSnapshot: "Curry Snapper",
+				reportingCategorySnapshot: "Fish",
+				quantity: 1,
+				unitPrice: "2500",
+				total: "2500",
+			},
+			{
+				id: LI(25),
+				orderId: ORDER.o10,
+				productId: PROD.drink12oz,
+				productNameSnapshot: "12oz Drink",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 1,
+				unitPrice: "300",
+				total: "300",
+			},
+			{
+				id: LI(26),
+				orderId: ORDER.o11,
+				productId: PROD.cookupBakedSnapper,
+				productNameSnapshot: "Cookup Baked Snapper",
+				reportingCategorySnapshot: "Fish",
+				quantity: 2,
+				unitPrice: "2500",
+				total: "5000",
+			},
+			{
+				id: LI(27),
+				orderId: ORDER.o12,
+				productId: PROD.drink1Lt,
+				productNameSnapshot: "1 Lt Drink",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 2,
+				unitPrice: "600",
+				total: "1200",
+			},
+			{
+				id: LI(28),
+				orderId: ORDER.o12,
+				productId: PROD.xlEnergy,
+				productNameSnapshot: "XL Energy",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 2,
+				unitPrice: "500",
+				total: "1000",
+			},
+			{
+				id: LI(29),
+				orderId: ORDER.o12,
+				productId: PROD.water,
+				productNameSnapshot: "Water",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 1,
+				unitPrice: "200",
+				total: "200",
+			},
+			{
+				id: LI(30),
+				orderId: ORDER.o13,
+				productId: PROD.friedRiceBakedChicken,
+				productNameSnapshot: "Fried Rice and Baked Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 5,
+				unitPrice: "2200",
+				total: "11000",
+			},
+			{
+				id: LI(31),
+				orderId: ORDER.o14,
+				productId: PROD.vegMealDholl,
+				productNameSnapshot: "Veg. Meal/Dholl",
+				reportingCategorySnapshot: "Veggie",
+				quantity: 2,
+				unitPrice: "1500",
+				total: "3000",
+			},
+			{
+				id: LI(32),
+				orderId: ORDER.o14,
+				productId: PROD.cookUpFc,
+				productNameSnapshot: "Cook-up Fc",
+				reportingCategorySnapshot: "Meat Cookup",
+				quantity: 1,
+				unitPrice: "2000",
+				total: "2000",
+			},
+			{
+				id: LI(33),
+				orderId: ORDER.o15,
+				productId: PROD.spongeCake,
+				productNameSnapshot: "Sponge Cake",
+				reportingCategorySnapshot: "Pastries",
+				quantity: 2,
+				unitPrice: "800",
+				total: "1600",
+			},
+			{
+				id: LI(34),
+				orderId: ORDER.o15,
+				productId: PROD.bakedCustard,
+				productNameSnapshot: "Baked Custard",
+				reportingCategorySnapshot: "Pastries",
+				quantity: 1,
+				unitPrice: "600",
+				total: "600",
+			},
+			{
+				id: LI(35),
+				orderId: ORDER.o15,
+				productId: PROD.coke,
+				productNameSnapshot: "Coke",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 1,
+				unitPrice: "300",
+				total: "300",
+			},
+			{
+				id: LI(36),
+				orderId: ORDER.o15,
+				productId: PROD.water,
+				productNameSnapshot: "Water",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 1,
+				unitPrice: "200",
+				total: "200",
+			},
+			{
+				id: LI(37),
+				orderId: ORDER.o16,
+				productId: PROD.friedRiceBakedChicken,
+				productNameSnapshot: "Fried Rice and Baked Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 1,
+				unitPrice: "2200",
+				total: "2200",
+				voided: true,
+				voidReason: "Customer changed mind",
+			},
+			{
+				id: LI(38),
+				orderId: ORDER.o17,
+				productId: PROD.friedRiceBakedChicken,
+				productNameSnapshot: "Fried Rice and Baked Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 1,
+				unitPrice: "2200",
+				total: "2200",
+			},
+			{
+				id: LI(39),
+				orderId: ORDER.o17,
+				productId: PROD.chowmeinFryChicken,
+				productNameSnapshot: "Chowmein/Fry Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 1,
+				unitPrice: "2200",
+				total: "2200",
+			},
+			{
+				id: LI(40),
+				orderId: ORDER.o18,
+				productId: PROD.cookupFrySnapper,
+				productNameSnapshot: "Cookup Fry Snapper",
+				reportingCategorySnapshot: "Fish",
+				quantity: 2,
+				unitPrice: "2500",
+				total: "5000",
+			},
+			{
+				id: LI(41),
+				orderId: ORDER.o18,
+				productId: PROD.curryChicken,
+				productNameSnapshot: "Curry Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 1,
+				unitPrice: "2200",
+				total: "2200",
+			},
+			{
+				id: LI(42),
+				orderId: ORDER.o19,
+				productId: PROD.raisinRicePineapple,
+				productNameSnapshot: "Raisin Rice with Pineapple Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 3,
+				unitPrice: "2200",
+				total: "6600",
+			},
+			{
+				id: LI(43),
+				orderId: ORDER.o20,
+				productId: PROD.drink1Lt,
+				productNameSnapshot: "1 Lt Drink",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 3,
+				unitPrice: "600",
+				total: "1800",
+			},
+			{
+				id: LI(44),
+				orderId: ORDER.o20,
+				productId: PROD.tamarindJuice,
+				productNameSnapshot: "Tamarind Juice",
+				reportingCategorySnapshot: "Local Juice",
+				quantity: 2,
+				unitPrice: "500",
+				total: "1000",
+			},
+			{
+				id: LI(45),
+				orderId: ORDER.o20,
+				productId: PROD.coke,
+				productNameSnapshot: "Coke",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 1,
+				unitPrice: "300",
+				total: "300",
+			},
+		])
+		.onConflictDoNothing();
+
+	// 14. Payments
+	console.log("  -> Payments");
+	const PM = (n: number) =>
+		`f3000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.payment)
+		.values([
+			{
+				id: PM(1),
+				orderId: ORDER.o1,
+				method: "cash",
+				amount: "6600",
+				tendered: "7000",
+				changeGiven: "400",
+				status: "completed",
+				createdAt: daysAgo(6, 10),
+			},
+			{
+				id: PM(2),
+				orderId: ORDER.o2,
+				method: "cash",
+				amount: "4700",
+				tendered: "5000",
+				changeGiven: "300",
+				status: "completed",
+				createdAt: daysAgo(6, 11),
+			},
+			{
+				id: PM(3),
+				orderId: ORDER.o3,
+				method: "card",
+				amount: "8800",
+				reference: "TXN-001",
+				status: "completed",
+				createdAt: daysAgo(5, 12),
+			},
+			{
+				id: PM(4),
+				orderId: ORDER.o4,
+				method: "cash",
+				amount: "2100",
+				tendered: "2500",
+				changeGiven: "400",
+				status: "completed",
+				createdAt: daysAgo(5, 13),
+			},
+			{
+				id: PM(5),
+				orderId: ORDER.o5,
+				method: "cash",
+				amount: "7400",
+				tendered: "8000",
+				changeGiven: "600",
+				status: "completed",
+				createdAt: daysAgo(4, 11),
+			},
+			{
+				id: PM(6),
+				orderId: ORDER.o6,
+				method: "cash",
+				amount: "1600",
+				tendered: "2000",
+				changeGiven: "400",
+				status: "completed",
+				createdAt: daysAgo(4, 14),
+			},
+			{
+				id: PM(7),
+				orderId: ORDER.o7,
+				method: "card",
+				amount: "9300",
+				reference: "TXN-002",
+				status: "completed",
+				createdAt: daysAgo(3, 10),
+			},
+			{
+				id: PM(8),
+				orderId: ORDER.o8,
+				method: "cash",
+				amount: "4400",
+				tendered: "5000",
+				changeGiven: "600",
+				status: "completed",
+				createdAt: daysAgo(3, 12),
+			},
+			{
+				id: PM(9),
+				orderId: ORDER.o9,
+				method: "cash",
+				amount: "1900",
+				tendered: "2000",
+				changeGiven: "100",
+				status: "completed",
+				createdAt: daysAgo(3, 15),
+			},
+			{
+				id: PM(10),
+				orderId: ORDER.o10,
+				method: "cash",
+				amount: "6800",
+				tendered: "7000",
+				changeGiven: "200",
+				status: "completed",
+				createdAt: daysAgo(2, 11),
+			},
+			{
+				id: PM(11),
+				orderId: ORDER.o11,
+				method: "card",
+				amount: "5000",
+				reference: "TXN-003",
+				status: "completed",
+				createdAt: daysAgo(2, 13),
+			},
+			{
+				id: PM(12),
+				orderId: ORDER.o12,
+				method: "cash",
+				amount: "2400",
+				tendered: "2500",
+				changeGiven: "100",
+				status: "completed",
+				createdAt: daysAgo(2, 14),
+			},
+			{
+				id: PM(13),
+				orderId: ORDER.o13,
+				method: "cash",
+				amount: "11000",
+				tendered: "11000",
+				changeGiven: "0",
+				status: "completed",
+				createdAt: daysAgo(1, 10),
+			},
+			{
+				id: PM(14),
+				orderId: ORDER.o14,
+				method: "card",
+				amount: "5000",
+				reference: "TXN-004",
+				status: "completed",
+				createdAt: daysAgo(1, 12),
+			},
+			{
+				id: PM(15),
+				orderId: ORDER.o15,
+				method: "cash",
+				amount: "2700",
+				tendered: "3000",
+				changeGiven: "300",
+				status: "completed",
+				createdAt: daysAgo(1, 14),
+			},
+			{
+				id: PM(16),
+				orderId: ORDER.o19,
+				method: "cash",
+				amount: "6600",
+				tendered: "7000",
+				changeGiven: "400",
+				status: "completed",
+				createdAt: daysAgo(0, 9),
+			},
+		])
+		.onConflictDoNothing();
+
+	// 15. Cash Sessions
+	console.log("  -> Cash Sessions");
+	await db
+		.insert(schema.cashSession)
+		.values([
+			{
+				id: CASH_SESSION.cs1,
+				registerId: REG.meals,
+				locationId: LOC_ID,
+				openedBy: USER.cashier,
+				openedAt: daysAgo(1, 8),
+				openingFloat: "10000",
+				closedBy: USER.cashier,
+				closedAt: daysAgo(1, 18),
+				closingCount: "35100",
+				expectedCash: "34700",
+				variance: "400",
+				status: "closed",
+				notes: "Busy lunch. Minor overage.",
+			},
+			{
+				id: CASH_SESSION.cs2,
+				registerId: REG.pastry,
+				locationId: LOC_ID,
+				openedBy: USER.cashier,
+				openedAt: daysAgo(1, 9),
+				openingFloat: "5000",
+				closedBy: USER.admin,
+				closedAt: daysAgo(1, 17),
+				closingCount: "7700",
+				expectedCash: "7700",
+				variance: "0",
+				status: "closed",
+			},
+			{
+				id: CASH_SESSION.cs3,
+				registerId: REG.meals,
+				locationId: LOC_ID,
+				openedBy: USER.cashier,
+				openedAt: daysAgo(0, 8),
+				openingFloat: "10000",
+				status: "open",
+			},
+			{
+				id: CASH_SESSION.cs4,
+				registerId: REG.beverage,
+				locationId: LOC_ID,
+				openedBy: USER.cashier,
+				openedAt: daysAgo(0, 9),
+				openingFloat: "5000",
+				status: "open",
+			},
+		])
+		.onConflictDoNothing();
+
+	// Cash drops & payouts
+	console.log("  -> Cash Drops & Payouts");
+	await db
+		.insert(schema.cashDrop)
+		.values([
+			{
+				id: "f4000000-0000-4000-8000-000000000001",
+				cashSessionId: CASH_SESSION.cs1,
+				amount: "15000",
+				userId: USER.cashier,
+				reason: "Mid-day cash drop to safe",
+				createdAt: daysAgo(1, 13),
+			},
+		])
+		.onConflictDoNothing();
+	await db
+		.insert(schema.cashPayout)
+		.values([
+			{
+				id: "f4100000-0000-4000-8000-000000000001",
+				cashSessionId: CASH_SESSION.cs1,
+				amount: "2500",
+				userId: USER.admin,
+				reason: "Petty cash - market supplies",
+				createdAt: daysAgo(1, 14),
+			},
+		])
+		.onConflictDoNothing();
+
+	// 16. Kitchen Order Tickets
+	console.log("  -> Kitchen Tickets");
+	const KOT = {
+		k1: "f5000000-0000-4000-8000-000000000001",
+		k2: "f5000000-0000-4000-8000-000000000002",
+		k3: "f5000000-0000-4000-8000-000000000003",
+		k4: "f5000000-0000-4000-8000-000000000004",
+		k5: "f5000000-0000-4000-8000-000000000005",
+	};
+	await db
+		.insert(schema.kitchenOrderTicket)
+		.values([
+			{
+				id: KOT.k1,
+				orderId: ORDER.o19,
+				locationId: LOC_ID,
+				status: "completed",
+				createdAt: daysAgo(0, 9),
+			},
+			{
+				id: KOT.k2,
+				orderId: ORDER.o17,
+				locationId: LOC_ID,
+				status: "in_progress",
+				createdAt: daysAgo(0, 11),
+			},
+			{
+				id: KOT.k3,
+				orderId: ORDER.o18,
+				locationId: LOC_ID,
+				status: "pending",
+				createdAt: daysAgo(0, 11),
+			},
+			{
+				id: KOT.k4,
+				orderId: ORDER.o13,
+				locationId: LOC_ID,
+				status: "completed",
+				createdAt: daysAgo(1, 10),
+			},
+			{
+				id: KOT.k5,
+				orderId: ORDER.o14,
+				locationId: LOC_ID,
+				status: "completed",
+				createdAt: daysAgo(1, 12),
+			},
+		])
+		.onConflictDoNothing();
+
+	const KI = (n: number) =>
+		`f5100000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.kitchenOrderItem)
+		.values([
+			{
+				id: KI(1),
+				ticketId: KOT.k1,
+				orderLineItemId: LI(42),
+				productName: "Raisin Rice with Pineapple Chicken",
+				quantity: 3,
+				status: "completed",
+			},
+			{
+				id: KI(2),
+				ticketId: KOT.k2,
+				orderLineItemId: LI(38),
+				productName: "Fried Rice and Baked Chicken",
+				quantity: 1,
+				status: "in_progress",
+			},
+			{
+				id: KI(3),
+				ticketId: KOT.k2,
+				orderLineItemId: LI(39),
+				productName: "Chowmein/Fry Chicken",
+				quantity: 1,
+				status: "pending",
+			},
+			{
+				id: KI(4),
+				ticketId: KOT.k3,
+				orderLineItemId: LI(40),
+				productName: "Cookup Fry Snapper",
+				quantity: 2,
+				status: "pending",
+			},
+			{
+				id: KI(5),
+				ticketId: KOT.k3,
+				orderLineItemId: LI(41),
+				productName: "Curry Chicken",
+				quantity: 1,
+				status: "pending",
+			},
+			{
+				id: KI(6),
+				ticketId: KOT.k4,
+				orderLineItemId: LI(30),
+				productName: "Fried Rice and Baked Chicken",
+				quantity: 5,
+				status: "completed",
+			},
+			{
+				id: KI(7),
+				ticketId: KOT.k5,
+				orderLineItemId: LI(31),
+				productName: "Veg. Meal/Dholl",
+				quantity: 2,
+				status: "completed",
+			},
+			{
+				id: KI(8),
+				ticketId: KOT.k5,
+				orderLineItemId: LI(32),
+				productName: "Cook-up Fc",
+				quantity: 1,
+				status: "completed",
+			},
+		])
+		.onConflictDoNothing();
+
+	// 17. Inventory
+	console.log("  -> Inventory Items & Stock");
+	await db
+		.insert(schema.inventoryItem)
+		.values([
+			{
+				id: INV_ITEM.chicken,
+				organizationId: ORG_ID,
+				sku: "INV-001",
+				name: "Whole Chicken",
+				category: "Protein",
+				unitOfMeasure: "lb",
+				preferredSupplierId: SUPPLIER.freshFoods,
+				reorderPoint: "50",
+				minLevel: "20",
+				maxLevel: "200",
+				avgCost: "450.0000",
+			},
+			{
+				id: INV_ITEM.rice,
+				organizationId: ORG_ID,
+				sku: "INV-002",
+				name: "White Rice",
+				category: "Grains",
+				unitOfMeasure: "lb",
+				preferredSupplierId: SUPPLIER.freshFoods,
+				reorderPoint: "100",
+				minLevel: "40",
+				maxLevel: "500",
+				avgCost: "120.0000",
+			},
+			{
+				id: INV_ITEM.flour,
+				organizationId: ORG_ID,
+				sku: "INV-003",
+				name: "All-Purpose Flour",
+				category: "Baking",
+				unitOfMeasure: "lb",
+				preferredSupplierId: SUPPLIER.freshFoods,
+				reorderPoint: "30",
+				minLevel: "10",
+				maxLevel: "100",
+				avgCost: "80.0000",
+			},
+			{
+				id: INV_ITEM.oil,
+				organizationId: ORG_ID,
+				sku: "INV-004",
+				name: "Vegetable Oil",
+				category: "Cooking",
+				unitOfMeasure: "gal",
+				preferredSupplierId: SUPPLIER.freshFoods,
+				reorderPoint: "10",
+				minLevel: "5",
+				maxLevel: "50",
+				avgCost: "1200.0000",
+			},
+			{
+				id: INV_ITEM.sugar,
+				organizationId: ORG_ID,
+				sku: "INV-005",
+				name: "Brown Sugar",
+				category: "Baking",
+				unitOfMeasure: "lb",
+				preferredSupplierId: SUPPLIER.freshFoods,
+				reorderPoint: "20",
+				minLevel: "10",
+				maxLevel: "80",
+				avgCost: "150.0000",
+			},
+			{
+				id: INV_ITEM.snapper,
+				organizationId: ORG_ID,
+				sku: "INV-006",
+				name: "Red Snapper",
+				category: "Protein",
+				unitOfMeasure: "lb",
+				preferredSupplierId: SUPPLIER.freshFoods,
+				reorderPoint: "30",
+				minLevel: "10",
+				maxLevel: "100",
+				avgCost: "800.0000",
+			},
+			{
+				id: INV_ITEM.beef,
+				organizationId: ORG_ID,
+				sku: "INV-007",
+				name: "Stewing Beef",
+				category: "Protein",
+				unitOfMeasure: "lb",
+				preferredSupplierId: SUPPLIER.freshFoods,
+				reorderPoint: "20",
+				minLevel: "10",
+				maxLevel: "80",
+				avgCost: "700.0000",
+			},
+			{
+				id: INV_ITEM.coconut,
+				organizationId: ORG_ID,
+				sku: "INV-008",
+				name: "Coconut (dry)",
+				category: "Baking",
+				unitOfMeasure: "each",
+				preferredSupplierId: SUPPLIER.freshFoods,
+				reorderPoint: "20",
+				minLevel: "10",
+				maxLevel: "60",
+				avgCost: "200.0000",
+			},
+			{
+				id: INV_ITEM.onions,
+				organizationId: ORG_ID,
+				sku: "INV-009",
+				name: "Yellow Onions",
+				category: "Produce",
+				unitOfMeasure: "lb",
+				preferredSupplierId: SUPPLIER.freshFoods,
+				reorderPoint: "25",
+				minLevel: "10",
+				maxLevel: "80",
+				avgCost: "180.0000",
+			},
+			{
+				id: INV_ITEM.garlic,
+				organizationId: ORG_ID,
+				sku: "INV-010",
+				name: "Garlic",
+				category: "Produce",
+				unitOfMeasure: "lb",
+				preferredSupplierId: SUPPLIER.freshFoods,
+				reorderPoint: "5",
+				minLevel: "2",
+				maxLevel: "20",
+				avgCost: "400.0000",
+			},
+			{
+				id: INV_ITEM.peppers,
+				organizationId: ORG_ID,
+				sku: "INV-011",
+				name: "Hot Peppers (Wiri Wiri)",
+				category: "Produce",
+				unitOfMeasure: "lb",
+				preferredSupplierId: SUPPLIER.freshFoods,
+				reorderPoint: "3",
+				minLevel: "1",
+				maxLevel: "15",
+				avgCost: "600.0000",
+			},
+			{
+				id: INV_ITEM.noodles,
+				organizationId: ORG_ID,
+				sku: "INV-012",
+				name: "Chowmein Noodles",
+				category: "Grains",
+				unitOfMeasure: "lb",
+				preferredSupplierId: SUPPLIER.freshFoods,
+				reorderPoint: "30",
+				minLevel: "10",
+				maxLevel: "100",
+				avgCost: "200.0000",
+			},
+			{
+				id: INV_ITEM.tamarind,
+				organizationId: ORG_ID,
+				sku: "INV-013",
+				name: "Tamarind Pulp",
+				category: "Produce",
+				unitOfMeasure: "lb",
+				preferredSupplierId: SUPPLIER.freshFoods,
+				reorderPoint: "5",
+				minLevel: "2",
+				maxLevel: "20",
+				avgCost: "350.0000",
+			},
+			{
+				id: INV_ITEM.softDrinks,
+				organizationId: ORG_ID,
+				sku: "INV-014",
+				name: "Soft Drinks (assorted)",
+				category: "Beverages",
+				unitOfMeasure: "case",
+				preferredSupplierId: SUPPLIER.bevDist,
+				reorderPoint: "10",
+				minLevel: "5",
+				maxLevel: "40",
+				avgCost: "4800.0000",
+			},
+			{
+				id: INV_ITEM.water,
+				organizationId: ORG_ID,
+				sku: "INV-015",
+				name: "Bottled Water (case)",
+				category: "Beverages",
+				unitOfMeasure: "case",
+				preferredSupplierId: SUPPLIER.bevDist,
+				reorderPoint: "10",
+				minLevel: "5",
+				maxLevel: "30",
+				avgCost: "3600.0000",
+			},
+		])
+		.onConflictDoNothing();
+
+	const IS = (n: number) =>
+		`fc100000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.inventoryStock)
+		.values([
+			{
+				id: IS(1),
+				inventoryItemId: INV_ITEM.chicken,
+				locationId: LOC_ID,
+				quantityOnHand: "85",
+			},
+			{
+				id: IS(2),
+				inventoryItemId: INV_ITEM.rice,
+				locationId: LOC_ID,
+				quantityOnHand: "220",
+			},
+			{
+				id: IS(3),
+				inventoryItemId: INV_ITEM.flour,
+				locationId: LOC_ID,
+				quantityOnHand: "45",
+			},
+			{
+				id: IS(4),
+				inventoryItemId: INV_ITEM.oil,
+				locationId: LOC_ID,
+				quantityOnHand: "18",
+			},
+			{
+				id: IS(5),
+				inventoryItemId: INV_ITEM.sugar,
+				locationId: LOC_ID,
+				quantityOnHand: "35",
+			},
+			{
+				id: IS(6),
+				inventoryItemId: INV_ITEM.snapper,
+				locationId: LOC_ID,
+				quantityOnHand: "28",
+			},
+			{
+				id: IS(7),
+				inventoryItemId: INV_ITEM.beef,
+				locationId: LOC_ID,
+				quantityOnHand: "15",
+			},
+			{
+				id: IS(8),
+				inventoryItemId: INV_ITEM.coconut,
+				locationId: LOC_ID,
+				quantityOnHand: "22",
+			},
+			{
+				id: IS(9),
+				inventoryItemId: INV_ITEM.onions,
+				locationId: LOC_ID,
+				quantityOnHand: "40",
+			},
+			{
+				id: IS(10),
+				inventoryItemId: INV_ITEM.garlic,
+				locationId: LOC_ID,
+				quantityOnHand: "8",
+			},
+			{
+				id: IS(11),
+				inventoryItemId: INV_ITEM.peppers,
+				locationId: LOC_ID,
+				quantityOnHand: "4",
+			},
+			{
+				id: IS(12),
+				inventoryItemId: INV_ITEM.noodles,
+				locationId: LOC_ID,
+				quantityOnHand: "55",
+			},
+			{
+				id: IS(13),
+				inventoryItemId: INV_ITEM.tamarind,
+				locationId: LOC_ID,
+				quantityOnHand: "6",
+			},
+			{
+				id: IS(14),
+				inventoryItemId: INV_ITEM.softDrinks,
+				locationId: LOC_ID,
+				quantityOnHand: "12",
+			},
+			{
+				id: IS(15),
+				inventoryItemId: INV_ITEM.water,
+				locationId: LOC_ID,
+				quantityOnHand: "8",
+			},
+		])
+		.onConflictDoNothing();
+
+	// 18. Purchase Orders
+	console.log("  -> Purchase Orders");
+	await db
+		.insert(schema.purchaseOrder)
+		.values([
+			{
+				id: PO.po1,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				supplierId: SUPPLIER.freshFoods,
+				status: "received",
+				createdBy: USER.admin,
+				approvedBy: USER.admin,
+				notes: "Weekly protein and produce delivery",
+				total: "104000",
+				createdAt: daysAgo(5, 9),
+			},
+			{
+				id: PO.po2,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				supplierId: SUPPLIER.bevDist,
+				status: "approved",
+				createdBy: USER.admin,
+				approvedBy: USER.admin,
+				notes: "Beverage restocking order",
+				total: "84000",
+				createdAt: daysAgo(1, 10),
+			},
+			{
+				id: PO.po3,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				supplierId: SUPPLIER.freshFoods,
+				status: "draft",
+				createdBy: USER.admin,
+				notes: "Next week order - pending review",
+				total: "69000",
+				createdAt: daysAgo(0, 10),
+			},
+		])
+		.onConflictDoNothing();
+
+	const PL = (n: number) =>
+		`fd100000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.purchaseOrderLine)
+		.values([
+			{
+				id: PL(1),
+				purchaseOrderId: PO.po1,
+				inventoryItemId: INV_ITEM.chicken,
+				quantityOrdered: "100",
+				quantityReceived: "100",
+				unitCost: "450.0000",
+				total: "45000",
+			},
+			{
+				id: PL(2),
+				purchaseOrderId: PO.po1,
+				inventoryItemId: INV_ITEM.snapper,
+				quantityOrdered: "40",
+				quantityReceived: "40",
+				unitCost: "800.0000",
+				total: "32000",
+			},
+			{
+				id: PL(3),
+				purchaseOrderId: PO.po1,
+				inventoryItemId: INV_ITEM.onions,
+				quantityOrdered: "30",
+				quantityReceived: "30",
+				unitCost: "180.0000",
+				total: "5400",
+			},
+			{
+				id: PL(4),
+				purchaseOrderId: PO.po1,
+				inventoryItemId: INV_ITEM.garlic,
+				quantityOrdered: "10",
+				quantityReceived: "10",
+				unitCost: "400.0000",
+				total: "4000",
+			},
+			{
+				id: PL(5),
+				purchaseOrderId: PO.po1,
+				inventoryItemId: INV_ITEM.peppers,
+				quantityOrdered: "6",
+				quantityReceived: "6",
+				unitCost: "600.0000",
+				total: "3600",
+			},
+			{
+				id: PL(6),
+				purchaseOrderId: PO.po1,
+				inventoryItemId: INV_ITEM.beef,
+				quantityOrdered: "20",
+				quantityReceived: "20",
+				unitCost: "700.0000",
+				total: "14000",
+			},
+			{
+				id: PL(7),
+				purchaseOrderId: PO.po2,
+				inventoryItemId: INV_ITEM.softDrinks,
+				quantityOrdered: "10",
+				quantityReceived: "0",
+				unitCost: "4800.0000",
+				total: "48000",
+			},
+			{
+				id: PL(8),
+				purchaseOrderId: PO.po2,
+				inventoryItemId: INV_ITEM.water,
+				quantityOrdered: "10",
+				quantityReceived: "0",
+				unitCost: "3600.0000",
+				total: "36000",
+			},
+			{
+				id: PL(9),
+				purchaseOrderId: PO.po3,
+				inventoryItemId: INV_ITEM.chicken,
+				quantityOrdered: "80",
+				quantityReceived: "0",
+				unitCost: "450.0000",
+				total: "36000",
+			},
+			{
+				id: PL(10),
+				purchaseOrderId: PO.po3,
+				inventoryItemId: INV_ITEM.rice,
+				quantityOrdered: "150",
+				quantityReceived: "0",
+				unitCost: "120.0000",
+				total: "18000",
+			},
+			{
+				id: PL(11),
+				purchaseOrderId: PO.po3,
+				inventoryItemId: INV_ITEM.noodles,
+				quantityOrdered: "50",
+				quantityReceived: "0",
+				unitCost: "200.0000",
+				total: "10000",
+			},
+			{
+				id: PL(12),
+				purchaseOrderId: PO.po3,
+				inventoryItemId: INV_ITEM.flour,
+				quantityOrdered: "25",
+				quantityReceived: "0",
+				unitCost: "80.0000",
+				total: "2000",
+			},
+			{
+				id: PL(13),
+				purchaseOrderId: PO.po3,
+				inventoryItemId: INV_ITEM.coconut,
+				quantityOrdered: "15",
+				quantityReceived: "0",
+				unitCost: "200.0000",
+				total: "3000",
+			},
+		])
+		.onConflictDoNothing();
+
+	// 19. Production Logs
+	console.log("  -> Production Logs");
+	const today = new Date().toISOString().split("T")[0]!;
+	const yesterday = new Date(Date.now() - 86400000)
+		.toISOString()
+		.split("T")[0]!;
+	const twoDaysAgo = new Date(Date.now() - 2 * 86400000)
+		.toISOString()
+		.split("T")[0]!;
+	const PD = (n: number) =>
+		`fe000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.productionLog)
+		.values([
+			{
+				id: PD(1),
+				productId: PROD.friedRiceBakedChicken,
+				productName: "Fried Rice and Baked Chicken",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "production",
+				quantity: 30,
+				notes: "Morning batch",
+				logDate: today,
+			},
+			{
+				id: PD(2),
+				productId: PROD.curryChicken,
+				productName: "Curry Chicken",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "production",
+				quantity: 20,
+				notes: "Morning batch",
+				logDate: today,
+			},
+			{
+				id: PD(3),
+				productId: PROD.chowmeinBakedChicken,
+				productName: "Chowmein/Baked Chicken",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "production",
+				quantity: 15,
+				logDate: today,
+			},
+			{
+				id: PD(4),
+				productId: PROD.cookupBakedSnapper,
+				productName: "Cookup Baked Snapper",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "production",
+				quantity: 12,
+				logDate: today,
+			},
+			{
+				id: PD(5),
+				productId: PROD.spongeCake,
+				productName: "Sponge Cake",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "production",
+				quantity: 10,
+				notes: "Bakery morning run",
+				logDate: today,
+			},
+			{
+				id: PD(6),
+				productId: PROD.coconutBuns,
+				productName: "Coconut Buns",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "production",
+				quantity: 24,
+				notes: "Bakery morning run",
+				logDate: today,
+			},
+			{
+				id: PD(7),
+				productId: PROD.friedRiceBakedChicken,
+				productName: "Fried Rice and Baked Chicken",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "waste",
+				quantity: 2,
+				notes: "End of day unsold",
+				logDate: yesterday,
+			},
+			{
+				id: PD(8),
+				productId: PROD.vegRice,
+				productName: "Veg. Rice",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "waste",
+				quantity: 3,
+				notes: "Overproduced",
+				logDate: yesterday,
+			},
+			{
+				id: PD(9),
+				productId: PROD.friedRiceBakedChicken,
+				productName: "Fried Rice and Baked Chicken",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "production",
+				quantity: 35,
+				logDate: yesterday,
+			},
+			{
+				id: PD(10),
+				productId: PROD.curryChicken,
+				productName: "Curry Chicken",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "production",
+				quantity: 25,
+				logDate: yesterday,
+			},
+			{
+				id: PD(11),
+				productId: PROD.cookupBakedSnapper,
+				productName: "Cookup Baked Snapper",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "production",
+				quantity: 10,
+				logDate: yesterday,
+			},
+			{
+				id: PD(12),
+				productId: PROD.curryBeef,
+				productName: "Anyrice / Curry Beef",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "production",
+				quantity: 8,
+				logDate: yesterday,
+			},
+			{
+				id: PD(13),
+				productId: PROD.friedRiceBakedChicken,
+				productName: "Fried Rice and Baked Chicken",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "production",
+				quantity: 28,
+				logDate: twoDaysAgo,
+			},
+			{
+				id: PD(14),
+				productId: PROD.curryChicken,
+				productName: "Curry Chicken",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "production",
+				quantity: 22,
+				logDate: twoDaysAgo,
+			},
+		])
+		.onConflictDoNothing();
+
+	// 20. Audit Logs
+	console.log("  -> Audit Logs");
+	const AL = (n: number) =>
+		`ff000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.auditLog)
+		.values([
+			{
+				id: AL(1),
+				userId: USER.admin,
+				userNameSnapshot: "Admin",
+				roleSnapshot: "Executive",
+				locationId: LOC_ID,
+				entityType: "order",
+				entityId: ORDER.o16,
+				actionType: "void",
+				afterData: { reason: "Customer changed mind" },
+				createdAt: daysAgo(1, 15),
+			},
+			{
+				id: AL(2),
+				userId: USER.admin,
+				userNameSnapshot: "Admin",
+				roleSnapshot: "Executive",
+				locationId: LOC_ID,
+				entityType: "product",
+				entityId: PROD.friedRiceBakedChicken,
+				actionType: "price_update",
+				beforeData: { price: "2000" },
+				afterData: { price: "2200" },
+				reason: "Annual price adjustment",
+				createdAt: daysAgo(5, 9),
+			},
+			{
+				id: AL(3),
+				userId: USER.admin,
+				userNameSnapshot: "Admin",
+				roleSnapshot: "Executive",
+				locationId: LOC_ID,
+				entityType: "cash_session",
+				entityId: CASH_SESSION.cs1,
+				actionType: "close",
+				afterData: {
+					closingCount: "35100",
+					expectedCash: "34700",
+					variance: "400",
+				},
+				createdAt: daysAgo(1, 18),
+			},
+			{
+				id: AL(4),
+				userId: USER.cashier,
+				userNameSnapshot: "Cashier Demo",
+				roleSnapshot: "Cashier",
+				locationId: LOC_ID,
+				entityType: "cash_session",
+				entityId: CASH_SESSION.cs3,
+				actionType: "open",
+				afterData: { openingFloat: "10000" },
+				createdAt: daysAgo(0, 8),
+			},
+			{
+				id: AL(5),
+				userId: USER.admin,
+				userNameSnapshot: "Admin",
+				roleSnapshot: "Executive",
+				locationId: LOC_ID,
+				entityType: "purchase_order",
+				entityId: PO.po1,
+				actionType: "approve",
+				afterData: { total: "104000", supplier: "Fresh Foods Supply" },
+				createdAt: daysAgo(5, 10),
+			},
+			{
+				id: AL(6),
+				userId: USER.admin,
+				userNameSnapshot: "Admin",
+				roleSnapshot: "Executive",
+				locationId: LOC_ID,
+				entityType: "purchase_order",
+				entityId: PO.po2,
+				actionType: "approve",
+				afterData: { total: "84000", supplier: "Beverage Distributors" },
+				createdAt: daysAgo(1, 11),
+			},
+			{
+				id: AL(7),
+				userId: USER.admin,
+				userNameSnapshot: "Admin",
+				roleSnapshot: "Executive",
+				locationId: LOC_ID,
+				entityType: "inventory",
+				entityId: INV_ITEM.chicken,
+				actionType: "stock_receipt",
+				afterData: { quantity: 100 },
+				createdAt: daysAgo(3, 8),
+			},
+			{
+				id: AL(8),
+				userId: USER.cashier,
+				userNameSnapshot: "Cashier Demo",
+				roleSnapshot: "Cashier",
+				locationId: LOC_ID,
+				entityType: "order",
+				entityId: ORDER.o1,
+				actionType: "create",
+				afterData: { total: "6600", items: 3 },
+				createdAt: daysAgo(6, 10),
+			},
+			{
+				id: AL(9),
+				userId: USER.admin,
+				userNameSnapshot: "Admin",
+				roleSnapshot: "Executive",
+				locationId: LOC_ID,
+				entityType: "cash_session",
+				entityId: CASH_SESSION.cs1,
+				actionType: "payout",
+				afterData: { amount: "2500", reason: "Petty cash" },
+				createdAt: daysAgo(1, 14),
+			},
+			{
+				id: AL(10),
+				userId: USER.admin,
+				userNameSnapshot: "Admin",
+				roleSnapshot: "Executive",
+				locationId: LOC_ID,
+				entityType: "user",
+				entityId: USER.cashier,
+				actionType: "create",
+				afterData: { name: "Cashier Demo", email: "cashier@bettencourt.com" },
+				createdAt: daysAgo(6, 8),
+			},
+			{
+				id: AL(11),
+				userId: USER.cashier,
+				userNameSnapshot: "Cashier Demo",
+				roleSnapshot: "Cashier",
+				locationId: LOC_ID,
+				entityType: "cash_session",
+				entityId: CASH_SESSION.cs1,
+				actionType: "cash_drop",
+				afterData: { amount: "15000" },
+				createdAt: daysAgo(1, 13),
+			},
+			{
+				id: AL(12),
+				userId: USER.admin,
+				userNameSnapshot: "Admin",
+				roleSnapshot: "Executive",
+				locationId: LOC_ID,
+				entityType: "production",
+				entityId: PROD.friedRiceBakedChicken,
+				actionType: "log_production",
+				afterData: { quantity: 30 },
+				createdAt: daysAgo(0, 7),
+			},
+		])
+		.onConflictDoNothing();
+
+	console.log("Seed complete!");
+	process.exit(0);
+}
+
+seed().catch((e) => {
+	console.error("Seed failed:", e);
+	process.exit(1);
+});

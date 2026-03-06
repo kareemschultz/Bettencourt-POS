@@ -3,10 +3,10 @@ import * as schema from "@Bettencourt-POS/db/schema/auth";
 import { env } from "@Bettencourt-POS/env/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { admin } from "better-auth/plugins/admin";
+import { multiSession } from "better-auth/plugins/multi-session";
 import { organization } from "better-auth/plugins/organization";
 import { twoFactor } from "better-auth/plugins/two-factor";
-import { multiSession } from "better-auth/plugins/multi-session";
-import { admin } from "better-auth/plugins/admin";
 import { username } from "better-auth/plugins/username";
 
 export const auth = betterAuth({

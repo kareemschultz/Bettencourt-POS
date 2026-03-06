@@ -5,6 +5,9 @@
 		".": {
 			"default": "./src/index.ts"
 		},
+		"./schema": {
+			"default": "./src/schema/index.ts"
+		},
 		"./*": {
 			"default": "./src/*.ts"
 		}
@@ -14,13 +17,11 @@
 		"db:generate": "drizzle-kit generate",
 		"db:studio": "drizzle-kit studio",
 		"db:migrate": "drizzle-kit migrate",
-		"db:start": "docker compose up -d",
-		"db:watch": "docker compose up",
-		"db:stop": "docker compose stop",
-		"db:down": "docker compose down"
+		"db:seed": "bun run src/seed.ts"
 	},
 	"dependencies": {
 		"@Bettencourt-POS/env": "workspace:*",
+		"better-auth": "catalog:",
 		"dotenv": "catalog:",
 		"drizzle-orm": "^0.45.1",
 		"pg": "^8.17.1",

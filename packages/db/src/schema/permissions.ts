@@ -10,7 +10,7 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
-import { organization, location } from "./organization";
+import { location, organization } from "./organization";
 
 // ── Custom Role ────────────────────────────────────────────────────────
 
@@ -24,7 +24,9 @@ export const customRole = pgTable(
 		name: text("name").notNull(),
 		permissions: jsonb("permissions").notNull().default({}),
 		isSystem: boolean("is_system").notNull().default(false),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 	},
 	(table) => [index("idx_custom_role_org").on(table.organizationId)],
 );

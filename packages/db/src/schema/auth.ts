@@ -1,5 +1,13 @@
 import { relations } from "drizzle-orm";
-import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+	boolean,
+	index,
+	numeric,
+	pgTable,
+	text,
+	timestamp,
+	uuid,
+} from "drizzle-orm/pg-core";
 import { organization } from "./organization";
 
 export const user = pgTable("user", {
@@ -25,6 +33,7 @@ export const user = pgTable("user", {
 	twoFactorEnabled: boolean("two_factor_enabled").default(false),
 	// POS-specific columns
 	pinHash: text("pin_hash"),
+	hourlyRate: numeric("hourly_rate", { precision: 10, scale: 2 }),
 	organizationId: uuid("organization_id").references(() => organization.id),
 });
 

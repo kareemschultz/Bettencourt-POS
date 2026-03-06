@@ -1,0 +1,99 @@
+# Bettencourt POS - Deployment Changes by Alfred
+Date: 2026-03-05
+
+## Summary
+Alfred (Kareem's infrastructure agent) made the following changes to get the Bettencourt POS app deployed to production at `pos.karetechsolutions.com` on KareTech's VPS (kt-nexus-01).
+
+---
+
+## Files Modified
+
+### 1. `Dockerfile` (rewritten)
+
+**Problem**: The original Dockerfile used `oven/bun:1` for the builder stage. React Router v7's Vite plugin has a `writeBundle` hook that imports `react-dom/server` at runtime to verify the build. Bun's `react-dom/server.bun.js` does NOT export `renderToPipeableStream` (a Node.js streaming API), causing the build to fail even though `ssr: false` is set.
+
+**Second problem**: Bun's workspace `node_modules` uses symlinks into a `.bun/` cache directory. These symlinks break when copied between Docker stages with `COPY --from=builder`. The production image could never resolve packages like `better-auth`, `hono`, etc.
+
+**Solution** (pattern taken from Terminal Control's server Dockerfile):
+
+1. **Builder stage uses `node:22-slim` + `npm install -g bun`** instead of `oven/bun:1`. Node.js handles the `react-dom/server` import in the writeBundle hook correctly.
+
+2. **Externals-only node_modules**: After building, a clean `/app/externals/` directory is created with a fresh `package.json`. Only the packages that tsdown leaves as external imports are installed via `bun add`. This produces a proper `node_modules/` with real directories (no broken symlinks).
+
+3. **Production stage** (`oven/bun:1-slim`) receives only:
+   - `dist/` (server bundle from tsdown)
+   - `public/` (web SPA build from Vite/React Router)
+   - `node_modules/` (from the clean externals directory)
+
+**External packages** (these break when bundled due to dynamic imports):
+- `hono` - web framework
+- `@orpc/openapi`, `@orpc/server`, `@orpc/zod` - RPC framework
+- `better-auth`, `@better-auth/drizzle-adapter` - auth (dynamic adapter loading)
+- `drizzle-orm`, `pg` - database
+- `dotenv`, `@t3-oss/env-core` - env validation
+- `zod` - schema validation
+
+**If you add new external dependencies** to the server: add them to the `bun add` line in the Dockerfile (line ~58).
+
+### 2. `docker-compose.prod.yml` (modified)
+
+Changes from original:
+- **Network**: Changed from `kt-network` (does not exist) to `kt-net-apps` (actual network name on kt-nexus-01)
+- **Added networks**: `kt-net-databases` (for kt-central-db access) and `pangolin` (for reverse proxy routing)
+- **Added resource limits**: `memory: 256M`, `cpus: "0.5"`
+- **Added logging limits**: `max-size: 10m`, `max-file: 3` (prevents disk fill)
+
+### 3. `apps/web/vite.config.ts` (NOT modified)
+This file was NOT changed. The `ssr: false` config is correct. The build issue was solved at the Dockerfile level by using Node.js for the build stage.
+
+---
+
+## Infrastructure Setup (outside this repo)
+
+### Database
+- Database `bettencourt_pos` was created on `kt-central-db` (shared PostgreSQL 16 instance)
+- Connection: `postgresql://postgres:{password}@kt-central-db:5432/bettencourt_pos`
+- The DB password in docker-compose.prod.yml is currently plaintext -- should be moved to HashiCorp Vault
+
+### Pangolin Reverse Proxy
+- Resource created: `pos.karetechsolutions.com` (resource ID 42)
+- Target: `kt-bettencourt-pos:3000` (target ID 43)
+- SSO disabled (app has its own auth via better-auth)
+- SSL enabled (auto via Let's Encrypt through Pangolin/Gerbil)
+
+### Docker Container
+- Name: `kt-bettencourt-pos`
+- Networks: `kt-net-apps`, `kt-net-databases`, `pangolin`
+- Health check: `GET /health` every 30s
+- Status as of deployment: running, healthy, serving at pos.karetechsolutions.com
+
+---
+
+## Known Issues / TODO
+
+1. **DB password in plaintext** in docker-compose.prod.yml -- should be stored in HashiCorp Vault at `secret/bettencourt-pos/db` and referenced via `.env` file
+2. **BETTER_AUTH_SECRET** has a hardcoded default -- should also go to Vault
+3. **Server RAM is tight** (5.7/7.7GB used, heavy swap at 6.3/8.0GB) -- the 256M limit keeps this container lean but monitor for OOM
+4. **Image size** could be reduced further by switching to DHI (Docker Hardened Images) like Terminal Control does -- see `apps/server/Dockerfile` in the terminal-control repo for the pattern
+
+---
+
+## How to Rebuild
+
+```bash
+cd /home/karetech/projects/bettencourt/Bettencourt-POS
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+The container auto-connects to all required networks via the compose file. No manual `docker network connect` needed.
+
+---
+
+## Server Context (kt-nexus-01)
+
+- **VPS**: 7.7GB RAM, 240GB disk, ~44 containers running
+- **Docker networks**: `kt-net-apps` (app-to-app), `kt-net-databases` (app-to-db), `pangolin` (reverse proxy)
+- **Central DB**: `kt-central-db` at port 5432 (internal), PostgreSQL 16 with PgBouncer
+- **Reverse proxy**: Pangolin + Traefik + Gerbil stack (API at `http://172.20.0.6:3003/v1/`)
+- **Pangolin API key**: stored in Vault at `secret/pangolin/api_key`
+- **Domain**: `karetechsolutions.com` managed via Pangolin (domainId: `domain1`)

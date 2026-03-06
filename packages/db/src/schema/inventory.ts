@@ -11,7 +11,32 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
-import { organization, location } from "./organization";
+import { location, organization } from "./organization";
+
+// ── Stock Alert ───────────────────────────────────────────────────────
+
+export const stockAlert = pgTable(
+	"stock_alert",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		inventoryItemId: uuid("inventory_item_id")
+			.notNull()
+			.references(() => inventoryItem.id, { onDelete: "cascade" }),
+		type: text("type").notNull(),
+		acknowledgedBy: text("acknowledged_by").references(() => user.id),
+		acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+		organizationId: uuid("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		index("idx_stock_alert_org").on(table.organizationId),
+		index("idx_stock_alert_item").on(table.inventoryItemId),
+	],
+);
 
 // ── Supplier ───────────────────────────────────────────────────────────
 
@@ -28,7 +53,9 @@ export const supplier = pgTable(
 		phone: text("phone"),
 		address: text("address"),
 		isActive: boolean("is_active").notNull().default(true),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true })
 			.notNull()
 			.defaultNow()
@@ -50,13 +77,19 @@ export const inventoryItem = pgTable(
 		name: text("name").notNull(),
 		category: text("category"),
 		unitOfMeasure: text("unit_of_measure").notNull().default("each"),
-		unitConversionFactor: numeric("unit_conversion_factor", { precision: 10, scale: 4 }).default(
-			"1",
+		unitConversionFactor: numeric("unit_conversion_factor", {
+			precision: 10,
+			scale: 4,
+		}).default("1"),
+		preferredSupplierId: uuid("preferred_supplier_id").references(
+			() => supplier.id,
+			{
+				onDelete: "set null",
+			},
 		),
-		preferredSupplierId: uuid("preferred_supplier_id").references(() => supplier.id, {
-			onDelete: "set null",
-		}),
-		reorderPoint: numeric("reorder_point", { precision: 10, scale: 2 }).default("0"),
+		reorderPoint: numeric("reorder_point", { precision: 10, scale: 2 }).default(
+			"0",
+		),
 		minLevel: numeric("min_level", { precision: 10, scale: 2 }).default("0"),
 		maxLevel: numeric("max_level", { precision: 10, scale: 2 }).default("0"),
 		binLocation: text("bin_location"),
@@ -65,7 +98,9 @@ export const inventoryItem = pgTable(
 		serialTracking: boolean("serial_tracking").notNull().default(false),
 		avgCost: numeric("avg_cost", { precision: 10, scale: 4 }).default("0"),
 		isActive: boolean("is_active").notNull().default(true),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true })
 			.notNull()
 			.defaultNow()
@@ -133,14 +168,25 @@ export const stockLedger = pgTable(
 			.notNull()
 			.references(() => location.id, { onDelete: "cascade" }),
 		movementType: text("movement_type").notNull(),
-		quantityChange: numeric("quantity_change", { precision: 10, scale: 2 }).notNull(),
-		beforeQuantity: numeric("before_quantity", { precision: 10, scale: 2 }).notNull(),
-		afterQuantity: numeric("after_quantity", { precision: 10, scale: 2 }).notNull(),
+		quantityChange: numeric("quantity_change", {
+			precision: 10,
+			scale: 2,
+		}).notNull(),
+		beforeQuantity: numeric("before_quantity", {
+			precision: 10,
+			scale: 2,
+		}).notNull(),
+		afterQuantity: numeric("after_quantity", {
+			precision: 10,
+			scale: 2,
+		}).notNull(),
 		userId: text("user_id").references(() => user.id),
 		referenceType: text("reference_type"),
 		referenceId: uuid("reference_id"),
 		reason: text("reason"),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 	},
 	(table) => [
 		index("idx_stock_ledger_item").on(table.inventoryItemId),
@@ -169,7 +215,9 @@ export const purchaseOrder = pgTable(
 		approvedBy: text("approved_by").references(() => user.id),
 		notes: text("notes"),
 		total: numeric("total", { precision: 10, scale: 2 }).notNull().default("0"),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true })
 			.notNull()
 			.defaultNow()
@@ -194,7 +242,10 @@ export const purchaseOrderLine = pgTable(
 		inventoryItemId: uuid("inventory_item_id")
 			.notNull()
 			.references(() => inventoryItem.id),
-		quantityOrdered: numeric("quantity_ordered", { precision: 10, scale: 2 }).notNull(),
+		quantityOrdered: numeric("quantity_ordered", {
+			precision: 10,
+			scale: 2,
+		}).notNull(),
 		quantityReceived: numeric("quantity_received", { precision: 10, scale: 2 })
 			.notNull()
 			.default("0"),
@@ -218,7 +269,9 @@ export const goodsReceipt = pgTable(
 			.references(() => location.id),
 		receivedBy: text("received_by").references(() => user.id),
 		notes: text("notes"),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 	},
 	(table) => [index("idx_goods_receipt_po").on(table.purchaseOrderId)],
 );
@@ -235,7 +288,10 @@ export const goodsReceiptLine = pgTable(
 		purchaseOrderLineId: uuid("purchase_order_line_id")
 			.notNull()
 			.references(() => purchaseOrderLine.id),
-		quantityReceived: numeric("quantity_received", { precision: 10, scale: 2 }).notNull(),
+		quantityReceived: numeric("quantity_received", {
+			precision: 10,
+			scale: 2,
+		}).notNull(),
 		lotNumber: text("lot_number"),
 		expiryDate: date("expiry_date"),
 	},
@@ -261,7 +317,9 @@ export const transfer = pgTable(
 		createdBy: text("created_by").references(() => user.id),
 		approvedBy: text("approved_by").references(() => user.id),
 		notes: text("notes"),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true })
 			.notNull()
 			.defaultNow()
@@ -310,7 +368,9 @@ export const stockCount = pgTable(
 		status: text("status").notNull().default("draft"),
 		createdBy: text("created_by").references(() => user.id),
 		finalizedBy: text("finalized_by").references(() => user.id),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 		finalizedAt: timestamp("finalized_at", { withTimezone: true }),
 	},
 	(table) => [
@@ -340,6 +400,42 @@ export const stockCountLine = pgTable(
 	(table) => [index("idx_stock_count_line_count").on(table.stockCountId)],
 );
 
+// ── Waste Log ──────────────────────────────────────────────────────
+
+export const wasteLog = pgTable(
+	"waste_log",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		organizationId: uuid("organization_id")
+			.notNull()
+			.references(() => organization.id),
+		inventoryItemId: uuid("inventory_item_id").references(
+			() => inventoryItem.id,
+			{ onDelete: "set null" },
+		),
+		productName: text("product_name").notNull(),
+		quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull(),
+		unit: text("unit").notNull(),
+		estimatedCost: numeric("estimated_cost", {
+			precision: 10,
+			scale: 2,
+		}).notNull(),
+		reason: text("reason").notNull(),
+		notes: text("notes"),
+		loggedBy: text("logged_by")
+			.notNull()
+			.references(() => user.id),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(table) => [
+		index("idx_waste_log_org").on(table.organizationId),
+		index("idx_waste_log_item").on(table.inventoryItemId),
+		index("idx_waste_log_created").on(table.createdAt),
+	],
+);
+
 // ── Relations ──────────────────────────────────────────────────────────
 
 export const supplierRelations = relations(supplier, ({ one, many }) => ({
@@ -351,26 +447,34 @@ export const supplierRelations = relations(supplier, ({ one, many }) => ({
 	purchaseOrders: many(purchaseOrder),
 }));
 
-export const inventoryItemRelations = relations(inventoryItem, ({ one, many }) => ({
-	organization: one(organization, {
-		fields: [inventoryItem.organizationId],
-		references: [organization.id],
+export const inventoryItemRelations = relations(
+	inventoryItem,
+	({ one, many }) => ({
+		organization: one(organization, {
+			fields: [inventoryItem.organizationId],
+			references: [organization.id],
+		}),
+		preferredSupplier: one(supplier, {
+			fields: [inventoryItem.preferredSupplierId],
+			references: [supplier.id],
+		}),
+		barcodes: many(inventoryItemBarcode),
+		stock: many(inventoryStock),
+		ledgerEntries: many(stockLedger),
+		stockAlerts: many(stockAlert),
+		wasteLogs: many(wasteLog),
 	}),
-	preferredSupplier: one(supplier, {
-		fields: [inventoryItem.preferredSupplierId],
-		references: [supplier.id],
-	}),
-	barcodes: many(inventoryItemBarcode),
-	stock: many(inventoryStock),
-	ledgerEntries: many(stockLedger),
-}));
+);
 
-export const inventoryItemBarcodeRelations = relations(inventoryItemBarcode, ({ one }) => ({
-	inventoryItem: one(inventoryItem, {
-		fields: [inventoryItemBarcode.inventoryItemId],
-		references: [inventoryItem.id],
+export const inventoryItemBarcodeRelations = relations(
+	inventoryItemBarcode,
+	({ one }) => ({
+		inventoryItem: one(inventoryItem, {
+			fields: [inventoryItemBarcode.inventoryItemId],
+			references: [inventoryItem.id],
+		}),
 	}),
-}));
+);
 
 export const inventoryStockRelations = relations(inventoryStock, ({ one }) => ({
 	inventoryItem: one(inventoryItem, {
@@ -398,70 +502,82 @@ export const stockLedgerRelations = relations(stockLedger, ({ one }) => ({
 	}),
 }));
 
-export const purchaseOrderRelations = relations(purchaseOrder, ({ one, many }) => ({
-	organization: one(organization, {
-		fields: [purchaseOrder.organizationId],
-		references: [organization.id],
+export const purchaseOrderRelations = relations(
+	purchaseOrder,
+	({ one, many }) => ({
+		organization: one(organization, {
+			fields: [purchaseOrder.organizationId],
+			references: [organization.id],
+		}),
+		location: one(location, {
+			fields: [purchaseOrder.locationId],
+			references: [location.id],
+		}),
+		supplier: one(supplier, {
+			fields: [purchaseOrder.supplierId],
+			references: [supplier.id],
+		}),
+		createdByUser: one(user, {
+			fields: [purchaseOrder.createdBy],
+			references: [user.id],
+			relationName: "purchaseOrderCreatedBy",
+		}),
+		approvedByUser: one(user, {
+			fields: [purchaseOrder.approvedBy],
+			references: [user.id],
+			relationName: "purchaseOrderApprovedBy",
+		}),
+		lines: many(purchaseOrderLine),
+		goodsReceipts: many(goodsReceipt),
 	}),
-	location: one(location, {
-		fields: [purchaseOrder.locationId],
-		references: [location.id],
-	}),
-	supplier: one(supplier, {
-		fields: [purchaseOrder.supplierId],
-		references: [supplier.id],
-	}),
-	createdByUser: one(user, {
-		fields: [purchaseOrder.createdBy],
-		references: [user.id],
-		relationName: "purchaseOrderCreatedBy",
-	}),
-	approvedByUser: one(user, {
-		fields: [purchaseOrder.approvedBy],
-		references: [user.id],
-		relationName: "purchaseOrderApprovedBy",
-	}),
-	lines: many(purchaseOrderLine),
-	goodsReceipts: many(goodsReceipt),
-}));
+);
 
-export const purchaseOrderLineRelations = relations(purchaseOrderLine, ({ one }) => ({
-	purchaseOrder: one(purchaseOrder, {
-		fields: [purchaseOrderLine.purchaseOrderId],
-		references: [purchaseOrder.id],
+export const purchaseOrderLineRelations = relations(
+	purchaseOrderLine,
+	({ one }) => ({
+		purchaseOrder: one(purchaseOrder, {
+			fields: [purchaseOrderLine.purchaseOrderId],
+			references: [purchaseOrder.id],
+		}),
+		inventoryItem: one(inventoryItem, {
+			fields: [purchaseOrderLine.inventoryItemId],
+			references: [inventoryItem.id],
+		}),
 	}),
-	inventoryItem: one(inventoryItem, {
-		fields: [purchaseOrderLine.inventoryItemId],
-		references: [inventoryItem.id],
-	}),
-}));
+);
 
-export const goodsReceiptRelations = relations(goodsReceipt, ({ one, many }) => ({
-	purchaseOrder: one(purchaseOrder, {
-		fields: [goodsReceipt.purchaseOrderId],
-		references: [purchaseOrder.id],
+export const goodsReceiptRelations = relations(
+	goodsReceipt,
+	({ one, many }) => ({
+		purchaseOrder: one(purchaseOrder, {
+			fields: [goodsReceipt.purchaseOrderId],
+			references: [purchaseOrder.id],
+		}),
+		location: one(location, {
+			fields: [goodsReceipt.locationId],
+			references: [location.id],
+		}),
+		receivedByUser: one(user, {
+			fields: [goodsReceipt.receivedBy],
+			references: [user.id],
+		}),
+		lines: many(goodsReceiptLine),
 	}),
-	location: one(location, {
-		fields: [goodsReceipt.locationId],
-		references: [location.id],
-	}),
-	receivedByUser: one(user, {
-		fields: [goodsReceipt.receivedBy],
-		references: [user.id],
-	}),
-	lines: many(goodsReceiptLine),
-}));
+);
 
-export const goodsReceiptLineRelations = relations(goodsReceiptLine, ({ one }) => ({
-	goodsReceipt: one(goodsReceipt, {
-		fields: [goodsReceiptLine.goodsReceiptId],
-		references: [goodsReceipt.id],
+export const goodsReceiptLineRelations = relations(
+	goodsReceiptLine,
+	({ one }) => ({
+		goodsReceipt: one(goodsReceipt, {
+			fields: [goodsReceiptLine.goodsReceiptId],
+			references: [goodsReceipt.id],
+		}),
+		purchaseOrderLine: one(purchaseOrderLine, {
+			fields: [goodsReceiptLine.purchaseOrderLineId],
+			references: [purchaseOrderLine.id],
+		}),
 	}),
-	purchaseOrderLine: one(purchaseOrderLine, {
-		fields: [goodsReceiptLine.purchaseOrderLineId],
-		references: [purchaseOrderLine.id],
-	}),
-}));
+);
 
 export const transferRelations = relations(transfer, ({ one, many }) => ({
 	organization: one(organization, {
@@ -532,5 +648,35 @@ export const stockCountLineRelations = relations(stockCountLine, ({ one }) => ({
 	inventoryItem: one(inventoryItem, {
 		fields: [stockCountLine.inventoryItemId],
 		references: [inventoryItem.id],
+	}),
+}));
+
+export const stockAlertRelations = relations(stockAlert, ({ one }) => ({
+	inventoryItem: one(inventoryItem, {
+		fields: [stockAlert.inventoryItemId],
+		references: [inventoryItem.id],
+	}),
+	organization: one(organization, {
+		fields: [stockAlert.organizationId],
+		references: [organization.id],
+	}),
+	acknowledgedByUser: one(user, {
+		fields: [stockAlert.acknowledgedBy],
+		references: [user.id],
+	}),
+}));
+
+export const wasteLogRelations = relations(wasteLog, ({ one }) => ({
+	organization: one(organization, {
+		fields: [wasteLog.organizationId],
+		references: [organization.id],
+	}),
+	inventoryItem: one(inventoryItem, {
+		fields: [wasteLog.inventoryItemId],
+		references: [inventoryItem.id],
+	}),
+	loggedByUser: one(user, {
+		fields: [wasteLog.loggedBy],
+		references: [user.id],
 	}),
 }));

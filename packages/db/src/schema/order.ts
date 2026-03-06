@@ -13,7 +13,8 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
-import { organization, location, register } from "./organization";
+import { customer } from "./customer";
+import { location, organization, register } from "./organization";
 import { product } from "./product";
 
 // ── Order ──────────────────────────────────────────────────────────────
@@ -33,12 +34,19 @@ export const order = pgTable(
 		orderNumber: text("order_number").notNull(),
 		type: text("type").notNull().default("sale"),
 		status: text("status").notNull().default("open"),
-		subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull().default("0"),
+		subtotal: numeric("subtotal", { precision: 10, scale: 2 })
+			.notNull()
+			.default("0"),
 		discountTotal: numeric("discount_total", { precision: 10, scale: 2 })
 			.notNull()
 			.default("0"),
-		taxTotal: numeric("tax_total", { precision: 10, scale: 2 }).notNull().default("0"),
+		taxTotal: numeric("tax_total", { precision: 10, scale: 2 })
+			.notNull()
+			.default("0"),
 		total: numeric("total", { precision: 10, scale: 2 }).notNull().default("0"),
+		customerId: uuid("customer_id").references(() => customer.id, {
+			onDelete: "set null",
+		}),
 		customerName: text("customer_name"),
 		customerPhone: text("customer_phone"),
 		deliveryAddress: text("delivery_address"),
@@ -46,7 +54,13 @@ export const order = pgTable(
 		estimatedReadyAt: timestamp("estimated_ready_at", { withTimezone: true }),
 		tableId: uuid("table_id"),
 		notes: text("notes"),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		voidAuthorizedBy: text("void_authorized_by").references(() => user.id),
+		voidReason: text("void_reason"),
+		voidAuthorizedAt: timestamp("void_authorized_at", { withTimezone: true }),
+		isSplit: boolean("is_split").notNull().default(false),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true })
 			.notNull()
 			.defaultNow()
@@ -79,7 +93,9 @@ export const orderLineItem = pgTable(
 		reportingCategorySnapshot: text("reporting_category_snapshot"),
 		quantity: integer("quantity").notNull().default(1),
 		unitPrice: numeric("unit_price", { precision: 10, scale: 2 }).notNull(),
-		discount: numeric("discount", { precision: 10, scale: 2 }).notNull().default("0"),
+		discount: numeric("discount", { precision: 10, scale: 2 })
+			.notNull()
+			.default("0"),
 		tax: numeric("tax", { precision: 10, scale: 2 }).notNull().default("0"),
 		total: numeric("total", { precision: 10, scale: 2 }).notNull(),
 		modifiersSnapshot: jsonb("modifiers_snapshot").default([]),
@@ -105,10 +121,17 @@ export const payment = pgTable(
 		method: text("method").notNull().default("cash"),
 		amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
 		tendered: numeric("tendered", { precision: 10, scale: 2 }),
-		changeGiven: numeric("change_given", { precision: 10, scale: 2 }).default("0"),
+		changeGiven: numeric("change_given", { precision: 10, scale: 2 }).default(
+			"0",
+		),
+		currency: text("currency").notNull().default("GYD"),
+		exchangeRate: numeric("exchange_rate", { precision: 10, scale: 4 }),
 		reference: text("reference"),
+		splitGroup: integer("split_group"),
 		status: text("status").notNull().default("completed"),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 	},
 	(table) => [
 		index("idx_payment_order").on(table.orderId),
@@ -129,7 +152,9 @@ export const refund = pgTable(
 		userId: text("user_id").references(() => user.id),
 		amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
 		reason: text("reason").notNull(),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 	},
 	(table) => [
 		index("idx_refund_order").on(table.orderId),
@@ -148,9 +173,7 @@ export const dailyOrderCounter = pgTable(
 		counterDate: date("counter_date").notNull().default(sql`CURRENT_DATE`),
 		lastNumber: integer("last_number").notNull().default(0),
 	},
-	(table) => [
-		primaryKey({ columns: [table.locationId, table.counterDate] }),
-	],
+	(table) => [primaryKey({ columns: [table.locationId, table.counterDate] })],
 );
 
 // ── Relations ──────────────────────────────────────────────────────────
@@ -159,6 +182,10 @@ export const orderRelations = relations(order, ({ one, many }) => ({
 	organization: one(organization, {
 		fields: [order.organizationId],
 		references: [organization.id],
+	}),
+	customer: one(customer, {
+		fields: [order.customerId],
+		references: [customer.id],
 	}),
 	location: one(location, {
 		fields: [order.locationId],
@@ -171,6 +198,12 @@ export const orderRelations = relations(order, ({ one, many }) => ({
 	user: one(user, {
 		fields: [order.userId],
 		references: [user.id],
+		relationName: "orderUser",
+	}),
+	voidAuthorizedByUser: one(user, {
+		fields: [order.voidAuthorizedBy],
+		references: [user.id],
+		relationName: "orderVoidAuthorizedBy",
 	}),
 	lineItems: many(orderLineItem),
 	payments: many(payment),
@@ -210,9 +243,12 @@ export const refundRelations = relations(refund, ({ one }) => ({
 	}),
 }));
 
-export const dailyOrderCounterRelations = relations(dailyOrderCounter, ({ one }) => ({
-	location: one(location, {
-		fields: [dailyOrderCounter.locationId],
-		references: [location.id],
+export const dailyOrderCounterRelations = relations(
+	dailyOrderCounter,
+	({ one }) => ({
+		location: one(location, {
+			fields: [dailyOrderCounter.locationId],
+			references: [location.id],
+		}),
 	}),
-}));
+);

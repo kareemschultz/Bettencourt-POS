@@ -28,7 +28,9 @@ export const auditLog = pgTable(
 		diffData: jsonb("diff_data"),
 		reason: text("reason"),
 		ipAddress: text("ip_address"),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 	},
 	(table) => [
 		index("idx_audit_log_user").on(table.userId),

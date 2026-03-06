@@ -1,0 +1,407 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, ReceiptText } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import { authClient } from "@/lib/auth-client";
+import { formatGYD } from "@/lib/types";
+import { todayGY } from "@/lib/utils";
+import { orpc } from "@/utils/orpc";
+
+const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+
+const SUPPLIER_COLORS = [
+	"bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+	"bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
+	"bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+	"bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+	"bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300",
+	"bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300",
+	"bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+	"bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+];
+
+const emptyForm = {
+	amount: "",
+	category: "",
+	description: "",
+	supplierId: "",
+};
+
+type ExpenseRow = {
+	id: string;
+	amount: string;
+	category: string;
+	description: string;
+	created_at: string;
+	authorized_by_name: string | null;
+	created_by_name: string | null;
+	supplier_name: string | null;
+	supplier_id: string | null;
+};
+
+export default function ExpensesPage() {
+	const { data: session } = authClient.useSession();
+	const today = todayGY();
+	const queryClient = useQueryClient();
+
+	const [startDate, setStartDate] = useState(today);
+	const [endDate, setEndDate] = useState(today);
+	const [supplierFilter, setSupplierFilter] = useState("all");
+	const [dialogOpen, setDialogOpen] = useState(false);
+	const [form, setForm] = useState(emptyForm);
+
+	const { data: expensesRaw = [] } = useQuery(
+		orpc.cash.getExpenses.queryOptions({
+			input: {
+				organizationId: DEFAULT_ORG_ID,
+				startDate,
+				endDate: `${endDate}T23:59:59`,
+			},
+		}),
+	);
+	const expenses = expensesRaw as ExpenseRow[];
+
+	const { data: reportData } = useQuery(
+		orpc.cash.getExpenseReport.queryOptions({
+			input: {
+				organizationId: DEFAULT_ORG_ID,
+				startDate,
+				endDate: `${endDate}T23:59:59`,
+			},
+		}),
+	);
+
+	const { data: suppliers = [] } = useQuery(
+		orpc.settings.getSuppliers.queryOptions({ input: {} }),
+	);
+
+	const { data: categories = [] } = useQuery(
+		orpc.cash.getExpenseCategories.queryOptions(),
+	);
+
+	const createExpense = useMutation(
+		orpc.cash.createExpense.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.cash.getExpenses.queryOptions({
+						input: { organizationId: DEFAULT_ORG_ID },
+					}).queryKey,
+				});
+				queryClient.invalidateQueries({
+					queryKey: orpc.cash.getExpenseReport.queryOptions({
+						input: { organizationId: DEFAULT_ORG_ID },
+					}).queryKey,
+				});
+				setDialogOpen(false);
+				setForm(emptyForm);
+				toast.success("Expense recorded");
+			},
+			onError: (err) => toast.error(err.message || "Failed to save expense"),
+		}),
+	);
+
+	// Build stable supplier → color map
+	const supplierColorMap = new Map<string, string>();
+	suppliers.forEach((s, i) => {
+		supplierColorMap.set(s.id, SUPPLIER_COLORS[i % SUPPLIER_COLORS.length]!);
+	});
+
+	const filtered =
+		supplierFilter === "all"
+			? expenses
+			: expenses.filter((e) => e.supplier_id === supplierFilter);
+
+	const totalToday = filtered.reduce((sum, e) => sum + Number(e.amount), 0);
+
+	function handleSubmit() {
+		if (!form.amount || !form.category || !form.description) {
+			toast.error("Amount, category, and description are required");
+			return;
+		}
+		createExpense.mutate({
+			amount: form.amount,
+			category: form.category,
+			description: form.description,
+			supplierId: form.supplierId || null,
+			authorizedBy: session?.user?.id || "",
+			createdBy: session?.user?.id || "",
+			organizationId: DEFAULT_ORG_ID,
+		});
+	}
+
+	return (
+		<div className="flex flex-col gap-6 p-4 md:p-6">
+			{/* Header */}
+			<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div>
+					<h1 className="font-bold text-2xl text-foreground tracking-tight">
+						Expenses
+					</h1>
+					<p className="text-muted-foreground text-sm">
+						Daily expense tracking by supplier
+					</p>
+				</div>
+				<Button onClick={() => setDialogOpen(true)} className="gap-2">
+					<Plus className="size-4" />
+					Add Expense
+				</Button>
+			</div>
+
+			{/* Filters */}
+			<div className="flex flex-wrap items-end gap-3">
+				<div className="flex flex-col gap-1">
+					<Label className="text-muted-foreground text-xs">From</Label>
+					<Input
+						type="date"
+						value={startDate}
+						onChange={(e) => setStartDate(e.target.value)}
+						className="h-8 w-36 text-sm"
+					/>
+				</div>
+				<div className="flex flex-col gap-1">
+					<Label className="text-muted-foreground text-xs">To</Label>
+					<Input
+						type="date"
+						value={endDate}
+						onChange={(e) => setEndDate(e.target.value)}
+						className="h-8 w-36 text-sm"
+					/>
+				</div>
+				<div className="flex flex-col gap-1">
+					<Label className="text-muted-foreground text-xs">Supplier</Label>
+					<Select value={supplierFilter} onValueChange={setSupplierFilter}>
+						<SelectTrigger className="h-8 w-44 text-sm">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">All suppliers</SelectItem>
+							{suppliers.map((s) => (
+								<SelectItem key={s.id} value={s.id}>
+									{s.name}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+			</div>
+
+			{/* Summary cards */}
+			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+				<Card>
+					<CardContent className="flex flex-col gap-1 p-4">
+						<p className="text-muted-foreground text-xs">Total Expenses</p>
+						<p className="font-bold text-foreground text-xl">
+							{formatGYD(totalToday)}
+						</p>
+						<p className="text-muted-foreground text-xs">
+							{filtered.length} entries
+						</p>
+					</CardContent>
+				</Card>
+				{(
+					(reportData?.bySupplier as Array<{
+						supplier_name: string;
+						total: string;
+						count: number;
+					}>) ?? []
+				)
+					.slice(0, 3)
+					.map((row, i) => (
+						<Card key={i}>
+							<CardContent className="flex flex-col gap-1 p-4">
+								<p className="text-muted-foreground text-xs">
+									{row.supplier_name}
+								</p>
+								<p className="font-bold text-foreground text-lg">
+									{formatGYD(Number(row.total))}
+								</p>
+								<p className="text-muted-foreground text-xs">
+									{row.count} expenses
+								</p>
+							</CardContent>
+						</Card>
+					))}
+			</div>
+
+			{/* Table */}
+			<div className="rounded-lg border border-border">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead className="text-xs">Date</TableHead>
+							<TableHead className="text-xs">Supplier</TableHead>
+							<TableHead className="text-xs">Category</TableHead>
+							<TableHead className="text-xs">Description</TableHead>
+							<TableHead className="text-right text-xs">Amount</TableHead>
+							<TableHead className="text-xs">Authorized By</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{filtered.length === 0 ? (
+							<TableRow>
+								<TableCell
+									colSpan={6}
+									className="py-10 text-center text-muted-foreground text-sm"
+								>
+									<ReceiptText className="mx-auto mb-2 size-8 opacity-30" />
+									No expenses recorded
+								</TableCell>
+							</TableRow>
+						) : (
+							filtered.map((e) => {
+								const color = e.supplier_id
+									? supplierColorMap.get(e.supplier_id)
+									: undefined;
+								return (
+									<TableRow
+										key={e.id}
+										className={color ? `${color.split(" ")[0]}/5` : ""}
+									>
+										<TableCell className="whitespace-nowrap text-muted-foreground text-xs">
+											{new Date(e.created_at).toLocaleString("en-GY", {
+												month: "short",
+												day: "numeric",
+												hour: "2-digit",
+												minute: "2-digit",
+												hour12: false,
+											})}
+										</TableCell>
+										<TableCell>
+											{e.supplier_name ? (
+												<Badge
+													variant="secondary"
+													className={`text-xs ${color ?? ""}`}
+												>
+													{e.supplier_name}
+												</Badge>
+											) : (
+												<span className="text-muted-foreground text-xs">—</span>
+											)}
+										</TableCell>
+										<TableCell className="text-xs">{e.category}</TableCell>
+										<TableCell className="max-w-48 truncate text-xs">
+											{e.description}
+										</TableCell>
+										<TableCell className="text-right font-semibold text-sm">
+											{formatGYD(Number(e.amount))}
+										</TableCell>
+										<TableCell className="text-muted-foreground text-xs">
+											{e.authorized_by_name ?? "—"}
+										</TableCell>
+									</TableRow>
+								);
+							})
+						)}
+					</TableBody>
+				</Table>
+			</div>
+
+			{/* Add Expense Dialog */}
+			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle>Record Expense</DialogTitle>
+					</DialogHeader>
+					<div className="flex flex-col gap-4 py-2">
+						<div className="flex flex-col gap-1.5">
+							<Label>Amount (GYD)</Label>
+							<Input
+								type="number"
+								inputMode="decimal"
+								placeholder="0.00"
+								value={form.amount}
+								onChange={(e) =>
+									setForm((f) => ({ ...f, amount: e.target.value }))
+								}
+							/>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label>Supplier</Label>
+							<Select
+								value={form.supplierId || "none"}
+								onValueChange={(v) =>
+									setForm((f) => ({ ...f, supplierId: v === "none" ? "" : v }))
+								}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="Select supplier (optional)" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="none">No supplier</SelectItem>
+									{suppliers.map((s) => (
+										<SelectItem key={s.id} value={s.id}>
+											{s.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label>Category</Label>
+							<Select
+								value={form.category}
+								onValueChange={(v) => setForm((f) => ({ ...f, category: v }))}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="Select category" />
+								</SelectTrigger>
+								<SelectContent>
+									{categories.map((c) => (
+										<SelectItem key={c} value={c}>
+											{c}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label>Description</Label>
+							<Input
+								placeholder="What was this expense for?"
+								value={form.description}
+								onChange={(e) =>
+									setForm((f) => ({ ...f, description: e.target.value }))
+								}
+							/>
+						</div>
+					</div>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setDialogOpen(false)}>
+							Cancel
+						</Button>
+						<Button onClick={handleSubmit} disabled={createExpense.isPending}>
+							{createExpense.isPending ? "Saving..." : "Save Expense"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</div>
+	);
+}

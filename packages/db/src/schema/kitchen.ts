@@ -7,8 +7,8 @@ import {
 	timestamp,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { location } from "./organization";
 import { order, orderLineItem } from "./order";
+import { location } from "./organization";
 
 // ── Table Layout ───────────────────────────────────────────────────────
 
@@ -27,7 +27,10 @@ export const tableLayout = pgTable(
 		shape: text("shape").notNull().default("square"),
 		status: text("status").notNull().default("available"),
 		currentOrderId: uuid("current_order_id").references(() => order.id),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		currentGuests: integer("current_guests"),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true })
 			.notNull()
 			.defaultNow()
@@ -53,7 +56,9 @@ export const kitchenOrderTicket = pgTable(
 			.references(() => location.id),
 		status: text("status").notNull().default("pending"),
 		printerTarget: text("printer_target"),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true })
 			.notNull()
 			.defaultNow()
@@ -75,13 +80,17 @@ export const kitchenOrderItem = pgTable(
 		ticketId: uuid("ticket_id")
 			.notNull()
 			.references(() => kitchenOrderTicket.id, { onDelete: "cascade" }),
-		orderLineItemId: uuid("order_line_item_id").references(() => orderLineItem.id),
+		orderLineItemId: uuid("order_line_item_id").references(
+			() => orderLineItem.id,
+		),
 		productName: text("product_name").notNull(),
 		quantity: integer("quantity").notNull().default(1),
 		modifiers: text("modifiers"),
 		notes: text("notes"),
 		status: text("status").notNull().default("pending"),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true })
 			.notNull()
 			.defaultNow()
@@ -106,25 +115,31 @@ export const tableLayoutRelations = relations(tableLayout, ({ one }) => ({
 	}),
 }));
 
-export const kitchenOrderTicketRelations = relations(kitchenOrderTicket, ({ one, many }) => ({
-	order: one(order, {
-		fields: [kitchenOrderTicket.orderId],
-		references: [order.id],
+export const kitchenOrderTicketRelations = relations(
+	kitchenOrderTicket,
+	({ one, many }) => ({
+		order: one(order, {
+			fields: [kitchenOrderTicket.orderId],
+			references: [order.id],
+		}),
+		location: one(location, {
+			fields: [kitchenOrderTicket.locationId],
+			references: [location.id],
+		}),
+		items: many(kitchenOrderItem),
 	}),
-	location: one(location, {
-		fields: [kitchenOrderTicket.locationId],
-		references: [location.id],
-	}),
-	items: many(kitchenOrderItem),
-}));
+);
 
-export const kitchenOrderItemRelations = relations(kitchenOrderItem, ({ one }) => ({
-	ticket: one(kitchenOrderTicket, {
-		fields: [kitchenOrderItem.ticketId],
-		references: [kitchenOrderTicket.id],
+export const kitchenOrderItemRelations = relations(
+	kitchenOrderItem,
+	({ one }) => ({
+		ticket: one(kitchenOrderTicket, {
+			fields: [kitchenOrderItem.ticketId],
+			references: [kitchenOrderTicket.id],
+		}),
+		orderLineItem: one(orderLineItem, {
+			fields: [kitchenOrderItem.orderLineItemId],
+			references: [orderLineItem.id],
+		}),
 	}),
-	orderLineItem: one(orderLineItem, {
-		fields: [kitchenOrderItem.orderLineItemId],
-		references: [orderLineItem.id],
-	}),
-}));
+);

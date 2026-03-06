@@ -1,0 +1,37 @@
+name: bettencourt-pos
+
+services:
+  app:
+    build: .
+    container_name: kt-bettencourt-pos
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:99916e118ea3377b7c19c108429df8fd17dd2eb9f122139e@kt-central-db:5432/bettencourt_pos
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-7oYs78SEdLdtRqasu8pze8vpLV9k00ST}
+      BETTER_AUTH_URL: https://pos.karetechsolutions.com
+      CORS_ORIGIN: https://pos.karetechsolutions.com
+      VITE_SERVER_URL: https://pos.karetechsolutions.com
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - kt-net-apps
+      - kt-net-databases
+      - pangolin
+
+networks:
+  kt-net-apps:
+    external: true
+  kt-net-databases:
+    external: true
+  pangolin:
+    external: true

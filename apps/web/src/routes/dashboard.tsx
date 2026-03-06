@@ -1,15 +1,140 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { useNavigate } from "react-router";
-
+import {
+	createContext,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
+import { Outlet, useNavigate, useOutletContext } from "react-router";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
+export { ErrorBoundary };
 
-export default function Dashboard() {
+import { PinLockScreen } from "@/components/auth/pin-lock-screen";
+import { AppSidebar } from "@/components/layout/app-sidebar";
+import { SyncIndicator } from "@/components/layout/sync-indicator";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import {
+	SidebarInset,
+	SidebarProvider,
+	SidebarTrigger,
+} from "@/components/ui/sidebar";
+import type { AppUser } from "@/lib/types";
+
+// ── Location context ─────────────────────────────────────────────────
+export interface LocationContextValue {
+	locationId: string | null;
+	locationName: string | null;
+	setLocationId: (id: string) => void;
+}
+
+export const LocationContext = createContext<LocationContextValue>({
+	locationId: null,
+	locationName: null,
+	setLocationId: () => {},
+});
+
+/** Hook for child routes to access the selected location via Outlet context */
+export function useLocationContext() {
+	return useOutletContext<LocationContextValue>();
+}
+
+const LOCATION_STORAGE_KEY = "bettencourt-selected-location";
+
+const AUTO_LOCK_MS = 5 * 60 * 1000; // 5 minutes of inactivity
+
+/**
+ * Map the custom role name from the DB to a sidebar role identifier.
+ * Sidebar nav items use these identifiers in their `roles` arrays.
+ */
+function mapRoleToSidebarRole(roleName: string): string {
+	switch (roleName.toLowerCase()) {
+		case "executive":
+		case "owner":
+			return "executive";
+		case "manager":
+		case "warehouse clerk":
+		case "accountant":
+			return "admin";
+		case "kitchen":
+			return "checkoff";
+		default:
+			return "cashier";
+	}
+}
+
+export default function DashboardLayout() {
 	const { data: session, isPending } = authClient.useSession();
 	const navigate = useNavigate();
+	const [locked, setLocked] = useState(false);
+	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	const privateData = useQuery(orpc.privateData.queryOptions());
+	// Fetch the current user's role and permissions from the DB
+	const { data: userProfile, isLoading: loadingProfile } = useQuery(
+		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
+	);
+
+	// Fetch all locations for the switcher
+	const { data: locations = [] } = useQuery(
+		orpc.locations.listLocations.queryOptions({ input: {} }),
+	);
+
+	// Selected location with localStorage persistence
+	const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
+		() => {
+			try {
+				return localStorage.getItem(LOCATION_STORAGE_KEY);
+			} catch {
+				return null;
+			}
+		},
+	);
+
+	// Auto-select first active location if none selected or selection is invalid
+	useEffect(() => {
+		if (locations.length === 0) return;
+		const activeLocations = locations.filter((l) => l.isActive);
+		if (activeLocations.length === 0) return;
+
+		const currentValid = activeLocations.some(
+			(l) => l.id === selectedLocationId,
+		);
+		if (!currentValid) {
+			const firstId = activeLocations[0]?.id;
+			setSelectedLocationId(firstId);
+			try {
+				localStorage.setItem(LOCATION_STORAGE_KEY, firstId);
+			} catch {}
+		}
+	}, [locations, selectedLocationId]);
+
+	const handleLocationChange = useCallback((id: string) => {
+		setSelectedLocationId(id);
+		try {
+			localStorage.setItem(LOCATION_STORAGE_KEY, id);
+		} catch {}
+	}, []);
+
+	const selectedLocation = locations.find((l) => l.id === selectedLocationId);
+
+	const locationContext: LocationContextValue = useMemo(
+		() => ({
+			locationId: selectedLocationId,
+			locationName: selectedLocation?.name ?? null,
+			setLocationId: handleLocationChange,
+		}),
+		[selectedLocationId, selectedLocation?.name, handleLocationChange],
+	);
 
 	useEffect(() => {
 		if (!session && !isPending) {
@@ -17,15 +142,104 @@ export default function Dashboard() {
 		}
 	}, [session, isPending, navigate]);
 
-	if (isPending) {
-		return <div>Loading...</div>;
+	// Auto-lock on inactivity
+	const resetTimer = useCallback(() => {
+		if (timerRef.current) clearTimeout(timerRef.current);
+		timerRef.current = setTimeout(() => setLocked(true), AUTO_LOCK_MS);
+	}, []);
+
+	useEffect(() => {
+		const events = ["mousedown", "keydown", "touchstart", "scroll"];
+		const handler = () => resetTimer();
+		for (const e of events) window.addEventListener(e, handler);
+		resetTimer();
+		return () => {
+			for (const e of events) window.removeEventListener(e, handler);
+			if (timerRef.current) clearTimeout(timerRef.current);
+		};
+	}, [resetTimer]);
+
+	// Build the AppUser from the API response (memoized to keep a stable ref)
+	const user: AppUser | null = useMemo(() => {
+		if (!session) return null;
+		if (!userProfile) return null;
+
+		return {
+			id: session.user.id,
+			name: userProfile.name,
+			email: userProfile.email,
+			role: mapRoleToSidebarRole(userProfile.roleName),
+			organization_id: null,
+			location_id: null,
+			custom_role_id: userProfile.roleId,
+			permissions: userProfile.permissions,
+		};
+	}, [session, userProfile]);
+
+	if (isPending || loadingProfile) {
+		return (
+			<div className="flex h-svh items-center justify-center">
+				<div className="text-muted-foreground">Loading...</div>
+			</div>
+		);
+	}
+
+	if (!session || !user) {
+		return null;
+	}
+
+	if (locked) {
+		return (
+			<PinLockScreen
+				userName={user.name}
+				onUnlock={() => {
+					setLocked(false);
+					resetTimer();
+				}}
+			/>
+		);
 	}
 
 	return (
-		<div>
-			<h1>Dashboard</h1>
-			<p>Welcome {session?.user.name}</p>
-			<p>API: {privateData.data?.message}</p>
-		</div>
+		<SidebarProvider>
+			<AppSidebar user={user} />
+			<SidebarInset>
+				<header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-4">
+					<SidebarTrigger className="-ml-1" />
+					<Separator orientation="vertical" className="mr-2 h-4" />
+					<div className="flex flex-1 items-center gap-2">
+						{locations.filter((l) => l.isActive).length > 0 ? (
+							<Select
+								value={selectedLocationId ?? undefined}
+								onValueChange={handleLocationChange}
+							>
+								<SelectTrigger className="h-8 w-[180px] border-none bg-transparent text-muted-foreground text-sm shadow-none focus:ring-0">
+									<SelectValue placeholder="Select location" />
+								</SelectTrigger>
+								<SelectContent>
+									{locations
+										.filter((l) => l.isActive)
+										.map((loc) => (
+											<SelectItem key={loc.id} value={loc.id}>
+												{loc.name}
+											</SelectItem>
+										))}
+								</SelectContent>
+							</Select>
+						) : (
+							<span className="text-muted-foreground text-sm">
+								No locations
+							</span>
+						)}
+					</div>
+					<SyncIndicator />
+				</header>
+				<main className="flex-1 overflow-auto">
+					<LocationContext.Provider value={locationContext}>
+						<Outlet context={locationContext} />
+					</LocationContext.Provider>
+				</main>
+			</SidebarInset>
+		</SidebarProvider>
 	);
 }

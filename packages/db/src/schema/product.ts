@@ -8,9 +8,12 @@ import {
 	primaryKey,
 	text,
 	timestamp,
+	uniqueIndex,
 	uuid,
+	varchar,
 } from "drizzle-orm/pg-core";
-import { organization, location, register } from "./organization";
+import { inventoryItem } from "./inventory";
+import { location, organization, register } from "./organization";
 
 // ── Reporting Category (Department) ────────────────────────────────────
 
@@ -24,7 +27,9 @@ export const reportingCategory = pgTable(
 		name: text("name").notNull(),
 		sortOrder: integer("sort_order").notNull().default(0),
 		isActive: boolean("is_active").notNull().default(true),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 	},
 	(table) => [index("idx_reporting_category_org").on(table.organizationId)],
 );
@@ -47,11 +52,15 @@ export const product = pgTable(
 		sku: text("sku"),
 		price: numeric("price", { precision: 10, scale: 2 }).notNull().default("0"),
 		cost: numeric("cost", { precision: 10, scale: 2 }).default("0"),
-		taxRate: numeric("tax_rate", { precision: 5, scale: 4 }).notNull().default("0"),
+		taxRate: numeric("tax_rate", { precision: 5, scale: 4 })
+			.notNull()
+			.default("0"),
 		isActive: boolean("is_active").notNull().default(true),
 		imageUrl: text("image_url"),
 		sortOrder: integer("sort_order").notNull().default(0),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true })
 			.notNull()
 			.defaultNow()
@@ -77,7 +86,9 @@ export const modifierGroup = pgTable(
 		required: boolean("required").notNull().default(false),
 		minSelect: integer("min_select").notNull().default(0),
 		maxSelect: integer("max_select").notNull().default(1),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 	},
 	(table) => [index("idx_modifier_group_org").on(table.organizationId)],
 );
@@ -123,12 +134,16 @@ export const productBarcode = pgTable(
 		productId: uuid("product_id")
 			.notNull()
 			.references(() => product.id, { onDelete: "cascade" }),
-		barcode: text("barcode").notNull(),
+		barcode: varchar("barcode", { length: 100 }).notNull(),
+		format: varchar("format", { length: 20 }).notNull().default("code128"),
 		isPrimary: boolean("is_primary").notNull().default(false),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 	},
 	(table) => [
 		index("idx_product_barcode_product").on(table.productId),
-		index("idx_product_barcode_barcode").on(table.barcode),
+		uniqueIndex("idx_product_barcode_barcode_unique").on(table.barcode),
 	],
 );
 
@@ -145,9 +160,7 @@ export const productLocation = pgTable(
 			.references(() => location.id, { onDelete: "cascade" }),
 		isAvailable: boolean("is_available").notNull().default(true),
 	},
-	(table) => [
-		primaryKey({ columns: [table.productId, table.locationId] }),
-	],
+	(table) => [primaryKey({ columns: [table.productId, table.locationId] })],
 );
 
 // ── Combo Product ──────────────────────────────────────────────────────
@@ -172,10 +185,9 @@ export const comboComponent = pgTable(
 			.notNull()
 			.references(() => comboProduct.id, { onDelete: "cascade" }),
 		componentName: text("component_name").notNull(),
-		departmentId: uuid("department_id").references(
-			() => reportingCategory.id,
-			{ onDelete: "set null" },
-		),
+		departmentId: uuid("department_id").references(() => reportingCategory.id, {
+			onDelete: "set null",
+		}),
 		allocatedPrice: numeric("allocated_price", { precision: 10, scale: 2 })
 			.notNull()
 			.default("0"),
@@ -195,9 +207,7 @@ export const registerDepartment = pgTable(
 			.notNull()
 			.references(() => reportingCategory.id, { onDelete: "cascade" }),
 	},
-	(table) => [
-		primaryKey({ columns: [table.registerId, table.departmentId] }),
-	],
+	(table) => [primaryKey({ columns: [table.registerId, table.departmentId] })],
 );
 
 // ── Tax Rate ───────────────────────────────────────────────────────────
@@ -213,20 +223,84 @@ export const taxRate = pgTable(
 		rate: numeric("rate", { precision: 5, scale: 4 }).notNull().default("0"),
 		isDefault: boolean("is_default").notNull().default(false),
 		isActive: boolean("is_active").notNull().default(true),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 	},
 	(table) => [index("idx_tax_rate_org").on(table.organizationId)],
 );
 
+// ── Menu Schedule ─────────────────────────────────────────────────────
+
+export const menuSchedule = pgTable(
+	"menu_schedule",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		organizationId: uuid("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		startTime: text("start_time").notNull(),
+		endTime: text("end_time").notNull(),
+		daysOfWeek: text("days_of_week").notNull(),
+		isActive: boolean("is_active").notNull().default(true),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(table) => [index("idx_menu_schedule_org").on(table.organizationId)],
+);
+
+export const menuScheduleProduct = pgTable(
+	"menu_schedule_product",
+	{
+		menuScheduleId: uuid("menu_schedule_id")
+			.notNull()
+			.references(() => menuSchedule.id, { onDelete: "cascade" }),
+		productId: uuid("product_id")
+			.notNull()
+			.references(() => product.id, { onDelete: "cascade" }),
+		overridePrice: numeric("override_price", { precision: 10, scale: 2 }),
+	},
+	(table) => [primaryKey({ columns: [table.menuScheduleId, table.productId] })],
+);
+
+// ── Recipe Ingredient ─────────────────────────────────────────────────
+
+export const recipeIngredient = pgTable(
+	"recipe_ingredient",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		productId: uuid("product_id")
+			.notNull()
+			.references(() => product.id, { onDelete: "cascade" }),
+		inventoryItemId: uuid("inventory_item_id")
+			.notNull()
+			.references(() => inventoryItem.id),
+		quantity: numeric("quantity", { precision: 10, scale: 4 }).notNull(),
+		unit: text("unit").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(table) => [
+		index("idx_recipe_ingredient_product").on(table.productId),
+		index("idx_recipe_ingredient_item").on(table.inventoryItemId),
+	],
+);
+
 // ── Relations ──────────────────────────────────────────────────────────
 
-export const reportingCategoryRelations = relations(reportingCategory, ({ one, many }) => ({
-	organization: one(organization, {
-		fields: [reportingCategory.organizationId],
-		references: [organization.id],
+export const reportingCategoryRelations = relations(
+	reportingCategory,
+	({ one, many }) => ({
+		organization: one(organization, {
+			fields: [reportingCategory.organizationId],
+			references: [organization.id],
+		}),
+		products: many(product),
 	}),
-	products: many(product),
-}));
+);
 
 export const productRelations = relations(product, ({ one, many }) => ({
 	organization: one(organization, {
@@ -244,16 +318,21 @@ export const productRelations = relations(product, ({ one, many }) => ({
 		fields: [product.id],
 		references: [comboProduct.productId],
 	}),
+	menuScheduleProducts: many(menuScheduleProduct),
+	recipeIngredients: many(recipeIngredient),
 }));
 
-export const modifierGroupRelations = relations(modifierGroup, ({ one, many }) => ({
-	organization: one(organization, {
-		fields: [modifierGroup.organizationId],
-		references: [organization.id],
+export const modifierGroupRelations = relations(
+	modifierGroup,
+	({ one, many }) => ({
+		organization: one(organization, {
+			fields: [modifierGroup.organizationId],
+			references: [organization.id],
+		}),
+		modifiers: many(modifier),
+		productModifierGroups: many(productModifierGroup),
 	}),
-	modifiers: many(modifier),
-	productModifierGroups: many(productModifierGroup),
-}));
+);
 
 export const modifierRelations = relations(modifier, ({ one }) => ({
 	modifierGroup: one(modifierGroup, {
@@ -262,16 +341,19 @@ export const modifierRelations = relations(modifier, ({ one }) => ({
 	}),
 }));
 
-export const productModifierGroupRelations = relations(productModifierGroup, ({ one }) => ({
-	product: one(product, {
-		fields: [productModifierGroup.productId],
-		references: [product.id],
+export const productModifierGroupRelations = relations(
+	productModifierGroup,
+	({ one }) => ({
+		product: one(product, {
+			fields: [productModifierGroup.productId],
+			references: [product.id],
+		}),
+		modifierGroup: one(modifierGroup, {
+			fields: [productModifierGroup.modifierGroupId],
+			references: [modifierGroup.id],
+		}),
 	}),
-	modifierGroup: one(modifierGroup, {
-		fields: [productModifierGroup.modifierGroupId],
-		references: [modifierGroup.id],
-	}),
-}));
+);
 
 export const productBarcodeRelations = relations(productBarcode, ({ one }) => ({
 	product: one(product, {
@@ -280,24 +362,30 @@ export const productBarcodeRelations = relations(productBarcode, ({ one }) => ({
 	}),
 }));
 
-export const productLocationRelations = relations(productLocation, ({ one }) => ({
-	product: one(product, {
-		fields: [productLocation.productId],
-		references: [product.id],
+export const productLocationRelations = relations(
+	productLocation,
+	({ one }) => ({
+		product: one(product, {
+			fields: [productLocation.productId],
+			references: [product.id],
+		}),
+		location: one(location, {
+			fields: [productLocation.locationId],
+			references: [location.id],
+		}),
 	}),
-	location: one(location, {
-		fields: [productLocation.locationId],
-		references: [location.id],
-	}),
-}));
+);
 
-export const comboProductRelations = relations(comboProduct, ({ one, many }) => ({
-	product: one(product, {
-		fields: [comboProduct.productId],
-		references: [product.id],
+export const comboProductRelations = relations(
+	comboProduct,
+	({ one, many }) => ({
+		product: one(product, {
+			fields: [comboProduct.productId],
+			references: [product.id],
+		}),
+		components: many(comboComponent),
 	}),
-	components: many(comboComponent),
-}));
+);
 
 export const comboComponentRelations = relations(comboComponent, ({ one }) => ({
 	comboProduct: one(comboProduct, {
@@ -310,16 +398,19 @@ export const comboComponentRelations = relations(comboComponent, ({ one }) => ({
 	}),
 }));
 
-export const registerDepartmentRelations = relations(registerDepartment, ({ one }) => ({
-	register: one(register, {
-		fields: [registerDepartment.registerId],
-		references: [register.id],
+export const registerDepartmentRelations = relations(
+	registerDepartment,
+	({ one }) => ({
+		register: one(register, {
+			fields: [registerDepartment.registerId],
+			references: [register.id],
+		}),
+		department: one(reportingCategory, {
+			fields: [registerDepartment.departmentId],
+			references: [reportingCategory.id],
+		}),
 	}),
-	department: one(reportingCategory, {
-		fields: [registerDepartment.departmentId],
-		references: [reportingCategory.id],
-	}),
-}));
+);
 
 export const taxRateRelations = relations(taxRate, ({ one }) => ({
 	organization: one(organization, {
@@ -327,3 +418,42 @@ export const taxRateRelations = relations(taxRate, ({ one }) => ({
 		references: [organization.id],
 	}),
 }));
+
+export const menuScheduleRelations = relations(
+	menuSchedule,
+	({ one, many }) => ({
+		organization: one(organization, {
+			fields: [menuSchedule.organizationId],
+			references: [organization.id],
+		}),
+		menuScheduleProducts: many(menuScheduleProduct),
+	}),
+);
+
+export const menuScheduleProductRelations = relations(
+	menuScheduleProduct,
+	({ one }) => ({
+		menuSchedule: one(menuSchedule, {
+			fields: [menuScheduleProduct.menuScheduleId],
+			references: [menuSchedule.id],
+		}),
+		product: one(product, {
+			fields: [menuScheduleProduct.productId],
+			references: [product.id],
+		}),
+	}),
+);
+
+export const recipeIngredientRelations = relations(
+	recipeIngredient,
+	({ one }) => ({
+		product: one(product, {
+			fields: [recipeIngredient.productId],
+			references: [product.id],
+		}),
+		inventoryItem: one(inventoryItem, {
+			fields: [recipeIngredient.inventoryItemId],
+			references: [inventoryItem.id],
+		}),
+	}),
+);

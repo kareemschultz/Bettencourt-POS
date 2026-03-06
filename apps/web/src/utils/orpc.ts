@@ -20,8 +20,12 @@ export const queryClient = new QueryClient({
 	}),
 });
 
+const baseUrl =
+	env.VITE_SERVER_URL ||
+	(typeof window !== "undefined" ? window.location.origin : "");
+
 export const link = new RPCLink({
-	url: `${env.VITE_SERVER_URL}/rpc`,
+	url: `${baseUrl}/rpc`,
 	fetch(url, options) {
 		return fetch(url, {
 			...options,

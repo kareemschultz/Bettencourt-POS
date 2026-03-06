@@ -42,7 +42,8 @@
 				"noEmptyPattern": "warn"
 			},
 			"suspicious": {
-				"noExplicitAny": "warn"
+				"noExplicitAny": "warn",
+				"noArrayIndexKey": "warn"
 			},
 			"a11y": {
 				"noLabelWithoutControl": "warn",
@@ -67,7 +68,8 @@
 				"noUnusedTemplateLiteral": "error",
 				"useNumberNamespace": "error",
 				"noInferrableTypes": "error",
-				"noUselessElse": "error"
+				"noUselessElse": "error",
+				"noNonNullAssertion": "warn"
 			}
 		}
 	},

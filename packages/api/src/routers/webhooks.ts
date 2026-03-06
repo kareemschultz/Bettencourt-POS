@@ -1,0 +1,200 @@
+import { db } from "@Bettencourt-POS/db";
+import * as schema from "@Bettencourt-POS/db/schema";
+import { ORPCError } from "@orpc/server";
+import { and, desc, eq } from "drizzle-orm";
+import { z } from "zod";
+import { permissionProcedure } from "../index";
+import { dispatchWebhookEvent } from "../lib/webhooks";
+
+const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+
+// ── listEndpoints ──────────────────────────────────────────────────────
+const listEndpoints = permissionProcedure("settings.read")
+	.input(z.object({}).optional())
+	.handler(async () => {
+		const endpoints = await db
+			.select()
+			.from(schema.webhookEndpoint)
+			.where(eq(schema.webhookEndpoint.organizationId, DEFAULT_ORG_ID))
+			.orderBy(desc(schema.webhookEndpoint.createdAt));
+
+		return endpoints;
+	});
+
+// ── createEndpoint ─────────────────────────────────────────────────────
+const createEndpoint = permissionProcedure("settings.write")
+	.input(
+		z.object({
+			name: z.string().min(1, "Name is required"),
+			url: z.string().url("Must be a valid URL"),
+			secret: z.string().nullable().optional(),
+			events: z.array(z.string()).min(1, "Select at least one event"),
+			isActive: z.boolean().default(true),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const rows = await db
+			.insert(schema.webhookEndpoint)
+			.values({
+				organizationId: DEFAULT_ORG_ID,
+				name: input.name,
+				url: input.url,
+				secret: input.secret ?? null,
+				events: input.events,
+				isActive: input.isActive,
+			})
+			.returning({ id: schema.webhookEndpoint.id });
+
+		return { id: rows[0]?.id };
+	});
+
+// ── updateEndpoint ─────────────────────────────────────────────────────
+const updateEndpoint = permissionProcedure("settings.write")
+	.input(
+		z.object({
+			id: z.string().uuid(),
+			name: z.string().min(1).optional(),
+			url: z.string().url().optional(),
+			secret: z.string().nullable().optional(),
+			events: z.array(z.string()).optional(),
+			isActive: z.boolean().optional(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const existing = await db
+			.select({ id: schema.webhookEndpoint.id })
+			.from(schema.webhookEndpoint)
+			.where(
+				and(
+					eq(schema.webhookEndpoint.id, input.id),
+					eq(schema.webhookEndpoint.organizationId, DEFAULT_ORG_ID),
+				),
+			)
+			.limit(1);
+
+		if (existing.length === 0) {
+			throw new ORPCError("NOT_FOUND", {
+				message: "Webhook endpoint not found",
+			});
+		}
+
+		const updates: Record<string, unknown> = {};
+		if (input.name !== undefined) updates.name = input.name;
+		if (input.url !== undefined) updates.url = input.url;
+		if (input.secret !== undefined) updates.secret = input.secret;
+		if (input.events !== undefined) updates.events = input.events;
+		if (input.isActive !== undefined) updates.isActive = input.isActive;
+
+		await db
+			.update(schema.webhookEndpoint)
+			.set(updates)
+			.where(eq(schema.webhookEndpoint.id, input.id));
+
+		return { success: true };
+	});
+
+// ── deleteEndpoint ─────────────────────────────────────────────────────
+const deleteEndpoint = permissionProcedure("settings.write")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input }) => {
+		const existing = await db
+			.select({ id: schema.webhookEndpoint.id })
+			.from(schema.webhookEndpoint)
+			.where(
+				and(
+					eq(schema.webhookEndpoint.id, input.id),
+					eq(schema.webhookEndpoint.organizationId, DEFAULT_ORG_ID),
+				),
+			)
+			.limit(1);
+
+		if (existing.length === 0) {
+			throw new ORPCError("NOT_FOUND", {
+				message: "Webhook endpoint not found",
+			});
+		}
+
+		await db
+			.delete(schema.webhookEndpoint)
+			.where(eq(schema.webhookEndpoint.id, input.id));
+
+		return { success: true };
+	});
+
+// ── getDeliveries ──────────────────────────────────────────────────────
+const getDeliveries = permissionProcedure("settings.read")
+	.input(
+		z.object({
+			endpointId: z.string().uuid(),
+			limit: z.number().min(1).max(100).default(50),
+			offset: z.number().min(0).default(0),
+		}),
+	)
+	.handler(async ({ input }) => {
+		// Verify endpoint belongs to org
+		const endpoint = await db
+			.select({ id: schema.webhookEndpoint.id })
+			.from(schema.webhookEndpoint)
+			.where(
+				and(
+					eq(schema.webhookEndpoint.id, input.endpointId),
+					eq(schema.webhookEndpoint.organizationId, DEFAULT_ORG_ID),
+				),
+			)
+			.limit(1);
+
+		if (endpoint.length === 0) {
+			throw new ORPCError("NOT_FOUND", {
+				message: "Webhook endpoint not found",
+			});
+		}
+
+		const deliveries = await db
+			.select()
+			.from(schema.webhookDelivery)
+			.where(eq(schema.webhookDelivery.endpointId, input.endpointId))
+			.orderBy(desc(schema.webhookDelivery.createdAt))
+			.limit(input.limit)
+			.offset(input.offset);
+
+		return deliveries;
+	});
+
+// ── testEndpoint ───────────────────────────────────────────────────────
+const testEndpoint = permissionProcedure("settings.write")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input }) => {
+		const rows = await db
+			.select()
+			.from(schema.webhookEndpoint)
+			.where(
+				and(
+					eq(schema.webhookEndpoint.id, input.id),
+					eq(schema.webhookEndpoint.organizationId, DEFAULT_ORG_ID),
+				),
+			)
+			.limit(1);
+
+		if (rows.length === 0) {
+			throw new ORPCError("NOT_FOUND", {
+				message: "Webhook endpoint not found",
+			});
+		}
+
+		dispatchWebhookEvent("test.ping", {
+			message: "This is a test webhook from Bettencourt's POS",
+			endpointId: input.id,
+			timestamp: new Date().toISOString(),
+		});
+
+		return { success: true, message: "Test webhook dispatched" };
+	});
+
+export const webhooksRouter = {
+	listEndpoints,
+	createEndpoint,
+	updateEndpoint,
+	deleteEndpoint,
+	getDeliveries,
+	testEndpoint,
+};
