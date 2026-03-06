@@ -49,6 +49,10 @@ export const product = pgTable(
 			() => reportingCategory.id,
 			{ onDelete: "set null" },
 		),
+		proteinCategoryId: uuid("protein_category_id").references(
+			() => reportingCategory.id,
+			{ onDelete: "set null" },
+		),
 		sku: text("sku"),
 		price: numeric("price", { precision: 10, scale: 2 }).notNull().default("0"),
 		cost: numeric("cost", { precision: 10, scale: 2 }).default("0"),
@@ -69,6 +73,7 @@ export const product = pgTable(
 	(table) => [
 		index("idx_product_org").on(table.organizationId),
 		index("idx_product_category").on(table.reportingCategoryId),
+		index("idx_product_protein_category").on(table.proteinCategoryId),
 		index("idx_product_sku").on(table.sku),
 	],
 );

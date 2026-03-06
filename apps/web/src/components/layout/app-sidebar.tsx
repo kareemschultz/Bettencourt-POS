@@ -110,6 +110,13 @@ const restaurantNavItems = [
 		roles: ["executive", "admin", "checkoff"],
 	},
 	{
+		title: "Production Report",
+		url: "/dashboard/production-report",
+		icon: BarChart3,
+		module: "reports",
+		roles: ["executive", "admin"],
+	},
+	{
 		title: "Menu Schedules",
 		url: "/dashboard/menu-schedules",
 		icon: CalendarClock,

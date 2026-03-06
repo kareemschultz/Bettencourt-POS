@@ -23,6 +23,7 @@ export const productionLog = pgTable(
 		locationId: uuid("location_id").references(() => location.id),
 		loggedByUserId: text("logged_by_user_id").references(() => user.id),
 		entryType: text("entry_type").notNull(),
+		workflow: text("workflow"), // "restaurant" | "bakery"
 		quantity: integer("quantity").notNull(),
 		notes: text("notes"),
 		logDate: date("log_date").notNull().default(sql`CURRENT_DATE`),
