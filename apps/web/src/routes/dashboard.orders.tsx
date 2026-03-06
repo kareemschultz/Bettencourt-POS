@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { OrdersTable } from "@/components/orders/orders-table";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
@@ -6,8 +7,20 @@ import { orpc } from "@/utils/orpc";
 export default function OrdersPage() {
 	const { data: session } = authClient.useSession();
 
+	const [search, setSearch] = useState("");
+	const [statusFilter, setStatusFilter] = useState("all");
+	const [dateFrom, setDateFrom] = useState("");
+	const [dateTo, setDateTo] = useState("");
+
 	const { data, isLoading } = useQuery(
-		orpc.orders.list.queryOptions({ input: {} }),
+		orpc.orders.list.queryOptions({
+			input: {
+				status: statusFilter !== "all" ? statusFilter : undefined,
+				startDate: dateFrom || undefined,
+				endDate: dateTo || undefined,
+				limit: 200,
+			},
+		}),
 	);
 
 	if (isLoading) {
@@ -42,6 +55,14 @@ export default function OrdersPage() {
 				orders={orders}
 				userId={session?.user?.id}
 				userRole="admin"
+				search={search}
+				onSearchChange={setSearch}
+				statusFilter={statusFilter}
+				onStatusFilterChange={setStatusFilter}
+				dateFrom={dateFrom}
+				onDateFromChange={setDateFrom}
+				dateTo={dateTo}
+				onDateToChange={setDateTo}
 			/>
 		</div>
 	);

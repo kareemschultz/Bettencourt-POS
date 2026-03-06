@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CreditCard, History, Plus, RefreshCw, Search } from "lucide-react";
+import {
+	CreditCard,
+	Filter,
+	History,
+	Plus,
+	RefreshCw,
+	Search,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +28,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import {
 	Table,
 	TableBody,
@@ -60,6 +74,9 @@ export default function GiftCardsPage() {
 			createdAt: string | Date;
 		}>;
 	} | null>(null);
+
+	const [cardSearch, setCardSearch] = useState("");
+	const [cardStatusFilter, setCardStatusFilter] = useState("all");
 
 	const { data: cards = [], isLoading } = useQuery(
 		orpc.giftcards.list.queryOptions({ input: {} }),
@@ -136,6 +153,25 @@ export default function GiftCardsPage() {
 		0,
 	);
 
+	const cardQ = cardSearch.trim().toLowerCase();
+	const filteredCards = cards.filter((c) => {
+		if (cardQ) {
+			const matchesCode = c.code.toLowerCase().includes(cardQ);
+			const matchesCustomer = (c.customerName ?? "")
+				.toLowerCase()
+				.includes(cardQ);
+			if (!matchesCode && !matchesCustomer) return false;
+		}
+		if (cardStatusFilter === "active") {
+			if (!c.isActive || Number(c.currentBalance) <= 0) return false;
+		} else if (cardStatusFilter === "inactive") {
+			if (c.isActive) return false;
+		} else if (cardStatusFilter === "empty") {
+			if (Number(c.currentBalance) !== 0) return false;
+		}
+		return true;
+	});
+
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
@@ -207,6 +243,36 @@ export default function GiftCardsPage() {
 						Every gift card issued, with current balance and status. Click the
 						reload icon to add funds.
 					</CardDescription>
+					{/* Filter bar */}
+					<div className="flex flex-wrap items-center gap-3 pt-1">
+						<Filter className="size-4 shrink-0 text-muted-foreground" />
+						<div className="relative">
+							<Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+							<Input
+								placeholder="Code or customer..."
+								value={cardSearch}
+								onChange={(e) => setCardSearch(e.target.value)}
+								className="h-9 w-52 pl-9"
+							/>
+						</div>
+						<Select
+							value={cardStatusFilter}
+							onValueChange={setCardStatusFilter}
+						>
+							<SelectTrigger className="h-9 w-44">
+								<SelectValue placeholder="All statuses" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">All Statuses</SelectItem>
+								<SelectItem value="active">Active</SelectItem>
+								<SelectItem value="inactive">Inactive</SelectItem>
+								<SelectItem value="empty">Empty (no balance)</SelectItem>
+							</SelectContent>
+						</Select>
+						<span className="text-muted-foreground text-sm">
+							{filteredCards.length} card{filteredCards.length !== 1 ? "s" : ""}
+						</span>
+					</div>
 				</CardHeader>
 				<CardContent className="p-0">
 					<Table>
@@ -231,22 +297,23 @@ export default function GiftCardsPage() {
 										Loading...
 									</TableCell>
 								</TableRow>
-							) : cards.length === 0 ? (
+							) : filteredCards.length === 0 ? (
 								<TableRow>
 									<TableCell
 										colSpan={7}
 										className="py-8 text-center text-muted-foreground"
 									>
 										<CreditCard className="mx-auto mb-2 size-8 opacity-50" />
-										<p className="font-medium">No gift cards issued yet</p>
+										<p className="font-medium">No gift cards found</p>
 										<p className="mt-1 text-xs">
-											Click "Sell Gift Card" to create one with a starting
-											balance.
+											{cards.length === 0
+												? 'Click "Sell Gift Card" to create one with a starting balance.'
+												: "Try adjusting your search or filter."}
 										</p>
 									</TableCell>
 								</TableRow>
 							) : (
-								cards.map((card) => {
+								filteredCards.map((card) => {
 									const balance = Number(card.currentBalance);
 									return (
 										<TableRow key={card.id}>

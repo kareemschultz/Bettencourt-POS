@@ -7,6 +7,7 @@ import {
 	Clock,
 	CreditCard,
 	Filter,
+	Search,
 	ShoppingBag,
 	Truck,
 } from "lucide-react";
@@ -213,10 +214,26 @@ export function OrdersTable({
 	orders: initialOrders,
 	userId,
 	userRole,
+	search = "",
+	onSearchChange,
+	statusFilter = "all",
+	onStatusFilterChange,
+	dateFrom = "",
+	onDateFromChange,
+	dateTo = "",
+	onDateToChange,
 }: {
 	orders: Order[];
 	userId?: string;
 	userRole?: string;
+	search?: string;
+	onSearchChange?: (v: string) => void;
+	statusFilter?: string;
+	onStatusFilterChange?: (v: string) => void;
+	dateFrom?: string;
+	onDateFromChange?: (v: string) => void;
+	dateTo?: string;
+	onDateToChange?: (v: string) => void;
 }) {
 	const queryClient = useQueryClient();
 	const [orders, setOrders] = useState(initialOrders);
@@ -248,10 +265,16 @@ export function OrdersTable({
 		setVoidReason("");
 	}
 
-	const filtered =
-		typeFilter === "all"
-			? orders
-			: orders.filter((o) => o.order_type === typeFilter);
+	const q = search.trim().toLowerCase();
+	const filtered = orders.filter((o) => {
+		if (typeFilter !== "all" && o.order_type !== typeFilter) return false;
+		if (q) {
+			const matchesNumber = o.order_number.toLowerCase().includes(q);
+			const matchesCustomer = (o.customer_name ?? "").toLowerCase().includes(q);
+			if (!matchesNumber && !matchesCustomer) return false;
+		}
+		return true;
+	});
 
 	const orderTypeIcon = (type: string) => {
 		switch (type) {
@@ -267,10 +290,23 @@ export function OrdersTable({
 	return (
 		<div className="flex flex-col gap-3">
 			{/* Filter bar */}
-			<div className="flex items-center gap-3">
-				<Filter className="size-4 text-muted-foreground" />
+			<div className="flex flex-wrap items-center gap-3">
+				<Filter className="size-4 shrink-0 text-muted-foreground" />
+
+				{/* Search */}
+				<div className="relative">
+					<Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						placeholder="Order # or customer..."
+						value={search}
+						onChange={(e) => onSearchChange?.(e.target.value)}
+						className="h-9 w-52 pl-9"
+					/>
+				</div>
+
+				{/* Order type */}
 				<Select value={typeFilter} onValueChange={setTypeFilter}>
-					<SelectTrigger className="w-44">
+					<SelectTrigger className="h-9 w-44">
 						<SelectValue placeholder="All order types" />
 					</SelectTrigger>
 					<SelectContent>
@@ -280,6 +316,42 @@ export function OrdersTable({
 						<SelectItem value="delivery">Delivery</SelectItem>
 					</SelectContent>
 				</Select>
+
+				{/* Status */}
+				<Select
+					value={statusFilter}
+					onValueChange={(v) => onStatusFilterChange?.(v)}
+				>
+					<SelectTrigger className="h-9 w-40">
+						<SelectValue placeholder="All statuses" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="all">All Statuses</SelectItem>
+						<SelectItem value="completed">Completed</SelectItem>
+						<SelectItem value="open">Open</SelectItem>
+						<SelectItem value="voided">Voided</SelectItem>
+						<SelectItem value="refunded">Refunded</SelectItem>
+						<SelectItem value="held">Held</SelectItem>
+					</SelectContent>
+				</Select>
+
+				{/* Date range */}
+				<Input
+					type="date"
+					value={dateFrom}
+					onChange={(e) => onDateFromChange?.(e.target.value)}
+					className="h-9 w-40"
+					aria-label="From date"
+				/>
+				<span className="text-muted-foreground text-sm">to</span>
+				<Input
+					type="date"
+					value={dateTo}
+					onChange={(e) => onDateToChange?.(e.target.value)}
+					className="h-9 w-40"
+					aria-label="To date"
+				/>
+
 				<span className="text-muted-foreground text-sm">
 					{filtered.length} orders
 				</span>
