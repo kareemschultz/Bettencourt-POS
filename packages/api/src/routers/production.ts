@@ -1,6 +1,6 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 
@@ -81,6 +81,7 @@ const createEntry = permissionProcedure("orders.update")
 			locationId: z.string().uuid().nullable().optional(),
 			loggedByUserId: z.string().nullable().optional(),
 			entryType: z.enum(["opening", "reorder", "closing"]),
+			workflow: z.string().optional(),
 			quantity: z.number().int(),
 			notes: z.string().nullable().optional(),
 		}),
@@ -94,6 +95,7 @@ const createEntry = permissionProcedure("orders.update")
 				locationId: input.locationId ?? null,
 				loggedByUserId: input.loggedByUserId ?? null,
 				entryType: input.entryType,
+				workflow: input.workflow ?? null,
 				quantity: input.quantity,
 				notes: input.notes ?? null,
 			})
@@ -175,8 +177,104 @@ const getReconciliation = permissionProcedure("reports.read")
 		return { reconciliation, date };
 	});
 
+// ── getReport ───────────────────────────────────────────────────────────
+const getReport = permissionProcedure("reports.read")
+	.input(
+		z.object({
+			date: z.string(),
+			workflow: z.string().optional(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+
+		const conditions: ReturnType<typeof eq>[] = [
+			eq(schema.productionLog.logDate, input.date),
+		];
+		if (input.workflow) {
+			conditions.push(eq(schema.productionLog.workflow, input.workflow));
+		}
+
+		const entries = await db
+			.select({
+				productId: schema.productionLog.productId,
+				productName: schema.productionLog.productName,
+				entryType: schema.productionLog.entryType,
+				quantity: schema.productionLog.quantity,
+			})
+			.from(schema.productionLog)
+			.where(and(...conditions));
+
+		const byProduct = new Map<
+			string,
+			{ name: string; opening: number; reorder: number; closing: number }
+		>();
+		for (const e of entries) {
+			const key = e.productId ?? e.productName;
+			const cur = byProduct.get(key) ?? {
+				name: e.productName,
+				opening: 0,
+				reorder: 0,
+				closing: 0,
+			};
+			if (e.entryType === "opening") cur.opening += e.quantity;
+			if (e.entryType === "reorder") cur.reorder += e.quantity;
+			if (e.entryType === "closing") cur.closing += e.quantity;
+			byProduct.set(key, cur);
+		}
+
+		// Get actual sold from completed orders on that date (Guyana is UTC-4)
+		const dateStart = new Date(`${input.date}T00:00:00-04:00`);
+		const dateEnd = new Date(`${input.date}T23:59:59-04:00`);
+
+		const soldItems = await db
+			.select({
+				productId: schema.orderLineItem.productId,
+				productName: schema.orderLineItem.productNameSnapshot,
+				quantity: schema.orderLineItem.quantity,
+			})
+			.from(schema.orderLineItem)
+			.innerJoin(
+				schema.order,
+				eq(schema.orderLineItem.orderId, schema.order.id),
+			)
+			.where(
+				and(
+					eq(schema.order.organizationId, DEFAULT_ORG_ID),
+					eq(schema.order.status, "completed"),
+					gte(schema.order.createdAt, dateStart),
+					lte(schema.order.createdAt, dateEnd),
+					eq(schema.orderLineItem.voided, false),
+				),
+			);
+
+		const actualByProduct = new Map<string, number>();
+		for (const s of soldItems) {
+			const key = s.productId ?? s.productName;
+			actualByProduct.set(key, (actualByProduct.get(key) ?? 0) + s.quantity);
+		}
+
+		const rows = Array.from(byProduct.entries()).map(([key, v]) => {
+			const expected = v.opening + v.reorder - v.closing;
+			const actual = actualByProduct.get(key) ?? 0;
+			return {
+				productId: key,
+				productName: v.name,
+				opening: v.opening,
+				reorder: v.reorder,
+				closing: v.closing,
+				expected,
+				actual,
+				variance: actual - expected,
+			};
+		});
+
+		return { rows, date: input.date };
+	});
+
 export const productionRouter = {
 	getEntries,
 	createEntry,
 	getReconciliation,
+	getReport,
 };

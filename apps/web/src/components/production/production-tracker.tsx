@@ -88,6 +88,9 @@ export function ProductionTracker({ products, initialTotals, userId }: Props) {
 	const [quantity, setQuantity] = useState(0);
 	const [notes, setNotes] = useState("");
 	const [deptFilter, setDeptFilter] = useState<string>("all");
+	const [workflow, setWorkflow] = useState<"restaurant" | "bakery">(
+		"restaurant",
+	);
 
 	const today = todayGY();
 
@@ -128,6 +131,14 @@ export function ProductionTracker({ products, initialTotals, userId }: Props) {
 		}),
 	);
 
+	const filteredProducts = products.filter((p) => {
+		const deptLower = (p.department_name ?? "").toLowerCase();
+		if (workflow === "bakery") {
+			return deptLower.includes("pastry") || deptLower.includes("bakery");
+		}
+		return !deptLower.includes("pastry") && !deptLower.includes("bakery");
+	});
+
 	// Get unique departments
 	const departments = Array.from(
 		new Set(products.map((p) => p.department_name).filter(Boolean)),
@@ -135,8 +146,8 @@ export function ProductionTracker({ products, initialTotals, userId }: Props) {
 
 	const filtered =
 		deptFilter === "all"
-			? products
-			: products.filter((p) => p.department_name === deptFilter);
+			? filteredProducts
+			: filteredProducts.filter((p) => p.department_name === deptFilter);
 
 	const handleNumpad = useCallback((digit: number) => {
 		setQuantity((prev) => {
@@ -161,6 +172,24 @@ export function ProductionTracker({ products, initialTotals, userId }: Props) {
 
 	return (
 		<div className="flex h-[calc(100vh-3.5rem)] flex-col">
+			{/* Workflow selector */}
+			<div className="mb-4 flex gap-2 px-3 pt-3 sm:px-4">
+				<button
+					type="button"
+					onClick={() => setWorkflow("restaurant")}
+					className={`rounded-md px-4 py-2 font-medium text-sm transition-colors ${workflow === "restaurant" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+				>
+					Restaurant → Food
+				</button>
+				<button
+					type="button"
+					onClick={() => setWorkflow("bakery")}
+					className={`rounded-md px-4 py-2 font-medium text-sm transition-colors ${workflow === "bakery" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+				>
+					Bakery → Pastry
+				</button>
+			</div>
+
 			{/* Mode Toggle Bar */}
 			<div className="flex items-center gap-2 border-border border-b bg-muted/30 px-3 py-2 sm:px-4">
 				{(Object.entries(MODE_CONFIG) as [EntryType, typeof modeConfig][]).map(
