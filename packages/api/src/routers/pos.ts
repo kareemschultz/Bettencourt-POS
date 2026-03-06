@@ -7,6 +7,22 @@ import { permissionProcedure } from "../index";
 import { createAuditLog } from "../lib/audit";
 import { emitKitchenEvent } from "../lib/kitchen-events";
 
+const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+const DEFAULT_LOC_ID = "b0000000-0000-4000-8000-000000000001";
+
+async function nextInvoiceNumber(orgId: string): Promise<string> {
+	const result = await db
+		.insert(schema.invoiceCounter)
+		.values({ organizationId: orgId, lastNumber: 1 })
+		.onConflictDoUpdate({
+			target: schema.invoiceCounter.organizationId,
+			set: { lastNumber: sql`${schema.invoiceCounter.lastNumber} + 1` },
+		})
+		.returning({ lastNumber: schema.invoiceCounter.lastNumber });
+	const num = result[0]?.lastNumber ?? 1;
+	return `INV-${String(num).padStart(4, "0")}`;
+}
+
 // ── getProducts ─────────────────────────────────────────────────────────
 // POS product grid: filtered by register departments, specific department, and location
 const getProducts = permissionProcedure("orders.read")
@@ -47,7 +63,8 @@ const getProducts = permissionProcedure("orders.read")
 		}
 
 		// Get departments (filtered if register has restrictions)
-		let departments;
+		let departments: { id: string; name: string; sortOrder: number | null }[] =
+			[];
 		if (departmentFilter.length > 0) {
 			departments = await db
 				.select({
@@ -537,6 +554,33 @@ const checkout = permissionProcedure("orders.create")
 						: 0,
 			};
 		});
+
+		// Auto-create draft invoice for credit sales
+		const creditPayment = payments.find((p) => p.method === "credit");
+		if (creditPayment && userId) {
+			const invoiceNumber = await nextInvoiceNumber(
+				organizationId ?? DEFAULT_ORG_ID,
+			);
+			await db.insert(schema.invoice).values({
+				organizationId: organizationId ?? DEFAULT_ORG_ID,
+				locationId: locationId ?? DEFAULT_LOC_ID,
+				invoiceNumber,
+				customerId: customerId ?? null,
+				customerName: customerName ?? "Walk-in",
+				items: items.map((item) => ({
+					description: item.productName ?? "Item",
+					quantity: item.quantity,
+					unitPrice: item.unitPrice,
+					total: item.unitPrice * item.quantity,
+				})),
+				subtotal: subtotal.toFixed(2),
+				taxTotal: taxTotal.toFixed(2),
+				total: total.toFixed(2),
+				status: "outstanding",
+				notes: `Credit sale from POS — Order ${result.order.orderNumber}`,
+				createdBy: userId,
+			});
+		}
 
 		// Emit kitchen event after transaction committed
 		emitKitchenEvent({

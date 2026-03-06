@@ -4,6 +4,7 @@ import {
 	Banknote,
 	Check,
 	CreditCard,
+	FileText,
 	Gift,
 	Loader2,
 	Search,
@@ -34,12 +35,18 @@ interface PaymentDialogProps {
 	) => Promise<void>;
 }
 
-type PaymentStep = "method" | "cash" | "split_cash" | "gift_card" | "complete";
+type PaymentStep =
+	| "method"
+	| "cash"
+	| "split_cash"
+	| "gift_card"
+	| "credit"
+	| "complete";
 
 export function PaymentDialog({
 	open,
 	total,
-	items,
+	items: _items,
 	onClose,
 	onComplete,
 }: PaymentDialogProps) {
@@ -200,6 +207,16 @@ export function PaymentDialog({
 		}
 	}
 
+	async function handleCreditPayment() {
+		setProcessing(true);
+		try {
+			await onComplete([{ method: "credit", amount: total }]);
+			setStep("complete");
+		} catch {
+			setProcessing(false);
+		}
+	}
+
 	// GYD quick amounts
 	const quickCashAmounts = [
 		Math.ceil(total / 100) * 100,
@@ -284,6 +301,19 @@ export function PaymentDialog({
 								<span className="font-medium text-base">Gift Card</span>
 								<span className="block text-muted-foreground text-xs">
 									Pay with gift card balance
+								</span>
+							</div>
+						</Button>
+						<Button
+							variant="outline"
+							className="flex h-16 touch-manipulation items-center justify-start gap-3 px-5 sm:h-14"
+							onClick={() => setStep("credit")}
+						>
+							<FileText className="size-6 shrink-0 sm:size-5" />
+							<div className="text-left">
+								<span className="font-medium text-base">Credit / Invoice</span>
+								<span className="block text-muted-foreground text-xs">
+									Record as credit, auto-create invoice
 								</span>
 							</div>
 						</Button>
@@ -518,6 +548,41 @@ export function PaymentDialog({
 						>
 							<ArrowLeft className="mr-1.5 size-4" /> Back
 						</Button>
+					</div>
+				)}
+
+				{step === "credit" && (
+					<div className="flex flex-col gap-4 py-2">
+						<div className="text-center">
+							<p className="text-muted-foreground text-sm">Amount Due</p>
+							<p className="font-bold text-3xl sm:text-2xl">
+								{formatGYD(total)}
+							</p>
+						</div>
+						<div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-800 text-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+							<p className="mb-1 font-medium">Credit Sale</p>
+							<p className="text-xs">
+								This order will be recorded as credit. A draft invoice will be
+								auto-created. Petty cash will be used to balance the till for
+								the day.
+							</p>
+						</div>
+						<div className="flex gap-2">
+							<Button
+								variant="outline"
+								className="h-12 flex-1 touch-manipulation"
+								onClick={() => setStep("method")}
+							>
+								<ArrowLeft className="mr-1.5 size-4" /> Back
+							</Button>
+							<Button
+								className="h-12 flex-1 touch-manipulation font-bold text-base"
+								onClick={handleCreditPayment}
+								disabled={processing}
+							>
+								{processing ? "Processing..." : "Confirm / Complete"}
+							</Button>
+						</div>
 					</div>
 				)}
 
