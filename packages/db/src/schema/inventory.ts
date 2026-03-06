@@ -3,6 +3,7 @@ import {
 	boolean,
 	date,
 	index,
+	jsonb,
 	numeric,
 	pgTable,
 	text,
@@ -52,6 +53,9 @@ export const supplier = pgTable(
 		email: text("email"),
 		phone: text("phone"),
 		address: text("address"),
+		salesRep: text("sales_rep"),
+		categories: jsonb("categories").$type<string[]>().default([]),
+		itemsSupplied: text("items_supplied"),
 		isActive: boolean("is_active").notNull().default(true),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()

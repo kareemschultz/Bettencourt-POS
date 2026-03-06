@@ -137,28 +137,80 @@ const getSuppliers = permissionProcedure("settings.read")
 const createSupplier = permissionProcedure("settings.update")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
+			organizationId: z.string().uuid().optional(),
 			name: z.string().min(1),
 			contactName: z.string().nullable().optional(),
 			email: z.string().email().nullable().optional(),
 			phone: z.string().nullable().optional(),
 			address: z.string().nullable().optional(),
+			salesRep: z.string().nullable().optional(),
+			categories: z.array(z.string()).optional(),
+			itemsSupplied: z.string().nullable().optional(),
 		}),
 	)
 	.handler(async ({ input }) => {
+		const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 		const rows = await db
 			.insert(schema.supplier)
 			.values({
-				organizationId: input.organizationId,
+				organizationId: input.organizationId ?? DEFAULT_ORG_ID,
 				name: input.name,
 				contactName: input.contactName ?? null,
 				email: input.email ?? null,
 				phone: input.phone ?? null,
 				address: input.address ?? null,
+				salesRep: input.salesRep ?? null,
+				categories: input.categories ?? [],
+				itemsSupplied: input.itemsSupplied ?? null,
 			})
 			.returning({ id: schema.supplier.id });
 
 		return { id: rows[0]?.id };
+	});
+
+// ── updateSupplier ──────────────────────────────────────────────────────
+const updateSupplier = permissionProcedure("settings.update")
+	.input(
+		z.object({
+			id: z.string().uuid(),
+			name: z.string().min(1).optional(),
+			contactName: z.string().nullable().optional(),
+			email: z.string().email().nullable().optional(),
+			phone: z.string().nullable().optional(),
+			address: z.string().nullable().optional(),
+			salesRep: z.string().nullable().optional(),
+			categories: z.array(z.string()).optional(),
+			itemsSupplied: z.string().nullable().optional(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const { id, ...rest } = input;
+		const updates: Record<string, unknown> = {};
+		if (rest.name !== undefined) updates.name = rest.name;
+		if (rest.contactName !== undefined) updates.contactName = rest.contactName;
+		if (rest.email !== undefined) updates.email = rest.email;
+		if (rest.phone !== undefined) updates.phone = rest.phone;
+		if (rest.address !== undefined) updates.address = rest.address;
+		if (rest.salesRep !== undefined) updates.salesRep = rest.salesRep;
+		if (rest.categories !== undefined) updates.categories = rest.categories;
+		if (rest.itemsSupplied !== undefined)
+			updates.itemsSupplied = rest.itemsSupplied;
+		await db
+			.update(schema.supplier)
+			.set(updates)
+			.where(eq(schema.supplier.id, id));
+		return { success: true };
+	});
+
+// ── deleteSupplier ──────────────────────────────────────────────────────
+const deleteSupplier = permissionProcedure("settings.update")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input }) => {
+		await db
+			.update(schema.supplier)
+			.set({ isActive: false })
+			.where(eq(schema.supplier.id, input.id));
+		return { success: true };
 	});
 
 // ── getTables ───────────────────────────────────────────────────────────
@@ -679,6 +731,8 @@ export const settingsRouter = {
 	getRegisters,
 	getSuppliers,
 	createSupplier,
+	updateSupplier,
+	deleteSupplier,
 	getTables,
 	updateTable,
 	getUsers,
