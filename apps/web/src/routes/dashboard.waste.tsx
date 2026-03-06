@@ -2,12 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	AlertTriangle,
 	ChevronUp,
+	Pencil,
 	Plus,
 	Trash2,
 	TrendingDown,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -16,6 +18,22 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
@@ -111,6 +129,13 @@ export default function WasteTrackingPage() {
 		}),
 	);
 
+	// Individual log entries
+	const { data: logEntries = [] } = useQuery(
+		orpc.inventory.getWasteLog.queryOptions({
+			input: { startDate, endDate, limit: 100, page: 1 },
+		}),
+	);
+
 	// 30-day trend (always last 30 days regardless of filter)
 	const thirtyAgo = thirtyDaysAgoGY();
 	const { data: trendSummary } = useQuery(
@@ -142,7 +167,19 @@ export default function WasteTrackingPage() {
 		return Math.round((wasteCost / monthRevenueTotal) * 10000) / 100;
 	}, [monthSummary, monthRevenueTotal]);
 
-	// Mutation
+	// Edit modal state
+	const [editDialogOpen, setEditDialogOpen] = useState(false);
+	const [editingEntry, setEditingEntry] = useState<{
+		id: string;
+		productName: string;
+		quantity: string;
+		unit: string;
+		estimatedCost: string;
+		reason: string;
+		notes: string;
+	} | null>(null);
+
+	// Mutations
 	const logWasteMutation = useMutation(
 		orpc.inventory.logWaste.mutationOptions({
 			onSuccess: () => {
@@ -161,6 +198,28 @@ export default function WasteTrackingPage() {
 			onError: (err: Error) => {
 				toast.error(`Failed to log waste: ${err.message}`);
 			},
+		}),
+	);
+
+	const updateWasteMutation = useMutation(
+		orpc.inventory.updateWaste.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: ["inventory"] });
+				setEditDialogOpen(false);
+				setEditingEntry(null);
+				toast.success("Waste entry updated");
+			},
+			onError: (err: Error) => toast.error(err.message || "Failed to update"),
+		}),
+	);
+
+	const deleteWasteMutation = useMutation(
+		orpc.inventory.deleteWaste.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: ["inventory"] });
+				toast.success("Waste entry deleted");
+			},
+			onError: (err: Error) => toast.error(err.message || "Failed to delete"),
 		}),
 	);
 
@@ -767,6 +826,247 @@ export default function WasteTrackingPage() {
 					)}
 				</CardContent>
 			</Card>
+
+			{/* Waste Log Entries */}
+			<Card>
+				<CardHeader>
+					<CardTitle className="text-base">Waste Log Entries</CardTitle>
+					<CardDescription className="text-xs">
+						All individual waste entries for the selected period
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					{logEntries.length === 0 ? (
+						<p className="py-6 text-center text-muted-foreground text-sm">
+							No entries for this period.
+						</p>
+					) : (
+						<div className="overflow-x-auto">
+							<table className="w-full text-sm">
+								<thead>
+									<tr className="border-b text-left text-muted-foreground text-xs">
+										<th className="pr-3 pb-2 font-medium">Date</th>
+										<th className="pr-3 pb-2 font-medium">Item</th>
+										<th className="pr-3 pb-2 font-medium">Qty</th>
+										<th className="pr-3 pb-2 font-medium">Reason</th>
+										<th className="pr-3 pb-2 text-right font-medium">Cost</th>
+										<th className="pb-2 font-medium">Logged By</th>
+										<th className="w-16 pb-2" />
+									</tr>
+								</thead>
+								<tbody>
+									{(
+										logEntries as Array<{
+											id: string;
+											productName: string;
+											quantity: string;
+											unit: string;
+											estimatedCost: string;
+											reason: string;
+											notes: string | null;
+											createdAt: string;
+											userName: string | null;
+										}>
+									).map((entry) => (
+										<tr key={entry.id} className="border-b last:border-0">
+											<td className="whitespace-nowrap py-2 pr-3 text-muted-foreground text-xs">
+												{new Date(entry.createdAt).toLocaleString("en-GY", {
+													month: "short",
+													day: "numeric",
+													hour: "2-digit",
+													minute: "2-digit",
+													hour12: false,
+												})}
+											</td>
+											<td className="py-2 pr-3 font-medium">
+												{entry.productName}
+											</td>
+											<td className="py-2 pr-3 text-xs">
+												{entry.quantity} {entry.unit}
+											</td>
+											<td className="py-2 pr-3">
+												<Badge
+													variant="secondary"
+													className={`text-white text-xs ${REASON_COLORS[entry.reason] ?? "bg-gray-500"}`}
+												>
+													{reasonLabel(entry.reason)}
+												</Badge>
+											</td>
+											<td className="py-2 pr-3 text-right font-medium font-mono">
+												{formatGYD(Number(entry.estimatedCost))}
+											</td>
+											<td className="py-2 text-muted-foreground text-xs">
+												{entry.userName ?? "—"}
+											</td>
+											<td className="py-2">
+												<div className="flex items-center gap-1">
+													<Button
+														size="icon"
+														variant="ghost"
+														className="size-7"
+														onClick={() => {
+															setEditingEntry({
+																id: entry.id,
+																productName: entry.productName,
+																quantity: entry.quantity,
+																unit: entry.unit,
+																estimatedCost: entry.estimatedCost,
+																reason: entry.reason,
+																notes: entry.notes ?? "",
+															});
+															setEditDialogOpen(true);
+														}}
+													>
+														<Pencil className="size-3.5" />
+													</Button>
+													<Button
+														size="icon"
+														variant="ghost"
+														className="size-7 text-destructive hover:text-destructive"
+														disabled={deleteWasteMutation.isPending}
+														onClick={() => {
+															if (confirm("Delete this waste entry?")) {
+																deleteWasteMutation.mutate({ id: entry.id });
+															}
+														}}
+													>
+														<Trash2 className="size-3.5" />
+													</Button>
+												</div>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					)}
+				</CardContent>
+			</Card>
+
+			{/* Edit Waste Entry Dialog */}
+			<Dialog
+				open={editDialogOpen}
+				onOpenChange={(open) => {
+					setEditDialogOpen(open);
+					if (!open) setEditingEntry(null);
+				}}
+			>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle>Edit Waste Entry</DialogTitle>
+					</DialogHeader>
+					{editingEntry && (
+						<div className="flex flex-col gap-4 py-2">
+							<div className="flex flex-col gap-1.5">
+								<Label>Item Name</Label>
+								<Input
+									value={editingEntry.productName}
+									onChange={(e) =>
+										setEditingEntry((p) =>
+											p ? { ...p, productName: e.target.value } : p,
+										)
+									}
+								/>
+							</div>
+							<div className="grid grid-cols-2 gap-3">
+								<div className="flex flex-col gap-1.5">
+									<Label>Quantity</Label>
+									<Input
+										type="number"
+										value={editingEntry.quantity}
+										onChange={(e) =>
+											setEditingEntry((p) =>
+												p ? { ...p, quantity: e.target.value } : p,
+											)
+										}
+									/>
+								</div>
+								<div className="flex flex-col gap-1.5">
+									<Label>Unit</Label>
+									<Input
+										value={editingEntry.unit}
+										onChange={(e) =>
+											setEditingEntry((p) =>
+												p ? { ...p, unit: e.target.value } : p,
+											)
+										}
+									/>
+								</div>
+							</div>
+							<div className="flex flex-col gap-1.5">
+								<Label>Reason</Label>
+								<Select
+									value={editingEntry.reason}
+									onValueChange={(v) =>
+										setEditingEntry((p) => (p ? { ...p, reason: v } : p))
+									}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{REASON_OPTIONS.map((r) => (
+											<SelectItem key={r.value} value={r.value}>
+												{r.label}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="flex flex-col gap-1.5">
+								<Label>Estimated Cost (GYD)</Label>
+								<Input
+									type="number"
+									value={editingEntry.estimatedCost}
+									onChange={(e) =>
+										setEditingEntry((p) =>
+											p ? { ...p, estimatedCost: e.target.value } : p,
+										)
+									}
+								/>
+							</div>
+							<div className="flex flex-col gap-1.5">
+								<Label>Notes</Label>
+								<Input
+									value={editingEntry.notes}
+									onChange={(e) =>
+										setEditingEntry((p) =>
+											p ? { ...p, notes: e.target.value } : p,
+										)
+									}
+								/>
+							</div>
+						</div>
+					)}
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+							Cancel
+						</Button>
+						<Button
+							disabled={updateWasteMutation.isPending}
+							onClick={() => {
+								if (!editingEntry) return;
+								updateWasteMutation.mutate({
+									id: editingEntry.id,
+									productName: editingEntry.productName,
+									quantity: editingEntry.quantity,
+									unit: editingEntry.unit,
+									estimatedCost: editingEntry.estimatedCost,
+									reason: editingEntry.reason as
+										| "spoilage"
+										| "over_prep"
+										| "expired"
+										| "dropped"
+										| "other",
+									notes: editingEntry.notes || undefined,
+								});
+							}}
+						>
+							{updateWasteMutation.isPending ? "Saving..." : "Save Changes"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 
 			{/* High waste alert */}
 			{wasteVsRevenuePct > 5 && (

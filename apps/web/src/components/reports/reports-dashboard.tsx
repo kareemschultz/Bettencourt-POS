@@ -356,6 +356,11 @@ export function ReportsDashboard({
 											<Tooltip
 												formatter={(value) => formatGYD(Number(value))}
 											/>
+											<Legend
+												formatter={(value) => (
+													<span className="text-xs">{value}</span>
+												)}
+											/>
 										</PieChart>
 									</ResponsiveContainer>
 								) : (

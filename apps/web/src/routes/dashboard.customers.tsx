@@ -6,6 +6,7 @@ import {
 	Plus,
 	Search,
 	ShoppingBag,
+	Trash2,
 	Users,
 } from "lucide-react";
 import { useState } from "react";
@@ -91,6 +92,16 @@ export default function CustomersPage() {
 				toast.success("Customer updated");
 			},
 			onError: (err) => toast.error(err.message || "Failed to update customer"),
+		}),
+	);
+
+	const deleteMut = useMutation(
+		orpc.customers.deleteCustomer.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: listKey });
+				toast.success("Customer deleted");
+			},
+			onError: (err) => toast.error(err.message || "Failed to delete customer"),
 		}),
 	);
 
@@ -245,16 +256,32 @@ export default function CustomersPage() {
 													{formatGYD(Number(c.totalSpent))}
 												</TableCell>
 												<TableCell>
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={(e) => {
-															e.stopPropagation();
-															openEdit(c);
-														}}
-													>
-														<Edit2 className="size-3.5" />
-													</Button>
+													<div className="flex items-center gap-1">
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={(e) => {
+																e.stopPropagation();
+																openEdit(c);
+															}}
+														>
+															<Edit2 className="size-3.5" />
+														</Button>
+														<Button
+															variant="ghost"
+															size="sm"
+															className="text-destructive hover:text-destructive"
+															disabled={deleteMut.isPending}
+															onClick={(e) => {
+																e.stopPropagation();
+																if (confirm(`Delete ${c.name}?`)) {
+																	deleteMut.mutate({ id: c.id });
+																}
+															}}
+														>
+															<Trash2 className="size-3.5" />
+														</Button>
+													</div>
 												</TableCell>
 											</TableRow>
 										))

@@ -229,6 +229,14 @@ const getHistory = permissionProcedure("orders.read")
 		return orders;
 	});
 
+// ── delete ────────────────────────────────────────────────────────────
+const deleteCustomer = permissionProcedure("orders.create")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input }) => {
+		await db.delete(schema.customer).where(eq(schema.customer.id, input.id));
+		return { status: "deleted" };
+	});
+
 export const customersRouter = {
 	list,
 	getById,
@@ -236,4 +244,5 @@ export const customersRouter = {
 	update,
 	search,
 	getHistory,
+	deleteCustomer,
 };

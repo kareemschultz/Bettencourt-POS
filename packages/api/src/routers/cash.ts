@@ -500,6 +500,31 @@ const getExpenseCategories = permissionProcedure("shifts.read").handler(
 	},
 );
 
+// ── 7.4 updateExpense ──────────────────────────────────────────────────
+const updateExpense = permissionProcedure("shifts.create")
+	.input(
+		z.object({
+			expenseId: z.string().uuid(),
+			amount: z.string(),
+			category: z.string(),
+			description: z.string(),
+			supplierId: z.string().uuid().nullable().optional(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		await db
+			.update(schema.expense)
+			.set({
+				amount: input.amount,
+				category: input.category,
+				description: input.description,
+				supplierId: input.supplierId ?? null,
+			})
+			.where(eq(schema.expense.id, input.expenseId));
+
+		return { status: "updated" };
+	});
+
 // ── 7.4 deleteExpense ──────────────────────────────────────────────────
 const deleteExpense = permissionProcedure("shifts.delete")
 	.input(z.object({ expenseId: z.string().uuid() }))
@@ -578,6 +603,7 @@ export const cashRouter = {
 	getHandoffs,
 	// 7.4 Expense Tracking
 	createExpense,
+	updateExpense,
 	getExpenses,
 	getExpenseReport,
 	getExpenseCategories,

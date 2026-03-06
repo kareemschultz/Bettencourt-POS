@@ -542,7 +542,7 @@ const updateTaxRate = permissionProcedure("settings.update")
 				.set({ isDefault: false })
 				.where(
 					and(
-						eq(schema.taxRate.organizationId, existing[0]?.organizationId),
+						eq(schema.taxRate.organizationId, existing[0]!.organizationId),
 						eq(schema.taxRate.isDefault, true),
 						ne(schema.taxRate.id, input.id),
 					),

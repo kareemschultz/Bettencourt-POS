@@ -739,6 +739,8 @@ async function seed() {
 					departments: ["create", "read", "update", "delete", "override"],
 					discounts: ["create", "apply"],
 					prices: ["override"],
+					invoices: ["create", "read", "update", "delete"],
+					quotations: ["create", "read", "update", "delete"],
 				},
 			},
 			{
@@ -768,6 +770,8 @@ async function seed() {
 					departments: ["create", "read", "update", "delete", "override"],
 					discounts: ["create", "apply"],
 					prices: ["override"],
+					invoices: ["create", "read", "update", "delete"],
+					quotations: ["create", "read", "update", "delete"],
 				},
 			},
 			{
@@ -787,6 +791,8 @@ async function seed() {
 					audit: ["read"],
 					departments: ["override"],
 					discounts: ["apply"],
+					invoices: ["create", "read", "update"],
+					quotations: ["create", "read", "update"],
 				},
 			},
 			{

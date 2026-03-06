@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, ReceiptText } from "lucide-react";
+import { Pencil, Plus, ReceiptText, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +75,7 @@ export default function ExpensesPage() {
 	const [endDate, setEndDate] = useState(today);
 	const [supplierFilter, setSupplierFilter] = useState("all");
 	const [dialogOpen, setDialogOpen] = useState(false);
+	const [editingId, setEditingId] = useState<string | null>(null);
 	const [form, setForm] = useState(emptyForm);
 
 	const { data: expensesRaw = [] } = useQuery(
@@ -106,24 +107,51 @@ export default function ExpensesPage() {
 		orpc.cash.getExpenseCategories.queryOptions(),
 	);
 
+	function invalidateExpenses() {
+		queryClient.invalidateQueries({
+			queryKey: orpc.cash.getExpenses.queryOptions({
+				input: { organizationId: DEFAULT_ORG_ID },
+			}).queryKey,
+		});
+		queryClient.invalidateQueries({
+			queryKey: orpc.cash.getExpenseReport.queryOptions({
+				input: { organizationId: DEFAULT_ORG_ID },
+			}).queryKey,
+		});
+	}
+
 	const createExpense = useMutation(
 		orpc.cash.createExpense.mutationOptions({
 			onSuccess: () => {
-				queryClient.invalidateQueries({
-					queryKey: orpc.cash.getExpenses.queryOptions({
-						input: { organizationId: DEFAULT_ORG_ID },
-					}).queryKey,
-				});
-				queryClient.invalidateQueries({
-					queryKey: orpc.cash.getExpenseReport.queryOptions({
-						input: { organizationId: DEFAULT_ORG_ID },
-					}).queryKey,
-				});
+				invalidateExpenses();
 				setDialogOpen(false);
 				setForm(emptyForm);
 				toast.success("Expense recorded");
 			},
 			onError: (err) => toast.error(err.message || "Failed to save expense"),
+		}),
+	);
+
+	const updateExpense = useMutation(
+		orpc.cash.updateExpense.mutationOptions({
+			onSuccess: () => {
+				invalidateExpenses();
+				setDialogOpen(false);
+				setEditingId(null);
+				setForm(emptyForm);
+				toast.success("Expense updated");
+			},
+			onError: (err) => toast.error(err.message || "Failed to update expense"),
+		}),
+	);
+
+	const deleteExpense = useMutation(
+		orpc.cash.deleteExpense.mutationOptions({
+			onSuccess: () => {
+				invalidateExpenses();
+				toast.success("Expense deleted");
+			},
+			onError: (err) => toast.error(err.message || "Failed to delete expense"),
 		}),
 	);
 
@@ -140,20 +168,47 @@ export default function ExpensesPage() {
 
 	const totalToday = filtered.reduce((sum, e) => sum + Number(e.amount), 0);
 
+	function openAdd() {
+		setEditingId(null);
+		setForm(emptyForm);
+		setDialogOpen(true);
+	}
+
+	function openEdit(e: ExpenseRow) {
+		setEditingId(e.id);
+		setForm({
+			amount: e.amount,
+			category: e.category,
+			description: e.description,
+			supplierId: e.supplier_id ?? "",
+		});
+		setDialogOpen(true);
+	}
+
 	function handleSubmit() {
 		if (!form.amount || !form.category || !form.description) {
 			toast.error("Amount, category, and description are required");
 			return;
 		}
-		createExpense.mutate({
-			amount: form.amount,
-			category: form.category,
-			description: form.description,
-			supplierId: form.supplierId || null,
-			authorizedBy: session?.user?.id || "",
-			createdBy: session?.user?.id || "",
-			organizationId: DEFAULT_ORG_ID,
-		});
+		if (editingId) {
+			updateExpense.mutate({
+				expenseId: editingId,
+				amount: form.amount,
+				category: form.category,
+				description: form.description,
+				supplierId: form.supplierId || null,
+			});
+		} else {
+			createExpense.mutate({
+				amount: form.amount,
+				category: form.category,
+				description: form.description,
+				supplierId: form.supplierId || null,
+				authorizedBy: session?.user?.id || "",
+				createdBy: session?.user?.id || "",
+				organizationId: DEFAULT_ORG_ID,
+			});
+		}
 	}
 
 	return (
@@ -168,7 +223,7 @@ export default function ExpensesPage() {
 						Daily expense tracking by supplier
 					</p>
 				</div>
-				<Button onClick={() => setDialogOpen(true)} className="gap-2">
+				<Button onClick={openAdd} className="gap-2">
 					<Plus className="size-4" />
 					Add Expense
 				</Button>
@@ -261,13 +316,14 @@ export default function ExpensesPage() {
 							<TableHead className="text-xs">Description</TableHead>
 							<TableHead className="text-right text-xs">Amount</TableHead>
 							<TableHead className="text-xs">Authorized By</TableHead>
+							<TableHead className="w-20 text-xs" />
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{filtered.length === 0 ? (
 							<TableRow>
 								<TableCell
-									colSpan={6}
+									colSpan={7}
 									className="py-10 text-center text-muted-foreground text-sm"
 								>
 									<ReceiptText className="mx-auto mb-2 size-8 opacity-30" />
@@ -315,6 +371,31 @@ export default function ExpensesPage() {
 										<TableCell className="text-muted-foreground text-xs">
 											{e.authorized_by_name ?? "—"}
 										</TableCell>
+										<TableCell>
+											<div className="flex items-center justify-end gap-1">
+												<Button
+													size="icon"
+													variant="ghost"
+													className="size-7"
+													onClick={() => openEdit(e)}
+												>
+													<Pencil className="size-3.5" />
+												</Button>
+												<Button
+													size="icon"
+													variant="ghost"
+													className="size-7 text-destructive hover:text-destructive"
+													disabled={deleteExpense.isPending}
+													onClick={() => {
+														if (confirm("Delete this expense?")) {
+															deleteExpense.mutate({ expenseId: e.id });
+														}
+													}}
+												>
+													<Trash2 className="size-3.5" />
+												</Button>
+											</div>
+										</TableCell>
 									</TableRow>
 								);
 							})
@@ -323,11 +404,22 @@ export default function ExpensesPage() {
 				</Table>
 			</div>
 
-			{/* Add Expense Dialog */}
-			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+			{/* Add / Edit Expense Dialog */}
+			<Dialog
+				open={dialogOpen}
+				onOpenChange={(open) => {
+					setDialogOpen(open);
+					if (!open) {
+						setEditingId(null);
+						setForm(emptyForm);
+					}
+				}}
+			>
 				<DialogContent className="sm:max-w-md">
 					<DialogHeader>
-						<DialogTitle>Record Expense</DialogTitle>
+						<DialogTitle>
+							{editingId ? "Edit Expense" : "Record Expense"}
+						</DialogTitle>
 					</DialogHeader>
 					<div className="flex flex-col gap-4 py-2">
 						<div className="flex flex-col gap-1.5">
@@ -396,8 +488,17 @@ export default function ExpensesPage() {
 						<Button variant="outline" onClick={() => setDialogOpen(false)}>
 							Cancel
 						</Button>
-						<Button onClick={handleSubmit} disabled={createExpense.isPending}>
-							{createExpense.isPending ? "Saving..." : "Save Expense"}
+						<Button
+							onClick={handleSubmit}
+							disabled={createExpense.isPending || updateExpense.isPending}
+						>
+							{editingId
+								? updateExpense.isPending
+									? "Saving..."
+									: "Save Changes"
+								: createExpense.isPending
+									? "Saving..."
+									: "Save Expense"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

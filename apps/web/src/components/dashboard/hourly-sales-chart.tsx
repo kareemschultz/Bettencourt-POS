@@ -26,7 +26,7 @@ export function HourlySalesChart({ data }: HourlySalesChartProps) {
 	}
 
 	return (
-		<div className="h-[220px] w-full sm:h-[260px]">
+		<div className="h-[220px] w-full overflow-visible sm:h-[260px]">
 			<ResponsiveContainer width="100%" height="100%">
 				<ComposedChart
 					data={data}

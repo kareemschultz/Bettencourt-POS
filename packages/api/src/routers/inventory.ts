@@ -925,6 +925,43 @@ const getWasteByDepartment = permissionProcedure("inventory.read")
 		}));
 	});
 
+// ── updateWaste ─────────────────────────────────────────────────────────
+const updateWaste = permissionProcedure("inventory.update")
+	.input(
+		z.object({
+			id: z.string().uuid(),
+			productName: z.string().min(1),
+			quantity: z.string(),
+			unit: z.string().min(1),
+			estimatedCost: z.string(),
+			reason: z.enum(["spoilage", "over_prep", "expired", "dropped", "other"]),
+			notes: z.string().optional(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		await db
+			.update(schema.wasteLog)
+			.set({
+				productName: input.productName,
+				quantity: input.quantity,
+				unit: input.unit,
+				estimatedCost: input.estimatedCost,
+				reason: input.reason,
+				notes: input.notes ?? null,
+			})
+			.where(eq(schema.wasteLog.id, input.id));
+
+		return { status: "updated" };
+	});
+
+// ── deleteWaste ─────────────────────────────────────────────────────────
+const deleteWaste = permissionProcedure("inventory.delete")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input }) => {
+		await db.delete(schema.wasteLog).where(eq(schema.wasteLog.id, input.id));
+		return { status: "deleted" };
+	});
+
 export const inventoryRouter = {
 	getStockLevels,
 	getLedger,
@@ -940,6 +977,8 @@ export const inventoryRouter = {
 	getReorderSettings,
 	updateReorderSettings,
 	logWaste,
+	updateWaste,
+	deleteWaste,
 	getWasteLog,
 	getWasteSummary,
 	getWasteByDepartment,
