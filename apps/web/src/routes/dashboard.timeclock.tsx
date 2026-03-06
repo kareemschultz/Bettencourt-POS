@@ -56,6 +56,7 @@ export default function TimeclockPage() {
 	const queryClient = useQueryClient();
 	const today = todayGY();
 	const [dateRange, setDateRange] = useState({ start: today, end: today });
+	const [employeeSearch, setEmployeeSearch] = useState("");
 
 	const { data: activeShift, isLoading: loadingShift } = useQuery({
 		...orpc.timeclock.getActiveShift.queryOptions({ input: {} }),
@@ -213,6 +214,14 @@ export default function TimeclockPage() {
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
+							<div className="mb-4">
+								<Input
+									placeholder="Search by employee name..."
+									value={employeeSearch}
+									onChange={(e) => setEmployeeSearch(e.target.value)}
+									className="max-w-sm"
+								/>
+							</div>
 							<Table>
 								<TableHeader>
 									<TableRow>
@@ -224,63 +233,74 @@ export default function TimeclockPage() {
 									</TableRow>
 								</TableHeader>
 								<TableBody>
-									{(todayShifts as unknown[]).length === 0 ? (
-										<TableRow>
-											<TableCell
-												colSpan={5}
-												className="py-8 text-center text-muted-foreground"
-											>
-												No shifts today
-											</TableCell>
-										</TableRow>
-									) : (
-										(todayShifts as Array<Record<string, unknown>>).map(
-											(shift) => {
-												const clockInTime = new Date(shift.clock_in as string);
-												const clockOutTime = shift.clock_out
-													? new Date(shift.clock_out as string)
-													: null;
-												const duration = clockOutTime
-													? formatDuration(
-															clockOutTime.getTime() - clockInTime.getTime(),
-														)
-													: "In progress";
-												return (
-													<TableRow key={shift.id as string}>
-														<TableCell className="font-medium">
-															{String(shift.user_name || "Unknown")}
-														</TableCell>
-														<TableCell className="font-mono text-sm">
-															{clockInTime.toLocaleTimeString([], {
-																hour: "2-digit",
-																minute: "2-digit",
-															})}
-														</TableCell>
-														<TableCell className="font-mono text-sm">
-															{clockOutTime
-																? clockOutTime.toLocaleTimeString([], {
-																		hour: "2-digit",
-																		minute: "2-digit",
-																	})
-																: "—"}
-														</TableCell>
-														<TableCell className="font-mono text-sm">
-															{duration}
-														</TableCell>
-														<TableCell>
-															<Badge
-																variant={
-																	shift.clock_out ? "secondary" : "default"
-																}
-															>
-																{shift.clock_out ? "Completed" : "Active"}
-															</Badge>
-														</TableCell>
-													</TableRow>
-												);
-											},
-										)
-									)}
+									{(() => {
+										const filtered = (
+											todayShifts as Array<Record<string, unknown>>
+										).filter(
+											(shift) =>
+												!employeeSearch ||
+												String(shift.user_name || "")
+													.toLowerCase()
+													.includes(employeeSearch.toLowerCase()),
+										);
+										if (filtered.length === 0)
+											return (
+												<TableRow>
+													<TableCell
+														colSpan={5}
+														className="py-8 text-center text-muted-foreground"
+													>
+														{employeeSearch
+															? "No matching employees"
+															: "No shifts today"}
+													</TableCell>
+												</TableRow>
+											);
+										return filtered.map((shift) => {
+											const clockInTime = new Date(shift.clock_in as string);
+											const clockOutTime = shift.clock_out
+												? new Date(shift.clock_out as string)
+												: null;
+											const duration = clockOutTime
+												? formatDuration(
+														clockOutTime.getTime() - clockInTime.getTime(),
+													)
+												: "In progress";
+											return (
+												<TableRow key={shift.id as string}>
+													<TableCell className="font-medium">
+														{String(shift.user_name || "Unknown")}
+													</TableCell>
+													<TableCell className="font-mono text-sm">
+														{clockInTime.toLocaleTimeString([], {
+															hour: "2-digit",
+															minute: "2-digit",
+														})}
+													</TableCell>
+													<TableCell className="font-mono text-sm">
+														{clockOutTime
+															? clockOutTime.toLocaleTimeString([], {
+																	hour: "2-digit",
+																	minute: "2-digit",
+																})
+															: "—"}
+													</TableCell>
+													<TableCell className="font-mono text-sm">
+														{duration}
+													</TableCell>
+													<TableCell>
+														<Badge
+															variant={
+																shift.clock_out ? "secondary" : "default"
+															}
+														>
+															{shift.clock_out ? "Completed" : "Active"}
+														</Badge>
+													</TableCell>
+												</TableRow>
+											);
+										});
+									})()}
 								</TableBody>
 							</Table>
 						</CardContent>

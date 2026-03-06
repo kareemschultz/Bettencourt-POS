@@ -64,13 +64,14 @@ export default function LoyaltyPage() {
 	const [tierDialogOpen, setTierDialogOpen] = useState(false);
 	const [editingTierId, setEditingTierId] = useState<string | null>(null);
 	const [tierForm, setTierForm] = useState<TierForm>(emptyTier);
+	const [memberSearch, setMemberSearch] = useState("");
 
 	const { data: program, isLoading } = useQuery(
 		orpc.loyalty.getProgram.queryOptions({ input: {} }),
 	);
 
 	const { data: leaderboard } = useQuery(
-		orpc.loyalty.getLeaderboard.queryOptions({ input: { limit: 10 } }),
+		orpc.loyalty.getLeaderboard.queryOptions({ input: { limit: 50 } }),
 	);
 
 	const programKey = orpc.loyalty.getProgram.queryOptions({
@@ -351,6 +352,14 @@ export default function LoyaltyPage() {
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
+							<div className="mb-4">
+								<Input
+									placeholder="Search by name or phone..."
+									value={memberSearch}
+									onChange={(e) => setMemberSearch(e.target.value)}
+									className="max-w-sm"
+								/>
+							</div>
 							{!leaderboard || leaderboard.length === 0 ? (
 								<div className="py-8 text-center text-muted-foreground">
 									<Trophy className="mx-auto mb-2 size-8 opacity-50" />
@@ -376,23 +385,49 @@ export default function LoyaltyPage() {
 										</TableRow>
 									</TableHeader>
 									<TableBody>
-										{leaderboard.map((member, i) => (
-											<TableRow key={member.customerId}>
-												<TableCell className="font-bold text-muted-foreground">
-													{i + 1}
-												</TableCell>
-												<TableCell className="font-medium">
-													{member.customerName}
-												</TableCell>
-												<TableCell>{member.customerPhone || "—"}</TableCell>
-												<TableCell className="text-right">
-													{member.currentPoints.toLocaleString()}
-												</TableCell>
-												<TableCell className="text-right font-medium">
-													{member.lifetimePoints.toLocaleString()}
-												</TableCell>
-											</TableRow>
-										))}
+										{(() => {
+											const filtered = memberSearch
+												? leaderboard.filter(
+														(m) =>
+															(m.customerName || "")
+																.toLowerCase()
+																.includes(memberSearch.toLowerCase()) ||
+															(m.customerPhone || "")
+																.toLowerCase()
+																.includes(memberSearch.toLowerCase()),
+													)
+												: leaderboard.slice(0, 10);
+											if (filtered.length === 0)
+												return (
+													<TableRow>
+														<TableCell
+															colSpan={5}
+															className="py-8 text-center text-muted-foreground"
+														>
+															No members match your search
+														</TableCell>
+													</TableRow>
+												);
+											return filtered.map((member, i) => (
+												<TableRow key={member.customerId}>
+													<TableCell className="font-bold text-muted-foreground">
+														{memberSearch
+															? leaderboard.indexOf(member) + 1
+															: i + 1}
+													</TableCell>
+													<TableCell className="font-medium">
+														{member.customerName}
+													</TableCell>
+													<TableCell>{member.customerPhone || "—"}</TableCell>
+													<TableCell className="text-right">
+														{member.currentPoints.toLocaleString()}
+													</TableCell>
+													<TableCell className="text-right font-medium">
+														{member.lifetimePoints.toLocaleString()}
+													</TableCell>
+												</TableRow>
+											));
+										})()}
 									</TableBody>
 								</Table>
 							)}

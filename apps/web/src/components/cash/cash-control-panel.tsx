@@ -62,6 +62,8 @@ export function CashControlPanel({
 	const [payoutDialog, setPayoutDialog] = useState(false);
 	const [amount, setAmount] = useState("");
 	const [reason, setReason] = useState("");
+	const [dateFrom, setDateFrom] = useState("");
+	const [dateTo, setDateTo] = useState("");
 
 	const invalidateCash = () =>
 		queryClient.invalidateQueries({ queryKey: ["cash"] });
@@ -236,6 +238,35 @@ export function CashControlPanel({
 					<CardTitle>Shift History</CardTitle>
 				</CardHeader>
 				<CardContent>
+					<div className="mb-4 flex flex-wrap items-center gap-2">
+						<Input
+							type="date"
+							aria-label="From date"
+							value={dateFrom}
+							onChange={(e) => setDateFrom(e.target.value)}
+							className="w-auto"
+						/>
+						<span className="text-muted-foreground text-sm">to</span>
+						<Input
+							type="date"
+							aria-label="To date"
+							value={dateTo}
+							onChange={(e) => setDateTo(e.target.value)}
+							className="w-auto"
+						/>
+						{(dateFrom || dateTo) && (
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => {
+									setDateFrom("");
+									setDateTo("");
+								}}
+							>
+								Clear
+							</Button>
+						)}
+					</div>
 					<div className="rounded-lg border">
 						<Table>
 							<TableHeader>
@@ -249,44 +280,64 @@ export function CashControlPanel({
 								</TableRow>
 							</TableHeader>
 							<TableBody>
-								{sessions.map((s) => (
-									<TableRow key={s.id}>
-										<TableCell className="text-sm">
-											{s.userName || "Unknown"}
-										</TableCell>
-										<TableCell className="font-mono text-sm">
-											{formatGYD(Number(s.openingFloat))}
-										</TableCell>
-										<TableCell className="font-mono text-sm">
-											{s.expectedCash ? formatGYD(Number(s.expectedCash)) : "-"}
-										</TableCell>
-										<TableCell className="font-mono text-sm">
-											{s.closingCount ? formatGYD(Number(s.closingCount)) : "-"}
-										</TableCell>
-										<TableCell className="font-mono text-sm">
-											{s.variance != null ? (
-												<span
-													className={
-														Number(s.variance) < 0
-															? "text-destructive"
-															: "text-foreground"
+								{sessions
+									.filter((s) => {
+										if (!dateFrom && !dateTo) return true;
+										const sessionDate = new Date(s.openedAt);
+										if (dateFrom) {
+											const from = new Date(`${dateFrom}T00:00:00`);
+											if (sessionDate < from) return false;
+										}
+										if (dateTo) {
+											const to = new Date(`${dateTo}T23:59:59`);
+											if (sessionDate > to) return false;
+										}
+										return true;
+									})
+									.map((s) => (
+										<TableRow key={s.id}>
+											<TableCell className="text-sm">
+												{s.userName || "Unknown"}
+											</TableCell>
+											<TableCell className="font-mono text-sm">
+												{formatGYD(Number(s.openingFloat))}
+											</TableCell>
+											<TableCell className="font-mono text-sm">
+												{s.expectedCash
+													? formatGYD(Number(s.expectedCash))
+													: "-"}
+											</TableCell>
+											<TableCell className="font-mono text-sm">
+												{s.closingCount
+													? formatGYD(Number(s.closingCount))
+													: "-"}
+											</TableCell>
+											<TableCell className="font-mono text-sm">
+												{s.variance != null ? (
+													<span
+														className={
+															Number(s.variance) < 0
+																? "text-destructive"
+																: "text-foreground"
+														}
+													>
+														{formatGYD(Number(s.variance))}
+													</span>
+												) : (
+													"-"
+												)}
+											</TableCell>
+											<TableCell>
+												<Badge
+													variant={
+														s.status === "open" ? "default" : "secondary"
 													}
 												>
-													{formatGYD(Number(s.variance))}
-												</span>
-											) : (
-												"-"
-											)}
-										</TableCell>
-										<TableCell>
-											<Badge
-												variant={s.status === "open" ? "default" : "secondary"}
-											>
-												{s.status}
-											</Badge>
-										</TableCell>
-									</TableRow>
-								))}
+													{s.status}
+												</Badge>
+											</TableCell>
+										</TableRow>
+									))}
 							</TableBody>
 						</Table>
 					</div>
