@@ -5,6 +5,16 @@ import { VitePWA } from "vite-plugin-pwa";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
+	build: {
+		rollupOptions: {
+			output: {
+				// Merge chunks smaller than 4 KB into their importers.
+				// Prevents 50+ tiny icon files (~0.5 KB each) from becoming
+				// separate HTTP requests. Reduces request count by ~30-40.
+				experimentalMinChunkSize: 4096,
+			},
+		},
+	},
 	server: {
 		proxy: {
 			"/api": {

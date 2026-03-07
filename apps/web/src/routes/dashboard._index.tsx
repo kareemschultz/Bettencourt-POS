@@ -17,8 +17,17 @@ import {
 	UtensilsCrossed,
 	Warehouse,
 } from "lucide-react";
+import { lazy, Suspense } from "react";
 import { Link } from "react-router";
-import { HourlySalesChart } from "@/components/dashboard/hourly-sales-chart";
+
+// Lazy-load Recharts (351 KB) so it doesn't block the initial dashboard bundle.
+// The chart only renders after data loads anyway, so Suspense adds zero visible delay.
+const HourlySalesChart = lazy(() =>
+	import("@/components/dashboard/hourly-sales-chart").then((m) => ({
+		default: m.HourlySalesChart,
+	})),
+);
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -109,7 +118,7 @@ function ExecutiveDashboard() {
 				</div>
 				<div className="flex flex-wrap gap-2">
 					<Button asChild size="sm">
-						<Link to="/dashboard/pos" className="gap-1.5">
+						<Link to="/dashboard/pos" prefetch="intent" className="gap-1.5">
 							<ShoppingCart className="size-3.5" /> Open POS
 						</Link>
 					</Button>
@@ -215,7 +224,13 @@ function ExecutiveDashboard() {
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<HourlySalesChart data={hourlyData} />
+					<Suspense
+						fallback={
+							<div className="h-[220px] animate-pulse rounded-lg bg-muted sm:h-[260px]" />
+						}
+					>
+						<HourlySalesChart data={hourlyData} />
+					</Suspense>
 				</CardContent>
 			</Card>
 

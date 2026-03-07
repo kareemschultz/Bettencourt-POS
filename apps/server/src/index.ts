@@ -15,12 +15,16 @@ import { makeSignature } from "better-auth/crypto";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
+import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 
 const app = new Hono();
 
 app.use(logger());
+// Gzip/Brotli compression for all responses (API JSON, HTML, etc.)
+// Static assets already served with correct Content-Encoding by serveStatic.
+app.use("/*", compress());
 app.use(
 	"/*",
 	cors({
