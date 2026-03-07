@@ -961,20 +961,39 @@ In the POS Terminal, choose **Gift Card** as a payment method and enter the card
 
 **Navigate to:** Dashboard → Quotations
 
-Create price quotations for catering orders, events, or large orders.
+Create professional price quotations for catering, events, or corporate orders. Quotations print as a dedicated PDF with a QUOTATION stamp, validity countdown, Terms & Conditions, and signature blocks.
 
 ### Creating a Quotation
 
 1. Click **New Quotation**
-2. Add customer name and contact details
-3. Add line items (products, quantities, prices)
-4. Set validity date
-5. Add notes or terms
-6. Click **Save as Draft** or **Send**
+2. Enter customer name, phone, address, and **Valid Until** date
+3. Add line items (description, quantity, unit price — totals auto-calculate)
+4. In the **Tax & Discount** box, set:
+   - Tax Rate (%) and Tax Mode (whole invoice or per-line)
+   - Discount type (percent or fixed GYD amount) and value
+5. Enter **Terms & Conditions** (appears on the PDF)
+6. Add **Notes** and your name in **Prepared By**
+7. Click **Create**
 
-### Converting to an Invoice
+### Detail Panel Actions (click any quotation row)
 
-Once a quotation is accepted, click **Convert to Invoice** to create an invoice based on the quotation.
+| Button | What it does |
+|--------|-------------|
+| Print / Save PDF | Opens professional QUOTATION PDF in new tab |
+| Edit | Modify the quotation |
+| Mark Sent | Moves status from Draft → Sent |
+| Duplicate | Creates a new draft copy |
+| Revise | Creates a numbered revision (R2, R3…) linked to original |
+| To Invoice | Converts to a formal invoice (Sent/Accepted only) |
+
+### Quotation Statuses
+
+- **Draft** — created, not yet sent
+- **Sent** — sent to customer (Mark Sent or converted)
+- **Accepted** — customer agreed to the price
+- **Rejected** — customer declined
+- **Expired** — past the Valid Until date
+- **Converted** — turned into an invoice
 
 ---
 
@@ -982,21 +1001,52 @@ Once a quotation is accepted, click **Convert to Invoice** to create an invoice 
 
 **Navigate to:** Dashboard → Invoices
 
-Manage formal invoices for catering, corporate orders, or accounts.
+Manage formal invoices for catering, corporate orders, or accounts receivable. Supports VAT, discounts, payment terms, and cheque tracking.
+
+### Aging Summary Cards (top of page)
+
+Four cards show at a glance:
+- **Outstanding** — total unpaid balance across all invoices
+- **Overdue** — unpaid invoices past their due date (red if any)
+- **Paid This Month** — total payments collected this calendar month
+- **Drafts** — number of unfinished draft invoices
 
 ### Creating an Invoice
 
 1. Click **New Invoice**
-2. Add customer details and line items
-3. Set the due date
-4. Click **Save** or **Send**
+2. Enter customer details (name, phone, address)
+3. Set **Issued Date** and **Due Date**
+4. Add line items
+5. Set Tax Rate, Discount, and **Payment Terms** (Due on Receipt / Net 15 / Net 30 / Net 60)
+6. Enter your name in **Prepared By** (optional)
+7. Click **Create**
 
-### Invoice Status
+### Recording a Payment
+
+1. Click the invoice row to open the detail panel
+2. In **Record Payment**, enter:
+   - **Amount Paid** (can be partial)
+   - Cheque Number and Receipt Number (optional)
+   - Date Paid and Cheque Deposit Date
+3. Click **Record Payment**
+
+### Detail Panel Actions
+
+| Button | What it does |
+|--------|-------------|
+| Print / Save PDF | Opens professional INVOICE PDF in new tab |
+| Edit Invoice | Modify the invoice |
+| Mark as Sent | Moves Draft → Sent |
+| Duplicate | Creates a new draft copy |
+
+### Invoice Statuses
 
 - **Draft** — not yet sent
 - **Sent** — sent to customer
-- **Paid** — payment received
-- **Overdue** — past due date
+- **Outstanding** — sent but unpaid
+- **Paid** — fully paid
+- **Overpaid** — payment exceeds total
+- **Cancelled** — voided
 
 ---
 

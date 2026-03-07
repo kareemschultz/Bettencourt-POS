@@ -1,26 +1,68 @@
 ---
 title: Quotations & Invoices
-description: Create price quotations for catering orders and manage formal invoices
+description: Create professional price quotations, manage formal invoices with VAT, discounts, and payment tracking
 ---
 
 ## Quotations
 
 **Navigate to:** Dashboard → Quotations
 
-Create price quotations for catering orders, events, or large orders.
+Create professional price quotations for catering orders, events, or large corporate requests. Quotations are printed as a separate PDF with a QUOTATION stamp, validity countdown, Terms & Conditions, and signature blocks.
 
 ### Creating a Quotation
 
 1. Click **New Quotation**
-2. Add customer name and contact details
-3. Add line items (products, quantities, prices)
-4. Set validity date
-5. Add notes or terms
-6. Click **Save as Draft** or **Send**
+2. Fill in customer name, phone, address, and **Valid Until** date
+3. Add line items with description, quantity, and unit price
+4. Adjust tax rate, tax mode, and discount in the settings bar
+5. Add Terms & Conditions and Notes (optional)
+6. Enter **Prepared By** (your name) — appears on the PDF
+7. Click **Create**
 
-### Converting to an Invoice
+### Tax & Discount Settings (Form)
 
-Once a quotation is accepted, click **Convert to Invoice** to create an invoice based on the quotation.
+| Field | Options | Description |
+|-------|---------|-------------|
+| Tax Rate | Any % | VAT percentage applied to all items |
+| Tax Mode | Whole invoice / Per line | Whether one rate applies to everything or each line item can be exempt |
+| Discount Type | Percent / Fixed | Percentage discount or fixed GYD amount |
+| Discount Value | Number | The discount amount |
+
+The live **Totals** section shows Subtotal → Discount → VAT → **Total** as you type.
+
+### Quotation Statuses
+
+| Status | Description |
+|--------|-------------|
+| **Draft** | Created but not sent |
+| **Sent** | Marked as sent to customer |
+| **Accepted** | Customer has accepted |
+| **Rejected** | Customer declined |
+| **Expired** | Past the valid until date |
+| **Converted** | Turned into an invoice |
+
+### Detail Panel Actions
+
+Click any quotation row to open the detail panel on the right. From there you can:
+
+- **Print / Save PDF** — opens a professional QUOTATION PDF in a new tab (ready to print or save)
+- **Edit** — modify the quotation
+- **Mark Sent** — moves status from Draft → Sent (only on drafts)
+- **Duplicate** — creates a new draft copy
+- **Revise** — creates a numbered revision (e.g. `-R2`, `-R3`) linked to the original
+- **To Invoice** — converts to an invoice (available when Sent or Accepted)
+
+### PDF Output
+
+The PDF includes:
+- Bettencourt's Food Inc. logo and company details
+- QUOTATION stamp badge with quotation number
+- Validity countdown ("Valid for X more days")
+- Itemized line table with quantities and prices
+- Subtotal, discount, VAT, and total breakdown
+- Terms & Conditions section (if set)
+- Signature blocks for Authorized By and Accepted By
+- "This is a quotation only — not a tax invoice" footer
 
 ---
 
@@ -28,14 +70,29 @@ Once a quotation is accepted, click **Convert to Invoice** to create an invoice 
 
 **Navigate to:** Dashboard → Invoices
 
-Manage formal invoices for catering, corporate orders, or accounts.
+Manage formal invoices for catering, corporate orders, or accounts receivable. Invoices support VAT, discounts, payment terms, and cheque tracking.
 
 ### Creating an Invoice
 
 1. Click **New Invoice**
-2. Add customer details and line items
-3. Set the due date
-4. Click **Save** or **Send**
+2. Fill in customer details (name, phone, address)
+3. Set **Issued Date** and **Due Date**
+4. Add line items
+5. Adjust tax rate, discount, and payment terms
+6. Add **Prepared By** name (optional)
+7. Click **Create**
+
+### Tax & Discount Settings
+
+Same as quotations — Tax Rate, Tax Mode, Discount Type/Value, and Payment Terms (Due on Receipt / Net 15 / Net 30 / Net 60).
+
+### Aging Summary Cards
+
+At the top of the page, four cards show:
+- **Outstanding** — total unpaid balance
+- **Overdue** — unpaid past due date (shown in red if > 0)
+- **Paid This Month** — cash collected this month
+- **Drafts** — count of draft invoices
 
 ### Invoice Statuses
 
@@ -43,5 +100,53 @@ Manage formal invoices for catering, corporate orders, or accounts.
 |--------|-------------|
 | **Draft** | Not yet sent |
 | **Sent** | Sent to customer |
-| **Paid** | Payment received |
-| **Overdue** | Past due date and unpaid |
+| **Outstanding** | Past due and unpaid |
+| **Paid** | Fully paid |
+| **Overpaid** | Paid more than total |
+| **Cancelled** | Voided/cancelled |
+
+### Recording a Payment
+
+1. Click an invoice row to open the detail panel
+2. In the **Record Payment** card at the bottom, enter:
+   - **Amount Paid** — partial or full payment
+   - **Cheque Number** — optional
+   - **Receipt Number** — optional
+   - **Date Paid** — defaults to today
+   - **Cheque Deposit Date** — if applicable
+3. Click **Record Payment**
+
+### Detail Panel Actions
+
+- **Print / Save PDF** — professional INVOICE PDF with company letterhead
+- **Edit Invoice** — modify the invoice
+- **Mark as Sent** — moves Draft → Sent
+- **Duplicate** — creates a new draft copy of the invoice
+
+### PDF Output
+
+The invoice PDF includes:
+- Dark header band with logo, INVOICE stamp, number, issued/due dates, payment terms, and status badge
+- Bill To section with customer details
+- Itemized line table
+- Subtotal, discount, VAT breakdown, total, amount paid, and **Balance Due**
+- Payment Instructions (bank name, account, reference) — if configured in Settings → Documents
+- Notes section
+- Footer with generation timestamp
+
+### Document Settings
+
+Configure invoice and quotation defaults at **Settings → Documents**:
+
+| Setting | Description |
+|---------|-------------|
+| Default Tax Rate | Pre-fills the tax rate on new documents |
+| Default Tax Mode | Whole invoice or per-line |
+| Default Payment Terms | Pre-fills payment terms |
+| Default Discount Type | Percent or fixed |
+| Company TIN | Appears on PDFs |
+| Bank Name / Account / Branch | Payment instructions on invoice PDFs |
+| Payment Instructions | Free-text payment notes |
+| Default Quotation Terms | Pre-fills T&C on new quotations |
+| Invoice Footer Note | Custom footer text on invoice PDFs |
+| Quotation Footer Note | Custom footer text on quotation PDFs |
