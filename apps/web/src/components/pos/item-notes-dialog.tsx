@@ -18,14 +18,15 @@ interface ItemNotesDialogProps {
 }
 
 const QUICK_NOTES = [
-	"No salt",
-	"Extra spicy",
-	"No onions",
 	"No pepper",
+	"Less pepper",
+	"Extra pepper",
+	"No salt",
+	"No onions",
 	"Well done",
-	"Gluten free",
-	"Extra sauce",
-	"Allergies",
+	"No bone",
+	"Extra spicy",
+	"No skin",
 ];
 
 export function ItemNotesDialog({
