@@ -42,11 +42,18 @@ export async function openQuotationPdf(
 	quotation: QuotationPdfRow,
 	settings: QuotationDocSettings = {},
 ) {
+	// Open window synchronously (inside user-gesture context) before any await.
+	// Browsers block window.open() called after an await as an untrusted popup.
+	const win = window.open("about:blank", "_blank");
 	const logoBase64 = await fetchLogoBase64();
 	const html = buildQuotationHtml(quotation, settings, logoBase64);
 	const blob = new Blob([html], { type: "text/html" });
 	const url = URL.createObjectURL(blob);
-	window.open(url, "_blank");
+	if (win) {
+		win.location.href = url;
+	} else {
+		window.open(url, "_blank");
+	}
 	setTimeout(() => URL.revokeObjectURL(url), 15_000);
 }
 
