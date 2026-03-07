@@ -7,6 +7,7 @@ import {
 	Clock,
 	CreditCard,
 	Filter,
+	RotateCcw,
 	Search,
 	ShoppingBag,
 	Truck,
@@ -265,6 +266,33 @@ export function OrdersTable({
 		setVoidReason("");
 	}
 
+	const [refundReason, setRefundReason] = useState("");
+	const [refundAmount, setRefundAmount] = useState("");
+
+	const refundMutation = useMutation(
+		orpc.orders.refund.mutationOptions({
+			onSuccess: (_result, variables) => {
+				setOrders((prev) =>
+					prev.map((o) =>
+						o.id === variables.id ? { ...o, status: "refunded" } : o,
+					),
+				);
+				queryClient.invalidateQueries({ queryKey: ["orders"] });
+				toast.success("Order refunded");
+			},
+			onError: (error) => {
+				toast.error(error.message || "Failed to refund order");
+			},
+		}),
+	);
+
+	function handleRefund(orderId: string, total: number) {
+		const amt = refundAmount ? Number(refundAmount) : total;
+		refundMutation.mutate({ id: orderId, reason: refundReason, amount: amt });
+		setRefundReason("");
+		setRefundAmount("");
+	}
+
 	const q = search.trim().toLowerCase();
 	const filtered = orders.filter((o) => {
 		if (typeFilter !== "all" && o.order_type !== typeFilter) return false;
@@ -455,56 +483,135 @@ export function OrdersTable({
 										</TableCell>
 										{canVoid && (
 											<TableCell>
-												{order.status === "completed" && (
-													<AlertDialog>
-														<AlertDialogTrigger asChild>
-															<Button
-																variant="ghost"
-																size="sm"
-																className="h-7 gap-1 text-destructive text-xs hover:text-destructive"
-															>
-																<Ban className="size-3" />
-																Void
-															</Button>
-														</AlertDialogTrigger>
-														<AlertDialogContent>
-															<AlertDialogHeader>
-																<AlertDialogTitle>
-																	Void Order {order.order_number}?
-																</AlertDialogTitle>
-																<AlertDialogDescription>
-																	This will void the order totalling{" "}
-																	{formatGYD(Number(order.total))} and reverse
-																	any cash session entries. This action is
-																	logged in the audit trail.
-																</AlertDialogDescription>
-															</AlertDialogHeader>
-															<Input
-																placeholder="Reason for voiding (required)"
-																value={voidReason}
-																onChange={(e) => setVoidReason(e.target.value)}
-															/>
-															<AlertDialogFooter>
-																<AlertDialogCancel
-																	onClick={() => setVoidReason("")}
+												<div className="flex items-center gap-1">
+													{order.status === "completed" && (
+														<AlertDialog>
+															<AlertDialogTrigger asChild>
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	className="h-7 gap-1 text-destructive text-xs hover:text-destructive"
 																>
-																	Cancel
-																</AlertDialogCancel>
-																<AlertDialogAction
-																	className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-																	disabled={
-																		!voidReason.trim() || voidMutation.isPending
+																	<Ban className="size-3" />
+																	Void
+																</Button>
+															</AlertDialogTrigger>
+															<AlertDialogContent>
+																<AlertDialogHeader>
+																	<AlertDialogTitle>
+																		Void Order {order.order_number}?
+																	</AlertDialogTitle>
+																	<AlertDialogDescription>
+																		This will void the order totalling{" "}
+																		{formatGYD(Number(order.total))} and reverse
+																		any cash session entries. This action is
+																		logged in the audit trail.
+																	</AlertDialogDescription>
+																</AlertDialogHeader>
+																<Input
+																	placeholder="Reason for voiding (required)"
+																	value={voidReason}
+																	onChange={(e) =>
+																		setVoidReason(e.target.value)
 																	}
-																	onClick={() => handleVoid(order.id)}
+																/>
+																<AlertDialogFooter>
+																	<AlertDialogCancel
+																		onClick={() => setVoidReason("")}
+																	>
+																		Cancel
+																	</AlertDialogCancel>
+																	<AlertDialogAction
+																		className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+																		disabled={
+																			!voidReason.trim() ||
+																			voidMutation.isPending
+																		}
+																		onClick={() => handleVoid(order.id)}
+																	>
+																		{voidMutation.isPending
+																			? "Voiding..."
+																			: "Confirm Void"}
+																	</AlertDialogAction>
+																</AlertDialogFooter>
+															</AlertDialogContent>
+														</AlertDialog>
+													)}
+
+													{order.status === "completed" && (
+														<AlertDialog>
+															<AlertDialogTrigger asChild>
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	className="h-7 gap-1 text-amber-600 text-xs hover:text-amber-700"
+																	onClick={() =>
+																		setRefundAmount(String(order.total))
+																	}
 																>
-																	{voidMutation.isPending
-																		? "Voiding..."
-																		: "Confirm Void"}
-																</AlertDialogAction>
-															</AlertDialogFooter>
-														</AlertDialogContent>
-													</AlertDialog>
-												)}
+																	<RotateCcw className="size-3" />
+																	Refund
+																</Button>
+															</AlertDialogTrigger>
+															<AlertDialogContent>
+																<AlertDialogHeader>
+																	<AlertDialogTitle>
+																		Refund Order {order.order_number}?
+																	</AlertDialogTitle>
+																	<AlertDialogDescription>
+																		Full order total is{" "}
+																		{formatGYD(Number(order.total))}. Enter a
+																		partial amount for partial refunds.
+																	</AlertDialogDescription>
+																</AlertDialogHeader>
+																<div className="flex flex-col gap-3">
+																	<Input
+																		type="number"
+																		placeholder={`Amount (default: ${order.total})`}
+																		value={refundAmount}
+																		onChange={(e) =>
+																			setRefundAmount(e.target.value)
+																		}
+																	/>
+																	<Input
+																		placeholder="Reason for refund (required)"
+																		value={refundReason}
+																		onChange={(e) =>
+																			setRefundReason(e.target.value)
+																		}
+																	/>
+																</div>
+																<AlertDialogFooter>
+																	<AlertDialogCancel
+																		onClick={() => {
+																			setRefundReason("");
+																			setRefundAmount("");
+																		}}
+																	>
+																		Cancel
+																	</AlertDialogCancel>
+																	<AlertDialogAction
+																		className="bg-amber-600 text-white hover:bg-amber-700"
+																		disabled={
+																			!refundReason.trim() ||
+																			refundMutation.isPending
+																		}
+																		onClick={() =>
+																			handleRefund(
+																				order.id,
+																				Number(order.total),
+																			)
+																		}
+																	>
+																		{refundMutation.isPending
+																			? "Refunding..."
+																			: "Confirm Refund"}
+																	</AlertDialogAction>
+																</AlertDialogFooter>
+															</AlertDialogContent>
+														</AlertDialog>
+													)}
+												</div>
 											</TableCell>
 										)}
 									</TableRow>
