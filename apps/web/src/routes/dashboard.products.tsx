@@ -362,6 +362,7 @@ export default function ProductsPage() {
 							<TabsList>
 								<TabsTrigger value="details">Details</TabsTrigger>
 								<TabsTrigger value="recipe">Recipe</TabsTrigger>
+								<TabsTrigger value="production">Production</TabsTrigger>
 							</TabsList>
 							<TabsContent value="details" className="mt-4">
 								<ProductDetailsForm
@@ -388,6 +389,9 @@ export default function ProductsPage() {
 							</TabsContent>
 							<TabsContent value="recipe" className="mt-4">
 								<RecipeTab productId={editingId} productPrice={form.price} />
+							</TabsContent>
+							<TabsContent value="production" className="mt-4">
+								<ProductionTab productId={editingId} />
 							</TabsContent>
 						</Tabs>
 					) : (
@@ -570,6 +574,153 @@ function ProductDetailsForm({
 					onCheckedChange={(v) => setForm({ ...form, isActive: v })}
 				/>
 				<Label>Active (visible in POS)</Label>
+			</div>
+		</div>
+	);
+}
+
+// ── ProductionTab ───────────────────────────────────────────────────────
+function ProductionTab({ productId }: { productId: string }) {
+	const queryClient = useQueryClient();
+	const [localComponents, setLocalComponents] = useState<
+		{ componentName: string; quantity: string }[] | null
+	>(null);
+	const [addName, setAddName] = useState("");
+	const [addQty, setAddQty] = useState("1");
+
+	const { data: saved = [], isLoading } = useQuery(
+		orpc.production.getComponents.queryOptions({ input: { productId } }),
+	);
+
+	const components: { componentName: string; quantity: string }[] =
+		localComponents ??
+		saved.map((c) => ({
+			componentName: c.componentName,
+			quantity: String(c.quantity),
+		}));
+
+	const saveComponents = useMutation(
+		orpc.production.setComponents.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.production.getComponents.queryOptions({
+						input: { productId },
+					}).queryKey,
+				});
+				setLocalComponents(null);
+				toast.success("Production components saved");
+			},
+			onError: (err) => toast.error(err.message || "Failed to save components"),
+		}),
+	);
+
+	function handleAdd() {
+		const name = addName.trim();
+		if (!name) return;
+		setLocalComponents([
+			...components,
+			{ componentName: name, quantity: addQty || "1" },
+		]);
+		setAddName("");
+		setAddQty("1");
+	}
+
+	function handleRemove(idx: number) {
+		setLocalComponents(components.filter((_, i) => i !== idx));
+	}
+
+	function handleSave() {
+		saveComponents.mutate({ productId, components });
+	}
+
+	if (isLoading)
+		return (
+			<p className="py-4 text-center text-muted-foreground text-sm">
+				Loading...
+			</p>
+		);
+
+	const isDirty = localComponents !== null;
+
+	return (
+		<div className="flex flex-col gap-4">
+			<p className="text-muted-foreground text-sm">
+				Map this POS item to individual production components. When this product
+				is sold, each component's actual count increases in the Production
+				Report.
+			</p>
+
+			{components.length === 0 ? (
+				<p className="rounded-md border border-dashed p-4 text-center text-muted-foreground text-sm">
+					No components — this product tracks as one unit in the report.
+				</p>
+			) : (
+				<div className="rounded-md border">
+					<table className="w-full text-sm">
+						<thead className="bg-muted/50">
+							<tr>
+								<th className="p-2 text-left font-medium">Component Name</th>
+								<th className="p-2 text-center font-medium">Qty</th>
+								<th className="w-10 p-2" />
+							</tr>
+						</thead>
+						<tbody>
+							{components.map((c, i) => (
+								<tr key={i} className="border-t">
+									<td className="p-2">{c.componentName}</td>
+									<td className="p-2 text-center">{c.quantity}</td>
+									<td className="p-2">
+										<Button
+											variant="ghost"
+											size="icon"
+											className="size-7 text-destructive hover:text-destructive"
+											onClick={() => handleRemove(i)}
+										>
+											<X className="size-3.5" />
+										</Button>
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			)}
+
+			<div className="flex gap-2">
+				<Input
+					placeholder="Component name (e.g. Rice)"
+					value={addName}
+					onChange={(e) => setAddName(e.target.value)}
+					onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+					className="flex-1"
+				/>
+				<Input
+					type="number"
+					step="0.25"
+					min="0.25"
+					placeholder="Qty"
+					value={addQty}
+					onChange={(e) => setAddQty(e.target.value)}
+					className="w-20"
+				/>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={handleAdd}
+					disabled={!addName.trim()}
+				>
+					Add
+				</Button>
+			</div>
+
+			<div className="flex justify-end">
+				<Button
+					size="sm"
+					disabled={!isDirty || saveComponents.isPending}
+					onClick={handleSave}
+				>
+					{saveComponents.isPending ? "Saving..." : "Save Components"}
+				</Button>
 			</div>
 		</div>
 	);
