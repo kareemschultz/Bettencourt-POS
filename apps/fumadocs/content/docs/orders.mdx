@@ -1,48 +1,132 @@
 ---
 title: Orders
-description: View, search, void, and refund orders
+description: View, filter, and manage all transactions — with full detail on every order including cashier, items, payments, and void history.
 ---
 
 **Navigate to:** Dashboard → Orders
 
 ---
 
-## Viewing Orders
+## Order List
 
-- All orders are listed with order number, date, total, and status
-- **Status colours:** Green = Completed, Yellow = Open/Held, Red = Voided, Blue = Refunded
-- Use the **search bar** to find by order number or customer name
-- Use **date filters** to view a specific day or range
-- Use the **status filter** to show only voided orders, refunds, etc.
+The orders table shows all transactions for the selected filters. Each row displays:
+
+| Column | Description |
+|--------|-------------|
+| Order # | Unique order number (e.g. ORD-0042) |
+| Status | Completed, Open, Held, Voided, or Refunded |
+| Type | Walk-in / Dine-in, Pickup, or Delivery |
+| Cashier | Staff member who processed the order |
+| Customer | Customer name and phone (if provided) |
+| Total | Order total in GYD |
+| Time | Time the order was created |
+
+Click any row to open the full order detail dialog.
 
 ---
 
-## Viewing Order Details
+## Filtering Orders
 
-Click any order row to open its details:
-- All items with quantities and line totals
-- Payment method(s) used
-- Customer name (if linked)
-- Cashier who processed it
-- Timestamps
+Use the controls above the table to narrow results:
+
+- **Search** — by order number or customer name
+- **Type filter** — All Types, Walk-in/Dine-in, Pickup, Delivery
+- **Status filter** — All, Completed, Open, Voided, Refunded, Held
+- **From / To date** — view orders for a specific day or range
+
+The order count at the right of the filter bar updates instantly as you type.
+
+---
+
+## Order Detail Dialog
+
+Click any row to open the full detail view. The dialog is organised into sections:
+
+### Header
+- Order number and creation timestamp
+- Status badge (Completed / Voided / Refunded / etc.)
+- Fulfillment status badge (Preparing / Ready / Picked Up / Delivered) when applicable
+
+### Transaction Information
+| Field | Description |
+|-------|-------------|
+| Cashier | Staff member who rang up the order |
+| Location | Which branch the order was taken at |
+| Register | Which register (e.g. Register 1) |
+| Order Type | Walk-in, Pickup, or Delivery |
+| Table | Table number (dine-in only) |
+| Split Order | Shown if the bill was split |
+| Closed At | Timestamp when the order was finalised |
+
+### Customer (shown when available)
+- Customer name, phone number, and delivery address
+
+### Notes
+- Order-level notes shown in an amber box (if any were added)
+
+### Items
+A table of every line item:
+- Product name with modifiers shown as grey chips
+- Item-level notes in italics below the product
+- Voided items shown with a strikethrough and a red **Voided** badge
+- Columns: Product, Qty, Price, Disc. (discount), Total
+
+### Payments
+Each payment shows:
+- Method (Cash or Card) with an icon
+- Amount
+- For cash payments: **Tendered** amount and **Change given**
+- Voided payments are dimmed with a red **Voided** badge
+
+### Totals
+- Subtotal
+- Discount (shown in red, only if applied)
+- Tax / 16.5% VAT (only if non-zero)
+- **Total** (bold)
+
+### Void Information (voided orders only)
+A red box showing:
+- Void reason
+- Authorized by (manager who approved it)
+- Date and time voided
+
+---
+
+## Printing / Exporting
+
+### Print PDF
+In the order detail dialog, click **Print PDF** (bottom left) to open a formatted receipt in a new browser tab. Click **Print / Save as PDF** inside that tab to save it or send it to a printer.
+
+The PDF includes: order number, date, cashier, location, register, customer info, all line items with modifiers, payment breakdown with change given, totals, and void information if applicable.
+
+### Export CSV
+On the main Orders page, click **Export** (top right) to download the currently filtered orders as a CSV file with: Order #, Status, Type, Total, Cashier, Customer, Date.
 
 ---
 
 ## Voiding an Order
 
-1. Open the order details
-2. Click **Void Order**
-3. A confirmation dialog appears — click **Confirm Void**
-4. The order is marked as voided and removed from sales totals
+> Only admins and executives can void orders. Voiding is final and logged in the audit trail.
 
-> Only managers can void completed orders. Cashiers can remove items before payment.
+1. Click the order row to open the detail dialog
+2. Click **Void** (bottom right — only visible on Completed orders)
+3. Enter a **reason** in the text field (required)
+4. Click **Confirm Void**
+
+The order status changes to **Voided**, all payments are voided, and if there was a cash payment, the cash session expected total is adjusted automatically.
 
 ---
 
 ## Refunding an Order
 
-1. Open the order details
-2. Click **Refund**
-3. Enter the refund amount (can be partial)
-4. Confirm
-5. The refund is recorded and the order status changes to Refunded
+> Only completed orders can be refunded.
+
+1. Click the order row to open the detail dialog
+2. Click **Refund** (bottom right)
+3. The full order total is pre-filled — change the amount for a **partial refund**
+4. Enter a **reason** (required)
+5. Click **Confirm Refund**
+
+The order status changes to **Refunded** and a negative payment record is created in the system for accounting purposes.
+
+> Refunds and voids both appear in the **P&L Statement** and **Sales Reports** so the numbers always balance.

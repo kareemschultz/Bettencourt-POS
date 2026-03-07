@@ -2,6 +2,7 @@ import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { ORPCError } from "@orpc/server";
 import { and, asc, count, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 import { createAuditLog } from "../lib/audit";
@@ -91,7 +92,8 @@ const list = permissionProcedure("orders.read")
 const getById = permissionProcedure("orders.read")
 	.input(z.object({ id: z.string().uuid() }))
 	.handler(async ({ input }) => {
-		// Get order with cashier and location names
+		// Get order with cashier, location, register, and void-authorizer names
+		const voidUser = alias(schema.user, "void_user");
 		const orders = await db
 			.select({
 				id: schema.order.id,
@@ -112,10 +114,15 @@ const getById = permissionProcedure("orders.read")
 				fulfillmentStatus: schema.order.fulfillmentStatus,
 				tableId: schema.order.tableId,
 				notes: schema.order.notes,
+				voidReason: schema.order.voidReason,
+				voidAuthorizedAt: schema.order.voidAuthorizedAt,
+				isSplit: schema.order.isSplit,
 				createdAt: schema.order.createdAt,
 				updatedAt: schema.order.updatedAt,
 				cashierName: schema.user.name,
 				locationName: schema.location.name,
+				registerName: schema.register.name,
+				voidAuthorizedByName: voidUser.name,
 			})
 			.from(schema.order)
 			.leftJoin(schema.user, eq(schema.order.userId, schema.user.id))
@@ -123,6 +130,11 @@ const getById = permissionProcedure("orders.read")
 				schema.location,
 				eq(schema.order.locationId, schema.location.id),
 			)
+			.leftJoin(
+				schema.register,
+				eq(schema.order.registerId, schema.register.id),
+			)
+			.leftJoin(voidUser, eq(schema.order.voidAuthorizedBy, voidUser.id))
 			.where(eq(schema.order.id, input.id));
 
 		if (orders.length === 0) {
