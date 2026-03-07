@@ -35,7 +35,9 @@ export function HourlySalesChart({ data }: HourlySalesChartProps) {
 					<XAxis
 						dataKey="hour"
 						className="text-[10px] sm:text-xs"
-						tick={{ fill: "hsl(var(--muted-foreground))" }}
+						tick={{
+							style: { fill: "var(--muted-foreground)", fontSize: "10px" },
+						}}
 						tickLine={false}
 						axisLine={false}
 					/>
@@ -44,7 +46,9 @@ export function HourlySalesChart({ data }: HourlySalesChartProps) {
 						orientation="left"
 						tickFormatter={(v) => formatGYD(v)}
 						className="text-[10px] sm:text-xs"
-						tick={{ fill: "hsl(var(--muted-foreground))" }}
+						tick={{
+							style: { fill: "var(--muted-foreground)", fontSize: "10px" },
+						}}
 						tickLine={false}
 						axisLine={false}
 						width={70}
@@ -53,17 +57,20 @@ export function HourlySalesChart({ data }: HourlySalesChartProps) {
 						yAxisId="orders"
 						orientation="right"
 						className="text-[10px]"
-						tick={{ fill: "hsl(var(--muted-foreground))" }}
+						tick={{
+							style: { fill: "var(--muted-foreground)", fontSize: "10px" },
+						}}
 						tickLine={false}
 						axisLine={false}
 						width={30}
 					/>
 					<Tooltip
 						contentStyle={{
-							backgroundColor: "hsl(var(--card))",
-							border: "1px solid hsl(var(--border))",
+							backgroundColor: "var(--card)",
+							border: "1px solid var(--border)",
 							borderRadius: "8px",
 							fontSize: "12px",
+							color: "var(--card-foreground)",
 						}}
 						formatter={
 							((value: number | undefined, name: string | undefined) => [

@@ -163,6 +163,30 @@
 	animation: shake 0.4s ease-in-out;
 }
 
+/* ── Recharts theme fix ──────────────────────────────────────────────
+   SVG fill="" attributes don't resolve CSS custom properties, but CSS
+   class selectors do. These rules make all Recharts charts respect the
+   current theme (dark/light) automatically.
+   ──────────────────────────────────────────────────────────────────── */
+.recharts-cartesian-axis-tick-value {
+	fill: var(--muted-foreground);
+}
+.recharts-cartesian-grid line {
+	stroke: var(--border);
+}
+.recharts-default-tooltip {
+	background-color: var(--card) !important;
+	border-color: var(--border) !important;
+	color: var(--card-foreground) !important;
+	border-radius: 8px !important;
+}
+.recharts-tooltip-label {
+	color: var(--card-foreground) !important;
+}
+.recharts-tooltip-item {
+	color: var(--muted-foreground) !important;
+}
+
 /* ── Print styles for EOD report ───────────────────────────────────── */
 @media print {
 	body {
