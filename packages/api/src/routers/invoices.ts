@@ -28,6 +28,7 @@ const lineItemSchema = z.object({
 	quantity: z.number(),
 	unitPrice: z.number(),
 	total: z.number(),
+	taxExempt: z.boolean().optional(),
 });
 
 // ── list ───────────────────────────────────────────────────────────────
@@ -118,6 +119,12 @@ const create = permissionProcedure("invoices.create")
 			taxTotal: z.string().optional(),
 			total: z.string(),
 			createdBy: z.string(),
+			discountType: z.enum(["percent", "fixed"]).optional(),
+			discountValue: z.string().optional(),
+			taxMode: z.enum(["invoice", "line"]).optional(),
+			taxRate: z.string().optional(),
+			paymentTerms: z.string().optional(),
+			preparedBy: z.string().optional(),
 		}),
 	)
 	.handler(async ({ input }) => {
@@ -142,6 +149,12 @@ const create = permissionProcedure("invoices.create")
 				dueDate: input.dueDate ? new Date(input.dueDate) : null,
 				notes: input.notes ?? null,
 				createdBy: input.createdBy,
+				discountType: input.discountType ?? "percent",
+				discountValue: input.discountValue ?? "0",
+				taxMode: input.taxMode ?? "invoice",
+				taxRate: input.taxRate ?? "16.5",
+				paymentTerms: input.paymentTerms ?? "due_on_receipt",
+				preparedBy: input.preparedBy ?? null,
 			})
 			.returning();
 
@@ -166,6 +179,12 @@ const update = permissionProcedure("invoices.update")
 			taxTotal: z.string().optional(),
 			total: z.string().optional(),
 			status: z.string().optional(),
+			discountType: z.enum(["percent", "fixed"]).optional(),
+			discountValue: z.string().optional(),
+			taxMode: z.enum(["invoice", "line"]).optional(),
+			taxRate: z.string().optional(),
+			paymentTerms: z.string().optional(),
+			preparedBy: z.string().optional(),
 		}),
 	)
 	.handler(async ({ input }) => {
@@ -196,6 +215,15 @@ const update = permissionProcedure("invoices.update")
 		if (input.taxTotal !== undefined) updates.taxTotal = input.taxTotal;
 		if (input.total !== undefined) updates.total = input.total;
 		if (input.status !== undefined) updates.status = input.status;
+		if (input.discountType !== undefined)
+			updates.discountType = input.discountType;
+		if (input.discountValue !== undefined)
+			updates.discountValue = input.discountValue;
+		if (input.taxMode !== undefined) updates.taxMode = input.taxMode;
+		if (input.taxRate !== undefined) updates.taxRate = input.taxRate;
+		if (input.paymentTerms !== undefined)
+			updates.paymentTerms = input.paymentTerms;
+		if (input.preparedBy !== undefined) updates.preparedBy = input.preparedBy;
 
 		await db
 			.update(schema.invoice)
@@ -271,6 +299,85 @@ const markPaid = permissionProcedure("invoices.update")
 		return { success: true, status };
 	});
 
+// ── duplicate ──────────────────────────────────────────────────────────
+
+const duplicate = permissionProcedure("invoices.create")
+	.input(z.object({ id: z.string().uuid(), createdBy: z.string() }))
+	.handler(async ({ input }) => {
+		const existing = await db
+			.select()
+			.from(schema.invoice)
+			.where(eq(schema.invoice.id, input.id))
+			.limit(1);
+
+		if (existing.length === 0)
+			throw new ORPCError("NOT_FOUND", { message: "Invoice not found" });
+		const src = existing[0]!;
+		const invoiceNumber = await nextInvoiceNumber(DEFAULT_ORG_ID);
+
+		const rows = await db
+			.insert(schema.invoice)
+			.values({
+				organizationId: src.organizationId,
+				locationId: src.locationId,
+				invoiceNumber,
+				customerName: src.customerName,
+				customerAddress: src.customerAddress,
+				customerPhone: src.customerPhone,
+				customerId: src.customerId,
+				items: src.items as Record<string, unknown>[],
+				subtotal: src.subtotal,
+				taxTotal: src.taxTotal,
+				total: src.total,
+				status: "draft",
+				discountType: src.discountType,
+				discountValue: src.discountValue,
+				taxMode: src.taxMode,
+				taxRate: src.taxRate,
+				paymentTerms: src.paymentTerms,
+				notes: src.notes,
+				createdBy: input.createdBy,
+			})
+			.returning();
+
+		return rows[0]!;
+	});
+
+// ── getSummary ─────────────────────────────────────────────────────────
+
+const getSummary = permissionProcedure("invoices.read")
+	.input(z.object({}).optional())
+	.handler(async () => {
+		const result = await db.execute(sql`
+			SELECT
+				COALESCE(SUM(CASE WHEN status NOT IN ('paid','cancelled') THEN total::numeric - amount_paid::numeric ELSE 0 END), 0) as total_outstanding,
+				COALESCE(SUM(CASE WHEN status NOT IN ('paid','cancelled') AND due_date < NOW() THEN total::numeric - amount_paid::numeric ELSE 0 END), 0) as total_overdue,
+				COALESCE(SUM(CASE WHEN status = 'paid' AND date_paid >= date_trunc('month', NOW()) THEN amount_paid::numeric ELSE 0 END), 0) as paid_this_month,
+				COUNT(CASE WHEN status = 'draft' THEN 1 END)::int as draft_count,
+				COUNT(CASE WHEN status NOT IN ('paid','cancelled') AND due_date < NOW() THEN 1 END)::int as overdue_count
+			FROM invoice
+			WHERE organization_id = ${DEFAULT_ORG_ID}
+		`);
+		return (result.rows[0] ?? {}) as Record<string, unknown>;
+	});
+
+// ── markSent ───────────────────────────────────────────────────────────
+
+const markSent = permissionProcedure("invoices.update")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input }) => {
+		await db
+			.update(schema.invoice)
+			.set({ status: "sent" })
+			.where(
+				and(
+					eq(schema.invoice.id, input.id),
+					eq(schema.invoice.status, "draft"),
+				),
+			);
+		return { success: true };
+	});
+
 // ── router export ──────────────────────────────────────────────────────
 
 export const invoicesRouter = {
@@ -280,4 +387,7 @@ export const invoicesRouter = {
 	update,
 	delete: remove,
 	markPaid,
+	markSent,
+	duplicate,
+	getSummary,
 };
