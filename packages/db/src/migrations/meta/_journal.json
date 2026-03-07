@@ -15,6 +15,13 @@
 			"when": 1772803507115,
 			"tag": "0001_slippery_shiver_man",
 			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1772844585111,
+			"tag": "0002_loose_human_fly",
+			"breakpoints": true
 		}
 	]
 }

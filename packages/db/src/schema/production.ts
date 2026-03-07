@@ -3,6 +3,7 @@ import {
 	date,
 	index,
 	integer,
+	numeric,
 	pgTable,
 	text,
 	timestamp,
@@ -53,3 +54,30 @@ export const productionLogRelations = relations(productionLog, ({ one }) => ({
 		references: [user.id],
 	}),
 }));
+
+// ── Product Production Component ────────────────────────────────────────
+
+export const productProductionComponent = pgTable(
+	"product_production_component",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		productId: uuid("product_id")
+			.notNull()
+			.references(() => product.id, { onDelete: "cascade" }),
+		componentName: text("component_name").notNull(),
+		quantity: numeric("quantity", { precision: 10, scale: 4 })
+			.notNull()
+			.default("1"),
+	},
+	(table) => [index("idx_prod_component_product").on(table.productId)],
+);
+
+export const productProductionComponentRelations = relations(
+	productProductionComponent,
+	({ one }) => ({
+		product: one(product, {
+			fields: [productProductionComponent.productId],
+			references: [product.id],
+		}),
+	}),
+);
