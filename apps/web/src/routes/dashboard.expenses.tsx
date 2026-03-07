@@ -3,6 +3,7 @@ import {
 	Download,
 	Pencil,
 	Plus,
+	Printer,
 	ReceiptText,
 	Settings2,
 	Trash2,
@@ -66,6 +67,60 @@ function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
 	URL.revokeObjectURL(url);
 }
 
+function downloadPdf(title: string, rows: ExpenseRow[], period: string) {
+	if (!rows.length) return;
+	const fmt = (n: number) =>
+		new Intl.NumberFormat("en-GY", {
+			style: "currency",
+			currency: "GYD",
+		}).format(n);
+	const total = rows.reduce((s, e) => s + Number(e.amount), 0);
+	const tableRows = rows
+		.map(
+			(e) => `<tr>
+			<td>${new Date(e.created_at).toLocaleString("en-GY", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</td>
+			<td>${e.supplier_name ?? "—"}</td>
+			<td>${e.category}</td>
+			<td>${e.description}</td>
+			<td>${e.payment_method ?? "—"}</td>
+			<td>${e.reference_number ?? "—"}</td>
+			<td style="text-align:right;font-weight:600">${fmt(Number(e.amount))}</td>
+			<td>${e.authorized_by_name ?? "—"}</td>
+		</tr>`,
+		)
+		.join("\n");
+	const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+<title>${title}</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #111; padding: 24px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p  { margin: 0 0 16px; color: #555; font-size: 11px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f3f4f6; text-align: left; padding: 6px 8px; font-size: 10px; border-bottom: 2px solid #ddd; }
+  td { padding: 5px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .total { font-weight: bold; font-size: 13px; text-align: right; margin-top: 12px; }
+  @media print { button { display: none; } }
+</style></head><body>
+<h1>${title}</h1>
+<p>Period: ${period} &nbsp;·&nbsp; ${rows.length} entries</p>
+<table>
+<thead><tr>
+  <th>Date</th><th>Supplier</th><th>Category</th><th>Description</th>
+  <th>Payment</th><th>Ref #</th><th style="text-align:right">Amount</th><th>Auth. By</th>
+</tr></thead>
+<tbody>${tableRows}</tbody>
+</table>
+<p class="total">Total: ${fmt(total)}</p>
+<button onclick="window.print()" style="margin-top:16px;padding:8px 16px;cursor:pointer">Print / Save as PDF</button>
+</body></html>`;
+	const w = window.open("", "_blank");
+	if (w) {
+		w.document.write(html);
+		w.document.close();
+	}
+}
+
 const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 
 const SUPPLIER_COLORS = [
@@ -79,11 +134,22 @@ const SUPPLIER_COLORS = [
 	"bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
 ];
 
+const PAYMENT_METHODS = [
+	"Cash",
+	"Card",
+	"Bank Transfer",
+	"Cheque",
+	"Other",
+] as const;
+
 const emptyForm = {
 	amount: "",
 	category: "",
 	description: "",
 	supplierId: "",
+	paymentMethod: "",
+	referenceNumber: "",
+	notes: "",
 };
 
 type ExpenseRow = {
@@ -96,12 +162,43 @@ type ExpenseRow = {
 	created_by_name: string | null;
 	supplier_name: string | null;
 	supplier_id: string | null;
+	payment_method: string | null;
+	reference_number: string | null;
+	notes: string | null;
+	receipt_photo_url: string | null;
 };
 
 export default function ExpensesPage() {
 	const { data: session } = authClient.useSession();
 	const today = todayGY();
 	const queryClient = useQueryClient();
+
+	function datePreset(preset: "today" | "week" | "month" | "lastmonth") {
+		const now = new Date(
+			new Date().toLocaleString("en-US", { timeZone: "America/Guyana" }),
+		);
+		const pad = (n: number) => String(n).padStart(2, "0");
+		const fmt = (d: Date) =>
+			`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+		if (preset === "today") {
+			setStartDate(today);
+			setEndDate(today);
+		} else if (preset === "week") {
+			const dow = now.getDay() === 0 ? 6 : now.getDay() - 1; // Mon=0
+			const mon = new Date(now);
+			mon.setDate(now.getDate() - dow);
+			setStartDate(fmt(mon));
+			setEndDate(today);
+		} else if (preset === "month") {
+			setStartDate(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`);
+			setEndDate(today);
+		} else {
+			const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+			const lme = new Date(now.getFullYear(), now.getMonth(), 0);
+			setStartDate(fmt(lm));
+			setEndDate(fmt(lme));
+		}
+	}
 
 	const [startDate, setStartDate] = useState(today);
 	const [endDate, setEndDate] = useState(today);
@@ -112,6 +209,7 @@ export default function ExpensesPage() {
 	const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
 	const [newCategoryName, setNewCategoryName] = useState("");
 	const [viewingExpense, setViewingExpense] = useState<ExpenseRow | null>(null);
+	const [categoryFilter, setCategoryFilter] = useState("all");
 
 	const { data: expensesRaw = [] } = useQuery(
 		orpc.cash.getExpenses.queryOptions({
@@ -224,10 +322,19 @@ export default function ExpensesPage() {
 	// Map supplier name → id for clickable stat cards
 	const supplierNameToIdMap = new Map(suppliers.map((s) => [s.name, s.id]));
 
-	const filtered =
-		supplierFilter === "all"
-			? expenses
-			: expenses.filter((e) => e.supplier_id === supplierFilter);
+	const filtered = expenses
+		.filter((e) => supplierFilter === "all" || e.supplier_id === supplierFilter)
+		.filter((e) => categoryFilter === "all" || e.category === categoryFilter);
+
+	// Category breakdown (client-side from loaded expenses)
+	const categoryBreakdown = Object.entries(
+		expenses.reduce<Record<string, number>>((acc, e) => {
+			acc[e.category] = (acc[e.category] ?? 0) + Number(e.amount);
+			return acc;
+		}, {}),
+	)
+		.map(([name, total]) => ({ name, total }))
+		.sort((a, b) => b.total - a.total);
 
 	const totalToday = filtered.reduce((sum, e) => sum + Number(e.amount), 0);
 
@@ -244,6 +351,9 @@ export default function ExpensesPage() {
 			category: e.category,
 			description: e.description,
 			supplierId: e.supplier_id ?? "",
+			paymentMethod: e.payment_method ?? "",
+			referenceNumber: e.reference_number ?? "",
+			notes: e.notes ?? "",
 		});
 		setDialogOpen(true);
 	}
@@ -260,6 +370,9 @@ export default function ExpensesPage() {
 				category: form.category,
 				description: form.description,
 				supplierId: form.supplierId || null,
+				paymentMethod: form.paymentMethod || null,
+				referenceNumber: form.referenceNumber || null,
+				notes: form.notes || null,
 			});
 		} else {
 			createExpense.mutate({
@@ -267,6 +380,9 @@ export default function ExpensesPage() {
 				category: form.category,
 				description: form.description,
 				supplierId: form.supplierId || null,
+				paymentMethod: form.paymentMethod || null,
+				referenceNumber: form.referenceNumber || null,
+				notes: form.notes || null,
 				authorizedBy: session?.user?.id || "",
 				createdBy: session?.user?.id || "",
 				organizationId: DEFAULT_ORG_ID,
@@ -309,12 +425,32 @@ export default function ExpensesPage() {
 									Description: e.description ?? "",
 									Amount: e.amount,
 									Supplier: e.supplier_name ?? "",
+									"Payment Method": e.payment_method ?? "",
+									"Ref #": e.reference_number ?? "",
+									Notes: e.notes ?? "",
+									"Recorded By": e.created_by_name ?? "",
+									"Authorized By": e.authorized_by_name ?? "",
 								})),
 							)
 						}
 					>
 						<Download className="size-4" />
 						Export
+					</Button>
+					<Button
+						size="sm"
+						variant="outline"
+						className="gap-1"
+						onClick={() =>
+							downloadPdf(
+								"Expense Report",
+								filtered,
+								`${startDate} – ${endDate}`,
+							)
+						}
+					>
+						<Printer className="size-4" />
+						Print PDF
 					</Button>
 					<Button onClick={openAdd} className="gap-2">
 						<Plus className="size-4" />
@@ -344,6 +480,29 @@ export default function ExpensesPage() {
 					/>
 				</div>
 				<div className="flex flex-col gap-1">
+					<Label className="text-muted-foreground text-xs">Quick range</Label>
+					<div className="flex gap-1">
+						{(["today", "week", "month", "lastmonth"] as const).map((p) => (
+							<Button
+								key={p}
+								size="sm"
+								variant="outline"
+								className="h-8 px-2 text-xs"
+								onClick={() => datePreset(p)}
+							>
+								{
+									{
+										today: "Today",
+										week: "This Week",
+										month: "This Month",
+										lastmonth: "Last Month",
+									}[p]
+								}
+							</Button>
+						))}
+					</div>
+				</div>
+				<div className="flex flex-col gap-1">
 					<Label className="text-muted-foreground text-xs">Supplier</Label>
 					<Select value={supplierFilter} onValueChange={setSupplierFilter}>
 						<SelectTrigger className="h-8 w-44 text-sm">
@@ -354,6 +513,22 @@ export default function ExpensesPage() {
 							{suppliers.map((s) => (
 								<SelectItem key={s.id} value={s.id}>
 									{s.name}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+				<div className="flex flex-col gap-1">
+					<Label className="text-muted-foreground text-xs">Category</Label>
+					<Select value={categoryFilter} onValueChange={setCategoryFilter}>
+						<SelectTrigger className="h-8 w-44 text-sm">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">All categories</SelectItem>
+							{categories.map((c) => (
+								<SelectItem key={c.id} value={c.name}>
+									{c.name}
 								</SelectItem>
 							))}
 						</SelectContent>
@@ -411,6 +586,36 @@ export default function ExpensesPage() {
 						);
 					})}
 			</div>
+
+			{/* Category Breakdown */}
+			{categoryBreakdown.length > 0 && (
+				<div>
+					<p className="mb-2 font-medium text-foreground text-sm">
+						Spending by Category
+					</p>
+					<div className="flex flex-wrap gap-2">
+						{categoryBreakdown.map((cat) => (
+							<button
+								key={cat.name}
+								type="button"
+								onClick={() =>
+									setCategoryFilter(
+										categoryFilter === cat.name ? "all" : cat.name,
+									)
+								}
+								className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors hover:border-primary/50 hover:bg-primary/5 ${categoryFilter === cat.name ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border"}`}
+							>
+								<span className="font-medium text-foreground">
+									{formatGYD(cat.total)}
+								</span>
+								<span className="text-muted-foreground text-xs">
+									{cat.name}
+								</span>
+							</button>
+						))}
+					</div>
+				</div>
+			)}
 
 			{/* Table */}
 			<div className="rounded-lg border border-border">
@@ -595,6 +800,57 @@ export default function ExpensesPage() {
 								}
 							/>
 						</div>
+						<div className="grid grid-cols-2 gap-3">
+							<div className="flex flex-col gap-1.5">
+								<Label>Payment Method</Label>
+								<Select
+									value={form.paymentMethod || "none"}
+									onValueChange={(v) =>
+										setForm((f) => ({
+											...f,
+											paymentMethod: v === "none" ? "" : v,
+										}))
+									}
+								>
+									<SelectTrigger>
+										<SelectValue placeholder="Select method" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="none">Not specified</SelectItem>
+										{PAYMENT_METHODS.map((m) => (
+											<SelectItem key={m} value={m}>
+												{m}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="flex flex-col gap-1.5">
+								<Label>Receipt / Ref #</Label>
+								<Input
+									placeholder="Invoice or receipt #"
+									value={form.referenceNumber}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, referenceNumber: e.target.value }))
+									}
+								/>
+							</div>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label>
+								Notes{" "}
+								<span className="text-muted-foreground text-xs">
+									(optional)
+								</span>
+							</Label>
+							<Input
+								placeholder="e.g. receipt in green folder, approved verbally"
+								value={form.notes}
+								onChange={(e) =>
+									setForm((f) => ({ ...f, notes: e.target.value }))
+								}
+							/>
+						</div>
 					</div>
 					<DialogFooter>
 						<Button variant="outline" onClick={() => setDialogOpen(false)}>
@@ -666,10 +922,34 @@ export default function ExpensesPage() {
 									</p>
 								</div>
 							</div>
+							<div className="grid grid-cols-2 gap-4">
+								<div className="flex flex-col gap-1">
+									<p className="text-muted-foreground text-xs">
+										Payment Method
+									</p>
+									<p className="text-sm">
+										{viewingExpense.payment_method ?? "—"}
+									</p>
+								</div>
+								<div className="flex flex-col gap-1">
+									<p className="text-muted-foreground text-xs">
+										Receipt / Ref #
+									</p>
+									<p className="text-sm">
+										{viewingExpense.reference_number ?? "—"}
+									</p>
+								</div>
+							</div>
 							<div className="flex flex-col gap-1">
 								<p className="text-muted-foreground text-xs">Description</p>
 								<p className="text-sm">{viewingExpense.description}</p>
 							</div>
+							{viewingExpense.notes && (
+								<div className="flex flex-col gap-1">
+									<p className="text-muted-foreground text-xs">Notes</p>
+									<p className="text-sm">{viewingExpense.notes}</p>
+								</div>
+							)}
 							<div className="h-px bg-border" />
 							<div className="grid grid-cols-2 gap-4">
 								<div className="flex flex-col gap-1">

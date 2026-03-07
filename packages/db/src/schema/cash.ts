@@ -170,6 +170,9 @@ export const expense = pgTable(
 		category: text("category").notNull(),
 		description: text("description").notNull(),
 		receiptPhotoUrl: text("receipt_photo_url"),
+		paymentMethod: text("payment_method"),
+		referenceNumber: text("reference_number"),
+		notes: text("notes"),
 		authorizedBy: text("authorized_by")
 			.notNull()
 			.references(() => user.id),

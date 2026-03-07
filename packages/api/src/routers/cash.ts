@@ -386,6 +386,9 @@ const createExpense = permissionProcedure("shifts.create")
 			category: z.string(),
 			description: z.string(),
 			receiptPhotoUrl: z.string().nullable().optional(),
+			paymentMethod: z.string().nullable().optional(),
+			referenceNumber: z.string().nullable().optional(),
+			notes: z.string().nullable().optional(),
 			authorizedBy: z.string(),
 			createdBy: z.string(),
 			organizationId: z.string().uuid(),
@@ -401,6 +404,9 @@ const createExpense = permissionProcedure("shifts.create")
 				category: input.category,
 				description: input.description,
 				receiptPhotoUrl: input.receiptPhotoUrl ?? null,
+				paymentMethod: input.paymentMethod ?? null,
+				referenceNumber: input.referenceNumber ?? null,
+				notes: input.notes ?? null,
 				authorizedBy: input.authorizedBy,
 				createdBy: input.createdBy,
 				organizationId: input.organizationId,
@@ -529,6 +535,9 @@ const updateExpense = permissionProcedure("shifts.create")
 			category: z.string(),
 			description: z.string(),
 			supplierId: z.string().uuid().nullable().optional(),
+			paymentMethod: z.string().nullable().optional(),
+			referenceNumber: z.string().nullable().optional(),
+			notes: z.string().nullable().optional(),
 		}),
 	)
 	.handler(async ({ input }) => {
@@ -539,6 +548,9 @@ const updateExpense = permissionProcedure("shifts.create")
 				category: input.category,
 				description: input.description,
 				supplierId: input.supplierId ?? null,
+				paymentMethod: input.paymentMethod ?? null,
+				referenceNumber: input.referenceNumber ?? null,
+				notes: input.notes ?? null,
 			})
 			.where(eq(schema.expense.id, input.expenseId));
 
