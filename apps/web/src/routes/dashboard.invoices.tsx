@@ -339,6 +339,64 @@ export default function InvoicesPage() {
 				)}
 			</div>
 
+			{/* Aging Summary Cards */}
+			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4 print:hidden">
+				{loadingSummary ? (
+					<>
+						{[0, 1, 2, 3].map((i) => (
+							<Skeleton key={i} className="h-20 rounded-lg" />
+						))}
+					</>
+				) : (
+					<>
+						<Card className="p-4">
+							<p className="text-muted-foreground text-xs">Outstanding</p>
+							<p className="mt-1 font-bold text-xl">
+								{new Intl.NumberFormat("en-GY", {
+									style: "currency",
+									currency: "GYD",
+									maximumFractionDigits: 0,
+								}).format(Number(s.total_outstanding ?? 0))}
+							</p>
+						</Card>
+						<Card
+							className={`p-4 ${Number(s.total_overdue ?? 0) > 0 ? "border-destructive/50" : ""}`}
+						>
+							<p
+								className={`text-xs ${Number(s.total_overdue ?? 0) > 0 ? "text-destructive" : "text-muted-foreground"}`}
+							>
+								Overdue
+							</p>
+							<p
+								className={`mt-1 font-bold text-xl ${Number(s.total_overdue ?? 0) > 0 ? "text-destructive" : ""}`}
+							>
+								{new Intl.NumberFormat("en-GY", {
+									style: "currency",
+									currency: "GYD",
+									maximumFractionDigits: 0,
+								}).format(Number(s.total_overdue ?? 0))}
+							</p>
+						</Card>
+						<Card className="p-4">
+							<p className="text-muted-foreground text-xs">Paid This Month</p>
+							<p className="mt-1 font-bold text-emerald-600 text-xl">
+								{new Intl.NumberFormat("en-GY", {
+									style: "currency",
+									currency: "GYD",
+									maximumFractionDigits: 0,
+								}).format(Number(s.paid_this_month ?? 0))}
+							</p>
+						</Card>
+						<Card className="p-4">
+							<p className="text-muted-foreground text-xs">Drafts</p>
+							<p className="mt-1 font-bold text-xl">
+								{String(s.draft_count ?? 0)}
+							</p>
+						</Card>
+					</>
+				)}
+			</div>
+
 			{/* Filters */}
 			<div className="flex flex-wrap gap-3 print:hidden">
 				<div className="relative min-w-48 flex-1">
@@ -390,7 +448,7 @@ export default function InvoicesPage() {
 								{invoices.length === 0 ? (
 									<TableRow>
 										<TableCell
-											colSpan={8}
+											colSpan={9}
 											className="py-10 text-center text-muted-foreground text-sm"
 										>
 											<Receipt className="mx-auto mb-2 size-8 opacity-30" />
@@ -423,12 +481,35 @@ export default function InvoicesPage() {
 													? formatGYD(Number(inv.amountPaid))
 													: "—"}
 											</TableCell>
+											<TableCell className="text-right text-xs">
+												{(() => {
+													const bal =
+														Number(inv.total) - Number(inv.amountPaid);
+													return bal > 0 &&
+														!["paid", "cancelled"].includes(inv.status) ? (
+														<span className="font-mono text-destructive">
+															{formatGYD(bal)}
+														</span>
+													) : (
+														<span className="text-emerald-600">Paid</span>
+													);
+												})()}
+											</TableCell>
 											<TableCell>
-												<Badge
-													className={`text-[10px] ${statusBadgeClass(inv.status)}`}
-												>
-													{inv.status}
-												</Badge>
+												<div className="flex flex-col gap-0.5">
+													<Badge
+														className={`text-[10px] ${statusBadgeClass(inv.status)}`}
+													>
+														{inv.status}
+													</Badge>
+													{inv.dueDate &&
+														new Date(inv.dueDate) < new Date() &&
+														!["paid", "cancelled"].includes(inv.status) && (
+															<Badge className="bg-red-100 text-[9px] text-red-800">
+																OVERDUE
+															</Badge>
+														)}
+												</div>
 											</TableCell>
 											<TableCell className="text-muted-foreground text-xs">
 												{inv.dueDate
@@ -478,7 +559,7 @@ export default function InvoicesPage() {
 					{selectedInvoice ? (
 						<>
 							{/* Invoice detail */}
-							<Card className="print-area">
+							<Card>
 								<CardHeader className="pb-3 print:hidden">
 									<CardTitle className="flex items-center justify-between text-base">
 										<span>{selectedInvoice.invoiceNumber}</span>
@@ -491,7 +572,9 @@ export default function InvoicesPage() {
 											<Button
 												variant="outline"
 												size="sm"
-												onClick={() => window.print()}
+												onClick={() =>
+													openInvoicePdf(selectedInvoice, docSettings ?? {})
+												}
 												className="no-print gap-1.5"
 											>
 												<Printer className="size-4" />
@@ -501,78 +584,6 @@ export default function InvoicesPage() {
 									</CardTitle>
 								</CardHeader>
 								<CardContent className="flex flex-col gap-3 text-sm">
-									{/* Company letterhead — print only */}
-									<div className="hidden border-b pb-5 print:block">
-										<div className="flex items-start justify-between">
-											<div className="flex items-center gap-3">
-												<img
-													src="/images/bettencourts-logo.png"
-													alt="Bettencourt's Food Inc."
-													className="h-14 w-auto object-contain"
-												/>
-												<div>
-													<p className="font-bold text-lg">
-														Bettencourt's Food Inc.
-													</p>
-													<p className="text-muted-foreground text-xs">
-														Main Location, Georgetown, Guyana
-													</p>
-													<p className="text-muted-foreground text-xs">
-														Tel: +592 000-0000
-													</p>
-												</div>
-											</div>
-											<div className="text-right">
-												<p className="font-bold text-base uppercase tracking-widest">
-													Invoice
-												</p>
-												<p className="font-mono font-semibold text-sm">
-													{selectedInvoice.invoiceNumber}
-												</p>
-												<p className="mt-1 text-xs">
-													<span className="text-muted-foreground">
-														Issued:{" "}
-													</span>
-													{selectedInvoice.issuedDate
-														? new Date(
-																selectedInvoice.issuedDate,
-															).toLocaleDateString("en-GY")
-														: new Date(
-																selectedInvoice.createdAt,
-															).toLocaleDateString("en-GY")}
-												</p>
-												{selectedInvoice.dueDate && (
-													<p className="text-xs">
-														<span className="text-muted-foreground">Due: </span>
-														{new Date(
-															selectedInvoice.dueDate,
-														).toLocaleDateString("en-GY")}
-													</p>
-												)}
-											</div>
-										</div>
-									</div>
-
-									{/* Bill To label — print only */}
-									<p className="hidden font-bold text-muted-foreground text-xs uppercase tracking-wide print:block">
-										Bill To
-									</p>
-
-									<div>
-										<p className="font-semibold">
-											{selectedInvoice.customerName}
-										</p>
-										{selectedInvoice.customerPhone && (
-											<p className="text-muted-foreground">
-												{selectedInvoice.customerPhone}
-											</p>
-										)}
-										{selectedInvoice.customerAddress && (
-											<p className="text-muted-foreground">
-												{selectedInvoice.customerAddress}
-											</p>
-										)}
-									</div>
 									<div className="flex gap-6 text-muted-foreground text-xs">
 										<span>
 											Issued:{" "}
@@ -661,21 +672,49 @@ export default function InvoicesPage() {
 											{selectedInvoice.notes}
 										</p>
 									)}
-									{canUpdate && (
-										<Button
-											size="sm"
-											variant="outline"
-											className="no-print w-full gap-1"
-											onClick={() => openEdit(selectedInvoice)}
-										>
-											<Edit2 className="size-3" />
-											Edit Invoice
-										</Button>
-									)}
-									{/* Print footer — print only */}
-									<div className="mt-6 hidden border-t pt-3 text-center text-muted-foreground text-xs print:block">
-										Bettencourt's Food Inc. · Thank you for your business ·{" "}
-										{new Date().toLocaleString("en-GY")}
+									<div className="no-print flex flex-col gap-2">
+										{canUpdate && (
+											<Button
+												size="sm"
+												variant="outline"
+												className="w-full gap-1"
+												onClick={() => openEdit(selectedInvoice)}
+											>
+												<Edit2 className="size-3" />
+												Edit Invoice
+											</Button>
+										)}
+										{canUpdate && selectedInvoice.status === "draft" && (
+											<Button
+												size="sm"
+												variant="outline"
+												className="w-full gap-1"
+												disabled={markSentMut.isPending}
+												onClick={() =>
+													markSentMut.mutate({ id: selectedInvoice.id })
+												}
+											>
+												<Send className="size-3" />
+												Mark as Sent
+											</Button>
+										)}
+										{canCreate && (
+											<Button
+												size="sm"
+												variant="outline"
+												className="w-full gap-1"
+												disabled={duplicateMut.isPending}
+												onClick={() =>
+													duplicateMut.mutate({
+														id: selectedInvoice.id,
+														createdBy: session?.user?.id ?? "",
+													})
+												}
+											>
+												<Copy className="size-3" />
+												Duplicate
+											</Button>
+										)}
 									</div>
 								</CardContent>
 							</Card>
@@ -940,16 +979,105 @@ export default function InvoicesPage() {
 							</Button>
 						</div>
 
-						{/* Totals */}
-						<div className="flex justify-end gap-6 border-t pt-2 text-sm">
-							<span className="text-muted-foreground">Subtotal</span>
-							<span className="w-28 text-right font-semibold">
-								{formatGYD(subtotal)}
-							</span>
+						{/* Tax/Discount Settings */}
+						<div className="flex flex-wrap items-center gap-3 rounded-md bg-muted/40 p-2 text-sm">
+							<div className="flex items-center gap-1.5">
+								<span className="text-muted-foreground text-xs">Tax:</span>
+								<Input
+									className="h-7 w-16 text-xs"
+									type="number"
+									min="0"
+									max="100"
+									step="0.1"
+									value={form.taxRate}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, taxRate: e.target.value }))
+									}
+								/>
+								<span className="text-xs">%</span>
+							</div>
+							<div className="flex items-center gap-1.5">
+								<span className="text-muted-foreground text-xs">Discount:</span>
+								<Select
+									value={form.discountType}
+									onValueChange={(v) =>
+										setForm((f) => ({
+											...f,
+											discountType: v as "percent" | "fixed",
+										}))
+									}
+								>
+									<SelectTrigger className="h-7 w-16 text-xs">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="percent">%</SelectItem>
+										<SelectItem value="fixed">GYD</SelectItem>
+									</SelectContent>
+								</Select>
+								<Input
+									className="h-7 w-20 text-xs"
+									type="number"
+									min="0"
+									step="0.01"
+									value={form.discountValue}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, discountValue: e.target.value }))
+									}
+								/>
+							</div>
+							<div className="flex items-center gap-1.5">
+								<span className="text-muted-foreground text-xs">Terms:</span>
+								<Select
+									value={form.paymentTerms}
+									onValueChange={(v) =>
+										setForm((f) => ({ ...f, paymentTerms: v }))
+									}
+								>
+									<SelectTrigger className="h-7 w-36 text-xs">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="due_on_receipt">
+											Due on Receipt
+										</SelectItem>
+										<SelectItem value="net_15">Net 15</SelectItem>
+										<SelectItem value="net_30">Net 30</SelectItem>
+										<SelectItem value="net_60">Net 60</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
 						</div>
-						<div className="flex justify-end gap-6 font-bold text-sm">
-							<span>Total</span>
-							<span className="w-28 text-right">{formatGYD(subtotal)}</span>
+
+						{/* Totals */}
+						<div className="flex flex-col gap-1 border-t pt-2 text-sm">
+							<div className="flex justify-between text-muted-foreground">
+								<span>Subtotal</span>
+								<span className="font-mono">{formatGYD(subtotal)}</span>
+							</div>
+							{formDiscountAmt > 0 && (
+								<div className="flex justify-between text-destructive">
+									<span>
+										Discount
+										{form.discountType === "percent"
+											? ` (${form.discountValue}%)`
+											: ""}
+									</span>
+									<span className="font-mono">
+										-{formatGYD(formDiscountAmt)}
+									</span>
+								</div>
+							)}
+							{formTaxAmt > 0 && (
+								<div className="flex justify-between text-muted-foreground">
+									<span>VAT ({form.taxRate}%)</span>
+									<span className="font-mono">{formatGYD(formTaxAmt)}</span>
+								</div>
+							)}
+							<div className="flex justify-between font-bold">
+								<span>Total</span>
+								<span className="font-mono">{formatGYD(formTotal)}</span>
+							</div>
 						</div>
 
 						<div className="flex flex-col gap-1.5">
