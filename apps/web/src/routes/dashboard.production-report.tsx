@@ -24,7 +24,29 @@ export default function ProductionReportPage() {
 
 	return (
 		<div className="space-y-6 p-4 md:p-6">
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			{/* Print header — only visible in print */}
+			<div className="mb-6 hidden border-b pb-4 print:block">
+				<div className="flex items-start justify-between">
+					<div>
+						<h1 className="font-bold text-xl">Bettencourt's Food Inc.</h1>
+						<p className="text-muted-foreground text-sm">
+							Main Location, Georgetown, Guyana
+						</p>
+					</div>
+					<div className="text-right">
+						<p className="font-bold text-base">Production Report</p>
+						<p className="text-sm capitalize">
+							{workflow} · {date}
+						</p>
+						<p className="text-muted-foreground text-xs">
+							Generated: {new Date().toLocaleString("en-GY")}
+						</p>
+					</div>
+				</div>
+			</div>
+
+			{/* Screen header — hidden in print */}
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
 				<div>
 					<h1 className="font-bold text-2xl">Production Report</h1>
 					<p className="text-muted-foreground text-sm">
@@ -184,6 +206,11 @@ export default function ProductionReportPage() {
 						)}
 					</tbody>
 				</table>
+			</div>
+			{/* Print footer */}
+			<div className="mt-8 hidden border-t pt-2 text-center text-muted-foreground text-xs print:block">
+				Bettencourt's Food Inc. · Production Report ·{" "}
+				{new Date().toLocaleString("en-GY")}
 			</div>
 		</div>
 	);

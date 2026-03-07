@@ -131,17 +131,26 @@ export function ProductionTracker({ products, initialTotals, userId }: Props) {
 		}),
 	);
 
-	const filteredProducts = products.filter((p) => {
-		const deptLower = (p.department_name ?? "").toLowerCase();
-		if (workflow === "bakery") {
-			return deptLower.includes("pastry") || deptLower.includes("bakery");
-		}
-		return !deptLower.includes("pastry") && !deptLower.includes("bakery");
-	});
+	function isBakeryDept(name: string | null): boolean {
+		const d = (name ?? "").toLowerCase();
+		// Covers: "Bakery", "Pastry", "Pastries", "Baking"
+		return (
+			d.includes("bakery") ||
+			d.includes("baking") ||
+			d.includes("pastri") ||
+			d.includes("pastry")
+		);
+	}
 
-	// Get unique departments
+	const filteredProducts = products.filter((p) =>
+		workflow === "bakery"
+			? isBakeryDept(p.department_name)
+			: !isBakeryDept(p.department_name),
+	);
+
+	// Only show department pills relevant to the current workflow
 	const departments = Array.from(
-		new Set(products.map((p) => p.department_name).filter(Boolean)),
+		new Set(filteredProducts.map((p) => p.department_name).filter(Boolean)),
 	) as string[];
 
 	const filtered =
@@ -163,6 +172,7 @@ export function ProductionTracker({ products, initialTotals, userId }: Props) {
 			productName: selectedProduct.name,
 			loggedByUserId: userId,
 			entryType: mode,
+			workflow,
 			quantity,
 			notes: notes || null,
 		});

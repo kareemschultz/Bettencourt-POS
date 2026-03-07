@@ -315,7 +315,7 @@ export default function InvoicesPage() {
 	return (
 		<div className="flex flex-col gap-6 p-4 md:p-6">
 			{/* Header */}
-			<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+			<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between print:hidden">
 				<div>
 					<h1 className="flex items-center gap-2 font-bold text-2xl text-foreground tracking-tight">
 						<Receipt className="size-6" />
@@ -334,7 +334,7 @@ export default function InvoicesPage() {
 			</div>
 
 			{/* Filters */}
-			<div className="flex flex-wrap gap-3">
+			<div className="flex flex-wrap gap-3 print:hidden">
 				<div className="relative min-w-48 flex-1">
 					<Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 					<Input
@@ -364,8 +364,8 @@ export default function InvoicesPage() {
 			</div>
 
 			{/* Grid: table + detail */}
-			<div className="grid gap-4 lg:grid-cols-3">
-				<div className="lg:col-span-2">
+			<div className="grid gap-4 lg:grid-cols-3 print:grid-cols-1">
+				<div className="lg:col-span-2 print:hidden">
 					<Card>
 						<Table>
 							<TableHeader>
@@ -473,7 +473,7 @@ export default function InvoicesPage() {
 						<>
 							{/* Invoice detail */}
 							<Card className="print-area">
-								<CardHeader className="pb-3">
+								<CardHeader className="pb-3 print:hidden">
 									<CardTitle className="flex items-center justify-between text-base">
 										<span>{selectedInvoice.invoiceNumber}</span>
 										<div className="flex items-center gap-2">
@@ -495,6 +495,50 @@ export default function InvoicesPage() {
 									</CardTitle>
 								</CardHeader>
 								<CardContent className="flex flex-col gap-3 text-sm">
+									{/* Company letterhead — print only */}
+									<div className="hidden border-b pb-5 print:block">
+										<div className="flex items-start justify-between">
+											<div>
+												<p className="font-bold text-lg">
+													Bettencourt's Food Inc.
+												</p>
+												<p className="text-muted-foreground text-xs">
+													Main Location, Georgetown, Guyana
+												</p>
+												<p className="text-muted-foreground text-xs">
+													Tel: +592 000-0000
+												</p>
+											</div>
+											<div className="text-right">
+												<p className="font-bold text-base tracking-wide">
+													INVOICE
+												</p>
+												<p className="font-mono font-semibold text-sm">
+													{selectedInvoice.invoiceNumber}
+												</p>
+												<p className="text-muted-foreground text-xs">
+													Issued:{" "}
+													{new Date(
+														selectedInvoice.createdAt,
+													).toLocaleDateString("en-GY")}
+												</p>
+												{selectedInvoice.dueDate && (
+													<p className="text-muted-foreground text-xs">
+														Due:{" "}
+														{new Date(
+															selectedInvoice.dueDate,
+														).toLocaleDateString("en-GY")}
+													</p>
+												)}
+											</div>
+										</div>
+									</div>
+
+									{/* Bill To label — print only */}
+									<p className="hidden font-bold text-muted-foreground text-xs uppercase tracking-wide print:block">
+										Bill To
+									</p>
+
 									<div>
 										<p className="font-semibold">
 											{selectedInvoice.customerName}
@@ -593,6 +637,11 @@ export default function InvoicesPage() {
 											Edit Invoice
 										</Button>
 									)}
+									{/* Print footer — print only */}
+									<div className="mt-6 hidden border-t pt-3 text-center text-muted-foreground text-xs print:block">
+										Bettencourt's Food Inc. · Thank you for your business ·{" "}
+										{new Date().toLocaleString("en-GY")}
+									</div>
 								</CardContent>
 							</Card>
 

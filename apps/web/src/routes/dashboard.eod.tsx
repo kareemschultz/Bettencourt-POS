@@ -78,9 +78,22 @@ export default function EodReportPage() {
 			</div>
 
 			{/* Print header — only visible in print */}
-			<div className="mb-4 hidden text-center print:block">
-				<h1 className="font-bold text-xl">Bettencourt's Food Inc.</h1>
-				<p className="text-sm">End-of-Day Report — {date}</p>
+			<div className="mb-6 hidden border-b pb-4 print:block">
+				<div className="flex items-start justify-between">
+					<div>
+						<h1 className="font-bold text-xl">Bettencourt's Food Inc.</h1>
+						<p className="text-muted-foreground text-sm">
+							Main Location, Georgetown, Guyana
+						</p>
+					</div>
+					<div className="text-right">
+						<p className="font-bold text-base">End-of-Day Report</p>
+						<p className="text-sm">{date}</p>
+						<p className="text-muted-foreground text-xs">
+							Generated: {new Date().toLocaleString("en-GY")}
+						</p>
+					</div>
+				</div>
 			</div>
 
 			{isLoading ? (
@@ -450,6 +463,12 @@ export default function EodReportPage() {
 					</div>
 				</div>
 			)}
+
+			{/* Print footer */}
+			<div className="mt-8 hidden border-t pt-2 text-center text-muted-foreground text-xs print:block">
+				Bettencourt's Food Inc. · End-of-Day Report ·{" "}
+				{new Date().toLocaleString("en-GY")}
+			</div>
 		</div>
 	);
 }

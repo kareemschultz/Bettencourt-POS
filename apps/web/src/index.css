@@ -187,11 +187,33 @@
 	color: var(--muted-foreground) !important;
 }
 
-/* ── Print styles for EOD report ───────────────────────────────────── */
+/* ── Print styles ───────────────────────────────────────────────────── */
 @media print {
+	/* Page margins — A4/Letter friendly */
+	@page {
+		margin: 1.5cm 2cm;
+	}
+
+	/* Reset dark-mode CSS variables to light theme so reports print legibly */
+	:root,
+	.dark {
+		--background: oklch(0.98 0.003 85);
+		--foreground: oklch(0.15 0.01 85);
+		--card: oklch(1 0 0);
+		--card-foreground: oklch(0.15 0.01 85);
+		--muted: oklch(0.95 0.003 85);
+		--muted-foreground: oklch(0.5 0.01 85);
+		--border: oklch(0.9 0.005 85);
+		--input: oklch(0.9 0.005 85);
+		--secondary: oklch(0.95 0.005 85);
+		--secondary-foreground: oklch(0.25 0.01 85);
+	}
+
 	body {
 		background: white;
+		color: #000;
 	}
+
 	nav,
 	header,
 	aside,
@@ -199,30 +221,61 @@
 	.print\:hidden {
 		display: none;
 	}
+
 	main {
 		margin: 0;
 		padding: 0;
 	}
+
 	.print\:block {
 		display: block;
 	}
+
+	.print\:flex {
+		display: flex;
+	}
+
 	.print\:shadow-none {
 		box-shadow: none;
 	}
+
 	.print\:border {
 		border: 1px solid #e5e5e5;
 	}
+
+	.print\:grid-cols-1 {
+		grid-template-columns: repeat(1, 1fr);
+	}
+
 	.print\:grid-cols-2 {
 		grid-template-columns: repeat(2, 1fr);
 	}
+
 	.print\:gap-2 {
 		gap: 0.5rem;
 	}
+
 	nav, aside, header, .no-print { display: none !important; }
+
 	.print-area {
 		display: block !important;
 		font-family: sans-serif;
 		font-size: 11pt;
 		color: #000;
+	}
+
+	/* Ensure table borders show in print */
+	table {
+		border-collapse: collapse;
+		width: 100%;
+	}
+
+	th, td {
+		border-bottom: 1px solid #e5e5e5;
+	}
+
+	/* Avoid page breaks inside cards */
+	.print-no-break {
+		break-inside: avoid;
 	}
 }
