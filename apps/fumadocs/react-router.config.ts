@@ -2,7 +2,7 @@ import { glob } from "node:fs/promises";
 import type { Config } from "@react-router/dev/config";
 import { createGetUrl, getSlugs } from "fumadocs-core/source";
 
-const getUrl = createGetUrl("/docs");
+const getUrl = createGetUrl("/manual");
 
 export default {
 	ssr: false,

@@ -3,7 +3,7 @@ import { type InferPageType, loader } from "fumadocs-core/source";
 
 export const source = loader({
 	source: docs.toFumadocsSource(),
-	baseUrl: "/docs",
+	baseUrl: "/manual",
 });
 
 export async function getLLMText(page: InferPageType<typeof source>) {

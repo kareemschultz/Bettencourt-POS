@@ -243,6 +243,9 @@ app.get("/api/kitchen/events", (c) => {
 // Serve static files from the web build (production only)
 if (process.env.NODE_ENV === "production") {
 	app.use("/*", serveStatic({ root: "./public" }));
+	// Fumadocs manual fallback: each page is prerendered, but serve index.html for safety
+	app.get("/manual", serveStatic({ path: "./public/manual/index.html" }));
+	app.get("/manual/*", serveStatic({ path: "./public/manual/index.html" }));
 	// SPA fallback: serve index.html for any unmatched route
 	app.get("/*", serveStatic({ path: "./public/index.html" }));
 } else {

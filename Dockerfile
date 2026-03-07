@@ -33,6 +33,7 @@ WORKDIR /app
 COPY package.json bun.lock turbo.json ./
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
+COPY apps/fumadocs/package.json apps/fumadocs/
 COPY packages/api/package.json packages/api/
 COPY packages/auth/package.json packages/auth/
 COPY packages/db/package.json packages/db/
@@ -46,6 +47,7 @@ RUN bun install
 # Copy source
 COPY apps/server/ apps/server/
 COPY apps/web/ apps/web/
+COPY apps/fumadocs/ apps/fumadocs/
 COPY packages/ packages/
 
 # Build web SPA (empty VITE_SERVER_URL = same-origin in production)
@@ -56,6 +58,9 @@ ENV VITE_SERVER_URL=""
 # and the server returns "Bettencourt POS API — Development" at runtime.
 ENV NODE_ENV=production
 RUN cd apps/web && bun run build
+
+# Build fumadocs user manual (prerendered static pages under /manual/*)
+RUN cd apps/fumadocs && bun run build
 
 # Compile server into a single self-contained binary.
 # --compile:   embed Bun runtime + all JS modules into one ELF executable
@@ -80,6 +85,12 @@ COPY --from=builder --chown=nonroot:nonroot /app/server-bin ./server
 
 # SPA static assets served by Hono's serveStatic({ root: "./public" })
 COPY --from=builder --chown=nonroot:nonroot /app/apps/web/build/client/ ./public/
+
+# Fumadocs user manual — prerendered pages at /manual/*, assets at /manual/assets/*
+# With vite base="/manual", generated HTML references /manual/assets/..., so assets
+# must land in ./public/manual/assets/ to resolve correctly via serveStatic.
+COPY --from=builder --chown=nonroot:nonroot /app/apps/fumadocs/build/client/manual/ ./public/manual/
+COPY --from=builder --chown=nonroot:nonroot /app/apps/fumadocs/build/client/assets/ ./public/manual/assets/
 
 EXPOSE 3000
 

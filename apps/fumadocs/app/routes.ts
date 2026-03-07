@@ -1,11 +1,11 @@
 import { index, type RouteConfig, route } from "@react-router/dev/routes";
 
 export default [
-	index("routes/home.tsx"),
-	route("docs/*", "routes/docs.tsx"),
-	route("api/search", "routes/search.ts"),
+	route("manual", "routes/docs.tsx"),
+	route("manual/api/search", "routes/search.ts"),
+	route("manual/*", "routes/docs.tsx"),
 
-	// LLM integration:
+	// LLM integration (no /manual prefix — consumed by AI tools, not browsers):
 	route("llms.txt", "llms/index.ts"),
 	route("llms-full.txt", "llms/full.ts"),
 	route("llms.mdx/docs/*", "llms/mdx.ts"),
