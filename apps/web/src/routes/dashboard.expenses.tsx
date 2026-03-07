@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Pencil, Plus, ReceiptText, Trash2 } from "lucide-react";
+import {
+	Download,
+	Pencil,
+	Plus,
+	ReceiptText,
+	Settings2,
+	Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -102,6 +109,8 @@ export default function ExpensesPage() {
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [form, setForm] = useState(emptyForm);
+	const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
+	const [newCategoryName, setNewCategoryName] = useState("");
 
 	const { data: expensesRaw = [] } = useQuery(
 		orpc.cash.getExpenses.queryOptions({
@@ -180,6 +189,31 @@ export default function ExpensesPage() {
 		}),
 	);
 
+	const createCategoryMut = useMutation(
+		orpc.cash.createExpenseCategory.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.cash.getExpenseCategories.queryOptions().queryKey,
+				});
+				setNewCategoryName("");
+				toast.success("Category added");
+			},
+			onError: (err) => toast.error(err.message || "Failed to add category"),
+		}),
+	);
+
+	const deleteCategoryMut = useMutation(
+		orpc.cash.deleteExpenseCategory.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.cash.getExpenseCategories.queryOptions().queryKey,
+				});
+				toast.success("Category deleted");
+			},
+			onError: (err) => toast.error(err.message || "Failed to delete category"),
+		}),
+	);
+
 	// Build stable supplier → color map
 	const supplierColorMap = new Map<string, string>();
 	suppliers.forEach((s, i) => {
@@ -252,6 +286,15 @@ export default function ExpensesPage() {
 					</p>
 				</div>
 				<div className="flex items-center gap-2">
+					<Button
+						size="sm"
+						variant="outline"
+						className="gap-1"
+						onClick={() => setManageCategoriesOpen(true)}
+					>
+						<Settings2 className="size-4" />
+						Categories
+					</Button>
 					<Button
 						size="sm"
 						variant="outline"
@@ -529,8 +572,8 @@ export default function ExpensesPage() {
 								</SelectTrigger>
 								<SelectContent>
 									{categories.map((c) => (
-										<SelectItem key={c} value={c}>
-											{c}
+										<SelectItem key={c.id} value={c.name}>
+											{c.name}
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -564,6 +607,76 @@ export default function ExpensesPage() {
 									: "Save Expense"}
 						</Button>
 					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+			{/* Manage Categories Dialog */}
+			<Dialog
+				open={manageCategoriesOpen}
+				onOpenChange={setManageCategoriesOpen}
+			>
+				<DialogContent className="sm:max-w-sm">
+					<DialogHeader>
+						<DialogTitle>Manage Expense Categories</DialogTitle>
+					</DialogHeader>
+					<div className="flex flex-col gap-4 py-2">
+						<div className="flex gap-2">
+							<Input
+								placeholder="New category name"
+								value={newCategoryName}
+								onChange={(e) => setNewCategoryName(e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter" && newCategoryName.trim()) {
+										createCategoryMut.mutate({
+											name: newCategoryName.trim(),
+										});
+									}
+								}}
+							/>
+							<Button
+								onClick={() => {
+									if (!newCategoryName.trim()) return;
+									createCategoryMut.mutate({
+										name: newCategoryName.trim(),
+									});
+								}}
+								disabled={
+									!newCategoryName.trim() || createCategoryMut.isPending
+								}
+							>
+								<Plus className="size-4" />
+								Add
+							</Button>
+						</div>
+						<div className="flex max-h-64 flex-col gap-1 overflow-y-auto">
+							{categories.length === 0 ? (
+								<p className="py-4 text-center text-muted-foreground text-sm">
+									No categories yet
+								</p>
+							) : (
+								categories.map((c) => (
+									<div
+										key={c.id}
+										className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-muted"
+									>
+										<span className="text-sm">{c.name}</span>
+										<Button
+											size="icon"
+											variant="ghost"
+											className="size-7 text-destructive hover:text-destructive"
+											disabled={deleteCategoryMut.isPending}
+											onClick={() => {
+												if (confirm(`Delete category "${c.name}"?`)) {
+													deleteCategoryMut.mutate({ id: c.id });
+												}
+											}}
+										>
+											<Trash2 className="size-3.5" />
+										</Button>
+									</div>
+								))
+							)}
+						</div>
+					</div>
 				</DialogContent>
 			</Dialog>
 		</div>

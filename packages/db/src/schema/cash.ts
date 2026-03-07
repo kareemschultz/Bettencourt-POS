@@ -6,6 +6,7 @@ import {
 	pgTable,
 	text,
 	timestamp,
+	unique,
 	uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
@@ -190,6 +191,24 @@ export const expense = pgTable(
 		index("idx_expense_org").on(table.organizationId),
 		index("idx_expense_created").on(table.createdAt),
 		index("idx_expense_supplier").on(table.supplierId),
+	],
+);
+
+// ── Expense Category ──────────────────────────────────────────────────
+
+export const expenseCategory = pgTable(
+	"expense_category",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		name: text("name").notNull(),
+		organizationId: uuid("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+	},
+	(table) => [
+		index("idx_expense_category_org").on(table.organizationId),
+		unique("expense_category_org_name").on(table.organizationId, table.name),
 	],
 );
 

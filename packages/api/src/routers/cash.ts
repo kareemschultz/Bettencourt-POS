@@ -486,19 +486,39 @@ const getExpenseReport = permissionProcedure("shifts.read")
 // ── 7.4 getExpenseCategories ────────────────────────────────────────────
 const getExpenseCategories = permissionProcedure("shifts.read").handler(
 	async () => {
-		return [
-			"Food & Beverage Supplies",
-			"Cleaning Supplies",
-			"Office Supplies",
-			"Repairs & Maintenance",
-			"Delivery & Transport",
-			"Utilities",
-			"Marketing & Advertising",
-			"Staff Meals",
-			"Miscellaneous",
-		];
+		const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+		return db
+			.select({
+				id: schema.expenseCategory.id,
+				name: schema.expenseCategory.name,
+			})
+			.from(schema.expenseCategory)
+			.where(eq(schema.expenseCategory.organizationId, DEFAULT_ORG_ID))
+			.orderBy(schema.expenseCategory.name);
 	},
 );
+
+// ── 7.4 createExpenseCategory ───────────────────────────────────────────
+const createExpenseCategory = permissionProcedure("shifts.create")
+	.input(z.object({ name: z.string().min(1).max(100) }))
+	.handler(async ({ input }) => {
+		const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+		const [row] = await db
+			.insert(schema.expenseCategory)
+			.values({ name: input.name.trim(), organizationId: DEFAULT_ORG_ID })
+			.returning();
+		return row;
+	});
+
+// ── 7.4 deleteExpenseCategory ───────────────────────────────────────────
+const deleteExpenseCategory = permissionProcedure("shifts.create")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input }) => {
+		await db
+			.delete(schema.expenseCategory)
+			.where(eq(schema.expenseCategory.id, input.id));
+		return { success: true };
+	});
 
 // ── 7.4 updateExpense ──────────────────────────────────────────────────
 const updateExpense = permissionProcedure("shifts.create")
@@ -607,6 +627,8 @@ export const cashRouter = {
 	getExpenses,
 	getExpenseReport,
 	getExpenseCategories,
+	createExpenseCategory,
+	deleteExpenseCategory,
 	deleteExpense,
 	// 7.7 No-Sale Drawer Tracking
 	logNoSale,
