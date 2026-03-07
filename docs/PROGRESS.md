@@ -2,7 +2,7 @@
 
 This document tracks all plan phases and the current state of the system. Update it whenever significant work is completed.
 
-**Last updated:** 2026-03-06
+**Last updated:** 2026-03-07
 
 ---
 
@@ -211,3 +211,43 @@ Fix: Replace `array[0]?.id` with `array[0]!.id` where `array.length > 0` has bee
 | 6 | POS Terminal | Some department badges (e.g. "Duck") appear truncated on narrow screens; `overflow-x-auto` works but UX could be improved with a dropdown for 5+ departments | Low |
 | 7 | POS Terminal | Product names with "/" (e.g. "Anyrice / Curry Beef") look like two items — consider using "or" or parentheses | Low |
 | 8 | Loyalty Leaderboard | No pagination — shows all 50 members in one scroll. Consider adding pagination for large member lists | Low |
+
+---
+
+## Plan #6 — Print Polish & Combo Check-Off Splitting (2026-03-07)
+
+### Context
+
+Client feedback (Shakira, WhatsApp): pointed to combo items in the Check Off screen ("Anyrice / Curry Beef", "Cookup Baked Snapper", "Fried Rice and Baked Chicken") and asked if they would be split for production tracking.
+
+### Implemented
+
+| Task | Status | Details |
+|------|--------|---------|
+| Print/PDF styling — global | ✅ Done | `@page { margin: 1.5cm 2cm }` added; CSS variable reset inside `@media print` forces light theme even in dark mode |
+| Print header — P&L | ✅ Done | Two-column letterhead: company name/address left, report title/date/generated timestamp right |
+| Print header — EOD | ✅ Done | Same two-column letterhead pattern |
+| Print header — Production Report | ✅ Done | Was completely missing; added print-only header block + `print:hidden` on screen header |
+| Print — Invoices | ✅ Done | List panel hidden in print; full-width letterhead inside card; "Bill To" label; print footer |
+| Bug fix: Pastries filter | ✅ Done | `"pastries".includes("pastry")` → false; fixed with `isBakeryDept()` helper checking `"pastri"` prefix |
+| Bug fix: workflow not saved | ✅ Done | `handleSubmit` in production-tracker.tsx was missing `workflow` in `createEntryMutation.mutate()` |
+| Bug fix: dept pills showing all | ✅ Done | Department pills were built from all products; now built from `filteredProducts` (current workflow only) |
+| Combo indicator on cards | ✅ Done | Combo products show amber `Layers` icon + "splits into components" badge instead of Package icon |
+| Combo preview in dialog | ✅ Done | When a combo is selected, dialog shows live component breakdown (e.g. "Cookup × 5 / Baked Snapper × 5") that updates as quantity changes |
+| Server-side combo expansion | ✅ Done | `createEntry` API checks `productProductionComponent` table; if components exist, creates one log entry per component instead of one for the combo |
+| `listComboProductIds` endpoint | ✅ Done | New production router endpoint returns all product IDs that have component mappings — used to mark cards in the UI |
+| USER-MANUAL.md updated | ✅ Done | Section 6 fully rewritten: workflow tabs, entry types, combo splitting explained in plain language |
+| TypeScript check | ✅ Done | `tsc -b --noEmit` passes with zero errors |
+
+### How combo splitting works end-to-end
+
+1. Seed data maps combo products → components in `productProductionComponent` (e.g. "Fried Rice and Baked Chicken" → ["Fried Rice" ×1, "Baked Chicken" ×1])
+2. Staff taps combo card in Check Off → dialog shows component preview → confirms
+3. Server's `createEntry` detects component mappings and inserts separate `productionLog` rows for each component (using `productName = componentName`)
+4. Production Report (`getReport`) builds `byProduct` keyed by `productName` — matches individual component log entries
+5. Actual sold: POS combo sale also expands through `productProductionComponent` → `actualByName` accumulates "Fried Rice" and "Baked Chicken" sold counts
+6. Variance = component actual sold − component production logged → report balances correctly
+
+### Commit
+
+`feat: print polish, check-off bug fixes, combo component splitting` (2026-03-07)

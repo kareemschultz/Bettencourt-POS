@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	Check,
+	Layers,
 	Minus,
 	Moon,
 	Package,
@@ -77,9 +78,15 @@ interface Props {
 	initialTotals: ProductionTotal[];
 	userId: string;
 	userName: string;
+	comboProductIds: Set<string>;
 }
 
-export function ProductionTracker({ products, initialTotals, userId }: Props) {
+export function ProductionTracker({
+	products,
+	initialTotals,
+	userId,
+	comboProductIds,
+}: Props) {
 	const queryClient = useQueryClient();
 	const [mode, setMode] = useState<EntryType>("opening");
 	const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(
@@ -128,6 +135,17 @@ export function ProductionTracker({ products, initialTotals, userId }: Props) {
 			onError: (error) => {
 				toast.error(error.message || "Failed to log entry");
 			},
+		}),
+	);
+
+	// Fetch component breakdown when a combo product is selected
+	const { data: selectedComponents = [] } = useQuery(
+		orpc.production.getComponents.queryOptions({
+			input: {
+				productId:
+					selectedProduct?.id ?? "00000000-0000-0000-0000-000000000000",
+			},
+			query: { enabled: !!selectedProduct },
 		}),
 	);
 
@@ -257,6 +275,7 @@ export function ProductionTracker({ products, initialTotals, userId }: Props) {
 						const t = totalsMap.get(product.id);
 						const produced = (t?.opening || 0) + (t?.reorder || 0);
 						const remaining = produced - (t?.closing || 0);
+						const isCombo = comboProductIds.has(product.id);
 						return (
 							<button
 								key={product.id}
@@ -268,7 +287,11 @@ export function ProductionTracker({ products, initialTotals, userId }: Props) {
 								className="flex flex-col items-center justify-center rounded-xl border-2 border-border bg-card p-3 text-center transition-colors hover:border-primary active:scale-[0.97] sm:p-4"
 								style={{ minHeight: 120, touchAction: "manipulation" }}
 							>
-								<Package className="mb-1 size-6 text-muted-foreground sm:size-7" />
+								{isCombo ? (
+									<Layers className="mb-1 size-6 text-amber-500 sm:size-7" />
+								) : (
+									<Package className="mb-1 size-6 text-muted-foreground sm:size-7" />
+								)}
 								<span className="font-semibold text-foreground text-xs leading-tight sm:text-sm">
 									{product.name}
 								</span>
@@ -276,6 +299,14 @@ export function ProductionTracker({ products, initialTotals, userId }: Props) {
 									<span className="mt-0.5 text-[10px] text-muted-foreground">
 										{product.department_name}
 									</span>
+								)}
+								{isCombo && (
+									<Badge
+										variant="secondary"
+										className="mt-0.5 text-[9px] text-amber-700 dark:text-amber-400"
+									>
+										splits into components
+									</Badge>
 								)}
 								{produced > 0 && (
 									<div className="mt-1.5 flex gap-1.5">
@@ -398,6 +429,28 @@ export function ProductionTracker({ products, initialTotals, userId }: Props) {
 						</Button>
 					</div>
 
+					{/* Combo component preview */}
+					{selectedComponents.length > 0 && (
+						<div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/20">
+							<p className="mb-1.5 font-medium text-amber-800 dark:text-amber-300">
+								Will log as separate components:
+							</p>
+							<div className="space-y-0.5">
+								{selectedComponents.map((c) => (
+									<div
+										key={c.id}
+										className="flex items-center justify-between text-amber-700 dark:text-amber-400"
+									>
+										<span>{c.componentName}</span>
+										<span className="font-mono font-semibold">
+											× {Math.max(1, Math.round(quantity * Number(c.quantity)))}
+										</span>
+									</div>
+								))}
+							</div>
+						</div>
+					)}
+
 					{/* Optional notes */}
 					<Textarea
 						placeholder="Notes (optional)"
@@ -418,7 +471,9 @@ export function ProductionTracker({ products, initialTotals, userId }: Props) {
 							<Check className="size-4" />
 							{createEntryMutation.isPending
 								? "Saving..."
-								: `Log ${quantity} (${modeConfig.label})`}
+								: selectedComponents.length > 0
+									? `Split ${quantity} → ${selectedComponents.length} items (${modeConfig.label})`
+									: `Log ${quantity} (${modeConfig.label})`}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

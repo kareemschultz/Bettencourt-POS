@@ -16,6 +16,10 @@ export default function ProductionPage() {
 		orpc.production.getEntries.queryOptions({ input: { date: today } }),
 	);
 
+	const { data: comboIds = [] } = useQuery(
+		orpc.production.listComboProductIds.queryOptions({}),
+	);
+
 	if (loadingProducts || loadingProd) {
 		return (
 			<div className="flex items-center justify-center py-20 text-muted-foreground">
@@ -43,12 +47,15 @@ export default function ProductionPage() {
 		}),
 	);
 
+	const comboProductIds = new Set(comboIds as string[]);
+
 	return (
 		<ProductionTracker
 			products={products}
 			initialTotals={totals}
 			userId={session?.user?.id || ""}
 			userName={session?.user?.name || "User"}
+			comboProductIds={comboProductIds}
 		/>
 	);
 }

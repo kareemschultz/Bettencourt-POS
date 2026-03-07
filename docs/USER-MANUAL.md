@@ -253,27 +253,68 @@ The KDS automatically refreshes every few seconds. No manual refresh needed.
 
 ---
 
-## 6. Production Dashboard
+## 6. Production Dashboard (Check Off)
 
 **Navigate to:** Dashboard → Production
 
-Used by kitchen managers to log how much was produced/cooked for each product at the start and end of each day.
+Used by kitchen and bakery managers to log how much was produced each day and compare it against what the POS actually sold.
 
-### Logging Production
+### Workflow Tabs
 
-1. Select today's date
-2. For each product, enter:
-   - **Opening Stock** — how much you started with at the beginning of the day
-   - **Produced** — how much was cooked/made during the day
-   - **Closing Stock** — how much remains at the end
-3. The system calculates how much was sold vs. wasted
-4. Click **Save**
+At the top of the screen there are two tabs:
+- **Restaurant → Food** — shows all food products (soups, mains, sides, etc.)
+- **Bakery → Pastry** — shows all bakery/pastry products
+
+Only products belonging to the selected workflow are shown, so the kitchen and bakery teams can work independently without interfering with each other.
+
+### Entry Types
+
+The three coloured buttons at the top select what you are logging:
+
+| Button | Colour | When to use |
+|--------|--------|-------------|
+| **Opening** | Blue | First thing in the morning — how much you made for the day |
+| **Reorder** | Amber | Mid-day top-up when you cook more |
+| **Closing** | Green | End of day — leftover / damage / spoilage |
+
+### Logging a Product
+
+1. Tap the entry type (Opening / Reorder / Closing)
+2. Optionally use the department pills to filter to a specific section
+3. Tap any product card — a number pad dialog opens
+4. Enter the quantity using the numpad, quick-quantity buttons (5 / 10 / 20 / 25 / 50), or the +/− fine-tune buttons
+5. Add a note if needed (e.g. "burnt batch")
+6. Tap **Log** to save
+
+After saving, the product card shows a "Made" badge with the running total for the day.
+
+### Combo Products (Split Items)
+
+Some products — like "Fried Rice and Baked Chicken" or "Cookup Baked Snapper" — are combos made up of two individual items. These cards show an amber **stacked layers** icon and a "splits into components" label.
+
+When you log a quantity for a combo product, the system **automatically splits it** into its individual components:
+
+> *Example: Log 10 × "Fried Rice and Baked Chicken" (Opening)*
+> The system records:
+> → 10 × Fried Rice (Opening)
+> → 10 × Baked Chicken (Opening)
+
+Before you confirm, the dialog shows exactly how the split will be recorded, and the button reads **"Split X → N items"** so you always know what will happen.
+
+This means the Production Report can correctly compare what was made (each individual component) against what the POS sold — even when customers order the combo version.
 
 ### Production Report
 
 **Navigate to:** Dashboard → Production Report
 
-Shows a historical view of daily production entries, quantities produced, sold, and leftover, for tracking kitchen output.
+Compares what the kitchen logged (Opening + Reorder − Closing = Expected Sold) against what the POS terminal actually rang up as sold. Use the **Restaurant / Bakery** tabs and the date picker to select the period.
+
+Colour-coded variance badges show:
+- **Grey (0)** — balanced: sales match production
+- **Red (negative)** — short: more was rung up than produced
+- **Amber (positive)** — over: more was produced than sold (possible waste)
+
+The report can be printed using the **Print** button.
 
 ---
 

@@ -87,6 +87,42 @@ const createEntry = permissionProcedure("orders.update")
 		}),
 	)
 	.handler(async ({ input }) => {
+		// Check if this product is a combo with component mappings
+		const components = await db
+			.select({
+				componentName: schema.productProductionComponent.componentName,
+				quantity: schema.productProductionComponent.quantity,
+			})
+			.from(schema.productProductionComponent)
+			.where(eq(schema.productProductionComponent.productId, input.productId));
+
+		if (components.length > 0) {
+			// Expand combo: create one production log entry per component
+			const shared = {
+				locationId: input.locationId ?? null,
+				loggedByUserId: input.loggedByUserId ?? null,
+				entryType: input.entryType,
+				workflow: input.workflow ?? null,
+				notes: input.notes ?? null,
+			};
+			const rows = components
+				.map((comp) => ({
+					...shared,
+					// Use combo's productId as proxy — report matches by productName
+					productId: input.productId,
+					productName: comp.componentName,
+					quantity: Math.round(input.quantity * Number(comp.quantity)),
+				}))
+				.filter((r) => r.quantity > 0);
+
+			const inserted = await db
+				.insert(schema.productionLog)
+				.values(rows)
+				.returning();
+			return inserted[0];
+		}
+
+		// Not a combo — single entry
 		const [row] = await db
 			.insert(schema.productionLog)
 			.values({
@@ -103,6 +139,19 @@ const createEntry = permissionProcedure("orders.update")
 
 		return row;
 	});
+
+// ── listComboProductIds ──────────────────────────────────────────────────
+// Returns all product IDs that have at least one production component mapping
+const listComboProductIds = permissionProcedure("orders.read").handler(
+	async () => {
+		const rows = await db
+			.selectDistinct({
+				productId: schema.productProductionComponent.productId,
+			})
+			.from(schema.productProductionComponent);
+		return rows.map((r) => r.productId);
+	},
+);
 
 // ── getReconciliation ───────────────────────────────────────────────────
 // Production vs POS sales comparison per product
@@ -372,4 +421,5 @@ export const productionRouter = {
 	getReport,
 	getComponents,
 	setComponents,
+	listComboProductIds,
 };
