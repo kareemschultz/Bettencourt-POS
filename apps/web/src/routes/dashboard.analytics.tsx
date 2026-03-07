@@ -3,6 +3,7 @@ import {
 	BarChart3,
 	Clock,
 	DollarSign,
+	Lightbulb,
 	Package,
 	TrendingUp,
 	Users,
@@ -16,10 +17,13 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatGYD } from "@/lib/types";
+import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
 
 type DayRange = 30 | 60 | 90;
+type AbcView = "abc" | "departments";
 
 const DAY_NAMES = [
 	"Sunday",
@@ -33,6 +37,12 @@ const DAY_NAMES = [
 
 export default function AnalyticsPage() {
 	const [revenueDays, setRevenueDays] = useState<DayRange>(30);
+	const [abcView, setAbcView] = useState<AbcView>("abc");
+
+	const today = todayGY();
+	const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+		.toISOString()
+		.slice(0, 10);
 
 	const { data: revenueTrend, isLoading: loadingRevenue } = useQuery(
 		orpc.analytics.getRevenueTrend.queryOptions({
@@ -54,6 +64,14 @@ export default function AnalyticsPage() {
 	const { data: laborData, isLoading: loadingLabor } = useQuery(
 		orpc.analytics.getLaborCostRatio.queryOptions({ input: { days: 30 } }),
 	);
+	const { data: deptData, isLoading: loadingDept } = useQuery(
+		orpc.reports.getDepartmentProfitability.queryOptions({
+			input: {
+				startDate: `${thirtyDaysAgo}T00:00:00`,
+				endDate: `${today}T23:59:59`,
+			},
+		}),
+	);
 
 	const isLoading =
 		loadingRevenue ||
@@ -61,12 +79,27 @@ export default function AnalyticsPage() {
 		loadingDow ||
 		loadingAbc ||
 		loadingCustomer ||
-		loadingLabor;
+		loadingLabor ||
+		loadingDept;
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center py-20 text-muted-foreground">
-				Loading analytics...
+			<div className="flex flex-col gap-6 p-4 md:p-6">
+				<div>
+					<Skeleton className="h-8 w-56" />
+					<Skeleton className="mt-1 h-4 w-80" />
+				</div>
+				<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+					{Array.from({ length: 4 }).map((_, i) => (
+						<Skeleton key={i} className="h-24 rounded-lg" />
+					))}
+				</div>
+				<Skeleton className="h-64 rounded-lg" />
+				<div className="grid gap-4 lg:grid-cols-2">
+					<Skeleton className="h-64 rounded-lg" />
+					<Skeleton className="h-64 rounded-lg" />
+				</div>
+				<Skeleton className="h-80 rounded-lg" />
 			</div>
 		);
 	}
@@ -90,9 +123,63 @@ export default function AnalyticsPage() {
 	);
 
 	const abcRows = (abcData || []) as Record<string, unknown>[];
+	const deptRows = (deptData || []) as Record<string, unknown>[];
+	const maxDeptRev = Math.max(
+		...deptRows.map((r) => Number(r.revenue) || 0),
+		1,
+	);
 
 	const ci = (customerInsights || {}) as Record<string, unknown>;
 	const labor = (laborData || {}) as Record<string, unknown>;
+
+	// ── Auto-generated business insights ──────────────────────────────
+	const insights: string[] = [];
+	const bestDow = dowRows.reduce(
+		(best, r) =>
+			Number(r.avg_revenue) > Number(best.avg_revenue ?? 0) ? r : best,
+		dowRows[0] ?? {},
+	);
+	if (bestDow?.dow !== undefined) {
+		insights.push(
+			`${DAY_NAMES[Number(bestDow.dow)]} is your best day, averaging ${formatGYD(Number(bestDow.avg_revenue))} per day.`,
+		);
+	}
+	const peakHour = hourlyRows.reduce(
+		(best, r) =>
+			Number(r.avg_revenue) > Number(best.avg_revenue ?? 0) ? r : best,
+		hourlyRows[0] ?? {},
+	);
+	if (peakHour?.hour !== undefined) {
+		const h = Number(peakHour.hour);
+		insights.push(
+			`Peak hour is ${h.toString().padStart(2, "0")}:00–${(h + 1).toString().padStart(2, "0")}:00 with avg ${formatGYD(Number(peakHour.avg_revenue))} revenue.`,
+		);
+	}
+	if (abcRows[0]) {
+		insights.push(
+			`Top product: "${abcRows[0].product}" with ${formatGYD(Number(abcRows[0].revenue))} in sales (${Number(abcRows[0].percentage).toFixed(1)}% of revenue).`,
+		);
+	}
+	const returnRate =
+		Number(ci.total_customers) > 0
+			? (Number(ci.returning_customers) / Number(ci.total_customers)) * 100
+			: 0;
+	if (ci.total_customers) {
+		insights.push(
+			`${returnRate.toFixed(0)}% of your ${Number(ci.total_customers)} customers are repeat visitors.`,
+		);
+	}
+	if (labor.revenuePerLaborHour) {
+		insights.push(
+			`You generate ${formatGYD(Number(labor.revenuePerLaborHour))} per labor hour across ${Number(labor.totalHours || 0).toFixed(0)}h of work this month.`,
+		);
+	}
+	const cRows = abcRows.filter((r) => r.category === "C");
+	if (cRows.length > 0) {
+		insights.push(
+			`${cRows.length} product${cRows.length > 1 ? "s are" : " is"} in category C — consider reviewing ${cRows.length > 1 ? "them" : `"${cRows[0]!.product}"`} for menu optimization.`,
+		);
+	}
 
 	return (
 		<div className="flex flex-col gap-6 p-4 md:p-6">
@@ -106,6 +193,31 @@ export default function AnalyticsPage() {
 					Deep insights into revenue, products, customers, and labor
 				</p>
 			</div>
+
+			{/* ── Business Insights ──────────────────────────────────────── */}
+			{insights.length > 0 && (
+				<Card className="border-primary/20 bg-primary/5">
+					<CardHeader className="pb-3">
+						<CardTitle className="flex items-center gap-2 text-base">
+							<Lightbulb className="size-4 text-primary" />
+							Business Insights
+						</CardTitle>
+						<CardDescription className="text-xs">
+							Auto-generated from your last 90 days of data
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<ul className="flex flex-col gap-2">
+							{insights.map((insight, i) => (
+								<li key={i} className="flex items-start gap-2 text-sm">
+									<span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary" />
+									{insight}
+								</li>
+							))}
+						</ul>
+					</CardContent>
+				</Card>
+			)}
 
 			{/* Top summary cards */}
 			<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -450,82 +562,155 @@ export default function AnalyticsPage() {
 				</Card>
 			</div>
 
-			{/* ABC Analysis */}
+			{/* ABC Analysis / Department Revenue toggle */}
 			<Card>
 				<CardHeader>
-					<CardTitle className="flex items-center gap-2 text-base">
-						<Package className="size-4" />
-						ABC Product Analysis
-					</CardTitle>
-					<CardDescription className="text-xs">
-						A = top 80% revenue, B = next 15%, C = bottom 5% (last 90 days)
-					</CardDescription>
+					<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+						<div>
+							<CardTitle className="flex items-center gap-2 text-base">
+								<Package className="size-4" />
+								{abcView === "abc"
+									? "ABC Product Analysis"
+									: "Department Revenue Breakdown"}
+							</CardTitle>
+							<CardDescription className="text-xs">
+								{abcView === "abc"
+									? "A = top 80% revenue, B = next 15%, C = bottom 5% (last 90 days)"
+									: "Revenue and margin by department (last 30 days)"}
+							</CardDescription>
+						</div>
+						<div className="flex gap-1">
+							<Button
+								size="sm"
+								variant={abcView === "abc" ? "default" : "outline"}
+								onClick={() => setAbcView("abc")}
+								className="h-7 px-2.5 text-xs"
+							>
+								ABC Products
+							</Button>
+							<Button
+								size="sm"
+								variant={abcView === "departments" ? "default" : "outline"}
+								onClick={() => setAbcView("departments")}
+								className="h-7 px-2.5 text-xs"
+							>
+								Departments
+							</Button>
+						</div>
+					</div>
 				</CardHeader>
 				<CardContent>
-					{abcRows.length === 0 ? (
+					{abcView === "abc" ? (
+						abcRows.length === 0 ? (
+							<p className="py-8 text-center text-muted-foreground text-sm">
+								No product data available.
+							</p>
+						) : (
+							<div className="overflow-x-auto">
+								<table className="w-full text-sm">
+									<thead>
+										<tr className="border-b text-left text-muted-foreground text-xs">
+											<th className="pr-4 pb-2 font-medium">Product</th>
+											<th className="pr-4 pb-2 text-right font-medium">
+												Revenue
+											</th>
+											<th className="pr-4 pb-2 text-right font-medium">
+												Units
+											</th>
+											<th className="pr-4 pb-2 text-right font-medium">
+												% of Total
+											</th>
+											<th className="pr-4 pb-2 text-right font-medium">
+												Cumulative
+											</th>
+											<th className="pb-2 font-medium">Grade</th>
+										</tr>
+									</thead>
+									<tbody>
+										{abcRows.map((row, i) => {
+											const cat = row.category as string;
+											const badgeVariant =
+												cat === "A"
+													? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+													: cat === "B"
+														? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+														: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+											return (
+												<tr
+													key={i}
+													className="border-border/50 border-b last:border-0"
+												>
+													<td className="py-1.5 pr-4 font-medium">
+														{row.product as string}
+													</td>
+													<td className="py-1.5 pr-4 text-right font-mono">
+														{formatGYD(Number(row.revenue))}
+													</td>
+													<td className="py-1.5 pr-4 text-right">
+														{String(row.units_sold)}
+													</td>
+													<td className="py-1.5 pr-4 text-right">
+														{Number(row.percentage).toFixed(1)}%
+													</td>
+													<td className="py-1.5 pr-4 text-right">
+														{Number(row.cumulative).toFixed(1)}%
+													</td>
+													<td className="py-1.5">
+														<span
+															className={`inline-flex items-center rounded-full px-2 py-0.5 font-bold text-[10px] ${badgeVariant}`}
+														>
+															{cat}
+														</span>
+													</td>
+												</tr>
+											);
+										})}
+									</tbody>
+								</table>
+							</div>
+						)
+					) : deptRows.length === 0 ? (
 						<p className="py-8 text-center text-muted-foreground text-sm">
-							No product data available.
+							No department data available.
 						</p>
 					) : (
-						<div className="overflow-x-auto">
-							<table className="w-full text-sm">
-								<thead>
-									<tr className="border-b text-left text-muted-foreground text-xs">
-										<th className="pr-4 pb-2 font-medium">Product</th>
-										<th className="pr-4 pb-2 text-right font-medium">
-											Revenue
-										</th>
-										<th className="pr-4 pb-2 text-right font-medium">Units</th>
-										<th className="pr-4 pb-2 text-right font-medium">
-											% of Total
-										</th>
-										<th className="pr-4 pb-2 text-right font-medium">
-											Cumulative
-										</th>
-										<th className="pb-2 font-medium">Grade</th>
-									</tr>
-								</thead>
-								<tbody>
-									{abcRows.map((row, i) => {
-										const cat = row.category as string;
-										const badgeVariant =
-											cat === "A"
-												? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-												: cat === "B"
-													? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-													: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
-										return (
-											<tr
-												key={i}
-												className="border-border/50 border-b last:border-0"
-											>
-												<td className="py-1.5 pr-4 font-medium">
-													{row.product as string}
-												</td>
-												<td className="py-1.5 pr-4 text-right font-mono">
-													{formatGYD(Number(row.revenue))}
-												</td>
-												<td className="py-1.5 pr-4 text-right">
-													{String(row.units_sold)}
-												</td>
-												<td className="py-1.5 pr-4 text-right">
-													{Number(row.percentage).toFixed(1)}%
-												</td>
-												<td className="py-1.5 pr-4 text-right">
-													{Number(row.cumulative).toFixed(1)}%
-												</td>
-												<td className="py-1.5">
-													<span
-														className={`inline-flex items-center rounded-full px-2 py-0.5 font-bold text-[10px] ${badgeVariant}`}
-													>
-														{cat}
-													</span>
-												</td>
-											</tr>
-										);
-									})}
-								</tbody>
-							</table>
+						<div className="flex flex-col gap-3">
+							{deptRows.map((dept, i) => {
+								const rev = Number(dept.revenue) || 0;
+								const margin = Number(dept.margin_percent) || 0;
+								const pct = (rev / maxDeptRev) * 100;
+								return (
+									<div key={i} className="flex flex-col gap-1">
+										<div className="flex items-center justify-between text-sm">
+											<span className="font-medium">
+												{String(dept.department)}
+											</span>
+											<div className="flex items-center gap-4 text-muted-foreground text-xs">
+												<span className="font-mono font-semibold text-foreground">
+													{formatGYD(rev)}
+												</span>
+												<span
+													className={
+														margin >= 60
+															? "text-green-600"
+															: margin >= 40
+																? "text-amber-600"
+																: "text-red-600"
+													}
+												>
+													{margin.toFixed(1)}% margin
+												</span>
+											</div>
+										</div>
+										<div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+											<div
+												className="h-full rounded-full bg-primary/70 transition-all"
+												style={{ width: `${Math.max(pct, 1)}%` }}
+											/>
+										</div>
+									</div>
+								);
+							})}
 						</div>
 					)}
 				</CardContent>

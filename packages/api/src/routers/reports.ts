@@ -340,6 +340,9 @@ const getEodReport = permissionProcedure("reports.read")
 			topProductsResult,
 			departmentResult,
 			laborResult,
+			expensesResult,
+			productionResult,
+			productionSalesResult,
 		] = await Promise.all([
 			// Sales summary
 			db.execute(
@@ -453,7 +456,73 @@ const getEodReport = permissionProcedure("reports.read")
 				GROUP BY u.name
 				ORDER BY net_hours DESC`,
 			),
+
+			// Expenses for the day by category
+			db.execute(
+				sql`SELECT
+					COALESCE(category, 'Uncategorized') as category,
+					COALESCE(SUM(amount::numeric), 0)::numeric as total,
+					COUNT(*)::int as count
+				FROM expense
+				WHERE created_at >= ${dayStart}::timestamptz
+					AND created_at <= ${dayEnd}::timestamptz
+				GROUP BY category
+				ORDER BY total DESC`,
+			),
+
+			// Production for the day (opening + reorder vs closing)
+			db.execute(
+				sql`SELECT
+					pl.product_name,
+					COALESCE(SUM(CASE WHEN pl.entry_type IN ('opening','reorder') THEN pl.quantity ELSE 0 END), 0)::int as produced,
+					COALESCE(SUM(CASE WHEN pl.entry_type = 'closing' THEN pl.quantity ELSE 0 END), 0)::int as closing_stock
+				FROM production_log pl
+				WHERE pl.log_date = ${input.date}::date
+				GROUP BY pl.product_name
+				ORDER BY produced DESC`,
+			),
+
+			// Actual sales for production products today
+			db.execute(
+				sql`SELECT
+					oli.product_name_snapshot as product_name,
+					COALESCE(SUM(oli.quantity), 0)::int as actual_sold
+				FROM order_line_item oli
+				JOIN "order" o ON o.id = oli.order_id
+				WHERE o.status IN ('completed', 'closed')
+					AND o.created_at >= ${dayStart}::timestamptz
+					AND o.created_at <= ${dayEnd}::timestamptz
+					AND oli.voided = false
+				GROUP BY oli.product_name_snapshot`,
+			),
 		]);
+
+		// Build production vs sales map
+		const salesByProduct = new Map(
+			productionSalesResult.rows.map((r: Record<string, unknown>) => [
+				String(r.product_name),
+				Number(r.actual_sold),
+			]),
+		);
+		const productionVsSales = productionResult.rows.map(
+			(p: Record<string, unknown>) => {
+				const expected = Number(p.produced) - Number(p.closing_stock);
+				const actual = salesByProduct.get(String(p.product_name)) ?? 0;
+				return {
+					product_name: String(p.product_name),
+					produced: Number(p.produced),
+					closing_stock: Number(p.closing_stock),
+					expected_sold: expected,
+					actual_sold: actual,
+					variance: actual - expected,
+				};
+			},
+		);
+
+		const totalExpenses = expensesResult.rows.reduce(
+			(s: number, r: Record<string, unknown>) => s + Number(r.total),
+			0,
+		);
 
 		return {
 			date: input.date,
@@ -470,6 +539,9 @@ const getEodReport = permissionProcedure("reports.read")
 			topProducts: topProductsResult.rows,
 			departments: departmentResult.rows,
 			labor: laborResult.rows,
+			expenses: expensesResult.rows,
+			totalExpenses,
+			productionVsSales,
 		};
 	});
 

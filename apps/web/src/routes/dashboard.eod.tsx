@@ -1,5 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Loader2, Printer } from "lucide-react";
+import {
+	FileText,
+	Loader2,
+	Printer,
+	TrendingDown,
+	TrendingUp,
+} from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,19 +42,26 @@ export default function EodReportPage() {
 		Record<string, unknown>
 	>;
 	const voids = (report?.voids ?? []) as Array<Record<string, unknown>>;
+	const labor = (report?.labor ?? []) as Array<Record<string, unknown>>;
 	const topProducts = (report?.topProducts ?? []) as Array<
 		Record<string, unknown>
 	>;
 	const departments = (report?.departments ?? []) as Array<
 		Record<string, unknown>
 	>;
-	const labor = (report?.labor ?? []) as Array<Record<string, unknown>>;
+	const expenses = (report?.expenses ?? []) as Array<Record<string, unknown>>;
+	const totalExpenses = Number(report?.totalExpenses ?? 0);
+	const productionVsSales = (report?.productionVsSales ?? []) as Array<
+		Record<string, unknown>
+	>;
 
 	const totalVoids = voids.reduce((sum, v) => sum + Number(v.voided_total), 0);
 	const totalVoidCount = voids.reduce(
 		(sum, v) => sum + Number(v.void_count),
 		0,
 	);
+	const totalRevenue = Number(sales?.total_revenue ?? 0);
+	const netAfterExpenses = totalRevenue - totalExpenses;
 
 	return (
 		<div className="flex flex-col gap-6 p-4 md:p-6">
@@ -262,6 +275,149 @@ export default function EodReportPage() {
 							</CardContent>
 						</Card>
 					</div>
+
+					{/* ── Sales vs Expenses ────────────────────────────────── */}
+					<Card className="print:border print:shadow-none">
+						<CardHeader className="pb-3">
+							<CardTitle className="text-base">Sales vs Expenses</CardTitle>
+							<CardDescription>
+								Revenue earned vs expenses incurred today.
+							</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+								<SummaryItem
+									label="Revenue"
+									value={formatGYD(totalRevenue)}
+									highlight
+								/>
+								<SummaryItem
+									label="Expenses"
+									value={formatGYD(totalExpenses)}
+									negative
+								/>
+								<SummaryItem
+									label="Net"
+									value={formatGYD(netAfterExpenses)}
+									highlight={netAfterExpenses >= 0}
+									negative={netAfterExpenses < 0}
+								/>
+								<div className="flex flex-col gap-0.5">
+									<span className="text-muted-foreground text-xs">
+										Expense Ratio
+									</span>
+									<span className="font-bold font-mono text-lg">
+										{totalRevenue > 0
+											? `${((totalExpenses / totalRevenue) * 100).toFixed(1)}%`
+											: "—"}
+									</span>
+								</div>
+							</div>
+							{expenses.length > 0 && (
+								<div className="mt-4 border-t pt-3">
+									<p className="mb-2 text-muted-foreground text-xs uppercase tracking-wide">
+										By Category
+									</p>
+									<div className="flex flex-col gap-1">
+										{expenses.map((e, i) => {
+											const amt = Number(e.total);
+											const pct =
+												totalExpenses > 0 ? (amt / totalExpenses) * 100 : 0;
+											return (
+												<div
+													key={i}
+													className="flex items-center gap-2 text-xs"
+												>
+													<span className="w-36 shrink-0 truncate font-medium">
+														{String(e.category)}
+													</span>
+													<div className="flex-1">
+														<div
+															className="h-3 rounded-sm bg-destructive/60"
+															style={{ width: `${Math.max(pct, 1)}%` }}
+														/>
+													</div>
+													<span className="w-24 shrink-0 text-right font-mono">
+														{formatGYD(amt)}
+													</span>
+												</div>
+											);
+										})}
+									</div>
+								</div>
+							)}
+						</CardContent>
+					</Card>
+
+					{/* ── Production vs Sales ───────────────────────────────── */}
+					{productionVsSales.length > 0 && (
+						<Card className="print:border print:shadow-none">
+							<CardHeader className="pb-3">
+								<CardTitle className="text-base">Production vs Sales</CardTitle>
+								<CardDescription>
+									Units produced vs units sold. Positive variance =
+									over-produced, Negative = shortage.
+								</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<Table>
+									<TableHeader>
+										<TableRow>
+											<TableHead>Product</TableHead>
+											<TableHead className="text-right">Produced</TableHead>
+											<TableHead className="text-right">Closing</TableHead>
+											<TableHead className="text-right">Expected</TableHead>
+											<TableHead className="text-right">Actual</TableHead>
+											<TableHead className="text-right">Variance</TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody>
+										{productionVsSales.map((row, i) => {
+											const v = Number(row.variance);
+											return (
+												<TableRow key={i}>
+													<TableCell className="font-medium">
+														{String(row.product_name)}
+													</TableCell>
+													<TableCell className="text-right font-mono">
+														{String(row.produced)}
+													</TableCell>
+													<TableCell className="text-right font-mono">
+														{String(row.closing_stock)}
+													</TableCell>
+													<TableCell className="text-right font-mono">
+														{String(row.expected_sold)}
+													</TableCell>
+													<TableCell className="text-right font-mono">
+														{String(row.actual_sold)}
+													</TableCell>
+													<TableCell className="text-right font-mono">
+														<span
+															className={
+																v === 0
+																	? "text-green-600"
+																	: v > 0
+																		? "text-amber-600"
+																		: "text-red-600"
+															}
+														>
+															{v > 0 ? (
+																<TrendingUp className="mr-1 inline size-3" />
+															) : v < 0 ? (
+																<TrendingDown className="mr-1 inline size-3" />
+															) : null}
+															{v >= 0 ? "+" : ""}
+															{v}
+														</span>
+													</TableCell>
+												</TableRow>
+											);
+										})}
+									</TableBody>
+								</Table>
+							</CardContent>
+						</Card>
+					)}
 
 					<div className="grid gap-4 lg:grid-cols-2 print:grid-cols-2">
 						{/* ── Top Products ─────────────────────────────────────── */}
@@ -477,16 +633,18 @@ function SummaryItem({
 	label,
 	value,
 	highlight,
+	negative,
 }: {
 	label: string;
 	value: string;
 	highlight?: boolean;
+	negative?: boolean;
 }) {
 	return (
 		<div className="flex flex-col gap-0.5">
 			<span className="text-muted-foreground text-xs">{label}</span>
 			<span
-				className={`font-bold font-mono text-lg ${highlight ? "text-primary" : ""}`}
+				className={`font-bold font-mono text-lg ${highlight ? "text-primary" : negative ? "text-destructive" : ""}`}
 			>
 				{value}
 			</span>
