@@ -186,6 +186,9 @@ export default function ExpensesPage() {
 		supplierColorMap.set(s.id, SUPPLIER_COLORS[i % SUPPLIER_COLORS.length]!);
 	});
 
+	// Map supplier name → id for clickable stat cards
+	const supplierNameToIdMap = new Map(suppliers.map((s) => [s.name, s.id]));
+
 	const filtered =
 		supplierFilter === "all"
 			? expenses
@@ -314,16 +317,19 @@ export default function ExpensesPage() {
 				</div>
 			</div>
 
-			{/* Summary cards */}
+			{/* Summary cards — click to filter the detail table below */}
 			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-				<Card>
+				<Card
+					className={`cursor-pointer transition-colors hover:border-primary/50 hover:bg-primary/5 ${supplierFilter === "all" ? "ring-2 ring-primary" : ""}`}
+					onClick={() => setSupplierFilter("all")}
+				>
 					<CardContent className="flex flex-col gap-1 p-4">
-						<p className="text-muted-foreground text-xs">Total Expenses</p>
+						<p className="text-muted-foreground text-xs">All Expenses</p>
 						<p className="font-bold text-foreground text-xl">
-							{formatGYD(totalToday)}
+							{formatGYD(expenses.reduce((s, e) => s + Number(e.amount), 0))}
 						</p>
 						<p className="text-muted-foreground text-xs">
-							{filtered.length} entries
+							{expenses.length} entries
 						</p>
 					</CardContent>
 				</Card>
@@ -335,21 +341,31 @@ export default function ExpensesPage() {
 					}>) ?? []
 				)
 					.slice(0, 3)
-					.map((row, i) => (
-						<Card key={i}>
-							<CardContent className="flex flex-col gap-1 p-4">
-								<p className="text-muted-foreground text-xs">
-									{row.supplier_name}
-								</p>
-								<p className="font-bold text-foreground text-lg">
-									{formatGYD(Number(row.total))}
-								</p>
-								<p className="text-muted-foreground text-xs">
-									{row.count} expenses
-								</p>
-							</CardContent>
-						</Card>
-					))}
+					.map((row, i) => {
+						const supplierId = supplierNameToIdMap.get(row.supplier_name);
+						const isActive = !!supplierId && supplierFilter === supplierId;
+						return (
+							<Card
+								key={i}
+								className={`cursor-pointer transition-colors hover:border-primary/50 hover:bg-primary/5 ${isActive ? "ring-2 ring-primary" : ""}`}
+								onClick={() => {
+									if (supplierId) setSupplierFilter(supplierId);
+								}}
+							>
+								<CardContent className="flex flex-col gap-1 p-4">
+									<p className="text-muted-foreground text-xs">
+										{row.supplier_name}
+									</p>
+									<p className="font-bold text-foreground text-lg">
+										{formatGYD(Number(row.total))}
+									</p>
+									<p className="text-muted-foreground text-xs">
+										{row.count} expenses — click to view
+									</p>
+								</CardContent>
+							</Card>
+						);
+					})}
 			</div>
 
 			{/* Table */}
