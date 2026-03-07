@@ -3172,6 +3172,7 @@ async function seed() {
 		.insert(schema.productionLog)
 		.values([
 			// ─── TODAY — Restaurant workflow (component-based names) ───
+			// ── Baked Chicken ──
 			{
 				id: PD(15),
 				productId: null,
@@ -3180,6 +3181,30 @@ async function seed() {
 				loggedByUserId: USER.admin,
 				entryType: "opening",
 				quantity: 0,
+				workflow: "restaurant",
+				logDate: today,
+			},
+			{
+				id: PD(100),
+				productId: null,
+				productName: "Baked Chicken",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "reorder",
+				quantity: 50,
+				notes: "Morning batch",
+				workflow: "restaurant",
+				logDate: today,
+			},
+			{
+				id: PD(101),
+				productId: null,
+				productName: "Baked Chicken",
+				locationId: LOC_ID,
+				loggedByUserId: USER.admin,
+				entryType: "closing",
+				quantity: 3,
+				notes: "EOD count",
 				workflow: "restaurant",
 				logDate: today,
 			},
