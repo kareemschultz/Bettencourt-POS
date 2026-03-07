@@ -111,6 +111,7 @@ export default function ExpensesPage() {
 	const [form, setForm] = useState(emptyForm);
 	const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
 	const [newCategoryName, setNewCategoryName] = useState("");
+	const [viewingExpense, setViewingExpense] = useState<ExpenseRow | null>(null);
 
 	const { data: expensesRaw = [] } = useQuery(
 		orpc.cash.getExpenses.queryOptions({
@@ -444,7 +445,8 @@ export default function ExpensesPage() {
 								return (
 									<TableRow
 										key={e.id}
-										className={color ? `${color.split(" ")[0]}/5` : ""}
+										className={`cursor-pointer transition-colors hover:bg-muted/60 ${color ? `${color.split(" ")[0]}/5` : ""}`}
+										onClick={() => setViewingExpense(e)}
 									>
 										<TableCell className="whitespace-nowrap text-muted-foreground text-xs">
 											{new Date(e.created_at).toLocaleString("en-GY", {
@@ -483,7 +485,10 @@ export default function ExpensesPage() {
 													size="icon"
 													variant="ghost"
 													className="size-7"
-													onClick={() => openEdit(e)}
+													onClick={(ev) => {
+														ev.stopPropagation();
+														openEdit(e);
+													}}
 												>
 													<Pencil className="size-3.5" />
 												</Button>
@@ -492,7 +497,8 @@ export default function ExpensesPage() {
 													variant="ghost"
 													className="size-7 text-destructive hover:text-destructive"
 													disabled={deleteExpense.isPending}
-													onClick={() => {
+													onClick={(ev) => {
+														ev.stopPropagation();
 														if (confirm("Delete this expense?")) {
 															deleteExpense.mutate({ expenseId: e.id });
 														}
@@ -609,6 +615,97 @@ export default function ExpensesPage() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+			{/* View Expense Dialog */}
+			<Dialog
+				open={!!viewingExpense}
+				onOpenChange={(open) => {
+					if (!open) setViewingExpense(null);
+				}}
+			>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle>Expense Details</DialogTitle>
+					</DialogHeader>
+					{viewingExpense && (
+						<div className="flex flex-col gap-4 py-2">
+							<div className="grid grid-cols-2 gap-4">
+								<div className="flex flex-col gap-1">
+									<p className="text-muted-foreground text-xs">Date & Time</p>
+									<p className="font-medium text-sm">
+										{new Date(viewingExpense.created_at).toLocaleString(
+											"en-GY",
+											{
+												weekday: "short",
+												month: "short",
+												day: "numeric",
+												year: "numeric",
+												hour: "2-digit",
+												minute: "2-digit",
+												hour12: false,
+											},
+										)}
+									</p>
+								</div>
+								<div className="flex flex-col gap-1">
+									<p className="text-muted-foreground text-xs">Amount</p>
+									<p className="font-bold text-foreground text-lg">
+										{formatGYD(Number(viewingExpense.amount))}
+									</p>
+								</div>
+							</div>
+							<div className="h-px bg-border" />
+							<div className="grid grid-cols-2 gap-4">
+								<div className="flex flex-col gap-1">
+									<p className="text-muted-foreground text-xs">Category</p>
+									<p className="text-sm">{viewingExpense.category}</p>
+								</div>
+								<div className="flex flex-col gap-1">
+									<p className="text-muted-foreground text-xs">Supplier</p>
+									<p className="text-sm">
+										{viewingExpense.supplier_name ?? "—"}
+									</p>
+								</div>
+							</div>
+							<div className="flex flex-col gap-1">
+								<p className="text-muted-foreground text-xs">Description</p>
+								<p className="text-sm">{viewingExpense.description}</p>
+							</div>
+							<div className="h-px bg-border" />
+							<div className="grid grid-cols-2 gap-4">
+								<div className="flex flex-col gap-1">
+									<p className="text-muted-foreground text-xs">Recorded By</p>
+									<p className="text-sm">
+										{viewingExpense.created_by_name ?? "—"}
+									</p>
+								</div>
+								<div className="flex flex-col gap-1">
+									<p className="text-muted-foreground text-xs">Authorized By</p>
+									<p className="text-sm">
+										{viewingExpense.authorized_by_name ?? "—"}
+									</p>
+								</div>
+							</div>
+						</div>
+					)}
+					<DialogFooter className="gap-2">
+						<Button variant="outline" onClick={() => setViewingExpense(null)}>
+							Close
+						</Button>
+						<Button
+							onClick={() => {
+								if (viewingExpense) {
+									setViewingExpense(null);
+									openEdit(viewingExpense);
+								}
+							}}
+						>
+							<Pencil className="size-4" />
+							Edit
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
 			{/* Manage Categories Dialog */}
 			<Dialog
 				open={manageCategoriesOpen}
