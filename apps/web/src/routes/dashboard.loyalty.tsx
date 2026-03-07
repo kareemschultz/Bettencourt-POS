@@ -197,7 +197,7 @@ export default function LoyaltyPage() {
 			});
 		} else {
 			createTierMut.mutate({
-				programId: program?.id,
+				programId: program!.id,
 				...tierForm,
 			});
 		}

@@ -146,7 +146,7 @@ export default function ProductsPage() {
 			cost: costStr,
 			taxRate: String(p.taxRate || "0"),
 			reportingCategoryId: p.reportingCategoryId || "",
-			proteinCategoryId: p.proteinCategoryId ?? null,
+			proteinCategoryId: null,
 			imageUrl: p.imageUrl || "",
 			isActive: p.isActive !== false,
 		});

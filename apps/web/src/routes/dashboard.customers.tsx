@@ -155,7 +155,7 @@ export default function CustomersPage() {
 	const total = data?.total ?? 0;
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6 p-4 md:p-6">
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="flex items-center gap-2 font-bold text-2xl">

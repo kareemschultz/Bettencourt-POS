@@ -109,6 +109,7 @@ export class KeyboardBarcodeScanner implements BarcodeScannerDriver {
 	private buffer = "";
 	private timeout: ReturnType<typeof setTimeout> | null = null;
 	private handler: ((e: KeyboardEvent) => void) | null = null;
+	private callback: ((barcode: string) => void) | null = null;
 
 	onScan(callback: (barcode: string) => void): void {
 		this.callback = callback;

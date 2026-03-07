@@ -915,7 +915,7 @@ export default function WasteTrackingPage() {
 								</thead>
 								<tbody>
 									{(
-										logEntries as Array<{
+										logEntries as unknown as Array<{
 											id: string;
 											productName: string;
 											quantity: string;

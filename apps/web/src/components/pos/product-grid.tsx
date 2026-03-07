@@ -77,7 +77,7 @@ export function ProductGrid({
 						className={cn(
 							"relative flex flex-col items-start gap-0.5 rounded-lg border p-2.5 text-left",
 							"min-h-[68px] touch-manipulation select-none transition-all",
-							"active:scale-[0.97] sm:min-h-[76px] sm:gap-1 sm:p-3",
+							"hover:shadow-md hover:brightness-105 active:scale-[0.97] sm:min-h-[76px] sm:gap-1 sm:p-3",
 							colorClass,
 							qty > 0 && "ring-2 ring-primary ring-offset-1",
 						)}

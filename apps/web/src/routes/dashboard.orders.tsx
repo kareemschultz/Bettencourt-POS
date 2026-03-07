@@ -3,6 +3,7 @@ import { Download } from "lucide-react";
 import { useState } from "react";
 import { OrdersTable } from "@/components/orders/orders-table";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
 
@@ -52,8 +53,19 @@ export default function OrdersPage() {
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center py-20 text-muted-foreground">
-				Loading orders...
+			<div className="flex flex-col gap-4 p-4 md:p-6">
+				<div className="flex items-center justify-between">
+					<Skeleton className="h-8 w-32" />
+					<Skeleton className="h-9 w-24" />
+				</div>
+				<div className="flex flex-wrap gap-3">
+					<Skeleton className="h-9 w-52" />
+					<Skeleton className="h-9 w-44" />
+					<Skeleton className="h-9 w-40" />
+					<Skeleton className="h-9 w-40" />
+					<Skeleton className="h-9 w-40" />
+				</div>
+				<Skeleton className="h-96 rounded-lg" />
 			</div>
 		);
 	}

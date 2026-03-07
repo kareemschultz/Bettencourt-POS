@@ -555,7 +555,7 @@ export function POSTerminal({
 					) : (
 						<Badge
 							variant="outline"
-							className="shrink-0 cursor-pointer touch-manipulation px-2.5 py-1 text-muted-foreground text-xs sm:px-3"
+							className="shrink-0 cursor-pointer touch-manipulation border-dashed px-2.5 py-1 text-xs sm:px-3"
 							onClick={async () => {
 								try {
 									await requestOverride(
@@ -569,7 +569,7 @@ export function POSTerminal({
 								}
 							}}
 						>
-							Other Depts
+							+ Other Depts
 						</Badge>
 					)}
 				</div>
