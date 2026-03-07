@@ -81,6 +81,18 @@ const statusVariant: Record<
 	closed: "default",
 };
 
+const VOID_REASONS = [
+	"Customer changed their mind",
+	"Incorrect order entered",
+	"Item out of stock",
+	"Duplicate order",
+	"Customer complaint / dissatisfied",
+	"Payment issue",
+	"Order placed in error by staff",
+	"Test order",
+	"Custom reason…",
+] as const;
+
 const fulfillmentColors: Record<string, string> = {
 	preparing:
 		"bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
@@ -241,6 +253,7 @@ function OrderDetailDialog({
 	userId?: string;
 }) {
 	const { data, isLoading } = useOrderDetail(orderId);
+	const [voidReasonPreset, setVoidReasonPreset] = useState("");
 	const [voidReason, setVoidReason] = useState("");
 	const [refundReason, setRefundReason] = useState("");
 	const [refundAmount, setRefundAmount] = useState("");
@@ -701,13 +714,45 @@ function OrderDetailDialog({
 													trail.
 												</AlertDialogDescription>
 											</AlertDialogHeader>
-											<Input
-												placeholder="Reason for voiding (required)"
-												value={voidReason}
-												onChange={(e) => setVoidReason(e.target.value)}
-											/>
+											<div className="flex flex-col gap-2">
+												<Select
+													value={voidReasonPreset}
+													onValueChange={(v) => {
+														setVoidReasonPreset(v);
+														if (v !== "custom") setVoidReason(v);
+														else setVoidReason("");
+													}}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="Select a reason…" />
+													</SelectTrigger>
+													<SelectContent>
+														{VOID_REASONS.map((r) => (
+															<SelectItem
+																key={r}
+																value={r === "Custom reason…" ? "custom" : r}
+															>
+																{r}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+												{voidReasonPreset === "custom" && (
+													<Input
+														placeholder="Enter custom reason (required)"
+														value={voidReason}
+														onChange={(e) => setVoidReason(e.target.value)}
+														autoFocus
+													/>
+												)}
+											</div>
 											<AlertDialogFooter>
-												<AlertDialogCancel onClick={() => setVoidReason("")}>
+												<AlertDialogCancel
+													onClick={() => {
+														setVoidReason("");
+														setVoidReasonPreset("");
+													}}
+												>
 													Cancel
 												</AlertDialogCancel>
 												<AlertDialogAction
@@ -723,6 +768,7 @@ function OrderDetailDialog({
 															reason: voidReason,
 														});
 														setVoidReason("");
+														setVoidReasonPreset("");
 													}}
 												>
 													{voidMutation.isPending ? "Voiding…" : "Confirm Void"}
