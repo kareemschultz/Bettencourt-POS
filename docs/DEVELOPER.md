@@ -180,8 +180,146 @@ bun run dev
 
 ---
 
-## Code Quality
+## Docker Image Optimization
 
-- **Linting/Formatting**: Biome (`bun run check`)
-- **Type checking**: `bun run check-types`
-- **Pre-commit hooks**: Husky + lint-staged run Biome on staged files
+### Overview
+
+The production Docker image was reduced from **701 MB → 189 MB** (73% reduction) using two key techniques: `bun build --compile` to eliminate node_modules, and `gcr.io/distroless/cc-debian12` as the minimal runtime base.
+
+### Multistage Build Architecture
+
+```
+Stage 1 — Builder (node:22-slim + bun)
+  ├── bun install            (all workspace dependencies)
+  ├── cd apps/web && bun run build   (Vite → static SPA assets)
+  └── bun build --compile --minify ./src/index.ts   (→ /app/server-bin)
+
+Stage 2 — Runner (gcr.io/distroless/cc-debian12:nonroot)
+  ├── /app/server           (compiled binary, ~124 MB — includes Bun runtime + 932 JS modules)
+  └── /app/public/          (SPA static assets, ~3.5 MB)
+```
+
+### Key Technique: `bun build --compile`
+
+`bun build --compile` produces a standalone ELF binary that embeds:
+- The Bun runtime (JavaScriptCore engine)
+- All 932 JS modules from the monorepo
+- No reference to `node_modules` at runtime
+
+This eliminates the need to ship any JavaScript source or dependency tree in the final image — just the binary + the built SPA assets.
+
+**Original approach** used `tsdown` externals, which required shipping `node_modules` (~349 MB) in the runner image. That, combined with the `oven/bun:1-slim` base (~200 MB), produced 701 MB total.
+
+### Why `gcr.io/distroless/cc-debian12`, not Alpine
+
+The compiled Bun binary requires **glibc + libstdc++** because JavaScriptCore (Bun's JS engine) is built against glibc.
+
+Alpine Linux uses **musl libc** instead of glibc. The `gcompat` shim for Alpine provides partial compatibility but is missing symbols that Bun requires:
+```
+backtrace, backtrace_symbols, malloc_trim, __fprintf_chk,
+__cxa_thread_atexit_impl, gnu_get_libc_version
+```
+
+`gcr.io/distroless/cc-debian12` is a Debian-based minimal image that provides exactly glibc + libstdc++ in ~30 MB with no shell, no package manager, and runs as a non-root user (uid 65532) for security.
+
+### Why `strip --strip-all` Was NOT Used
+
+Stripping ELF debug symbols is a common technique to shrink binaries, but **it breaks compiled Bun binaries**. `bun build --compile` embeds the JavaScript payload in custom ELF sections. `strip --strip-all` removes unknown sections, destroying the embedded payload. When the payload is gone, Bun falls back to CLI mode (prints the Bun help text) instead of running the server.
+
+The `binutils` package is still installed in the builder stage but `strip` is not invoked.
+
+### Build Layer Caching
+
+Package files are copied before source files to maximize Docker cache hits:
+
+```dockerfile
+# These layers only rebuild when package.json or bun.lock changes
+COPY package.json bun.lock turbo.json ./
+COPY apps/server/package.json apps/server/
+COPY apps/web/package.json apps/web/
+COPY packages/*/package.json packages/*/
+RUN bun install
+
+# Source changes only rebuild from here
+COPY apps/ apps/
+COPY packages/ packages/
+RUN bun run build && bun build --compile ...
+```
+
+A typical rebuild after a source-only change takes ~30s instead of ~2 min because `bun install` is cached.
+
+### Healthcheck Limitation
+
+`distroless` images have no shell, no `curl`, no `wget`. In-container healthchecks using shell commands are not possible. Instead:
+
+- `docker-compose.prod.yml` uses `restart: unless-stopped` for automatic recovery
+- External monitoring (Pangolin / uptime monitors) checks `GET /health`
+- The `/health` endpoint returns `{"status":"ok","timestamp":"..."}` from `apps/server/src/index.ts`
+
+### Size Breakdown
+
+| Component | Size |
+|-----------|------|
+| distroless/cc-debian12 base | ~30 MB |
+| Compiled server binary | ~124 MB |
+| Web SPA static assets | ~3.5 MB |
+| **Total** | **~189 MB** |
+
+---
+
+## CI/CD (GitHub Actions)
+
+The CI/CD pipeline is defined in `.github/workflows/ci.yml`. It has two jobs:
+
+| Job | Runner | Triggers |
+|-----|--------|---------|
+| `check` — Type Check & Lint | `ubuntu-latest` (GitHub-hosted) | Every push and PR |
+| `deploy` — Build & Deploy | `self-hosted` (production host) | Push to `master` only (after `check` passes) |
+
+### What the pipeline does
+
+**Check job** (GitHub-hosted runner):
+1. Install dependencies (cached by `bun.lock` hash)
+2. Run `bun run check-types` — must be zero errors
+3. Run `bunx @biomejs/biome ci .` — lint/format in read-only CI mode
+
+**Deploy job** (self-hosted runner on production host):
+1. Write GitHub Secrets to a `.env` file
+2. Run `docker compose -f docker-compose.prod.yml --env-file .env up -d --build`
+3. Poll `GET http://localhost:3000/health` for up to 60 seconds
+4. Prune dangling Docker images
+5. Delete the `.env` file (cleanup runs even on failure)
+
+### Setting up the self-hosted runner
+
+The deploy job needs a GitHub Actions runner installed on the production host (this machine). Register it once:
+
+```bash
+# 1. Go to: https://github.com/kareemschultz/Bettencourt-POS/settings/actions/runners/new
+# 2. Follow the Linux/x64 instructions shown on that page
+# 3. When prompted for labels, add: self-hosted
+# 4. Install as a systemd service so it survives reboots:
+sudo ./svc.sh install
+sudo ./svc.sh start
+```
+
+The runner connects outbound to GitHub — no inbound ports or SSH exposure required.
+
+### Adding GitHub Secrets
+
+Go to **repo Settings → Secrets and variables → Actions**, then add:
+
+| Secret name | Value |
+|------------|-------|
+| `DATABASE_URL` | `postgresql://...` (production database URL) |
+| `BETTER_AUTH_SECRET` | The 32+ character auth secret |
+
+### Build caching
+
+Because the deploy job runs on the self-hosted runner (persistent machine), Docker's build cache accumulates between deployments. After the first full build:
+- The `bun install` layer is cached as long as `bun.lock` doesn't change
+- Typical rebuild time: **~30 seconds** (vs ~2 min for a cold build)
+
+---
+
+## Docker Image Optimization

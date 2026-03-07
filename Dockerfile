@@ -50,12 +50,19 @@ COPY packages/ packages/
 
 # Build web SPA (empty VITE_SERVER_URL = same-origin in production)
 ENV VITE_SERVER_URL=""
+# NODE_ENV=production must be set BEFORE bun build --compile.
+# Bun inlines process.env.NODE_ENV at compile time (dead code elimination).
+# Without this, the production static-file serving branch gets eliminated,
+# and the server returns "Bettencourt POS API — Development" at runtime.
+ENV NODE_ENV=production
 RUN cd apps/web && bun run build
 
-# Compile server into a single self-contained binary + strip debug symbols.
+# Compile server into a single self-contained binary.
 # --compile:   embed Bun runtime + all JS modules into one ELF executable
 # --minify:    shrink the embedded JS payload
-# strip:       remove ELF debug symbols (~15MB saved from the binary)
+# NOTE: strip is intentionally NOT used — strip --strip-all removes ELF sections
+#       that Bun uses to locate its embedded JS payload, causing the binary to
+#       fall back to Bun CLI mode instead of running the server.
 WORKDIR /app/apps/server
 RUN bun build --compile --minify ./src/index.ts --outfile /app/server-bin
 

@@ -1,0 +1,101 @@
+name: CI / Deploy
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+# Cancel in-progress runs for the same branch/PR to save runner minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Type-check and lint on GitHub-hosted runners (no infra required)
+  # ─────────────────────────────────────────────────────────────────────────────
+  check:
+    name: Type Check & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Cache bun install across runs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: TypeScript type check
+        run: bun run check-types
+
+      - name: Biome lint & format check
+        # biome ci = read-only CI mode (no --write, strict exit codes)
+        run: bunx @biomejs/biome ci .
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Deploy on push to master (runs on production host via self-hosted runner)
+  # ─────────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Build & Deploy
+    runs-on: self-hosted
+    needs: [check]
+    # Only deploy when pushing directly to master (not on PRs)
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Write secrets to a .env file for docker compose.
+      # Secrets are set in GitHub repo Settings → Secrets → Actions.
+      # Using env: then $VAR pattern (not ${{ secrets.X }} in run shell) — safe from injection.
+      - name: Create environment file
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+        run: |
+          printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > .env
+          printf 'BETTER_AUTH_SECRET=%s\n' "$BETTER_AUTH_SECRET" >> .env
+
+      # Build new image and restart container.
+      # Docker layer caching persists on the self-hosted runner between builds,
+      # so the bun install layer is typically cached (fast rebuilds ~30s vs ~2m).
+      - name: Build and deploy
+        run: docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+
+      # Poll /health until the server responds (up to 60 seconds)
+      - name: Verify deployment health
+        run: |
+          echo "Waiting for server to be healthy..."
+          for i in $(seq 1 12); do
+            if curl -sf http://localhost:3000/health > /dev/null; then
+              echo "Health check passed on attempt $i"
+              exit 0
+            fi
+            echo "Attempt $i/12 failed, waiting 5s..."
+            sleep 5
+          done
+          echo "Health check failed after 60s"
+          docker compose -f docker-compose.prod.yml logs --tail=50
+          exit 1
+
+      # Remove dangling (<none>) images left after rebuilds to reclaim disk space
+      - name: Prune dangling images
+        if: always()
+        run: docker image prune -f
+
+      # Always clean up the env file — even if a previous step failed
+      - name: Remove environment file
+        if: always()
+        run: rm -f .env
