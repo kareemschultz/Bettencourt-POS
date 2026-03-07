@@ -55,6 +55,7 @@ import { PaymentDialog } from "./payment-dialog";
 import { ProductGrid } from "./product-grid";
 import { ReceiptPreview } from "./receipt-preview";
 import { SellGiftCardDialog } from "./sell-gift-card-dialog";
+import { SplitBillDialog } from "./split-bill-dialog";
 
 const BEVERAGE_REGISTER = "c0000000-0000-4000-8000-000000000003";
 const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
@@ -84,6 +85,7 @@ export function POSTerminal({
 	const [paymentOpen, setPaymentOpen] = useState(false);
 	const [receiptOpen, setReceiptOpen] = useState(false);
 	const [discountOpen, setDiscountOpen] = useState(false);
+	const [splitBillOpen, setSplitBillOpen] = useState(false);
 	const [notesItemId, setNotesItemId] = useState<string | null>(null);
 	const [lastOrder, setLastOrder] = useState<Record<string, unknown> | null>(
 		null,
@@ -984,6 +986,14 @@ export function POSTerminal({
 				items={lastCartSnapshot}
 				change={lastChange}
 				userName={userName}
+				onSplitBill={
+					lastOrder?.id
+						? () => {
+								setReceiptOpen(false);
+								setSplitBillOpen(true);
+							}
+						: undefined
+				}
 			/>
 			<DiscountDialog
 				open={discountOpen}
@@ -1006,6 +1016,14 @@ export function POSTerminal({
 				onComplete={handlePaymentComplete}
 			/>
 			{SupervisorDialog}
+			{!!lastOrder?.id && (
+				<SplitBillDialog
+					open={splitBillOpen}
+					orderId={lastOrder.id as string}
+					orderTotal={Number(lastOrder.total ?? 0)}
+					onClose={() => setSplitBillOpen(false)}
+				/>
+			)}
 		</div>
 	);
 }

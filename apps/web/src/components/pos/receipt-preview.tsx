@@ -1,4 +1,4 @@
-import { Printer, X } from "lucide-react";
+import { Printer, Split, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -28,6 +28,7 @@ interface ReceiptPreviewProps {
 	change: number;
 	userName: string;
 	receiptConfig?: ReceiptConfig | null;
+	onSplitBill?: () => void;
 }
 
 export function ReceiptPreview({
@@ -38,6 +39,7 @@ export function ReceiptPreview({
 	change,
 	userName,
 	receiptConfig,
+	onSplitBill,
 }: ReceiptPreviewProps) {
 	if (!order) return null;
 
@@ -283,6 +285,16 @@ export function ReceiptPreview({
 						<Printer className="size-4" />
 						Print
 					</Button>
+					{onSplitBill && (
+						<Button
+							variant="outline"
+							className="flex-1 gap-2"
+							onClick={onSplitBill}
+						>
+							<Split className="size-4" />
+							Split
+						</Button>
+					)}
 					<Button
 						variant="outline"
 						className="flex-1"
