@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	Check,
+	CookingPot,
 	Layers,
 	Minus,
 	Moon,
-	Package,
 	Plus,
 	RefreshCw,
 	Sunrise,
@@ -290,7 +290,7 @@ export function ProductionTracker({
 								{isCombo ? (
 									<Layers className="mb-1 size-6 text-amber-500 sm:size-7" />
 								) : (
-									<Package className="mb-1 size-6 text-muted-foreground sm:size-7" />
+									<CookingPot className="mb-1 size-6 text-muted-foreground sm:size-7" />
 								)}
 								<span className="font-semibold text-foreground text-xs leading-tight sm:text-sm">
 									{product.name}

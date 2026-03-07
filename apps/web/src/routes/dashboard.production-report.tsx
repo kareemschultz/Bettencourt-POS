@@ -22,6 +22,26 @@ export default function ProductionReportPage() {
 	const short = rows.filter((r) => r.variance < 0).length;
 	const over = rows.filter((r) => r.variance > 0).length;
 
+	// Sort: short (negative) first → over (positive) → balanced
+	const sortedRows = [...rows].sort((a, b) => {
+		if (a.variance < 0 && b.variance >= 0) return -1;
+		if (a.variance >= 0 && b.variance < 0) return 1;
+		if (a.variance > 0 && b.variance === 0) return -1;
+		if (a.variance === 0 && b.variance > 0) return 1;
+		return a.variance - b.variance;
+	});
+
+	const totals = rows.reduce(
+		(acc, r) => ({
+			opening: acc.opening + r.opening,
+			reorder: acc.reorder + r.reorder,
+			closing: acc.closing + r.closing,
+			expected: acc.expected + r.expected,
+			actual: acc.actual + r.actual,
+		}),
+		{ opening: 0, reorder: 0, closing: 0, expected: 0, actual: 0 },
+	);
+
 	return (
 		<div className="space-y-6 p-4 md:p-6">
 			{/* Print header — only visible in print */}
@@ -144,9 +164,12 @@ export default function ProductionReportPage() {
 							<th className="p-3 text-left font-medium">Item</th>
 							<th className="p-3 text-center font-medium">Opening</th>
 							<th className="p-3 text-center font-medium">Reorder</th>
-							<th className="p-3 text-center font-medium">Closing</th>
+							<th className="p-3 text-center font-medium text-amber-700 dark:text-amber-400">
+								Closing
+							</th>
 							<th className="p-3 text-center font-medium">Expected Sold</th>
 							<th className="p-3 text-center font-medium">Actual Sold</th>
+							<th className="p-3 text-center font-medium">% Sold</th>
 							<th className="p-3 text-center font-medium">Variance</th>
 						</tr>
 					</thead>
@@ -154,59 +177,128 @@ export default function ProductionReportPage() {
 						{isLoading ? (
 							<tr>
 								<td
-									colSpan={7}
+									colSpan={8}
 									className="p-8 text-center text-muted-foreground"
 								>
 									Loading...
 								</td>
 							</tr>
-						) : rows.length === 0 ? (
+						) : sortedRows.length === 0 ? (
 							<tr>
 								<td
-									colSpan={7}
+									colSpan={8}
 									className="p-8 text-center text-muted-foreground"
 								>
 									No Check Off data for {date}
 								</td>
 							</tr>
 						) : (
-							rows.map((row) => (
-								<tr key={row.productId} className="border-t hover:bg-muted/30">
-									<td className="p-3 font-medium">{row.productName}</td>
-									<td className="p-3 text-center text-muted-foreground">
-										{row.opening}
-									</td>
-									<td className="p-3 text-center text-muted-foreground">
-										{row.reorder}
-									</td>
-									<td className="p-3 text-center text-muted-foreground">
-										{row.closing}
-									</td>
-									<td className="p-3 text-center font-semibold">
-										{row.expected}
-									</td>
-									<td className="p-3 text-center">{row.actual}</td>
-									<td className="p-3 text-center">
-										<Badge
-											variant={row.variance === 0 ? "secondary" : "destructive"}
-											className={
-												row.variance > 0
-													? "border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-100"
-													: row.variance === 0
-														? ""
-														: ""
-											}
+							<>
+								{sortedRows.map((row) => {
+									const pctSold =
+										row.expected > 0
+											? Math.round((row.actual / row.expected) * 100)
+											: null;
+									return (
+										<tr
+											key={row.productId}
+											className="border-t hover:bg-muted/30"
 										>
-											{row.variance > 0 ? "+" : ""}
-											{row.variance}
-										</Badge>
-									</td>
-								</tr>
-							))
+											<td className="p-3 font-medium">{row.productName}</td>
+											<td className="p-3 text-center text-muted-foreground">
+												{row.opening}
+											</td>
+											<td className="p-3 text-center text-muted-foreground">
+												{row.reorder}
+											</td>
+											<td
+												className={`p-3 text-center font-medium ${row.closing > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}
+											>
+												{row.closing}
+											</td>
+											<td className="p-3 text-center font-semibold">
+												{row.expected}
+											</td>
+											<td className="p-3 text-center">{row.actual}</td>
+											<td className="p-3 text-center text-muted-foreground">
+												{pctSold !== null ? `${pctSold}%` : "—"}
+											</td>
+											<td className="p-3 text-center">
+												<Badge
+													variant={
+														row.variance === 0 ? "secondary" : "destructive"
+													}
+													className={
+														row.variance > 0
+															? "border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-100"
+															: ""
+													}
+												>
+													{row.variance > 0 ? "+" : ""}
+													{row.variance}
+												</Badge>
+											</td>
+										</tr>
+									);
+								})}
+								{sortedRows.length > 1 && (
+									<tr className="border-t bg-muted/30 font-semibold">
+										<td className="p-3">Totals</td>
+										<td className="p-3 text-center">{totals.opening}</td>
+										<td className="p-3 text-center">{totals.reorder}</td>
+										<td
+											className={`p-3 text-center ${totals.closing > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}
+										>
+											{totals.closing}
+										</td>
+										<td className="p-3 text-center">{totals.expected}</td>
+										<td className="p-3 text-center">{totals.actual}</td>
+										<td className="p-3 text-center text-muted-foreground">
+											{totals.expected > 0
+												? `${Math.round((totals.actual / totals.expected) * 100)}%`
+												: "—"}
+										</td>
+										<td className="p-3 text-center">
+											<Badge
+												variant={
+													totals.actual - totals.expected === 0
+														? "secondary"
+														: totals.actual - totals.expected < 0
+															? "destructive"
+															: "outline"
+												}
+												className={
+													totals.actual - totals.expected > 0
+														? "border-amber-200 bg-amber-100 text-amber-800"
+														: ""
+												}
+											>
+												{totals.actual - totals.expected > 0 ? "+" : ""}
+												{totals.actual - totals.expected}
+											</Badge>
+										</td>
+									</tr>
+								)}
+							</>
 						)}
 					</tbody>
 				</table>
 			</div>
+			{rows.length > 0 && (
+				<p className="text-muted-foreground text-xs print:hidden">
+					<span className="font-medium text-amber-600">Closing</span> = leftover
+					at end of day. <span className="font-medium">% Sold</span> = Actual ÷
+					Expected. Combo sales are split into components in both Actual Sold
+					and Variance columns.
+				</p>
+			)}
+			{rows.length > 0 && (
+				<p className="text-muted-foreground text-xs print:hidden">
+					<span className="font-medium text-amber-600">Closing</span> = leftover
+					at end of day. <span className="font-medium">% Sold</span> = Actual ÷
+					Expected. Combo sales are split into components in both columns.
+				</p>
+			)}
 			{/* Print footer */}
 			<div className="mt-8 hidden border-t pt-2 text-center text-muted-foreground text-xs print:block">
 				Bettencourt's Food Inc. · Production Report ·{" "}
