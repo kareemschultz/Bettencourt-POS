@@ -1243,6 +1243,7 @@ async function seed() {
 	await db
 		.delete(schema.order)
 		.where(inArray(schema.order.id, seedOrderExtIds));
+	await db.delete(schema.productProductionComponent);
 
 	// 11. Table Layouts
 	console.log("  -> Table Layouts");
@@ -6856,6 +6857,155 @@ async function seed() {
 				reason: "Weekly veg delivery",
 				createdAt: daysAgo(7, 10),
 			},
+		])
+		.onConflictDoNothing();
+
+	// ── Section 19j: Production Component Mappings ──────────────────────────
+	console.log("  -> Production Component Mappings");
+	await db
+		.insert(schema.productProductionComponent)
+		.values([
+			// Fried Rice and Baked Chicken
+			{
+				productId: PROD.friedRiceBakedChicken,
+				componentName: "Fried Rice",
+				quantity: "1",
+			},
+			{
+				productId: PROD.friedRiceBakedChicken,
+				componentName: "Baked Chicken",
+				quantity: "1",
+			},
+			// Raisin Rice with Pineapple Chicken
+			{
+				productId: PROD.raisinRicePineapple,
+				componentName: "Raisin Rice",
+				quantity: "1",
+			},
+			{
+				productId: PROD.raisinRicePineapple,
+				componentName: "Pineapple Chicken",
+				quantity: "1",
+			},
+			// Vegetable Rice with Sweet and Sour Chicken
+			{
+				productId: PROD.vegRiceSweetSour,
+				componentName: "Veg Rice",
+				quantity: "1",
+			},
+			{
+				productId: PROD.vegRiceSweetSour,
+				componentName: "Sweet & Sour Chicken",
+				quantity: "1",
+			},
+			// Chowmein/Baked Chicken
+			{
+				productId: PROD.chowmeinBakedChicken,
+				componentName: "Chowmein",
+				quantity: "1",
+			},
+			{
+				productId: PROD.chowmeinBakedChicken,
+				componentName: "Baked Chicken",
+				quantity: "1",
+			},
+			// Chowmein/Fry Chicken
+			{
+				productId: PROD.chowmeinFryChicken,
+				componentName: "Chowmein",
+				quantity: "1",
+			},
+			{
+				productId: PROD.chowmeinFryChicken,
+				componentName: "Fry Chicken",
+				quantity: "1",
+			},
+			// Caribbean Rice B/Chicken
+			{
+				productId: PROD.caribbeanRiceBChicken,
+				componentName: "Caribbean Rice",
+				quantity: "1",
+			},
+			{
+				productId: PROD.caribbeanRiceBChicken,
+				componentName: "Baked Chicken",
+				quantity: "1",
+			},
+			// Caribbean Rice F/Chicken
+			{
+				productId: PROD.caribbeanRiceFChicken,
+				componentName: "Caribbean Rice",
+				quantity: "1",
+			},
+			{
+				productId: PROD.caribbeanRiceFChicken,
+				componentName: "Fry Chicken",
+				quantity: "1",
+			},
+			// Cookup/Baked Chicken
+			{
+				productId: PROD.cookupBakedChicken,
+				componentName: "Cookup",
+				quantity: "1",
+			},
+			{
+				productId: PROD.cookupBakedChicken,
+				componentName: "Baked Chicken",
+				quantity: "1",
+			},
+			// Mac Cheese W/ Baked Chick
+			{
+				productId: PROD.macCheeseBakedChick,
+				componentName: "Mac & Cheese",
+				quantity: "1",
+			},
+			{
+				productId: PROD.macCheeseBakedChick,
+				componentName: "Baked Chicken",
+				quantity: "1",
+			},
+			// Cookup Baked Snapper
+			{
+				productId: PROD.cookupBakedSnapper,
+				componentName: "Cookup",
+				quantity: "1",
+			},
+			{
+				productId: PROD.cookupBakedSnapper,
+				componentName: "Baked Snapper",
+				quantity: "1",
+			},
+			// Cookup Fry Snapper
+			{
+				productId: PROD.cookupFrySnapper,
+				componentName: "Cookup",
+				quantity: "1",
+			},
+			{
+				productId: PROD.cookupFrySnapper,
+				componentName: "Fry Snapper",
+				quantity: "1",
+			},
+			// Anyrice / Curry Beef
+			{ productId: PROD.curryBeef, componentName: "Rice", quantity: "1" },
+			{ productId: PROD.curryBeef, componentName: "Curry Beef", quantity: "1" },
+			// Cook Up BBQ
+			{ productId: PROD.cookUpBBQ, componentName: "Cookup", quantity: "1" },
+			{
+				productId: PROD.cookUpBBQ,
+				componentName: "BBQ Chicken",
+				quantity: "1",
+			},
+			// Cook-up Fc
+			{ productId: PROD.cookUpFc, componentName: "Cookup", quantity: "1" },
+			{ productId: PROD.cookUpFc, componentName: "Fry Chicken", quantity: "1" },
+			// Veg. Meal/Dholl
+			{
+				productId: PROD.vegMealDholl,
+				componentName: "Veg Meal",
+				quantity: "1",
+			},
+			{ productId: PROD.vegMealDholl, componentName: "Dholl", quantity: "1" },
 		])
 		.onConflictDoNothing();
 
