@@ -1,6 +1,6 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 
@@ -210,7 +210,7 @@ const getReport = permissionProcedure("reports.read")
 			{ name: string; opening: number; reorder: number; closing: number }
 		>();
 		for (const e of entries) {
-			const key = e.productId ?? e.productName;
+			const key = e.productName; // always key by name for production log
 			const cur = byProduct.get(key) ?? {
 				name: e.productName,
 				opening: 0,
@@ -248,17 +248,66 @@ const getReport = permissionProcedure("reports.read")
 				),
 			);
 
-		const actualByProduct = new Map<string, number>();
-		for (const s of soldItems) {
-			const key = s.productId ?? s.productName;
-			actualByProduct.set(key, (actualByProduct.get(key) ?? 0) + s.quantity);
+		// Load component mappings for all sold product IDs
+		const soldProductIds = [
+			...new Set(soldItems.map((s) => s.productId).filter(Boolean)),
+		] as string[];
+
+		const componentRows =
+			soldProductIds.length > 0
+				? await db
+						.select({
+							productId: schema.productProductionComponent.productId,
+							componentName: schema.productProductionComponent.componentName,
+							quantity: schema.productProductionComponent.quantity,
+						})
+						.from(schema.productProductionComponent)
+						.where(
+							inArray(
+								schema.productProductionComponent.productId,
+								soldProductIds,
+							),
+						)
+				: [];
+
+		// Build map: productId → components[]
+		const componentMap = new Map<
+			string,
+			{ componentName: string; quantity: number }[]
+		>();
+		for (const c of componentRows) {
+			const list = componentMap.get(c.productId) ?? [];
+			list.push({
+				componentName: c.componentName,
+				quantity: Number(c.quantity),
+			});
+			componentMap.set(c.productId, list);
 		}
 
-		const rows = Array.from(byProduct.entries()).map(([key, v]) => {
+		// Tally actual sold, expanding through components
+		const actualByName = new Map<string, number>();
+		for (const s of soldItems) {
+			const components = s.productId
+				? componentMap.get(s.productId)
+				: undefined;
+			if (components && components.length > 0) {
+				// Expand: each component gets qty * component.quantity
+				for (const c of components) {
+					const prev = actualByName.get(c.componentName) ?? 0;
+					actualByName.set(c.componentName, prev + s.quantity * c.quantity);
+				}
+			} else {
+				// No mapping — attribute directly to product name
+				const key = s.productName;
+				actualByName.set(key, (actualByName.get(key) ?? 0) + s.quantity);
+			}
+		}
+
+		const rows = Array.from(byProduct.entries()).map(([, v]) => {
 			const expected = v.opening + v.reorder - v.closing;
-			const actual = actualByProduct.get(key) ?? 0;
+			const actual = actualByName.get(v.name) ?? 0;
 			return {
-				productId: key,
+				productId: v.name, // used as React key in frontend
 				productName: v.name,
 				opening: v.opening,
 				reorder: v.reorder,
@@ -272,9 +321,55 @@ const getReport = permissionProcedure("reports.read")
 		return { rows, date: input.date };
 	});
 
+// ── getComponents ────────────────────────────────────────────────────────
+const getComponents = permissionProcedure("products.read")
+	.input(z.object({ productId: z.string().uuid() }))
+	.handler(async ({ input }) => {
+		return db
+			.select({
+				id: schema.productProductionComponent.id,
+				componentName: schema.productProductionComponent.componentName,
+				quantity: schema.productProductionComponent.quantity,
+			})
+			.from(schema.productProductionComponent)
+			.where(eq(schema.productProductionComponent.productId, input.productId))
+			.orderBy(schema.productProductionComponent.componentName);
+	});
+
+// ── setComponents ────────────────────────────────────────────────────────
+const setComponents = permissionProcedure("products.update")
+	.input(
+		z.object({
+			productId: z.string().uuid(),
+			components: z.array(
+				z.object({
+					componentName: z.string().min(1),
+					quantity: z.string(),
+				}),
+			),
+		}),
+	)
+	.handler(async ({ input }) => {
+		await db
+			.delete(schema.productProductionComponent)
+			.where(eq(schema.productProductionComponent.productId, input.productId));
+		if (input.components.length > 0) {
+			await db.insert(schema.productProductionComponent).values(
+				input.components.map((c) => ({
+					productId: input.productId,
+					componentName: c.componentName,
+					quantity: c.quantity,
+				})),
+			);
+		}
+		return { success: true };
+	});
+
 export const productionRouter = {
 	getEntries,
 	createEntry,
 	getReconciliation,
 	getReport,
+	getComponents,
+	setComponents,
 };
