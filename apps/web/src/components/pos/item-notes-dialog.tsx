@@ -18,6 +18,8 @@ interface ItemNotesDialogProps {
 }
 
 const QUICK_NOTES = [
+	"No sides",
+	"No garden salad",
 	"No pepper",
 	"Less pepper",
 	"Extra pepper",
