@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	ArrowRightLeft,
+	Copy,
 	Edit2,
 	FileText,
+	GitBranch,
 	Plus,
 	Printer,
 	Search,
+	Send,
 	Trash2,
 	X,
 } from "lucide-react";
@@ -40,6 +43,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { authClient } from "@/lib/auth-client";
+import { openQuotationPdf } from "@/lib/pdf/quotation-pdf";
 import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
@@ -58,6 +62,12 @@ interface QuotationForm {
 	validUntil: string;
 	notes: string;
 	items: LineItem[];
+	discountType: "percent" | "fixed";
+	discountValue: string;
+	taxMode: "invoice" | "line";
+	taxRate: string;
+	termsAndConditions: string;
+	preparedBy: string;
 }
 
 const emptyForm: QuotationForm = {
@@ -67,6 +77,12 @@ const emptyForm: QuotationForm = {
 	validUntil: "",
 	notes: "",
 	items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
+	discountType: "percent",
+	discountValue: "0",
+	taxMode: "invoice",
+	taxRate: "16.5",
+	termsAndConditions: "",
+	preparedBy: "",
 };
 
 function statusBadgeClass(status: string): string {
@@ -102,6 +118,13 @@ type QuotationRow = {
 	validUntil: string | null;
 	notes: string | null;
 	createdAt: string;
+	discountType: string;
+	discountValue: string;
+	taxMode: string;
+	taxRate: string;
+	termsAndConditions: string | null;
+	preparedBy: string | null;
+	parentQuotationId: string | null;
 };
 
 export default function QuotationsPage() {
@@ -126,6 +149,10 @@ export default function QuotationsPage() {
 	const canUpdate = userPerms.quotations?.includes("update") ?? false;
 	const canDelete = userPerms.quotations?.includes("delete") ?? false;
 	const canConvert = userPerms.invoices?.includes("create") ?? false;
+
+	const { data: docSettings } = useQuery(
+		orpc.settings.getDocumentSettings.queryOptions({ input: {} }),
+	);
 
 	const { data: raw = { quotations: [], total: 0 } } = useQuery(
 		orpc.quotations.list.queryOptions({
@@ -196,9 +223,54 @@ export default function QuotationsPage() {
 		}),
 	);
 
+	const markSentMut = useMutation(
+		orpc.quotations.markSent.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.quotations.list.queryOptions({ input: {} }).queryKey,
+				});
+				toast.success("Quotation marked as sent");
+			},
+			onError: () => toast.error("Failed to mark as sent"),
+		}),
+	);
+
+	const duplicateMut = useMutation(
+		orpc.quotations.duplicate.mutationOptions({
+			onSuccess: (newQ) => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.quotations.list.queryOptions({ input: {} }).queryKey,
+				});
+				setSelectedId((newQ as { id: string }).id);
+				toast.success("Quotation duplicated");
+			},
+			onError: () => toast.error("Failed to duplicate"),
+		}),
+	);
+
+	const reviseMut = useMutation(
+		orpc.quotations.revise.mutationOptions({
+			onSuccess: (newQ) => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.quotations.list.queryOptions({ input: {} }).queryKey,
+				});
+				setSelectedId((newQ as { id: string }).id);
+				toast.success("Revision created");
+			},
+			onError: () => toast.error("Failed to create revision"),
+		}),
+	);
+
 	function openCreate() {
 		setEditingId(null);
-		setForm(emptyForm);
+		setForm({
+			...emptyForm,
+			taxRate: String(docSettings?.defaultTaxRate ?? "16.5"),
+			taxMode: (docSettings?.defaultTaxMode as "invoice" | "line") ?? "invoice",
+			discountType:
+				(docSettings?.defaultDiscountType as "percent" | "fixed") ?? "percent",
+			termsAndConditions: docSettings?.defaultQuotationTerms ?? "",
+		});
 		setDialogOpen(true);
 	}
 
@@ -213,6 +285,12 @@ export default function QuotationsPage() {
 			items: Array.isArray(q.items)
 				? (q.items as LineItem[])
 				: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
+			discountType: (q.discountType as "percent" | "fixed") ?? "percent",
+			discountValue: q.discountValue ?? "0",
+			taxMode: (q.taxMode as "invoice" | "line") ?? "invoice",
+			taxRate: q.taxRate ?? "16.5",
+			termsAndConditions: q.termsAndConditions ?? "",
+			preparedBy: q.preparedBy ?? "",
 		});
 		setDialogOpen(true);
 	}
@@ -250,40 +328,49 @@ export default function QuotationsPage() {
 
 	function handleSave() {
 		const subtotal = form.items.reduce((s, i) => s + i.total, 0);
-		const total = subtotal;
+		const discountAmt =
+			form.discountType === "percent"
+				? (subtotal * Number(form.discountValue || 0)) / 100
+				: Number(form.discountValue || 0);
+		const taxableBase = subtotal - discountAmt;
+		const taxAmt = (Number(form.taxRate || 0) / 100) * taxableBase;
+		const total = taxableBase + taxAmt;
 		const userId = session?.user?.id ?? "";
 
+		const sharedFields = {
+			customerName: form.customerName,
+			customerAddress: form.customerAddress || undefined,
+			customerPhone: form.customerPhone || undefined,
+			validUntil: form.validUntil || undefined,
+			notes: form.notes || undefined,
+			items: form.items,
+			subtotal: String(subtotal),
+			taxTotal: String(taxAmt),
+			total: String(total),
+			discountType: form.discountType,
+			discountValue: form.discountValue,
+			taxMode: form.taxMode,
+			taxRate: form.taxRate,
+			termsAndConditions: form.termsAndConditions || undefined,
+			preparedBy: form.preparedBy || undefined,
+		};
+
 		if (editingId) {
-			updateMut.mutate({
-				id: editingId,
-				customerName: form.customerName,
-				customerAddress: form.customerAddress || undefined,
-				customerPhone: form.customerPhone || undefined,
-				validUntil: form.validUntil || undefined,
-				notes: form.notes || undefined,
-				items: form.items,
-				subtotal: String(subtotal),
-				taxTotal: "0",
-				total: String(total),
-			});
+			updateMut.mutate({ id: editingId, ...sharedFields });
 		} else {
-			createMut.mutate({
-				customerName: form.customerName,
-				customerAddress: form.customerAddress || undefined,
-				customerPhone: form.customerPhone || undefined,
-				validUntil: form.validUntil || undefined,
-				notes: form.notes || undefined,
-				items: form.items,
-				subtotal: String(subtotal),
-				taxTotal: "0",
-				total: String(total),
-				createdBy: userId,
-			});
+			createMut.mutate({ ...sharedFields, createdBy: userId });
 		}
 	}
 
 	const selectedQuotation = quotations.find((q) => q.id === selectedId) ?? null;
 	const subtotal = form.items.reduce((s, i) => s + i.total, 0);
+	const formDiscountAmt =
+		form.discountType === "percent"
+			? (subtotal * Number(form.discountValue || 0)) / 100
+			: Number(form.discountValue || 0);
+	const formTaxableBase = subtotal - formDiscountAmt;
+	const formTaxAmt = (Number(form.taxRate || 0) / 100) * formTaxableBase;
+	const formTotal = formTaxableBase + formTaxAmt;
 
 	return (
 		<div className="flex flex-col gap-6 p-4 md:p-6">
@@ -467,7 +554,9 @@ export default function QuotationsPage() {
 										<Button
 											variant="outline"
 											size="sm"
-											onClick={() => window.print()}
+											onClick={() =>
+												openQuotationPdf(selectedQuotation, docSettings ?? {})
+											}
 											className="no-print gap-1.5"
 										>
 											<Printer className="size-4" />
@@ -477,60 +566,6 @@ export default function QuotationsPage() {
 								</CardTitle>
 							</CardHeader>
 							<CardContent className="flex flex-col gap-3 text-sm">
-								{/* ── Print letterhead ──────────────────────────── */}
-								<div className="hidden border-b pb-5 print:block">
-									<div className="flex items-start justify-between">
-										<div className="flex items-center gap-3">
-											<img
-												src="/images/bettencourts-logo.png"
-												alt="Bettencourt's Food Inc."
-												className="h-14 w-auto object-contain"
-											/>
-											<div>
-												<p className="font-bold text-lg">
-													Bettencourt's Food Inc.
-												</p>
-												<p className="text-muted-foreground text-xs">
-													Main Location, Georgetown, Guyana
-												</p>
-												<p className="text-muted-foreground text-xs">
-													Tel: +592 000-0000
-												</p>
-											</div>
-										</div>
-										<div className="text-right">
-											<div className="mb-2 inline-block rounded border-2 border-primary px-3 py-1">
-												<p className="font-bold text-base text-primary uppercase tracking-widest">
-													Quotation
-												</p>
-											</div>
-											<p className="font-mono font-semibold text-sm">
-												{selectedQuotation.quotationNumber}
-											</p>
-											<p className="mt-1 text-xs">
-												<span className="text-muted-foreground">Issued: </span>
-												{new Date(
-													selectedQuotation.createdAt,
-												).toLocaleDateString("en-GY")}
-											</p>
-											{selectedQuotation.validUntil && (
-												<p className="text-xs">
-													<span className="text-muted-foreground">
-														Valid Until:{" "}
-													</span>
-													{new Date(
-														selectedQuotation.validUntil,
-													).toLocaleDateString("en-GY")}
-												</p>
-											)}
-										</div>
-									</div>
-								</div>
-								{/* Bill To label — print only */}
-								<p className="hidden font-bold text-muted-foreground text-xs uppercase tracking-wide print:block">
-									Bill To
-								</p>
-
 								<div>
 									<p className="font-semibold">
 										{selectedQuotation.customerName}
@@ -546,14 +581,23 @@ export default function QuotationsPage() {
 										</p>
 									)}
 								</div>
-								{selectedQuotation.validUntil && (
-									<p className="text-muted-foreground text-xs">
-										Valid until:{" "}
-										{new Date(selectedQuotation.validUntil).toLocaleDateString(
-											"en-GY",
-										)}
-									</p>
-								)}
+								{selectedQuotation.validUntil &&
+									(() => {
+										const days = Math.ceil(
+											(new Date(selectedQuotation.validUntil).getTime() -
+												Date.now()) /
+												86_400_000,
+										);
+										return (
+											<p
+												className={`font-medium text-xs ${days > 0 ? "text-sky-600 dark:text-sky-400" : "text-destructive"}`}
+											>
+												{days > 0
+													? `Valid for ${days} more day${days !== 1 ? "s" : ""} · expires ${new Date(selectedQuotation.validUntil).toLocaleDateString("en-GY")}`
+													: `Expired on ${new Date(selectedQuotation.validUntil).toLocaleDateString("en-GY")}`}
+											</p>
+										);
+									})()}
 								<Table>
 									<TableHeader>
 										<TableRow>
@@ -598,50 +642,72 @@ export default function QuotationsPage() {
 										{selectedQuotation.notes}
 									</p>
 								)}
-								{/* ── Signature section — print only ───────────── */}
-								<div className="mt-8 hidden grid-cols-2 gap-12 print:grid">
-									<div className="flex flex-col gap-1">
-										<div className="border-foreground border-b pb-8" />
-										<p className="mt-1 text-xs">
-											<span className="font-semibold">Authorized By</span>
-										</p>
-										<p className="text-muted-foreground text-xs">
-											Bettencourt's Food Inc.
-										</p>
-									</div>
-									<div className="flex flex-col gap-1">
-										<div className="border-foreground border-b pb-8" />
-										<p className="mt-1 text-xs">
-											<span className="font-semibold">Accepted By</span>
-										</p>
-										<p className="text-muted-foreground text-xs">
-											Customer Signature &amp; Date
-										</p>
-									</div>
-								</div>
-								{/* Print footer */}
-								<div className="mt-4 hidden border-t pt-2 text-center text-muted-foreground text-xs print:block">
-									Bettencourt's Food Inc. · This quotation is valid for 30 days
-									· {new Date().toLocaleString("en-GY")}
-								</div>
 
-								<div className="no-print flex gap-2 pt-1">
+								<div className="no-print flex flex-wrap gap-2 pt-1">
 									{canUpdate && (
 										<Button
 											size="sm"
 											variant="outline"
-											className="flex-1 gap-1"
+											className="gap-1"
 											onClick={() => openEdit(selectedQuotation)}
 										>
 											<Edit2 className="size-3" />
 											Edit
 										</Button>
 									)}
+									{canUpdate && selectedQuotation.status === "draft" && (
+										<Button
+											size="sm"
+											variant="outline"
+											className="gap-1"
+											onClick={() =>
+												markSentMut.mutate({ id: selectedQuotation.id })
+											}
+											disabled={markSentMut.isPending}
+										>
+											<Send className="size-3" />
+											Mark Sent
+										</Button>
+									)}
+									{canCreate && (
+										<Button
+											size="sm"
+											variant="outline"
+											className="gap-1"
+											onClick={() =>
+												duplicateMut.mutate({
+													id: selectedQuotation.id,
+													createdBy: session?.user?.id ?? "",
+												})
+											}
+											disabled={duplicateMut.isPending}
+										>
+											<Copy className="size-3" />
+											Duplicate
+										</Button>
+									)}
+									{canCreate && selectedQuotation.status !== "draft" && (
+										<Button
+											size="sm"
+											variant="outline"
+											className="gap-1"
+											onClick={() =>
+												reviseMut.mutate({
+													id: selectedQuotation.id,
+													createdBy: session?.user?.id ?? "",
+												})
+											}
+											disabled={reviseMut.isPending}
+										>
+											<GitBranch className="size-3" />
+											Revise
+										</Button>
+									)}
 									{canConvert &&
 										["sent", "accepted"].includes(selectedQuotation.status) && (
 											<Button
 												size="sm"
-												className="flex-1 gap-1"
+												className="gap-1"
 												onClick={() =>
 													convertMut.mutate({
 														id: selectedQuotation.id,
@@ -810,16 +876,122 @@ export default function QuotationsPage() {
 							</Button>
 						</div>
 
-						{/* Totals */}
-						<div className="flex justify-end gap-6 border-t pt-2 text-sm">
-							<span className="text-muted-foreground">Subtotal</span>
-							<span className="w-28 text-right font-semibold">
-								{formatGYD(subtotal)}
-							</span>
+						{/* Tax / Discount Settings */}
+						<div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/30 p-3">
+							<div className="flex flex-col gap-1.5">
+								<Label className="text-xs">Tax Rate (%)</Label>
+								<Input
+									type="number"
+									min={0}
+									step="0.5"
+									value={form.taxRate}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, taxRate: e.target.value }))
+									}
+								/>
+							</div>
+							<div className="flex flex-col gap-1.5">
+								<Label className="text-xs">Tax Mode</Label>
+								<Select
+									value={form.taxMode}
+									onValueChange={(v) =>
+										setForm((f) => ({ ...f, taxMode: v as "invoice" | "line" }))
+									}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="invoice">Whole invoice</SelectItem>
+										<SelectItem value="line">Per line item</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="flex flex-col gap-1.5">
+								<Label className="text-xs">Discount Type</Label>
+								<Select
+									value={form.discountType}
+									onValueChange={(v) =>
+										setForm((f) => ({
+											...f,
+											discountType: v as "percent" | "fixed",
+										}))
+									}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="percent">Percent (%)</SelectItem>
+										<SelectItem value="fixed">Fixed (GYD)</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="flex flex-col gap-1.5">
+								<Label className="text-xs">Discount Value</Label>
+								<Input
+									type="number"
+									min={0}
+									step="0.01"
+									value={form.discountValue}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, discountValue: e.target.value }))
+									}
+								/>
+							</div>
+							<div className="flex flex-col gap-1.5">
+								<Label className="text-xs">Prepared By</Label>
+								<Input
+									placeholder="Your name"
+									value={form.preparedBy}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, preparedBy: e.target.value }))
+									}
+								/>
+							</div>
 						</div>
-						<div className="flex justify-end gap-6 font-bold text-sm">
-							<span>Total</span>
-							<span className="w-28 text-right">{formatGYD(subtotal)}</span>
+
+						{/* Totals */}
+						<div className="flex flex-col items-end gap-1 border-t pt-2 text-sm">
+							<div className="flex w-64 justify-between text-muted-foreground">
+								<span>Subtotal</span>
+								<span className="font-mono">{formatGYD(subtotal)}</span>
+							</div>
+							{formDiscountAmt > 0 && (
+								<div className="flex w-64 justify-between text-destructive">
+									<span>
+										Discount
+										{form.discountType === "percent"
+											? ` (${form.discountValue}%)`
+											: ""}
+									</span>
+									<span className="font-mono">
+										−{formatGYD(formDiscountAmt)}
+									</span>
+								</div>
+							)}
+							{formTaxAmt > 0 && (
+								<div className="flex w-64 justify-between text-muted-foreground">
+									<span>VAT ({form.taxRate}%)</span>
+									<span className="font-mono">{formatGYD(formTaxAmt)}</span>
+								</div>
+							)}
+							<div className="flex w-64 justify-between border-t pt-1 font-bold">
+								<span>Total</span>
+								<span className="font-mono">{formatGYD(formTotal)}</span>
+							</div>
+						</div>
+
+						<div className="flex flex-col gap-1.5">
+							<Label>Terms &amp; Conditions</Label>
+							<Textarea
+								placeholder="Enter terms and conditions..."
+								value={form.termsAndConditions}
+								onChange={(e) =>
+									setForm((f) => ({ ...f, termsAndConditions: e.target.value }))
+								}
+								className="h-20 resize-none"
+							/>
 						</div>
 
 						<div className="flex flex-col gap-1.5">

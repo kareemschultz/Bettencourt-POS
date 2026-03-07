@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+	Copy,
 	CreditCard,
 	Edit2,
 	Plus,
 	Printer,
 	Receipt,
 	Search,
+	Send,
 	Trash2,
 	X,
 } from "lucide-react";
@@ -30,6 +32,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
 	TableBody,
@@ -40,6 +43,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { authClient } from "@/lib/auth-client";
+import { openInvoicePdf } from "@/lib/pdf/invoice-pdf";
 import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
@@ -59,6 +63,12 @@ interface InvoiceForm {
 	dueDate: string;
 	notes: string;
 	items: LineItem[];
+	discountType: "percent" | "fixed";
+	discountValue: string;
+	taxMode: "invoice" | "line";
+	taxRate: string;
+	paymentTerms: string;
+	preparedBy: string;
 }
 
 const emptyForm: InvoiceForm = {
@@ -69,6 +79,12 @@ const emptyForm: InvoiceForm = {
 	dueDate: "",
 	notes: "",
 	items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
+	discountType: "percent",
+	discountValue: "0",
+	taxMode: "invoice",
+	taxRate: "16.5",
+	paymentTerms: "due_on_receipt",
+	preparedBy: "",
 };
 
 function statusBadgeClass(status: string): string {
@@ -109,6 +125,12 @@ type InvoiceRow = {
 	dueDate: string | null;
 	notes: string | null;
 	createdAt: string;
+	discountType?: string | null;
+	discountValue?: string | null;
+	taxMode?: string | null;
+	taxRate?: string | null;
+	paymentTerms?: string | null;
+	preparedBy?: string | null;
 };
 
 export default function InvoicesPage() {
@@ -214,9 +236,50 @@ export default function InvoicesPage() {
 		}),
 	);
 
+	const { data: docSettings } = useQuery(
+		orpc.settings.getDocumentSettings.queryOptions({ input: {} }),
+	);
+
+	const { data: summaryRaw, isLoading: loadingSummary } = useQuery(
+		orpc.invoices.getSummary.queryOptions({ input: {} }),
+	);
+	const s = (summaryRaw as Record<string, unknown>) ?? {};
+
+	const markSentMut = useMutation(
+		orpc.invoices.markSent.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.invoices.list.queryOptions({ input: {} }).queryKey,
+				});
+				toast.success("Invoice marked as sent");
+			},
+			onError: () => toast.error("Failed to mark as sent"),
+		}),
+	);
+
+	const duplicateMut = useMutation(
+		orpc.invoices.duplicate.mutationOptions({
+			onSuccess: (newInv) => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.invoices.list.queryOptions({ input: {} }).queryKey,
+				});
+				setSelectedId((newInv as { id: string }).id);
+				toast.success("Invoice duplicated");
+			},
+			onError: () => toast.error("Failed to duplicate"),
+		}),
+	);
+
 	function openCreate() {
 		setEditingId(null);
-		setForm(emptyForm);
+		setForm({
+			...emptyForm,
+			taxRate: String(docSettings?.defaultTaxRate ?? "16.5"),
+			taxMode: (docSettings?.defaultTaxMode as "invoice" | "line") ?? "invoice",
+			discountType:
+				(docSettings?.defaultDiscountType as "percent" | "fixed") ?? "percent",
+			paymentTerms: docSettings?.defaultPaymentTerms ?? "due_on_receipt",
+		});
 		setDialogOpen(true);
 	}
 
@@ -232,6 +295,12 @@ export default function InvoicesPage() {
 			items: Array.isArray(inv.items)
 				? (inv.items as LineItem[])
 				: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
+			discountType: (inv.discountType as "percent" | "fixed") ?? "percent",
+			discountValue: inv.discountValue ?? "0",
+			taxMode: (inv.taxMode as "invoice" | "line") ?? "invoice",
+			taxRate: inv.taxRate ?? "16.5",
+			paymentTerms: inv.paymentTerms ?? "due_on_receipt",
+			preparedBy: inv.preparedBy ?? "",
 		});
 		setDialogOpen(true);
 	}
@@ -269,37 +338,38 @@ export default function InvoicesPage() {
 
 	function handleSave() {
 		const subtotal = form.items.reduce((s, i) => s + i.total, 0);
-		const total = subtotal;
+		const discountAmt =
+			form.discountType === "percent"
+				? (subtotal * Number(form.discountValue || 0)) / 100
+				: Number(form.discountValue || 0);
+		const taxableBase = subtotal - discountAmt;
+		const taxAmt = (Number(form.taxRate || 0) / 100) * taxableBase;
+		const total = taxableBase + taxAmt;
 		const userId = session?.user?.id ?? "";
 
+		const sharedFields = {
+			customerName: form.customerName,
+			customerAddress: form.customerAddress || undefined,
+			customerPhone: form.customerPhone || undefined,
+			issuedDate: form.issuedDate || undefined,
+			dueDate: form.dueDate || undefined,
+			notes: form.notes || undefined,
+			items: form.items,
+			subtotal: String(subtotal),
+			taxTotal: String(taxAmt),
+			total: String(total),
+			discountType: form.discountType,
+			discountValue: form.discountValue,
+			taxMode: form.taxMode,
+			taxRate: form.taxRate,
+			paymentTerms: form.paymentTerms,
+			preparedBy: form.preparedBy || undefined,
+		};
+
 		if (editingId) {
-			updateMut.mutate({
-				id: editingId,
-				customerName: form.customerName,
-				customerAddress: form.customerAddress || undefined,
-				customerPhone: form.customerPhone || undefined,
-				issuedDate: form.issuedDate || undefined,
-				dueDate: form.dueDate || undefined,
-				notes: form.notes || undefined,
-				items: form.items,
-				subtotal: String(subtotal),
-				taxTotal: "0",
-				total: String(total),
-			});
+			updateMut.mutate({ id: editingId, ...sharedFields });
 		} else {
-			createMut.mutate({
-				customerName: form.customerName,
-				customerAddress: form.customerAddress || undefined,
-				customerPhone: form.customerPhone || undefined,
-				issuedDate: form.issuedDate || undefined,
-				dueDate: form.dueDate || undefined,
-				notes: form.notes || undefined,
-				items: form.items,
-				subtotal: String(subtotal),
-				taxTotal: "0",
-				total: String(total),
-				createdBy: userId,
-			});
+			createMut.mutate({ ...sharedFields, createdBy: userId });
 		}
 	}
 
@@ -317,6 +387,13 @@ export default function InvoicesPage() {
 
 	const selectedInvoice = invoices.find((inv) => inv.id === selectedId) ?? null;
 	const subtotal = form.items.reduce((s, i) => s + i.total, 0);
+	const formDiscountAmt =
+		form.discountType === "percent"
+			? (subtotal * Number(form.discountValue || 0)) / 100
+			: Number(form.discountValue || 0);
+	const formTaxableBase = subtotal - formDiscountAmt;
+	const formTaxAmt = (Number(form.taxRate || 0) / 100) * formTaxableBase;
+	const formTotal = formTaxableBase + formTaxAmt;
 
 	return (
 		<div className="flex flex-col gap-6 p-4 md:p-6">
