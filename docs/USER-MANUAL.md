@@ -201,29 +201,57 @@ Click **Add Customer** in the cart area, search by name or phone, and select the
 
 ### Viewing Order Details
 
-Click any order row to open its details:
-- All items with quantities and line totals
-- Payment method(s) used
-- Customer name (if linked)
-- Cashier who processed it
-- Timestamps
+Click any order row to open the full detail dialog, which shows:
+
+**Transaction Info**
+- Cashier who processed the order
+- Location and register
+- Order type (Walk-in, Pickup, Delivery)
+- Table number (for dine-in)
+- Whether the bill was split
+
+**Customer Info** (when provided)
+- Customer name, phone number, delivery address
+
+**Items**
+- Every item with quantity, price, and any modifiers (e.g. "extra spicy")
+- Voided items are shown with a strikethrough
+- Item-level notes are shown in italics
+
+**Payments**
+- Payment method (cash or card)
+- For cash: amount tendered and change given back
+
+**Totals**
+- Subtotal, discount (if any), tax, and grand total
+
+**Void Info** (for voided orders only)
+- Reason for void, who authorized it, and when
+
+### Printing a Receipt / PDF
+
+Inside the order detail dialog, click **Print PDF** (bottom left) to open a formatted receipt in a new browser tab. Click **Print / Save as PDF** inside that tab to save or print.
 
 ### Voiding an Order
 
-1. Open the order details
-2. Click **Void Order**
-3. A confirmation dialog appears — click **Confirm Void**
-4. The order is marked as voided and removed from sales totals
+1. Click the order row to open its detail
+2. Click **Void** (bottom right — only visible on Completed orders)
+3. Type a **reason** (required)
+4. Click **Confirm Void**
 
-> Only managers can void completed orders. Cashiers can remove items before payment.
+The order is marked Voided, all payments are reversed, and if cash was tendered, the cash session total is automatically corrected.
+
+> Only managers (Admin / Executive role) can void completed orders.
 
 ### Refunding an Order
 
-1. Open the order details
-2. Click **Refund**
-3. Enter the refund amount (can be partial)
-4. Confirm
-5. The refund is recorded and the order status changes to Refunded
+1. Click the order row to open its detail
+2. Click **Refund** (bottom right)
+3. The full amount is pre-filled — change it for a **partial refund**
+4. Enter a **reason** (required)
+5. Click **Confirm Refund**
+
+The order status changes to Refunded and a refund payment record is created automatically for accounting.
 
 ---
 
@@ -559,19 +587,27 @@ Click any item to see the detailed movement history and identify where the varia
 
 **Navigate to:** Dashboard → Suppliers
 
-Manage your list of suppliers/vendors.
+Manage your full list of suppliers and vendors.
 
-### Adding a Supplier
+Your complete vendor list from the Vendor Register is already loaded in the system — 67 suppliers including Alabama Trading, Ansa McAl, Bank DIH Ltd, Royal Chicken-Mohamed Farms, Namilco, GPL, GT&T, GWI, and all others.
+
+### Adding a New Supplier
 
 1. Click **New Supplier**
 2. Enter: Name, Contact Person, Phone, Email, Address
-3. Click **Save**
+3. Assign categories (e.g. Food & Beverage, Utilities, Cleaning Supplies) to make expense filtering easier
+4. Click **Save**
 
 ### Editing a Supplier
 
-Click a supplier's name in the list to edit their details.
+Click a supplier's name or the edit icon to update their details (phone, address, contact person, etc.).
 
-Suppliers are linked to inventory items and used when creating purchase orders.
+### How Suppliers Are Used
+
+- **Purchase Orders** — select the supplier when creating a new PO
+- **Inventory Items** — each item can have a preferred supplier for auto-generating POs
+- **Expenses** — supplier cards appear at the top of the Expenses page for one-click filtering
+- **Stock Alerts** — if an item has a preferred supplier set, you can auto-generate a PO directly from the alert
 
 ---
 
