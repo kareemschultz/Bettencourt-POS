@@ -200,6 +200,19 @@ export function CartPanel({
 										<p className="truncate font-medium text-sm leading-tight">
 											{item.product.name}
 										</p>
+										{item.product.is_combo &&
+											(item.product.combo_components ?? []).length > 0 && (
+												<ul className="mt-0.5 flex flex-col gap-0">
+													{(item.product.combo_components ?? []).map((cc) => (
+														<li
+															key={cc.id}
+															className="truncate text-muted-foreground text-xs"
+														>
+															· {cc.component_name}
+														</li>
+													))}
+												</ul>
+											)}
 										{item.modifiers.length > 0 && (
 											<p className="truncate text-muted-foreground text-xs">
 												{item.modifiers

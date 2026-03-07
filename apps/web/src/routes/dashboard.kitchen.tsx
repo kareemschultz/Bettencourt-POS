@@ -199,6 +199,45 @@ export default function KitchenPage() {
 														x{item.quantity}
 													</span>
 												</div>
+												{item.modifiers &&
+													(() => {
+														try {
+															const mods = JSON.parse(item.modifiers) as Array<{
+																name: string;
+																price: number;
+																isComponent?: boolean;
+															}>;
+															const components = mods.filter(
+																(m) => m.isComponent,
+															);
+															const regular = mods.filter(
+																(m) => !m.isComponent,
+															);
+															return (
+																<>
+																	{components.length > 0 && (
+																		<ul className="mt-0.5 flex flex-col gap-0">
+																			{components.map((c) => (
+																				<li
+																					key={c.name}
+																					className="text-muted-foreground text-xs"
+																				>
+																					· {c.name}
+																				</li>
+																			))}
+																		</ul>
+																	)}
+																	{regular.length > 0 && (
+																		<p className="mt-0.5 text-sky-600 text-xs dark:text-sky-400">
+																			{regular.map((m) => m.name).join(", ")}
+																		</p>
+																	)}
+																</>
+															);
+														} catch {
+															return null;
+														}
+													})()}
 												{item.notes && (
 													<p className="mt-0.5 font-medium text-amber-600 text-xs dark:text-amber-400">
 														{item.notes}

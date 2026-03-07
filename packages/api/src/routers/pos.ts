@@ -504,13 +504,28 @@ const checkout = permissionProcedure("orders.create")
 
 			// Create kitchen items
 			for (const item of items) {
+				// Build modifiers array: combo components first (as isComponent entries), then selected modifiers
+				const kitchenMods: Array<{
+					name: string;
+					price: number;
+					isComponent?: boolean;
+				}> = [
+					...(item.isCombo && (item.comboComponents ?? []).length > 0
+						? (item.comboComponents ?? []).map((cc) => ({
+								name: cc.componentName,
+								price: 0,
+								isComponent: true as const,
+							}))
+						: []),
+					...item.modifiers,
+				];
 				await tx.insert(schema.kitchenOrderItem).values({
 					ticketId,
 					orderLineItemId: null,
 					productName: item.productName,
 					quantity: item.quantity,
 					modifiers:
-						item.modifiers.length > 0 ? JSON.stringify(item.modifiers) : null,
+						kitchenMods.length > 0 ? JSON.stringify(kitchenMods) : null,
 					notes: item.notes ?? null,
 					status: "pending",
 				});

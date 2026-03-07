@@ -203,6 +203,15 @@ export function ReceiptPreview({
 										{`@ ${formatGYD(item.product.price)} each`}
 									</div>
 								)}
+								{item.product.is_combo &&
+									(item.product.combo_components ?? []).map((cc) => (
+										<div
+											key={cc.id}
+											className="pl-2 text-[10px] text-muted-foreground"
+										>
+											· {cc.component_name}
+										</div>
+									))}
 								{departments.size > 1 && item.product.department_name && (
 									<div className="pl-2 text-[10px] text-muted-foreground">
 										[{item.product.department_name}]
