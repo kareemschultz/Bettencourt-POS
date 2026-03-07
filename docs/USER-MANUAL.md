@@ -766,38 +766,61 @@ The active card is highlighted with a ring so you always know which filter is in
 ### Adding an Expense
 
 1. Click **Add Expense** (top right)
-2. Enter the amount (GYD)
-3. Select the supplier (optional)
-4. Select the category
-5. Enter a description of what the expense was for
-6. Click **Save Expense**
+2. Enter the **amount** (GYD)
+3. Select the **supplier** (optional — your full vendor list is pre-loaded)
+4. Select the **category** from the list below
+5. Enter a **description** of what the expense was for
+6. Select the **payment method** — Cash, Card, Bank Transfer, Cheque, or Other
+7. Enter the **receipt / reference number** (invoice # or receipt # from the supplier — optional but recommended)
+8. Add any **notes** (optional — e.g. "receipt in green folder")
+9. Click **Save Expense**
+
+### Expense Categories
+
+| Category | When to use |
+|----------|-------------|
+| Food & Beverage Supplies | Chicken, fish, vegetables, cooking ingredients |
+| Beverages | Soft drinks, Vita Malt, beer, water bottles |
+| Cleaning Supplies | Bleach, detergent, mop heads, gloves |
+| Office Supplies | Pens, printer paper, staplers |
+| Repairs & Maintenance | Fridge repairs, plumbing, pest control |
+| Delivery & Transport | Gas for vans, courier costs |
+| Utilities | Electricity (GPL), Water (GWI), Gas (Massy), Phone (GT&T) |
+| Marketing & Advertising | Facebook ads, flyers, signage |
+| Staff Meals | Food provided to staff during shifts |
+| Vehicle Maintenance | Oil changes, tyres, brake pads for company vehicles |
+| CEO Drawings | Money taken out of the business by the CEO |
+| GM Drawings | Money taken out of the business by the General Manager |
+| Owner Drawings | Money taken out by the owner personally |
+| COO Drawings | Money taken out by the COO |
+| Miscellaneous | Anything that doesn't fit another category |
+
+> **Drawings** are withdrawals — money the owner or a manager takes out for personal use. They are tracked here as expenses so the P&L always shows the true profit left in the business.
 
 ### Filtering Expenses
 
-Use the filters at the top to narrow down what you see:
-- **From / To** date range — view expenses for a specific period
-- **Supplier** dropdown — filter by a specific supplier
-- Summary cards (described above) — click a supplier card as a quick filter shortcut
-
-### Editing or Deleting an Expense
-
-Each row in the expense table has a **pencil icon** (edit) and a **trash icon** (delete). Click the pencil to correct an entry, or the trash to remove it. Deletion asks for confirmation.
-
-### Exporting
-
-Click **Export** (top right) to download the current filtered expenses as a CSV file.
+Use the controls at the top to narrow down what you see:
+- **From / To** date range
+- **Quick date buttons** — Today, This Week, This Month, Last Month
+- **Supplier** dropdown
+- **Category** dropdown
+- **Category breakdown pills** — click a category pill (below the summary cards) to filter by that category
 
 ### Viewing Full Details
 
-The expense table shows every entry for the selected period with:
-- Date and time
-- Supplier (if linked)
-- Category
-- Description
-- Amount
-- Authorized by
+Click any expense row to open a read-only detail dialog showing all fields including notes, receipt number, who recorded it, and who authorized it. The **Edit** button inside the dialog opens the edit form.
 
-Expenses feed into the P&L Statement automatically.
+### Editing or Deleting an Expense
+
+- **Pencil icon** on any row — edit all fields including payment method, ref #, and notes
+- **Trash icon** — delete with a confirmation prompt
+
+### Exporting
+
+- **Export CSV** — downloads all currently filtered expenses with every field
+- **Print PDF** — opens a formatted expense report for printing or saving as PDF
+
+Expenses feed into the **P&L Statement** automatically under "Operating Expenses".
 
 ---
 
