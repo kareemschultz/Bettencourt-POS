@@ -55,6 +55,7 @@ interface InvoiceForm {
 	customerName: string;
 	customerAddress: string;
 	customerPhone: string;
+	issuedDate: string;
 	dueDate: string;
 	notes: string;
 	items: LineItem[];
@@ -64,6 +65,7 @@ const emptyForm: InvoiceForm = {
 	customerName: "",
 	customerAddress: "",
 	customerPhone: "",
+	issuedDate: "",
 	dueDate: "",
 	notes: "",
 	items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
@@ -103,6 +105,7 @@ type InvoiceRow = {
 	chequeNumber: string | null;
 	receiptNumber: string | null;
 	datePaid: string | null;
+	issuedDate: string | null;
 	dueDate: string | null;
 	notes: string | null;
 	createdAt: string;
@@ -223,6 +226,7 @@ export default function InvoicesPage() {
 			customerName: inv.customerName,
 			customerAddress: inv.customerAddress ?? "",
 			customerPhone: inv.customerPhone ?? "",
+			issuedDate: inv.issuedDate ? (inv.issuedDate.split("T")[0] ?? "") : "",
 			dueDate: inv.dueDate ? (inv.dueDate.split("T")[0] ?? "") : "",
 			notes: inv.notes ?? "",
 			items: Array.isArray(inv.items)
@@ -274,6 +278,7 @@ export default function InvoicesPage() {
 				customerName: form.customerName,
 				customerAddress: form.customerAddress || undefined,
 				customerPhone: form.customerPhone || undefined,
+				issuedDate: form.issuedDate || undefined,
 				dueDate: form.dueDate || undefined,
 				notes: form.notes || undefined,
 				items: form.items,
@@ -286,6 +291,7 @@ export default function InvoicesPage() {
 				customerName: form.customerName,
 				customerAddress: form.customerAddress || undefined,
 				customerPhone: form.customerPhone || undefined,
+				issuedDate: form.issuedDate || undefined,
 				dueDate: form.dueDate || undefined,
 				notes: form.notes || undefined,
 				items: form.items,
@@ -498,33 +504,46 @@ export default function InvoicesPage() {
 									{/* Company letterhead — print only */}
 									<div className="hidden border-b pb-5 print:block">
 										<div className="flex items-start justify-between">
-											<div>
-												<p className="font-bold text-lg">
-													Bettencourt's Food Inc.
-												</p>
-												<p className="text-muted-foreground text-xs">
-													Main Location, Georgetown, Guyana
-												</p>
-												<p className="text-muted-foreground text-xs">
-													Tel: +592 000-0000
-												</p>
+											<div className="flex items-center gap-3">
+												<img
+													src="/images/bettencourts-logo.png"
+													alt="Bettencourt's Food Inc."
+													className="h-14 w-auto object-contain"
+												/>
+												<div>
+													<p className="font-bold text-lg">
+														Bettencourt's Food Inc.
+													</p>
+													<p className="text-muted-foreground text-xs">
+														Main Location, Georgetown, Guyana
+													</p>
+													<p className="text-muted-foreground text-xs">
+														Tel: +592 000-0000
+													</p>
+												</div>
 											</div>
 											<div className="text-right">
-												<p className="font-bold text-base tracking-wide">
-													INVOICE
+												<p className="font-bold text-base uppercase tracking-widest">
+													Invoice
 												</p>
 												<p className="font-mono font-semibold text-sm">
 													{selectedInvoice.invoiceNumber}
 												</p>
-												<p className="text-muted-foreground text-xs">
-													Issued:{" "}
-													{new Date(
-														selectedInvoice.createdAt,
-													).toLocaleDateString("en-GY")}
+												<p className="mt-1 text-xs">
+													<span className="text-muted-foreground">
+														Issued:{" "}
+													</span>
+													{selectedInvoice.issuedDate
+														? new Date(
+																selectedInvoice.issuedDate,
+															).toLocaleDateString("en-GY")
+														: new Date(
+																selectedInvoice.createdAt,
+															).toLocaleDateString("en-GY")}
 												</p>
 												{selectedInvoice.dueDate && (
-													<p className="text-muted-foreground text-xs">
-														Due:{" "}
+													<p className="text-xs">
+														<span className="text-muted-foreground">Due: </span>
 														{new Date(
 															selectedInvoice.dueDate,
 														).toLocaleDateString("en-GY")}
@@ -554,14 +573,30 @@ export default function InvoicesPage() {
 											</p>
 										)}
 									</div>
-									{selectedInvoice.dueDate && (
-										<p className="text-muted-foreground text-xs">
-											Due:{" "}
-											{new Date(selectedInvoice.dueDate).toLocaleDateString(
-												"en-GY",
-											)}
-										</p>
-									)}
+									<div className="flex gap-6 text-muted-foreground text-xs">
+										<span>
+											Issued:{" "}
+											<span className="font-medium text-foreground">
+												{selectedInvoice.issuedDate
+													? new Date(
+															selectedInvoice.issuedDate,
+														).toLocaleDateString("en-GY")
+													: new Date(
+															selectedInvoice.createdAt,
+														).toLocaleDateString("en-GY")}
+											</span>
+										</span>
+										{selectedInvoice.dueDate && (
+											<span>
+												Due:{" "}
+												<span className="font-medium text-foreground">
+													{new Date(selectedInvoice.dueDate).toLocaleDateString(
+														"en-GY",
+													)}
+												</span>
+											</span>
+										)}
+									</div>
 									<Table>
 										<TableHeader>
 											<TableRow>
@@ -789,6 +824,16 @@ export default function InvoicesPage() {
 									value={form.customerPhone}
 									onChange={(e) =>
 										setForm((f) => ({ ...f, customerPhone: e.target.value }))
+									}
+								/>
+							</div>
+							<div className="flex flex-col gap-1.5">
+								<Label>Issued Date</Label>
+								<Input
+									type="date"
+									value={form.issuedDate}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, issuedDate: e.target.value }))
 									}
 								/>
 							</div>

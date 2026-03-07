@@ -477,6 +477,60 @@ export default function QuotationsPage() {
 								</CardTitle>
 							</CardHeader>
 							<CardContent className="flex flex-col gap-3 text-sm">
+								{/* ── Print letterhead ──────────────────────────── */}
+								<div className="hidden border-b pb-5 print:block">
+									<div className="flex items-start justify-between">
+										<div className="flex items-center gap-3">
+											<img
+												src="/images/bettencourts-logo.png"
+												alt="Bettencourt's Food Inc."
+												className="h-14 w-auto object-contain"
+											/>
+											<div>
+												<p className="font-bold text-lg">
+													Bettencourt's Food Inc.
+												</p>
+												<p className="text-muted-foreground text-xs">
+													Main Location, Georgetown, Guyana
+												</p>
+												<p className="text-muted-foreground text-xs">
+													Tel: +592 000-0000
+												</p>
+											</div>
+										</div>
+										<div className="text-right">
+											<div className="mb-2 inline-block rounded border-2 border-primary px-3 py-1">
+												<p className="font-bold text-base text-primary uppercase tracking-widest">
+													Quotation
+												</p>
+											</div>
+											<p className="font-mono font-semibold text-sm">
+												{selectedQuotation.quotationNumber}
+											</p>
+											<p className="mt-1 text-xs">
+												<span className="text-muted-foreground">Issued: </span>
+												{new Date(
+													selectedQuotation.createdAt,
+												).toLocaleDateString("en-GY")}
+											</p>
+											{selectedQuotation.validUntil && (
+												<p className="text-xs">
+													<span className="text-muted-foreground">
+														Valid Until:{" "}
+													</span>
+													{new Date(
+														selectedQuotation.validUntil,
+													).toLocaleDateString("en-GY")}
+												</p>
+											)}
+										</div>
+									</div>
+								</div>
+								{/* Bill To label — print only */}
+								<p className="hidden font-bold text-muted-foreground text-xs uppercase tracking-wide print:block">
+									Bill To
+								</p>
+
 								<div>
 									<p className="font-semibold">
 										{selectedQuotation.customerName}
@@ -544,6 +598,33 @@ export default function QuotationsPage() {
 										{selectedQuotation.notes}
 									</p>
 								)}
+								{/* ── Signature section — print only ───────────── */}
+								<div className="mt-8 hidden grid-cols-2 gap-12 print:grid">
+									<div className="flex flex-col gap-1">
+										<div className="border-foreground border-b pb-8" />
+										<p className="mt-1 text-xs">
+											<span className="font-semibold">Authorized By</span>
+										</p>
+										<p className="text-muted-foreground text-xs">
+											Bettencourt's Food Inc.
+										</p>
+									</div>
+									<div className="flex flex-col gap-1">
+										<div className="border-foreground border-b pb-8" />
+										<p className="mt-1 text-xs">
+											<span className="font-semibold">Accepted By</span>
+										</p>
+										<p className="text-muted-foreground text-xs">
+											Customer Signature &amp; Date
+										</p>
+									</div>
+								</div>
+								{/* Print footer */}
+								<div className="mt-4 hidden border-t pt-2 text-center text-muted-foreground text-xs print:block">
+									Bettencourt's Food Inc. · This quotation is valid for 30 days
+									· {new Date().toLocaleString("en-GY")}
+								</div>
+
 								<div className="no-print flex gap-2 pt-1">
 									{canUpdate && (
 										<Button

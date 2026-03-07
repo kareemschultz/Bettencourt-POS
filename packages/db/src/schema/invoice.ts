@@ -11,7 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { customer } from "./customer";
-import { organization, location } from "./organization";
+import { location, organization } from "./organization";
 
 // ── Invoice Counter ────────────────────────────────────────────────────
 
@@ -65,6 +65,7 @@ export const invoice = pgTable(
 		chequeNumber: text("cheque_number"),
 		receiptNumber: text("receipt_number"),
 		datePaid: timestamp("date_paid", { withTimezone: true }),
+		issuedDate: timestamp("issued_date", { withTimezone: true }),
 		dueDate: timestamp("due_date", { withTimezone: true }),
 		chequeDepositDate: timestamp("cheque_deposit_date", { withTimezone: true }),
 		notes: text("notes"),

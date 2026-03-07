@@ -110,6 +110,7 @@ const create = permissionProcedure("invoices.create")
 			customerPhone: z.string().optional(),
 			customerId: z.string().uuid().optional(),
 			locationId: z.string().uuid().optional(),
+			issuedDate: z.string().optional(),
 			dueDate: z.string().optional(),
 			notes: z.string().optional(),
 			items: z.array(lineItemSchema),
@@ -137,6 +138,7 @@ const create = permissionProcedure("invoices.create")
 				taxTotal: input.taxTotal ?? "0",
 				total: input.total,
 				status: "draft",
+				issuedDate: input.issuedDate ? new Date(input.issuedDate) : null,
 				dueDate: input.dueDate ? new Date(input.dueDate) : null,
 				notes: input.notes ?? null,
 				createdBy: input.createdBy,
@@ -156,6 +158,7 @@ const update = permissionProcedure("invoices.update")
 			customerAddress: z.string().optional(),
 			customerPhone: z.string().optional(),
 			customerId: z.string().uuid().optional(),
+			issuedDate: z.string().optional(),
 			dueDate: z.string().optional(),
 			notes: z.string().optional(),
 			items: z.array(lineItemSchema).optional(),
@@ -184,6 +187,8 @@ const update = permissionProcedure("invoices.update")
 		if (input.customerPhone !== undefined)
 			updates.customerPhone = input.customerPhone;
 		if (input.customerId !== undefined) updates.customerId = input.customerId;
+		if (input.issuedDate !== undefined)
+			updates.issuedDate = input.issuedDate ? new Date(input.issuedDate) : null;
 		if (input.dueDate !== undefined) updates.dueDate = new Date(input.dueDate);
 		if (input.notes !== undefined) updates.notes = input.notes;
 		if (input.items !== undefined) updates.items = input.items;
