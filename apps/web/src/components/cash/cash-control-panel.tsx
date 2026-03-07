@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, DollarSign } from "lucide-react";
+import { ArrowDown, ArrowUp, DollarSign, Unlock } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +60,7 @@ export function CashControlPanel({
 	const [closeShiftDialog, setCloseShiftDialog] = useState(false);
 	const [dropDialog, setDropDialog] = useState(false);
 	const [payoutDialog, setPayoutDialog] = useState(false);
+	const [noSaleDialog, setNoSaleDialog] = useState(false);
 	const [amount, setAmount] = useState("");
 	const [reason, setReason] = useState("");
 	const [dateFrom, setDateFrom] = useState("");
@@ -114,6 +115,17 @@ export function CashControlPanel({
 		}),
 	);
 
+	const noSaleMutation = useMutation(
+		orpc.cash.logNoSale.mutationOptions({
+			onSuccess: () => {
+				setNoSaleDialog(false);
+				setReason("");
+				invalidateCash();
+				toast.success("No-sale event recorded");
+			},
+		}),
+	);
+
 	function handleOpenShift() {
 		openShiftMutation.mutate({
 			openingFloat: String(Number(amount) || 0),
@@ -153,11 +165,21 @@ export function CashControlPanel({
 		});
 	}
 
+	function handleNoSale() {
+		if (!openSession) return;
+		noSaleMutation.mutate({
+			cashSessionId: openSession.id,
+			userId,
+			reason: reason || "No reason provided",
+		});
+	}
+
 	const isLoading =
 		openShiftMutation.isPending ||
 		closeShiftMutation.isPending ||
 		dropMutation.isPending ||
-		payoutMutation.isPending;
+		payoutMutation.isPending ||
+		noSaleMutation.isPending;
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -208,6 +230,16 @@ export function CashControlPanel({
 								<Button variant="outline" onClick={() => setPayoutDialog(true)}>
 									<ArrowUp className="mr-2 size-4" />
 									Payout
+								</Button>
+								<Button
+									variant="outline"
+									onClick={() => {
+										setReason("");
+										setNoSaleDialog(true);
+									}}
+								>
+									<Unlock className="mr-2 size-4" />
+									No Sale
 								</Button>
 								<Button
 									variant="destructive"
@@ -450,6 +482,31 @@ export function CashControlPanel({
 					<DialogFooter>
 						<Button onClick={handlePayout} disabled={isLoading}>
 							Record Payout
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog open={noSaleDialog} onOpenChange={setNoSaleDialog}>
+				<DialogContent className="max-w-sm">
+					<DialogHeader>
+						<DialogTitle>No Sale / Open Drawer</DialogTitle>
+					</DialogHeader>
+					<p className="text-muted-foreground text-sm">
+						Record a drawer-open event without a transaction.
+					</p>
+					<div className="flex flex-col gap-3 py-2">
+						<Label>Reason (optional)</Label>
+						<Input
+							value={reason}
+							onChange={(e) => setReason(e.target.value)}
+							placeholder="e.g. manager request, coin change"
+							className="h-11 text-base"
+						/>
+					</div>
+					<DialogFooter>
+						<Button onClick={handleNoSale} disabled={isLoading}>
+							{isLoading ? "Logging..." : "Log No Sale"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

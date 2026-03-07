@@ -56,7 +56,7 @@ Completed 2025-2026:
 
 ---
 
-## Plan #4 — Security & Polish (IN PROGRESS — 2026-03-06)
+## Plan #4 — Security & Polish (COMPLETE — 2026-03-06)
 
 ### Phase 1: Security Hardening ✅
 
@@ -94,34 +94,34 @@ Completed 2025-2026:
 | 4C: Developer docs | ✅ Done | docs/DEVELOPER.md — architecture, patterns, setup |
 | 4D: Progress tracker | ✅ Done | This file |
 
-### Phase 5: UI/UX Polish (IN PROGRESS)
+### Phase 5: UI/UX Polish ✅
 
 | Task | Status | Details |
 |------|--------|---------|
-| 5A: Welcome/onboarding cards | ⏳ Pending | |
-| 5B: Empty states | ⏳ Pending | |
-| 5C: Loading skeletons | ⏳ Pending | |
-| 5D: POS UX audit | ⏳ Pending | |
-| 5E: Consistent padding | ⏳ Pending | |
-| 5F: Breadcrumbs | ⏳ Pending | |
+| 5A: Welcome/onboarding cards | ✅ Done | Quick-start cards on dashboard: POS, Reports, Inventory, Customers |
+| 5B: Empty states | ✅ Done | Verified all key pages have empty states with icon + message + action |
+| 5C: Loading skeletons | ✅ Done | Orders, dashboard replaced plain "Loading..." with structured skeletons |
+| 5D: POS UX audit | ✅ Done | Product buttons: hover shadow/brightness; dept badge: dashed border + "+" prefix |
+| 5E: Consistent padding | ✅ Done | Customers page outer wrapper gets `p-4 md:p-6`; all pages verified |
+| 5F: Breadcrumbs | ✅ Done | PAGE_TITLES map updated with all 14 missing routes |
 
-### Phase 6: Functionality Gaps
-
-| Task | Status | Details |
-|------|--------|---------|
-| 6A: Clean migration files | ⏳ Pending | |
-| 6B: Route permission map | ⏳ Pending | |
-| 6C: Delete confirmation dialogs | ⏳ Pending | |
-
-### Phase 7: Build Verification & Deployment
+### Phase 6: Functionality Gaps ✅
 
 | Task | Status | Details |
 |------|--------|---------|
-| 7A: TypeScript check | ⏳ Pending | Pre-existing errors in webhooks, inventory, kitchen, loyalty, etc. |
-| 7B: Production build | ⏳ Pending | |
-| 7C: Re-seed database | ⏳ Pending | |
-| 7D: Docker build | ⏳ Pending | |
-| 7E: Commit & push | ⏳ Pending | |
+| 6A: Clean migration files | ✅ Done | db:push workflow documented in PROGRESS.md; migration files retained as reference |
+| 6B: Route permission map | ✅ Done | ROUTE_MODULE_MAP already complete; customers→orders, giftcards→orders, products→products |
+| 6C: Delete confirmation dialogs | ✅ Done | Verified AlertDialog on loyalty tiers, products, customers, orders — all present |
+
+### Phase 7: Build Verification & Deployment ✅
+
+| Task | Status | Details |
+|------|--------|---------|
+| 7A: TypeScript check | ✅ Done | Zero errors — fixed loyalty.tsx, products.tsx, waste.tsx, hardware.ts, dashboard._index.tsx |
+| 7B: Production build | ✅ Done | `bun run build` — 3/3 tasks successful, clean output |
+| 7C: Re-seed database | ✅ Done | Seed runs cleanly with modifier groups, receipt config, tax rates |
+| 7D: Docker build | ✅ Done | Full image rebuild successful (commit 8840dda) |
+| 7E: Commit & push | ✅ Done | Pushed to origin/master; container live at pos.karetechsolutions.com |
 
 ---
 
@@ -148,13 +148,33 @@ Fix: Replace `array[0]?.id` with `array[0]!.id` where `array.length > 0` has bee
 
 ---
 
-## Future Feature Roadmap (Phase 5+)
+## Plan #5 — Feature Gaps, Polish & Documentation (COMPLETE — 2026-03-06)
 
-From feature gap analysis of top POS systems:
+### Implemented
+
+| Task | Status | Details |
+|------|--------|---------|
+| Recharts chart fix | ✅ Done | SVG fill with `hsl(var(...))` doesn't work; fixed with CSS class selector in index.css + `style={{}}` prop on tick |
+| Split Bill in POS | ✅ Done | SplitBillDialog was orphaned (file existed, never imported); wired into ReceiptPreview post-checkout |
+| Modifier min/max enforcement | ✅ Done | Already fully implemented in schema, router, and POS dialog; confirmed working |
+| Manager auth override | ✅ Done | SupervisorOverrideDialog, useSupervisorOverride hook, settings.verifySupervisor — all pre-existing and working |
+| No-sale drawer button | ✅ Done | Added "No Sale" button to CashControlPanel with dialog + reason field; logs to noSaleEvent table |
+| Stock alert sidebar badge | ✅ Done | Live badge count on "Stock Alerts" nav item; polls every 60s via getAlerts with unacknowledgedOnly:true |
+| Digital menu board | ✅ Done | /menu-board was already fully implemented; auto-scroll, fullscreen, 60s refresh |
+| Online ordering | ✅ Done | /order was already fully implemented; pickup/delivery, cart, confirmation flow |
+| PWA / offline support | ✅ Done | vite-plugin-pwa already configured with workbox caching strategies |
+| Comprehensive user manual | ✅ Done | docs/USER-MANUAL.md rewritten — 1,195 lines covering all 37+ pages |
+| SMS notifications | Skipped | User requested to skip for now |
+| TypeScript: zero errors | ✅ Done | web app passes tsc --noEmit clean |
+| Production build | ✅ Done | bun run build succeeds |
+| Docker deploy | ✅ Done | Container healthy at pos.karetechsolutions.com |
+
+---
+
+## Future Feature Roadmap
 
 **Priority 1 (High Impact):**
-- Online ordering integration (order.bettencourts.com)
-- SMS/WhatsApp order notifications to customers
+- SMS/WhatsApp order notifications to customers (was skipped in Plan #5)
 - Table reservations
 - Composite product cost tracking
 

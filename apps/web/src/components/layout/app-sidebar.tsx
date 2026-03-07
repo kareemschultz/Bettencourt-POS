@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import {
 	AlertTriangle,
 	Banknote,
@@ -57,11 +58,13 @@ import {
 	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
+	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/auth-client";
 import type { AppUser } from "@/lib/types";
+import { orpc } from "@/utils/orpc";
 
 interface AppSidebarProps {
 	user: AppUser;
@@ -410,6 +413,18 @@ export function AppSidebar({ user }: AppSidebarProps) {
 	const navigate = useNavigate();
 	const [search, setSearch] = useState("");
 
+	const { data: alertData } = useQuery({
+		...orpc.inventory.getAlerts.queryOptions({
+			input: {
+				organizationId: user.organization_id ?? "",
+				unacknowledgedOnly: true,
+			},
+		}),
+		enabled: !!user.organization_id,
+		refetchInterval: 60_000,
+	});
+	const unacknowledgedAlertCount = alertData?.length ?? 0;
+
 	async function handleSignOut() {
 		await signOut();
 		navigate("/login");
@@ -444,6 +459,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
 										<span>{item.title}</span>
 									</a>
 								</SidebarMenuButton>
+								{item.url === "/dashboard/stock-alerts" &&
+									unacknowledgedAlertCount > 0 && (
+										<SidebarMenuBadge>
+											{unacknowledgedAlertCount}
+										</SidebarMenuBadge>
+									)}
 							</SidebarMenuItem>
 						))}
 					</SidebarMenu>

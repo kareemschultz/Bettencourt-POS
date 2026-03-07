@@ -57,7 +57,26 @@ WORKDIR /app/externals
 RUN echo '{"name":"externals","type":"module"}' > package.json && \
     bun add hono @orpc/openapi @orpc/server @orpc/zod \
             better-auth @better-auth/drizzle-adapter drizzle-orm pg \
-            dotenv @t3-oss/env-core zod --production
+            dotenv @t3-oss/env-core zod --production --no-optional && \
+    # Remove unused better-auth database adapters (we only use drizzle)
+    rm -rf node_modules/@better-auth/kysely-adapter \
+           node_modules/@better-auth/mongo-adapter \
+           node_modules/@better-auth/prisma-adapter \
+           node_modules/@better-auth/memory-adapter && \
+    # Remove unused drizzle dialects (we only use pg)
+    rm -rf node_modules/drizzle-orm/mysql-core \
+           node_modules/drizzle-orm/mysql2 \
+           node_modules/drizzle-orm/neon-http \
+           node_modules/drizzle-orm/neon-serverless \
+           node_modules/drizzle-orm/libsql \
+           node_modules/drizzle-orm/better-sqlite3 \
+           node_modules/drizzle-orm/d1 \
+           node_modules/drizzle-orm/expo-sqlite && \
+    # Strip test files, markdown, and changelogs from node_modules
+    find node_modules -type d -name "__tests__" -exec rm -rf {} + 2>/dev/null || true && \
+    find node_modules -type d -name "test" -maxdepth 4 -exec rm -rf {} + 2>/dev/null || true && \
+    find node_modules -name "*.md" -delete 2>/dev/null || true && \
+    find node_modules -name "CHANGELOG*" -delete 2>/dev/null || true
 
 WORKDIR /app
 
