@@ -95,6 +95,11 @@ export function ProductionTracker({
 	const [quantity, setQuantity] = useState(0);
 	const [notes, setNotes] = useState("");
 	const [deptFilter, setDeptFilter] = useState<string>("all");
+	// For reorder/closing on a combo: which specific component to top up.
+	// null = expand all equally (legacy behaviour), string = single component name.
+	const [selectedComponent, setSelectedComponent] = useState<string | null>(
+		null,
+	);
 	const [workflow, setWorkflow] = useState<"restaurant" | "bakery">(
 		"restaurant",
 	);
@@ -185,14 +190,18 @@ export function ProductionTracker({
 
 	function handleSubmit() {
 		if (!selectedProduct || quantity <= 0) return;
+		const skipExpansion = selectedComponent !== null;
 		createEntryMutation.mutate({
 			productId: selectedProduct.id,
-			productName: selectedProduct.name,
+			// When a specific component is chosen, log under that component's name
+			// so it accumulates in its own row on the production report.
+			productName: skipExpansion ? selectedComponent! : selectedProduct.name,
 			loggedByUserId: userId,
 			entryType: mode,
 			workflow,
 			quantity,
 			notes: notes || null,
+			skipExpansion,
 		});
 	}
 
@@ -228,7 +237,10 @@ export function ProductionTracker({
 								key={key}
 								variant={mode === key ? "default" : "outline"}
 								className={`h-14 flex-1 flex-col gap-0 text-base sm:h-16 sm:text-lg ${mode === key ? `${cfg.bg} text-white` : ""}`}
-								onClick={() => setMode(key)}
+								onClick={() => {
+									setMode(key);
+									setSelectedComponent(null);
+								}}
 							>
 								<span className="flex items-center gap-1.5">
 									<Icon className="size-4" />
@@ -283,6 +295,7 @@ export function ProductionTracker({
 									setSelectedProduct(product);
 									setQuantity(0);
 									setNotes("");
+									setSelectedComponent(null);
 								}}
 								className="flex flex-col items-center justify-center rounded-xl border-2 border-border bg-card p-3 text-center transition-colors hover:border-primary active:scale-[0.97] sm:p-4"
 								style={{ minHeight: 120, touchAction: "manipulation" }}
@@ -429,8 +442,8 @@ export function ProductionTracker({
 						</Button>
 					</div>
 
-					{/* Combo component preview */}
-					{selectedComponents.length > 0 && (
+					{/* Combo: opening → split preview; reorder/closing → component picker */}
+					{selectedComponents.length > 0 && mode === "opening" && (
 						<div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/20">
 							<p className="mb-1.5 font-medium text-amber-800 dark:text-amber-300">
 								Will log as separate components:
@@ -450,6 +463,47 @@ export function ProductionTracker({
 							</div>
 						</div>
 					)}
+					{selectedComponents.length > 0 &&
+						(mode === "reorder" || mode === "closing") && (
+							<div className="rounded-md border p-3 text-sm">
+								<p className="mb-2 font-medium">Which component?</p>
+								<div className="flex flex-wrap gap-1.5">
+									<Button
+										size="sm"
+										variant={selectedComponent === null ? "default" : "outline"}
+										className="text-xs"
+										onClick={() => setSelectedComponent(null)}
+									>
+										All equally
+									</Button>
+									{selectedComponents.map((c) => (
+										<Button
+											key={c.id}
+											size="sm"
+											variant={
+												selectedComponent === c.componentName
+													? "default"
+													: "outline"
+											}
+											className="text-xs"
+											onClick={() => setSelectedComponent(c.componentName)}
+										>
+											{c.componentName}
+										</Button>
+									))}
+								</div>
+								{selectedComponent ? (
+									<p className="mt-2 text-muted-foreground text-xs">
+										Adds {quantity} to “{selectedComponent}” only
+									</p>
+								) : (
+									<p className="mt-2 text-muted-foreground text-xs">
+										Adds {quantity} to all {selectedComponents.length}{" "}
+										components equally
+									</p>
+								)}
+							</div>
+						)}
 
 					{/* Optional notes */}
 					<Textarea
@@ -471,9 +525,11 @@ export function ProductionTracker({
 							<Check className="size-4" />
 							{createEntryMutation.isPending
 								? "Saving..."
-								: selectedComponents.length > 0
-									? `Split ${quantity} → ${selectedComponents.length} items (${modeConfig.label})`
-									: `Log ${quantity} (${modeConfig.label})`}
+								: selectedComponent !== null
+									? `Log ${quantity} → ${selectedComponent} (${modeConfig.label})`
+									: selectedComponents.length > 0
+										? `Split ${quantity} → ${selectedComponents.length} items (${modeConfig.label})`
+										: `Log ${quantity} (${modeConfig.label})`}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

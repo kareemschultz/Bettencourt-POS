@@ -84,17 +84,25 @@ const createEntry = permissionProcedure("orders.update")
 			workflow: z.string().optional(),
 			quantity: z.number().int(),
 			notes: z.string().nullable().optional(),
+			// When true, skip combo expansion and log directly to productName as-is.
+			// Used for per-component reorders (e.g. reorder only "Big Snapper" from
+			// a "Cook-up with Big Snapper" combo without touching cook-up).
+			skipExpansion: z.boolean().optional(),
 		}),
 	)
 	.handler(async ({ input }) => {
 		// Check if this product is a combo with component mappings
-		const components = await db
-			.select({
-				componentName: schema.productProductionComponent.componentName,
-				quantity: schema.productProductionComponent.quantity,
-			})
-			.from(schema.productProductionComponent)
-			.where(eq(schema.productProductionComponent.productId, input.productId));
+		const components = input.skipExpansion
+			? []
+			: await db
+					.select({
+						componentName: schema.productProductionComponent.componentName,
+						quantity: schema.productProductionComponent.quantity,
+					})
+					.from(schema.productProductionComponent)
+					.where(
+						eq(schema.productProductionComponent.productId, input.productId),
+					);
 
 		if (components.length > 0) {
 			// Expand combo: create one production log entry per component
