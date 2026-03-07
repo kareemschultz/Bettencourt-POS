@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+	type AnyPgColumn,
 	index,
 	integer,
 	jsonb,
@@ -69,6 +70,16 @@ export const invoice = pgTable(
 		dueDate: timestamp("due_date", { withTimezone: true }),
 		chequeDepositDate: timestamp("cheque_deposit_date", { withTimezone: true }),
 		notes: text("notes"),
+		discountType: text("discount_type").notNull().default("percent"),
+		discountValue: numeric("discount_value", { precision: 12, scale: 2 })
+			.notNull()
+			.default("0"),
+		taxMode: text("tax_mode").notNull().default("invoice"),
+		taxRate: numeric("tax_rate", { precision: 5, scale: 2 })
+			.notNull()
+			.default("16.5"),
+		paymentTerms: text("payment_terms").notNull().default("due_on_receipt"),
+		preparedBy: text("prepared_by"),
 		createdBy: text("created_by")
 			.notNull()
 			.references(() => user.id),
@@ -123,6 +134,20 @@ export const quotation = pgTable(
 			{ onDelete: "set null" },
 		),
 		notes: text("notes"),
+		discountType: text("discount_type").notNull().default("percent"),
+		discountValue: numeric("discount_value", { precision: 12, scale: 2 })
+			.notNull()
+			.default("0"),
+		taxMode: text("tax_mode").notNull().default("invoice"),
+		taxRate: numeric("tax_rate", { precision: 5, scale: 2 })
+			.notNull()
+			.default("16.5"),
+		termsAndConditions: text("terms_and_conditions"),
+		parentQuotationId: uuid("parent_quotation_id").references(
+			(): AnyPgColumn => quotation.id,
+			{ onDelete: "set null" },
+		),
+		preparedBy: text("prepared_by"),
 		createdBy: text("created_by")
 			.notNull()
 			.references(() => user.id),
@@ -199,6 +224,51 @@ export const quotationCounterRelations = relations(
 	({ one }) => ({
 		organization: one(organization, {
 			fields: [quotationCounter.organizationId],
+			references: [organization.id],
+		}),
+	}),
+);
+
+// ── Invoice Document Settings ──────────────────────────────────────────
+
+export const invoiceDocumentSettings = pgTable("invoice_document_settings", {
+	id: uuid("id").primaryKey().defaultRandom(),
+	organizationId: uuid("organization_id")
+		.notNull()
+		.unique()
+		.references(() => organization.id, { onDelete: "cascade" }),
+	defaultTaxRate: numeric("default_tax_rate", { precision: 5, scale: 2 })
+		.notNull()
+		.default("16.5"),
+	defaultTaxMode: text("default_tax_mode").notNull().default("invoice"),
+	defaultPaymentTerms: text("default_payment_terms")
+		.notNull()
+		.default("due_on_receipt"),
+	defaultDiscountType: text("default_discount_type")
+		.notNull()
+		.default("percent"),
+	companyTin: text("company_tin"),
+	bankName: text("bank_name"),
+	bankAccount: text("bank_account"),
+	bankBranch: text("bank_branch"),
+	paymentInstructions: text("payment_instructions"),
+	defaultQuotationTerms: text("default_quotation_terms"),
+	invoiceFooterNote: text("invoice_footer_note"),
+	quotationFooterNote: text("quotation_footer_note"),
+	createdAt: timestamp("created_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+	updatedAt: timestamp("updated_at", { withTimezone: true })
+		.notNull()
+		.defaultNow()
+		.$onUpdate(() => new Date()),
+});
+
+export const invoiceDocumentSettingsRelations = relations(
+	invoiceDocumentSettings,
+	({ one }) => ({
+		organization: one(organization, {
+			fields: [invoiceDocumentSettings.organizationId],
 			references: [organization.id],
 		}),
 	}),
