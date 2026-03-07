@@ -28,6 +28,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { authClient } from "@/lib/auth-client";
 import { formatGYD } from "@/lib/types";
 import { orpc } from "@/utils/orpc";
@@ -683,10 +684,17 @@ export default function DashboardIndexPage() {
 
 	if (isLoading) {
 		return (
-			<div className="flex h-64 items-center justify-center">
-				<div className="text-muted-foreground text-sm">
-					Loading dashboard...
+			<div className="flex flex-col gap-6 p-4 md:p-6">
+				<div className="flex flex-col gap-2">
+					<Skeleton className="h-7 w-56" />
+					<Skeleton className="h-4 w-80" />
 				</div>
+				<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+					{Array.from({ length: 4 }).map((_, i) => (
+						<Skeleton key={i} className="h-24 rounded-lg" />
+					))}
+				</div>
+				<Skeleton className="h-64 rounded-lg" />
 			</div>
 		);
 	}

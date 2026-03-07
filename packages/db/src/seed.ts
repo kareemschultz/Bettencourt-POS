@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import dotenv from "dotenv";
 import { eq, inArray, sql } from "drizzle-orm";
@@ -209,9 +209,14 @@ function daysAgo(days: number, hour = 12): Date {
 // ── Seed function ──────────────────────────────────────────────────────
 
 async function seed() {
-	console.log("Seeding database...");
+	const seedMode = process.env.SEED_MODE ?? "full";
+	const isProduction = seedMode === "production";
 
-	const passwordHash = await hashPassword("password123");
+	console.log(`Seeding database... (mode: ${seedMode})`);
+
+	const passwordHash = isProduction
+		? "" // not used in production mode
+		: await hashPassword("password123");
 
 	// 1. Organization
 	console.log("  -> Organization");
@@ -916,8 +921,80 @@ async function seed() {
 		])
 		.onConflictDoNothing();
 
-	// 8. Demo Users
-	console.log("  -> Demo Users");
+	// 8. Users (admin always created; demo users only in full mode)
+	console.log("  -> Users");
+
+	if (isProduction) {
+		// Production: create a single admin user with a strong random password
+		const prodPassword = randomBytes(24).toString("base64url");
+		const prodPasswordHash = await hashPassword(prodPassword);
+		const prodPinRaw = Math.floor(100000 + Math.random() * 900000).toString();
+		const prodPin = createHash("sha256").update(prodPinRaw).digest("hex");
+		await db
+			.insert(schema.user)
+			.values({
+				id: USER.admin,
+				name: "Admin",
+				email: "admin@bettencourt.com",
+				emailVerified: true,
+				role: "admin",
+				organizationId: ORG_ID,
+				pinHash: prodPin,
+			})
+			.onConflictDoNothing();
+		await db
+			.insert(schema.account)
+			.values({
+				id: "acc_admin_prod_000001",
+				userId: USER.admin,
+				accountId: USER.admin,
+				providerId: "credential",
+				password: prodPasswordHash,
+			})
+			.onConflictDoNothing();
+		await db
+			.insert(schema.member)
+			.values({
+				id: "mem_admin_000000000001",
+				organizationId: ORG_ID,
+				userId: USER.admin,
+				role: "owner",
+			})
+			.onConflictDoNothing();
+		await db
+			.insert(schema.userRole)
+			.values({
+				userId: USER.admin,
+				roleId: ROLE.executive,
+				locationId: LOC_ID,
+			})
+			.onConflictDoNothing();
+
+		// Seed receipt config for production
+		await db
+			.insert(schema.receiptConfig)
+			.values({
+				organizationId: ORG_ID,
+				businessName: "Bettencourt's Food Inc.",
+				tagline: "A True Guyanese Gem",
+				addressLine1: "Georgetown, Guyana",
+				phone: "+592-000-0000",
+				footerMessage: "Thank you for choosing Bettencourt's!",
+				showLogo: true,
+			})
+			.onConflictDoNothing();
+
+		console.log("\n========================================");
+		console.log("  PRODUCTION SEED COMPLETE");
+		console.log("  Admin email:    admin@bettencourt.com");
+		console.log(`  Admin password: ${prodPassword}`);
+		console.log(`  Admin PIN:      ${prodPinRaw}`);
+		console.log("  SAVE THESE CREDENTIALS NOW — not shown again");
+		console.log("========================================\n");
+		process.exit(0);
+	}
+
+	// Full mode: all demo users
 	// PINs: Admin=1234, Bonita=5678, Cashier=1111, Production=2222, Anna=3333, Carl=4444, Renatta=5555
 	const pinAdmin = createHash("sha256").update("1234").digest("hex");
 	const pinBonita = createHash("sha256").update("5678").digest("hex");
@@ -1190,6 +1267,62 @@ async function seed() {
 		])
 		.onConflictDoNothing();
 
+	// ── Production seed mode: stop here, create admin user, print credentials ──
+	if (seedMode === "production") {
+		console.log("\n  [PRODUCTION MODE] Structural data seeded successfully.");
+		console.log("  Creating production admin user...");
+		const { randomBytes } = await import("node:crypto");
+		const adminPassword = randomBytes(16).toString("hex");
+		const adminPasswordHash = await hashPassword(adminPassword);
+		const adminEmail = "admin@bettencourts.com";
+		const adminUserId = `usr_admin_prod_${Date.now()}`;
+		await db
+			.insert(schema.user)
+			.values({
+				id: adminUserId,
+				name: "Administrator",
+				email: adminEmail,
+				emailVerified: true,
+				role: "admin",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			})
+			.onConflictDoNothing();
+		await db
+			.insert(schema.account)
+			.values({
+				id: `acc_admin_prod_${Date.now()}`,
+				userId: adminUserId,
+				accountId: adminUserId,
+				providerId: "credential",
+				password: adminPasswordHash,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			})
+			.onConflictDoNothing();
+		await db
+			.insert(schema.member)
+			.values({
+				id: `mem_admin_prod_${Date.now()}`,
+				organizationId: ORG_ID,
+				userId: adminUserId,
+				role: "owner",
+				createdAt: new Date(),
+			})
+			.onConflictDoNothing();
+		console.log("\n  ╔══════════════════════════════════════════╗");
+		console.log("  ║       PRODUCTION ADMIN CREDENTIALS       ║");
+		console.log("  ╠══════════════════════════════════════════╣");
+		console.log(`  ║  Email:    ${adminEmail.padEnd(30)} ║`);
+		console.log(`  ║  Password: ${adminPassword.padEnd(30)} ║`);
+		console.log("  ║                                          ║");
+		console.log("  ║  SAVE THESE — they will not be shown     ║");
+		console.log("  ║  again. Change the password after login. ║");
+		console.log("  ╚══════════════════════════════════════════╝\n");
+		console.log("Seed complete (production mode)!");
+		process.exit(0);
+	}
+
 	// ═══════════════════════════════════════════════════════════════════════
 	// MOCK TRANSACTIONAL DATA
 	// ═══════════════════════════════════════════════════════════════════════
@@ -1402,9 +1535,9 @@ async function seed() {
 				orderNumber: "GT-001",
 				type: "sale",
 				status: "completed",
-				subtotal: "6600",
+				subtotal: "6400",
 				taxTotal: "0",
-				total: "6600",
+				total: "6400",
 				createdAt: daysAgo(6, 10),
 			},
 			{
@@ -1416,9 +1549,9 @@ async function seed() {
 				orderNumber: "GT-002",
 				type: "sale",
 				status: "completed",
-				subtotal: "4700",
+				subtotal: "4500",
 				taxTotal: "0",
-				total: "4700",
+				total: "4500",
 				createdAt: daysAgo(6, 11),
 			},
 			{
@@ -1642,9 +1775,9 @@ async function seed() {
 				orderNumber: "GT-018",
 				type: "dine_in",
 				status: "open",
-				subtotal: "7200",
+				subtotal: "7000",
 				taxTotal: "0",
-				total: "7200",
+				total: "7000",
 				tableId: TABLE.t4,
 				customerName: "Mr. Singh",
 				createdAt: daysAgo(0, 11),
@@ -1722,8 +1855,8 @@ async function seed() {
 				productNameSnapshot: "Curry Chicken",
 				reportingCategorySnapshot: "Chicken",
 				quantity: 1,
-				unitPrice: "2200",
-				total: "2200",
+				unitPrice: "2000",
+				total: "2000",
 			},
 			{
 				id: LI(3),
@@ -1742,8 +1875,8 @@ async function seed() {
 				productNameSnapshot: "Curry Chicken",
 				reportingCategorySnapshot: "Chicken",
 				quantity: 1,
-				unitPrice: "2200",
-				total: "2200",
+				unitPrice: "2000",
+				total: "2000",
 			},
 			{
 				id: LI(5),
@@ -2114,8 +2247,8 @@ async function seed() {
 				productNameSnapshot: "Curry Chicken",
 				reportingCategorySnapshot: "Chicken",
 				quantity: 1,
-				unitPrice: "2200",
-				total: "2200",
+				unitPrice: "2000",
+				total: "2000",
 			},
 			{
 				id: LI(42),
@@ -7264,6 +7397,283 @@ async function seed() {
 			},
 			{ productId: PROD.vegMealDholl, componentName: "Dholl", quantity: "1" },
 		])
+		.onConflictDoNothing();
+
+	// ── Modifier Groups & Modifiers ────────────────────────────────────
+	console.log("  -> Modifier Groups");
+	const MGRP = {
+		spiceLevel: "e0000000-0000-4000-8000-000000000001",
+		proteinAddon: "e0000000-0000-4000-8000-000000000002",
+		extras: "e0000000-0000-4000-8000-000000000003",
+		cookStyle: "e0000000-0000-4000-8000-000000000004",
+	} as const;
+
+	await db
+		.insert(schema.modifierGroup)
+		.values([
+			{
+				id: MGRP.spiceLevel,
+				organizationId: ORG_ID,
+				name: "Spice Level",
+				required: false,
+				minSelect: 0,
+				maxSelect: 1,
+			},
+			{
+				id: MGRP.proteinAddon,
+				organizationId: ORG_ID,
+				name: "Protein Add-on",
+				required: false,
+				minSelect: 0,
+				maxSelect: 2,
+			},
+			{
+				id: MGRP.extras,
+				organizationId: ORG_ID,
+				name: "Extras",
+				required: false,
+				minSelect: 0,
+				maxSelect: 3,
+			},
+			{
+				id: MGRP.cookStyle,
+				organizationId: ORG_ID,
+				name: "Cook Style",
+				required: false,
+				minSelect: 0,
+				maxSelect: 1,
+			},
+		])
+		.onConflictDoNothing();
+
+	console.log("  -> Modifiers");
+	await db
+		.insert(schema.modifier)
+		.values([
+			// Spice Level
+			{
+				modifierGroupId: MGRP.spiceLevel,
+				name: "Mild",
+				price: "0",
+				sortOrder: 1,
+			},
+			{
+				modifierGroupId: MGRP.spiceLevel,
+				name: "Medium",
+				price: "0",
+				sortOrder: 2,
+			},
+			{
+				modifierGroupId: MGRP.spiceLevel,
+				name: "Hot",
+				price: "0",
+				sortOrder: 3,
+			},
+			{
+				modifierGroupId: MGRP.spiceLevel,
+				name: "Extra Hot",
+				price: "0",
+				sortOrder: 4,
+			},
+			// Protein Add-on
+			{
+				modifierGroupId: MGRP.proteinAddon,
+				name: "Extra Chicken",
+				price: "500",
+				sortOrder: 1,
+			},
+			{
+				modifierGroupId: MGRP.proteinAddon,
+				name: "Extra Fish",
+				price: "600",
+				sortOrder: 2,
+			},
+			{
+				modifierGroupId: MGRP.proteinAddon,
+				name: "Add Egg",
+				price: "200",
+				sortOrder: 3,
+			},
+			// Extras
+			{
+				modifierGroupId: MGRP.extras,
+				name: "Extra Rice",
+				price: "300",
+				sortOrder: 1,
+			},
+			{
+				modifierGroupId: MGRP.extras,
+				name: "Extra Sauce",
+				price: "200",
+				sortOrder: 2,
+			},
+			{
+				modifierGroupId: MGRP.extras,
+				name: "Extra Salad",
+				price: "150",
+				sortOrder: 3,
+			},
+			// Cook Style
+			{
+				modifierGroupId: MGRP.cookStyle,
+				name: "Baked",
+				price: "0",
+				sortOrder: 1,
+			},
+			{
+				modifierGroupId: MGRP.cookStyle,
+				name: "Fried",
+				price: "0",
+				sortOrder: 2,
+			},
+			{
+				modifierGroupId: MGRP.cookStyle,
+				name: "Grilled",
+				price: "200",
+				sortOrder: 3,
+			},
+		])
+		.onConflictDoNothing();
+
+	console.log("  -> Product Modifier Group Links");
+	await db
+		.insert(schema.productModifierGroup)
+		.values([
+			// Curry dishes get Spice Level and Protein Add-on
+			{ productId: PROD.curryChicken, modifierGroupId: MGRP.spiceLevel },
+			{ productId: PROD.curryChicken, modifierGroupId: MGRP.proteinAddon },
+			{ productId: PROD.curryChicken, modifierGroupId: MGRP.extras },
+			{ productId: PROD.currySnapper, modifierGroupId: MGRP.spiceLevel },
+			{ productId: PROD.currySnapper, modifierGroupId: MGRP.extras },
+			{ productId: PROD.curryBeef, modifierGroupId: MGRP.spiceLevel },
+			{ productId: PROD.curryBeef, modifierGroupId: MGRP.extras },
+			// Main chicken meals get Protein Add-on, Extras, Cook Style
+			{
+				productId: PROD.friedRiceBakedChicken,
+				modifierGroupId: MGRP.proteinAddon,
+			},
+			{ productId: PROD.friedRiceBakedChicken, modifierGroupId: MGRP.extras },
+			{
+				productId: PROD.cookupBakedChicken,
+				modifierGroupId: MGRP.proteinAddon,
+			},
+			{ productId: PROD.cookupBakedChicken, modifierGroupId: MGRP.extras },
+			{ productId: PROD.cookupBakedChicken, modifierGroupId: MGRP.cookStyle },
+			{ productId: PROD.cookupBakedSnapper, modifierGroupId: MGRP.extras },
+			{ productId: PROD.cookupBakedSnapper, modifierGroupId: MGRP.cookStyle },
+			{
+				productId: PROD.chowmeinBakedChicken,
+				modifierGroupId: MGRP.proteinAddon,
+			},
+			{ productId: PROD.chowmeinBakedChicken, modifierGroupId: MGRP.extras },
+		])
+		.onConflictDoNothing();
+
+	// ── Receipt Configuration ──────────────────────────────────────────
+	console.log("  -> Receipt Config");
+	await db
+		.insert(schema.receiptConfig)
+		.values({
+			organizationId: ORG_ID,
+			businessName: "Bettencourt's Food Inc.",
+			tagline: "A True Guyanese Gem",
+			addressLine1: "Georgetown, Guyana",
+			phone: "+592-000-0000",
+			footerMessage: "Thank you for choosing Bettencourt's! Come again!",
+			showLogo: true,
+		})
+		.onConflictDoNothing();
+
+	// ── Tax Rates: 16% VAT on packaged beverages ───────────────────────
+	console.log("  -> Updating beverage tax rates (16% VAT)");
+	await db
+		.update(schema.product)
+		.set({ taxRate: "0.16" })
+		.where(
+			inArray(schema.product.id, [
+				PROD.drink1Lt,
+				PROD.drink12oz,
+				PROD.drink20oz,
+				PROD.coke,
+				PROD.vitaMalt,
+				PROD.xlEnergy,
+			]),
+		);
+
+	// 29. Apply tax rates to prepared food products (2D)
+	// Guyana VAT: 14% on prepared food. Water & plain items are exempt.
+	console.log("  -> Tax rates on products");
+	const TAXABLE_RATE = "0.14";
+	const taxableProducts = [
+		PROD.friedRiceBakedChicken,
+		PROD.raisinRicePineapple,
+		PROD.vegRiceSweetSour,
+		PROD.chowmeinBakedChicken,
+		PROD.chowmeinFryChicken,
+		PROD.caribbeanRiceBChicken,
+		PROD.caribbeanRiceFChicken,
+		PROD.cookupBakedChicken,
+		PROD.curryChicken,
+		PROD.macCheeseBakedChick,
+		PROD.cookupBakedSnapper,
+		PROD.cookupFrySnapper,
+		PROD.currySnapper,
+		PROD.curryBeef,
+		PROD.vegChowmein,
+		PROD.vegMealDholl,
+		PROD.vegRice,
+		PROD.veggieCookup,
+		PROD.spongeCake,
+		PROD.coconutBuns,
+		PROD.bakedCustard,
+		PROD.tamarindJuice,
+		PROD.cookUpBBQ,
+		PROD.cookUpFc,
+		PROD.cupDhal,
+	];
+	for (const productId of taxableProducts) {
+		await db
+			.update(schema.product)
+			.set({ taxRate: TAXABLE_RATE })
+			.where(eq(schema.product.id, productId));
+	}
+	// Bottled drinks remain 0% (retail goods, not prepared food)
+
+	// 32. Add a refunded order for status coverage (2E)
+	console.log("  -> Refunded order (status coverage)");
+	const ORDER_REFUND = "f2000000-0000-4000-8000-000000000001";
+	const LI_REFUND = (n: number) =>
+		`f2000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.order)
+		.values({
+			id: ORDER_REFUND,
+			organizationId: ORG_ID,
+			locationId: LOC_ID,
+			registerId: REG.meals,
+			userId: USER.cashier,
+			orderNumber: "GT-021",
+			type: "sale",
+			status: "refunded",
+			subtotal: "2200",
+			taxTotal: "0",
+			total: "2200",
+			notes: "Customer returned — wrong order delivered",
+			createdAt: daysAgo(3, 14),
+		})
+		.onConflictDoNothing();
+	await db
+		.insert(schema.orderLineItem)
+		.values({
+			id: LI_REFUND(1),
+			orderId: ORDER_REFUND,
+			productId: PROD.friedRiceBakedChicken,
+			productNameSnapshot: "Fried Rice and Baked Chicken",
+			reportingCategorySnapshot: "Chicken",
+			quantity: 1,
+			unitPrice: "2200",
+			total: "2200",
+		})
 		.onConflictDoNothing();
 
 	console.log("Seed complete!");

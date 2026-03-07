@@ -68,7 +68,7 @@ async function deliverToEndpoint(
 		})
 		.returning({ id: schema.webhookDelivery.id });
 
-	const deliveryId = delivery?.id;
+	const deliveryId = delivery!.id;
 	const headers: Record<string, string> = {
 		"Content-Type": "application/json",
 		"X-Webhook-Event": event,

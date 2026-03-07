@@ -415,7 +415,7 @@ export default function LabelsPage() {
         }
       `}</style>
 
-			<div className="space-y-6 print:hidden">
+			<div className="space-y-6 p-4 md:p-6 print:hidden">
 				<div className="flex items-center justify-between">
 					<div>
 						<h1 className="flex items-center gap-2 font-bold text-2xl">

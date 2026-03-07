@@ -1,90 +1,158 @@
-# Bettencourt-POS
+# Bettencourt POS
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, React Router, Hono, ORPC, and more.
+Enterprise point-of-sale system for **Bettencourt's Food Inc.**, a Guyanese restaurant in Georgetown, Guyana.
 
-## Features
+---
 
-- **TypeScript** - For type safety and improved developer experience
-- **React Router** - Declarative routing for React
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **shadcn/ui** - Reusable UI components
-- **Hono** - Lightweight, performant server framework
-- **oRPC** - End-to-end type-safe APIs with OpenAPI integration
-- **Bun** - Runtime environment
-- **Drizzle** - TypeScript-first ORM
-- **PostgreSQL** - Database engine
-- **Authentication** - Better-Auth
-- **Biome** - Linting and formatting
-- **Husky** - Git hooks for code quality
-- **PWA** - Progressive Web App support
-- **Tauri** - Build native desktop applications
-- **Turborepo** - Optimized monorepo build system
+## Tech Stack
 
-## Getting Started
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19, React Router v7, Tailwind CSS v4, shadcn/ui |
+| Backend | Hono, oRPC (type-safe API), Better Auth |
+| Database | PostgreSQL 15+, Drizzle ORM |
+| Runtime | Bun |
+| Build | Turborepo (monorepo) |
+| Deployment | Docker, Pangolin reverse proxy |
 
-First, install the dependencies:
+---
+
+## Prerequisites
+
+- [Bun](https://bun.sh) ≥ 1.1
+- [Docker](https://docker.com) + Docker Compose
+- PostgreSQL 15+ database
+
+---
+
+## Quick Start (Development)
 
 ```bash
+# 1. Clone and install
+git clone https://github.com/kareemschultz/Bettencourt-POS.git
+cd Bettencourt-POS
 bun install
-```
 
-## Database Setup
+# 2. Configure environment
+cp apps/server/.env.example apps/server/.env
+# Edit apps/server/.env with your DATABASE_URL and BETTER_AUTH_SECRET
 
-This project uses PostgreSQL with Drizzle ORM.
-
-1. Make sure you have a PostgreSQL database set up.
-2. Update your `apps/server/.env` file with your PostgreSQL connection details.
-
-3. Apply the schema to your database:
-
-```bash
+# 3. Push schema to database
 bun run db:push
-```
 
-Then, run the development server:
+# 4. Seed database with demo data
+cd packages/db && bun run db:seed && cd ../..
 
-```bash
+# 5. Start development servers
 bun run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser to see the web application.
-The API is running at [http://localhost:3000](http://localhost:3000).
+- Web app: http://localhost:5173
+- API server: http://localhost:3000
 
-## PWA Support with React Router v7
+**Demo credentials:** `admin@bettencourt.com` / `password123`
 
-There is a known compatibility issue between VitePWA and React Router v7.
-See: https://github.com/vite-pwa/vite-plugin-pwa/issues/809
-
-## Git Hooks and Formatting
-
-- Initialize hooks: `bun run prepare`
-- Format and lint fix: `bun run check`
+---
 
 ## Project Structure
 
 ```
 Bettencourt-POS/
 ├── apps/
-│   ├── web/         # Frontend application (React + React Router)
-│   └── server/      # Backend API (Hono, ORPC)
+│   ├── web/              # React SPA (React Router v7)
+│   │   └── src/routes/   # All page components
+│   └── server/           # Hono API server
+│       └── src/index.ts  # Server entry point + auth routes
 ├── packages/
-│   ├── api/         # API layer / business logic
-│   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries
+│   ├── api/              # oRPC routers + business logic
+│   │   └── src/routers/  # 29 domain routers
+│   ├── auth/             # Better Auth configuration
+│   ├── db/               # Drizzle schema + seed script
+│   │   └── src/
+│   │       ├── schema/   # 78 database tables across 14 files
+│   │       └── seed.ts   # 7,000+ line comprehensive seed
+│   └── env/              # Zod-validated environment variables
+├── docs/                 # Project documentation
+├── docker-compose.prod.yml
+└── Dockerfile
 ```
+
+---
 
 ## Available Scripts
 
-- `bun run dev`: Start all applications in development mode
-- `bun run build`: Build all applications
-- `bun run dev:web`: Start only the web application
-- `bun run dev:server`: Start only the server
-- `bun run check-types`: Check TypeScript types across all apps
-- `bun run db:push`: Push schema changes to database
-- `bun run db:generate`: Generate database client/types
-- `bun run db:migrate`: Run database migrations
-- `bun run db:studio`: Open database studio UI
-- `bun run check`: Run Biome formatting and linting
-- `cd apps/web && bun run generate-pwa-assets`: Generate PWA assets
-- `cd apps/web && bun run desktop:dev`: Start Tauri desktop app in development
-- `cd apps/web && bun run desktop:build`: Build Tauri desktop app
+### Root (run from project root)
+
+| Script | Description |
+|--------|-------------|
+| `bun run dev` | Start all apps in development mode |
+| `bun run build` | Build all apps for production |
+| `bun run check-types` | TypeScript type check across all packages |
+| `bun run check` | Biome lint + format |
+
+### Database (run from `packages/db/`)
+
+| Script | Description |
+|--------|-------------|
+| `bun run db:push` | Apply schema changes to database |
+| `bun run db:generate` | Generate migration files |
+| `bun run db:migrate` | Run migration files |
+| `bun run db:seed` | Seed full demo data |
+| `bun run db:seed:prod` | Seed structural data only + create admin user |
+| `bun run db:studio` | Open Drizzle Studio |
+
+---
+
+## Environment Variables
+
+### `apps/server/.env`
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DATABASE_URL` | PostgreSQL connection string | ✅ |
+| `BETTER_AUTH_SECRET` | Auth secret ≥ 32 chars | ✅ |
+| `BETTER_AUTH_URL` | Public URL of the app | ✅ |
+| `CORS_ORIGIN` | Allowed CORS origin | ✅ |
+| `PORT` | Server port (default: 3000) | ❌ |
+| `NODE_ENV` | `development` or `production` | ❌ |
+
+---
+
+## Deployment
+
+See [docs/PRODUCTION-MIGRATION.md](docs/PRODUCTION-MIGRATION.md) for full deployment guide.
+
+### Quick deploy
+
+```bash
+# Build and start production container
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
+
+Live at: https://pos.karetechsolutions.com
+
+---
+
+## Key Features
+
+- **POS Terminal** — Order creation, product grid by department, modifiers, discounts, split payments
+- **Kitchen Display System** — Real-time order tickets via SSE (Server-Sent Events)
+- **Inventory Management** — Stock tracking, purchase orders, waste logging, stock alerts
+- **Cash Control** — Shift open/close, cash drops, payouts, shift summaries
+- **Reporting** — Sales by period/department/product, expenses, profitability
+- **Customer Management** — Customer profiles, loyalty points, gift cards
+- **Time Clock** — Employee clock in/out with hourly rate tracking
+- **RBAC** — 8 roles (Owner, Manager, Cashier, Server, Kitchen, Warehouse, Accountant, Executive)
+- **Settings** — Products, categories, modifiers, receipt config, tax rates, registers
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs/USER-MANUAL.md](docs/USER-MANUAL.md) | Client guide for daily operations |
+| [docs/DEVELOPER.md](docs/DEVELOPER.md) | Architecture and development guide |
+| [docs/PROGRESS.md](docs/PROGRESS.md) | Project history and status |
+| [docs/PRODUCTION-MIGRATION.md](docs/PRODUCTION-MIGRATION.md) | Production deployment guide |
+| [DEMO-CREDENTIALS.md](DEMO-CREDENTIALS.md) | Demo login credentials |

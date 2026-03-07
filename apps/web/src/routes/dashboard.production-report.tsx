@@ -23,7 +23,7 @@ export default function ProductionReportPage() {
 	const over = rows.filter((r) => r.variance > 0).length;
 
 	return (
-		<div className="space-y-6 p-6">
+		<div className="space-y-6 p-4 md:p-6">
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<h1 className="font-bold text-2xl">Production Report</h1>

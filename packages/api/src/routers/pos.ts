@@ -500,7 +500,7 @@ const checkout = permissionProcedure("orders.create")
 					printerTarget: "kitchen",
 				})
 				.returning({ id: schema.kitchenOrderTicket.id });
-			const ticketId = ticketRows[0]?.id;
+			const ticketId = ticketRows[0]!.id;
 
 			// Create kitchen items
 			for (const item of items) {
@@ -535,7 +535,7 @@ const checkout = permissionProcedure("orders.create")
 					.select({ name: schema.user.name })
 					.from(schema.user)
 					.where(eq(schema.user.id, userId));
-				if (userRows.length > 0) userName = userRows[0]?.name;
+				if (userRows.length > 0) userName = userRows[0]!.name;
 			}
 
 			return {

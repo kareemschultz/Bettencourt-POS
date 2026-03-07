@@ -121,7 +121,7 @@ const updateItemStatus = permissionProcedure("orders.update")
 				.where(eq(schema.kitchenOrderItem.id, itemId));
 
 			if (itemRow.length > 0) {
-				const ticketId = itemRow[0]?.ticketId;
+				const ticketId = itemRow[0]!.ticketId;
 				const remaining = await db.execute(
 					sql`SELECT COUNT(*) as cnt FROM kitchen_order_item
 						WHERE ticket_id = ${ticketId} AND status != 'done'`,

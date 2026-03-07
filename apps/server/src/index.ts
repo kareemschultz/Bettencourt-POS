@@ -11,6 +11,7 @@ import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
+import { makeSignature } from "better-auth/crypto";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
@@ -78,35 +79,55 @@ app.post("/api/auth/pin-login", async (c) => {
 		// Clear failures on success
 		pinFailures.delete(hash);
 
-		// Get the user's password hash from the account table to sign in via Better Auth
-		const accounts = await db
-			.select({ password: schema.account.password })
-			.from(schema.account)
-			.where(eq(schema.account.userId, users[0]?.id))
-			.limit(1);
+		const user = users[0]!;
 
-		if (!accounts.length || !accounts[0]?.password) {
-			return c.json({ error: "Account not configured for PIN login" }, 500);
+		// Create a session directly via Better Auth's internal adapter (no password needed)
+		const ctx = await auth.$context;
+		const session = await ctx.internalAdapter.createSession(user.id);
+		if (!session) {
+			return c.json({ error: "Failed to create session" }, 500);
 		}
 
-		// Sign in via Better Auth using the user's email
-		const response = await auth.api.signInEmail({
-			body: {
-				email: users[0]?.email,
-				password: "password123", // All seeded users share this password
+		// Sign the session token using Better Auth's cookie signing format: "token.signature"
+		const signedToken = `${session.token}.${await makeSignature(session.token, ctx.secret)}`;
+		const cookieAttrs = ctx.authCookies.sessionToken.attributes;
+
+		// Build the Set-Cookie header string
+		const cookieParts = [
+			`${ctx.authCookies.sessionToken.name}=${signedToken}`,
+			`Path=${cookieAttrs.path ?? "/"}`,
+			cookieAttrs.httpOnly ? "HttpOnly" : "",
+			cookieAttrs.secure ? "Secure" : "",
+			cookieAttrs.sameSite ? `SameSite=${cookieAttrs.sameSite}` : "",
+			cookieAttrs.maxAge ? `Max-Age=${cookieAttrs.maxAge}` : "",
+		]
+			.filter(Boolean)
+			.join("; ");
+
+		return new Response(
+			JSON.stringify({
+				token: session.token,
+				user: { id: user.id, email: user.email, name: user.name },
+			}),
+			{
+				status: 200,
+				headers: {
+					"Content-Type": "application/json",
+					"Set-Cookie": cookieParts,
+				},
 			},
-			headers: c.req.raw.headers,
-			asResponse: true,
-		});
-		return response;
+		);
 	} catch (err) {
 		console.error("PIN login error:", err);
 		return c.json({ error: "Login failed" }, 500);
 	}
 });
 
-// Demo login: server-side sign-in with hardcoded demo credentials
+// Demo login: only available in development/staging — disabled in production
 app.post("/api/auth/demo-login", async (c) => {
+	if (env.NODE_ENV === "production") {
+		return c.json({ error: "Not found" }, 404);
+	}
 	const response = await auth.api.signInEmail({
 		body: {
 			email: "admin@bettencourt.com",

@@ -267,7 +267,7 @@ const placeOrder = publicProcedure
 					printerTarget: "kitchen",
 				})
 				.returning({ id: schema.kitchenOrderTicket.id });
-			const ticketId = ticketRows[0]?.id;
+			const ticketId = ticketRows[0]!.id;
 
 			// Create kitchen items
 			for (const item of items) {

@@ -55,9 +55,9 @@ const updateProgram = permissionProcedure("settings.update")
 					pointsPerDollar: input.pointsPerDollar,
 					isActive: input.isActive,
 				})
-				.where(eq(schema.loyaltyProgram.id, existing[0]?.id));
+				.where(eq(schema.loyaltyProgram.id, existing[0]!.id));
 
-			return { id: existing[0]?.id };
+			return { id: existing[0]!.id };
 		}
 
 		const rows = await db
@@ -205,7 +205,7 @@ const getCustomerPoints = permissionProcedure("orders.read")
 			.where(eq(schema.loyaltyTier.programId, program.id))
 			.orderBy(asc(schema.loyaltyTier.pointsRequired));
 
-		const currentPoints = membership[0]?.currentPoints;
+		const currentPoints = membership[0]!.currentPoints;
 		const availableRewards = tiers.filter(
 			(t) => currentPoints >= t.pointsRequired,
 		);
@@ -280,7 +280,7 @@ const earnPoints = permissionProcedure("orders.create")
 				.returning();
 		}
 
-		const membershipId = membership[0]?.id;
+		const membershipId = membership[0]!.id;
 
 		// Add points
 		await db

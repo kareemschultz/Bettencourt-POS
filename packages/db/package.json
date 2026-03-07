@@ -17,7 +17,8 @@
 		"db:generate": "drizzle-kit generate",
 		"db:studio": "drizzle-kit studio",
 		"db:migrate": "drizzle-kit migrate",
-		"db:seed": "bun run src/seed.ts"
+		"db:seed": "bun run src/seed.ts",
+		"db:seed:prod": "SEED_MODE=production bun run src/seed.ts"
 	},
 	"dependencies": {
 		"@Bettencourt-POS/env": "workspace:*",

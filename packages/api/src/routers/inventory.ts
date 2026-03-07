@@ -535,8 +535,8 @@ const acknowledgeAlert = permissionProcedure("inventory.update")
 					acknowledgedBy: input.userId,
 					acknowledgedAt: new Date(),
 				})
-				.where(eq(schema.stockAlert.id, existing[0]?.id));
-			return { id: existing[0]?.id };
+				.where(eq(schema.stockAlert.id, existing[0]!.id));
+			return { id: existing[0]!.id };
 		}
 
 		// Create a new alert row and immediately acknowledge it
@@ -724,7 +724,7 @@ const logWaste = permissionProcedure("inventory.create")
 				.limit(1);
 
 			if (item.length > 0) {
-				productName = item[0]?.name;
+				productName = item[0]!.name;
 				// Use avgCost * quantity if no cost provided or cost is zero
 				if (!input.estimatedCost || input.estimatedCost === "0") {
 					const cost = Number(item[0]?.avgCost || 0) * Number(input.quantity);

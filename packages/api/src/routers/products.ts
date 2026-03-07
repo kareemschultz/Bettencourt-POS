@@ -190,7 +190,7 @@ const getById = permissionProcedure("products.read")
 					eq(schema.comboComponent.departmentId, schema.reportingCategory.id),
 				)
 				.where(
-					eq(schema.comboComponent.comboProductId, comboProductRow[0]?.id),
+					eq(schema.comboComponent.comboProductId, comboProductRow[0]!.id),
 				);
 		}
 

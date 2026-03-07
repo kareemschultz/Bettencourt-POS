@@ -158,7 +158,7 @@ export default function SuppliersPage() {
 	const saving = createMut.isPending || updateMut.isPending;
 
 	return (
-		<div className="space-y-6 p-6">
+		<div className="space-y-6 p-4 md:p-6">
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="font-bold text-2xl">Suppliers</h1>

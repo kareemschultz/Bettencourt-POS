@@ -2,6 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Edit2, Gift, Plus, Star, Trash2, Trophy } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,6 +75,7 @@ export default function LoyaltyPage() {
 	const [editingTierId, setEditingTierId] = useState<string | null>(null);
 	const [tierForm, setTierForm] = useState<TierForm>(emptyTier);
 	const [memberSearch, setMemberSearch] = useState("");
+	const [deleteTierId, setDeleteTierId] = useState<string | null>(null);
 
 	const { data: program, isLoading } = useQuery(
 		orpc.loyalty.getProgram.queryOptions({ input: {} }),
@@ -199,7 +210,7 @@ export default function LoyaltyPage() {
 	};
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6 p-4 md:p-6">
 			<div>
 				<h1 className="flex items-center gap-2 font-bold text-2xl">
 					<Star className="size-6 text-primary" />
@@ -313,7 +324,7 @@ export default function LoyaltyPage() {
 												<Button
 													variant="ghost"
 													size="sm"
-													onClick={() => deleteTierMut.mutate({ id: tier.id })}
+													onClick={() => setDeleteTierId(tier.id)}
 												>
 													<Trash2 className="size-3.5 text-destructive" />
 												</Button>
@@ -529,6 +540,36 @@ export default function LoyaltyPage() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			{/* Delete Tier Confirmation */}
+			<AlertDialog
+				open={deleteTierId !== null}
+				onOpenChange={(open) => {
+					if (!open) setDeleteTierId(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete Reward Tier</AlertDialogTitle>
+						<AlertDialogDescription>
+							This will permanently remove this tier. Members associated with it
+							will lose their tier status. This action cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={() => {
+								if (deleteTierId) deleteTierMut.mutate({ id: deleteTierId });
+								setDeleteTierId(null);
+							}}
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

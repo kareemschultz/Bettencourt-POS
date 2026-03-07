@@ -104,7 +104,7 @@ const updateSettings = permissionProcedure("settings.write")
 					isActive: input.isActive,
 					dailyLimit: input.dailyLimit,
 				})
-				.where(eq(schema.notificationSettings.id, existing[0]?.id))
+				.where(eq(schema.notificationSettings.id, existing[0]!.id))
 				.returning();
 			return updated!;
 		}
@@ -347,8 +347,8 @@ const sendTest = permissionProcedure("settings.write")
 		// For now, mark as sent to demonstrate the flow
 		await db
 			.update(schema.notificationLog)
-			.set({ status: "sent", externalId: `test_${log?.id}` })
-			.where(eq(schema.notificationLog.id, log?.id));
+			.set({ status: "sent", externalId: `test_${log!.id}` })
+			.where(eq(schema.notificationLog.id, log!.id));
 
 		return {
 			success: true,

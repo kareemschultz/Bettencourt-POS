@@ -34,7 +34,61 @@ import {
 	SidebarProvider,
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { AppUser } from "@/lib/types";
+
+// Derive a human-readable page title from pathname
+const PAGE_TITLES: Record<string, string> = {
+	"/dashboard": "Dashboard",
+	"/dashboard/pos": "POS Terminal",
+	"/dashboard/orders": "Orders",
+	"/dashboard/customers": "Customers",
+	"/dashboard/inventory": "Inventory",
+	"/dashboard/reports": "Reports",
+	"/dashboard/cash": "Cash Control",
+	"/dashboard/settings": "Settings",
+	"/dashboard/kitchen": "Kitchen Display",
+	"/dashboard/production": "Production",
+	"/dashboard/timeclock": "Time Clock",
+	"/dashboard/loyalty": "Loyalty Program",
+	"/dashboard/giftcards": "Gift Cards",
+	"/dashboard/expenses": "Expenses",
+	"/dashboard/suppliers": "Suppliers",
+	"/dashboard/invoices": "Invoices",
+	"/dashboard/quotations": "Quotations",
+	"/dashboard/tables": "Tables",
+	"/dashboard/waste": "Waste Log",
+	"/dashboard/audit": "Audit Log",
+	"/dashboard/analytics": "Analytics",
+	"/dashboard/users": "Users",
+	"/dashboard/locations": "Locations",
+	"/dashboard/notifications": "Notifications",
+	"/dashboard/webhooks": "Webhooks",
+	"/dashboard/discounts": "Discounts",
+	"/dashboard/profitability": "Profitability",
+	"/dashboard/products": "Products",
+	"/dashboard/stock-alerts": "Stock Alerts",
+	"/dashboard/variance": "Variance Report",
+	"/dashboard/labor": "Labor Report",
+	"/dashboard/production-report": "Production Report",
+	"/dashboard/pnl": "P&L Report",
+	"/dashboard/eod": "End of Day",
+	"/dashboard/journal": "Journal",
+	"/dashboard/menu-schedules": "Menu Schedules",
+	"/dashboard/currency": "Currency",
+	"/dashboard/reconciliation": "Reconciliation",
+	"/dashboard/labels": "Labels",
+};
+
+function getPageTitle(pathname: string): string {
+	// Exact match first
+	if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
+	// Match by prefix (e.g. /dashboard/orders/123 → Orders)
+	for (const [path, title] of Object.entries(PAGE_TITLES)) {
+		if (pathname.startsWith(path + "/")) return title;
+	}
+	return "Dashboard";
+}
 
 // ── Location context ─────────────────────────────────────────────────
 export interface LocationContextValue {
@@ -90,6 +144,9 @@ const ROUTE_MODULE_MAP: Record<string, string> = {
 	"/dashboard/labels": "products",
 	"/dashboard/tables": "orders",
 	"/dashboard/loyalty": "orders",
+	"/dashboard/customers": "orders",
+	"/dashboard/giftcards": "orders",
+	"/dashboard/products": "products",
 };
 
 function hasRouteAccess(
@@ -233,8 +290,23 @@ export default function DashboardLayout() {
 
 	if (isPending || loadingProfile) {
 		return (
-			<div className="flex h-svh items-center justify-center">
-				<div className="text-muted-foreground">Loading...</div>
+			<div className="flex h-svh flex-col">
+				<div className="flex h-14 items-center gap-2 border-b px-4">
+					<Skeleton className="h-6 w-6" />
+					<Skeleton className="h-4 w-32" />
+				</div>
+				<div className="flex flex-1">
+					<Skeleton className="h-full w-64" />
+					<div className="flex flex-1 flex-col gap-4 p-6">
+						<Skeleton className="h-8 w-48" />
+						<div className="grid grid-cols-4 gap-4">
+							{Array.from({ length: 4 }).map((_, i) => (
+								<Skeleton key={i} className="h-24 rounded-lg" />
+							))}
+						</div>
+						<Skeleton className="h-64 rounded-lg" />
+					</div>
+				</div>
 			</div>
 		);
 	}
@@ -262,6 +334,10 @@ export default function DashboardLayout() {
 				<header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-4">
 					<SidebarTrigger className="-ml-1" />
 					<Separator orientation="vertical" className="mr-2 h-4" />
+					<span className="hidden font-medium text-sm sm:inline">
+						{getPageTitle(pathname)}
+					</span>
+					<Separator orientation="vertical" className="hidden h-4 sm:block" />
 					<div className="flex flex-1 items-center gap-2">
 						{locations.filter((l) => l.isActive).length > 0 ? (
 							<Select

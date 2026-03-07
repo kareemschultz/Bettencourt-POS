@@ -457,7 +457,7 @@ const updateReceiptConfig = permissionProcedure("settings.update")
 					promoMessage: input.promoMessage ?? null,
 					showLogo: input.showLogo,
 				})
-				.where(eq(schema.receiptConfig.id, existing[0]?.id));
+				.where(eq(schema.receiptConfig.id, existing[0]!.id));
 		} else {
 			await db.insert(schema.receiptConfig).values({
 				organizationId: input.organizationId,
