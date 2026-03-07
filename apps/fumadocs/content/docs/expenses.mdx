@@ -1,6 +1,6 @@
 ---
 title: Expenses
-description: Track daily business expenses by supplier, filter by clicking summary cards, and export to CSV
+description: Track daily business expenses with full detail — supplier, category, payment method, receipt reference, and notes. Filter, export CSV, and print PDF reports.
 ---
 
 **Navigate to:** Dashboard → Expenses
@@ -16,26 +16,32 @@ At the top of the page are **clickable summary cards** showing your expense tota
 - **All Expenses** card — shows the grand total. Click it to reset to viewing all entries.
 - **Supplier cards** (up to 3) — show the total spent with each top supplier.
 
-**Click any supplier card to instantly filter the expense table to show only that supplier's entries** — full date, category, description, and amount for every transaction.
+**Click any supplier card to instantly filter the expense table to show only that supplier's entries.** The active card is highlighted with a ring so you always know which filter is in effect.
 
-The active card is highlighted with a ring so you always know which filter is in effect.
+---
+
+## Category Breakdown
+
+Below the supplier cards is a **spending-by-category** row showing the total for each category as clickable pills. Click any pill to filter the table to that category only. Click again to clear.
 
 ---
 
 ## Filtering Expenses
 
 Use the controls at the top to narrow down what you see:
+
 - **From / To** date fields — view expenses for a specific period
+- **Quick range** buttons — **Today**, **This Week**, **This Month**, **Last Month** — instantly set the date range with one click
 - **Supplier** dropdown — filter by a specific supplier
-- Clicking a summary card (above) is a quick-filter shortcut that also updates the dropdown
+- **Category** dropdown — filter by a specific expense category
 
 ---
 
 ## Managing Categories
 
-Your expense categories are fully customisable. Click the **Categories** button (top right, next to Export) to open the category manager:
+Your expense categories are fully customisable. Click the **Categories** button (top right) to open the category manager:
 
-- **Add a category** — type the name in the text box and click **Add** (or press Enter)
+- **Add a category** — type the name and click **Add** (or press Enter)
 - **Delete a category** — click the trash icon next to any category; a confirmation prompt appears before deletion
 
 Default categories provided out-of-the-box:
@@ -49,7 +55,7 @@ Default categories provided out-of-the-box:
 - Staff Meals
 - Miscellaneous
 
-You can delete any of these and add your own. Category names must be unique per organisation.
+Category names must be unique per organisation.
 
 ---
 
@@ -60,21 +66,47 @@ You can delete any of these and add your own. Category names must be unique per 
 3. Select the **supplier** (optional)
 4. Select the **category** from your managed list
 5. Enter a **description** of what the expense was for
-6. Click **Save Expense**
+6. Select the **payment method** — Cash, Card, Bank Transfer, Cheque, or Other
+7. Enter the **receipt or reference number** (invoice # or receipt # from the supplier — optional but recommended for audit)
+8. Add any **notes** — e.g. "receipt in green folder", "approved verbally by Shakira" (optional)
+9. Click **Save Expense**
+
+---
+
+## Viewing Full Transaction Details
+
+Click anywhere on an expense row to open a read-only details dialog showing:
+
+| Field | Description |
+|-------|-------------|
+| Date & Time | Full timestamp including weekday |
+| Amount | Large, bold GYD amount |
+| Category | Expense category |
+| Supplier | Supplier name (if linked) |
+| Payment Method | How the expense was paid |
+| Receipt / Ref # | Invoice or receipt number |
+| Description | Full description (no truncation) |
+| Notes | Internal notes (only shown if present) |
+| Recorded By | Staff member who entered it |
+| Authorized By | Manager who approved it |
+
+The **Edit** button in the details dialog opens the edit form directly.
 
 ---
 
 ## Editing or Deleting an Expense
 
 Each row in the expense table has:
-- **Pencil icon** — click to open the edit dialog and correct any field
+- **Pencil icon** — click to open the edit dialog and correct any field (all fields including payment method, ref #, and notes are editable)
 - **Trash icon** — click to delete; a confirmation prompt appears before deletion
 
 ---
 
 ## Exporting
 
-Click **Export** (top right) to download the current filtered expenses as a CSV file — useful for sharing with your accountant.
+**Export CSV** (top right) — downloads the current filtered expenses as a CSV file including all fields: date, category, description, amount, supplier, payment method, ref #, notes, recorded by, authorized by.
+
+**Print PDF** — opens a formatted, print-ready expense report in a new browser tab. Click "Print / Save as PDF" inside that page to save it as a PDF or send it to a printer.
 
 ---
 
@@ -86,8 +118,8 @@ The table shows every entry for the selected period with:
 |--------|-------------|
 | Date | Date and time the expense was recorded |
 | Supplier | Supplier name (if linked), shown as a colour-coded badge |
-| Category | Expense category (Utilities, Rent, Supplies, etc.) |
-| Description | What the expense was for |
+| Category | Expense category |
+| Description | What the expense was for (truncated — click row for full text) |
 | Amount | Expense amount in GYD |
 | Authorized By | The manager who authorized it |
 
