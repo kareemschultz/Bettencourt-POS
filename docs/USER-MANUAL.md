@@ -309,10 +309,30 @@ This means the Production Report can correctly compare what was made (each indiv
 
 Compares what the kitchen logged (Opening + Reorder − Closing = Expected Sold) against what the POS terminal actually rang up as sold. Use the **Restaurant / Bakery** tabs and the date picker to select the period.
 
-Colour-coded variance badges show:
-- **Grey (0)** — balanced: sales match production
-- **Red (negative)** — short: more was rung up than produced
-- **Amber (positive)** — over: more was produced than sold (possible waste)
+**Columns:**
+
+| Column | What it means |
+|--------|---------------|
+| Opening | Quantity made at start of day |
+| Reorder | Mid-day top-up batches |
+| Closing | Leftover / unsold at end of day |
+| Expected | Opening + Reorder − Closing (should have been sold) |
+| Actual | What the POS actually rang up |
+| **% Sold** | Actual ÷ Expected × 100 (how much of what was made actually sold) |
+| Variance | Actual − Expected (negative = short, positive = over) |
+
+**Row sorting:** Rows are sorted by urgency — shortages (negative variance) appear first so you can spot problems immediately, followed by overages, then balanced items.
+
+**Colour-coded variance badges:**
+- **Grey (0)** — balanced: sales match production exactly
+- **Red (negative)** — short: more was rung up than produced — investigate
+- **Amber (positive)** — over: more was produced than sold (possible waste or leftover)
+
+**Closing column** is highlighted in amber whenever there is unsold stock at the end of the day.
+
+A **Totals row** at the bottom sums all columns so you can see the overall picture at a glance.
+
+> **Legend (shown below the table):** Closing = leftover at end of day. % Sold = Actual ÷ Expected. Combo sales are split into components in both columns.
 
 The report can be printed using the **Print** button.
 
@@ -698,22 +718,50 @@ Click **Print Report** to print the EOD report. This is designed to print on a f
 
 Track business expenses (non-COGS) such as utilities, rent, staff meals, repairs, etc.
 
+### Summary Cards (Quick Filter)
+
+At the top of the page are **clickable summary cards** showing your expense totals:
+
+- **All Expenses** card — shows the grand total for the selected period. Click it to reset to viewing all expenses.
+- **Supplier cards** (up to 3) — show the total spent with each top supplier. **Click any supplier card to instantly filter the expense table below to show only that supplier's entries** — full date, category, description, and amount detail.
+
+The active card is highlighted with a ring so you always know which filter is in effect.
+
 ### Adding an Expense
 
-1. Click **New Expense**
-2. Select the category (Utilities, Rent, Supplies, etc.)
-3. Enter the amount, date, and description
-4. Optionally add a receipt reference number
-5. Click **Save**
+1. Click **Add Expense** (top right)
+2. Enter the amount (GYD)
+3. Select the supplier (optional)
+4. Select the category
+5. Enter a description of what the expense was for
+6. Click **Save Expense**
 
-### Viewing Expenses
+### Filtering Expenses
 
-Filter expenses by:
-- Date range
+Use the filters at the top to narrow down what you see:
+- **From / To** date range — view expenses for a specific period
+- **Supplier** dropdown — filter by a specific supplier
+- Summary cards (described above) — click a supplier card as a quick filter shortcut
+
+### Editing or Deleting an Expense
+
+Each row in the expense table has a **pencil icon** (edit) and a **trash icon** (delete). Click the pencil to correct an entry, or the trash to remove it. Deletion asks for confirmation.
+
+### Exporting
+
+Click **Export** (top right) to download the current filtered expenses as a CSV file.
+
+### Viewing Full Details
+
+The expense table shows every entry for the selected period with:
+- Date and time
+- Supplier (if linked)
 - Category
-- Amount range
+- Description
+- Amount
+- Authorized by
 
-The total is shown at the top. Expenses feed into the P&L Statement automatically.
+Expenses feed into the P&L Statement automatically.
 
 ---
 
