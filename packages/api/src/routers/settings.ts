@@ -718,6 +718,81 @@ const verifySupervisor = protectedProcedure
 		};
 	});
 
+const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+
+// ── getDocumentSettings ───────────────────────────────────────────────
+const getDocumentSettings = permissionProcedure("settings.read")
+	.input(z.object({}).optional())
+	.handler(async () => {
+		const rows = await db
+			.select()
+			.from(schema.invoiceDocumentSettings)
+			.where(eq(schema.invoiceDocumentSettings.organizationId, DEFAULT_ORG_ID))
+			.limit(1);
+
+		if (rows.length === 0) {
+			const inserted = await db
+				.insert(schema.invoiceDocumentSettings)
+				.values({ organizationId: DEFAULT_ORG_ID })
+				.returning();
+			return inserted[0]!;
+		}
+		return rows[0]!;
+	});
+
+// ── updateDocumentSettings ────────────────────────────────────────────
+const updateDocumentSettings = permissionProcedure("settings.update")
+	.input(
+		z.object({
+			defaultTaxRate: z.number().min(0).max(100).optional(),
+			defaultTaxMode: z.enum(["invoice", "line"]).optional(),
+			defaultPaymentTerms: z.string().optional(),
+			defaultDiscountType: z.enum(["percent", "fixed"]).optional(),
+			companyTin: z.string().optional(),
+			bankName: z.string().optional(),
+			bankAccount: z.string().optional(),
+			bankBranch: z.string().optional(),
+			paymentInstructions: z.string().optional(),
+			defaultQuotationTerms: z.string().optional(),
+			invoiceFooterNote: z.string().optional(),
+			quotationFooterNote: z.string().optional(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const updates: Record<string, unknown> = {};
+		if (input.defaultTaxRate !== undefined)
+			updates.defaultTaxRate = String(input.defaultTaxRate);
+		if (input.defaultTaxMode !== undefined)
+			updates.defaultTaxMode = input.defaultTaxMode;
+		if (input.defaultPaymentTerms !== undefined)
+			updates.defaultPaymentTerms = input.defaultPaymentTerms;
+		if (input.defaultDiscountType !== undefined)
+			updates.defaultDiscountType = input.defaultDiscountType;
+		if (input.companyTin !== undefined) updates.companyTin = input.companyTin;
+		if (input.bankName !== undefined) updates.bankName = input.bankName;
+		if (input.bankAccount !== undefined)
+			updates.bankAccount = input.bankAccount;
+		if (input.bankBranch !== undefined) updates.bankBranch = input.bankBranch;
+		if (input.paymentInstructions !== undefined)
+			updates.paymentInstructions = input.paymentInstructions;
+		if (input.defaultQuotationTerms !== undefined)
+			updates.defaultQuotationTerms = input.defaultQuotationTerms;
+		if (input.invoiceFooterNote !== undefined)
+			updates.invoiceFooterNote = input.invoiceFooterNote;
+		if (input.quotationFooterNote !== undefined)
+			updates.quotationFooterNote = input.quotationFooterNote;
+
+		await db
+			.insert(schema.invoiceDocumentSettings)
+			.values({ organizationId: DEFAULT_ORG_ID, ...updates })
+			.onConflictDoUpdate({
+				target: schema.invoiceDocumentSettings.organizationId,
+				set: updates,
+			});
+
+		return { success: true };
+	});
+
 export const settingsRouter = {
 	getCurrentUser,
 	getOrganization,
@@ -742,4 +817,6 @@ export const settingsRouter = {
 	verifySupervisor,
 	getExchangeRates,
 	updateExchangeRate,
+	getDocumentSettings,
+	updateDocumentSettings,
 };

@@ -3,6 +3,7 @@ import {
 	Building2,
 	ChevronDown,
 	ChevronRight,
+	FileText,
 	Layers,
 	Loader2,
 	MapPin,
@@ -103,6 +104,10 @@ export default function SettingsPage() {
 						<SlidersHorizontal className="size-3.5" />
 						<span className="hidden sm:inline">Modifiers</span>
 					</TabsTrigger>
+					<TabsTrigger value="documents" className="gap-1.5">
+						<FileText className="size-3.5" />
+						<span className="hidden sm:inline">Documents</span>
+					</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="organization" className="mt-4">
@@ -128,6 +133,9 @@ export default function SettingsPage() {
 				</TabsContent>
 				<TabsContent value="modifiers" className="mt-4">
 					<ModifiersTab />
+				</TabsContent>
+				<TabsContent value="documents" className="mt-4">
+					<DocumentSettingsTab />
 				</TabsContent>
 			</Tabs>
 		</div>
@@ -1871,6 +1879,259 @@ function ModifiersTab() {
 				</DialogContent>
 			</Dialog>
 		</>
+	);
+}
+
+// ── Document Settings Tab ──────────────────────────────────────────────
+
+function DocumentSettingsTab() {
+	const qc = useQueryClient();
+	const { data, isLoading } = useQuery(
+		orpc.settings.getDocumentSettings.queryOptions({ input: {} }),
+	);
+
+	const [form, setForm] = useState({
+		defaultTaxRate: "",
+		defaultTaxMode: "invoice",
+		defaultPaymentTerms: "due_on_receipt",
+		defaultDiscountType: "percent",
+		companyTin: "",
+		bankName: "",
+		bankAccount: "",
+		bankBranch: "",
+		paymentInstructions: "",
+		defaultQuotationTerms: "",
+		invoiceFooterNote: "",
+		quotationFooterNote: "",
+	});
+
+	const [loaded, setLoaded] = useState(false);
+
+	if (data && !loaded) {
+		setForm({
+			defaultTaxRate: String(data.defaultTaxRate ?? "16.5"),
+			defaultTaxMode: data.defaultTaxMode ?? "invoice",
+			defaultPaymentTerms: data.defaultPaymentTerms ?? "due_on_receipt",
+			defaultDiscountType: data.defaultDiscountType ?? "percent",
+			companyTin: data.companyTin ?? "",
+			bankName: data.bankName ?? "",
+			bankAccount: data.bankAccount ?? "",
+			bankBranch: data.bankBranch ?? "",
+			paymentInstructions: data.paymentInstructions ?? "",
+			defaultQuotationTerms: data.defaultQuotationTerms ?? "",
+			invoiceFooterNote: data.invoiceFooterNote ?? "",
+			quotationFooterNote: data.quotationFooterNote ?? "",
+		});
+		setLoaded(true);
+	}
+
+	const saveMut = useMutation(
+		orpc.settings.updateDocumentSettings.mutationOptions({
+			onSuccess: () => {
+				toast.success("Document settings saved");
+				qc.invalidateQueries({
+					queryKey: orpc.settings.getDocumentSettings.key(),
+				});
+			},
+			onError: () => toast.error("Failed to save settings"),
+		}),
+	);
+
+	if (isLoading) return <LoadingCard />;
+
+	return (
+		<div className="space-y-6">
+			<Card>
+				<CardHeader>
+					<CardTitle>Invoice & Quotation Defaults</CardTitle>
+					<CardDescription>
+						These defaults auto-populate when creating new invoices and
+						quotations.
+					</CardDescription>
+				</CardHeader>
+				<CardContent className="grid gap-4 sm:grid-cols-2">
+					<div className="flex flex-col gap-1.5">
+						<Label>Default Tax Rate (%)</Label>
+						<Input
+							type="number"
+							min="0"
+							max="100"
+							step="0.1"
+							value={form.defaultTaxRate}
+							onChange={(e) =>
+								setForm((f) => ({ ...f, defaultTaxRate: e.target.value }))
+							}
+						/>
+					</div>
+					<div className="flex flex-col gap-1.5">
+						<Label>Default Tax Mode</Label>
+						<Select
+							value={form.defaultTaxMode}
+							onValueChange={(v) =>
+								setForm((f) => ({ ...f, defaultTaxMode: v }))
+							}
+						>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="invoice">Invoice-level</SelectItem>
+								<SelectItem value="line">Per-line</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="flex flex-col gap-1.5">
+						<Label>Default Payment Terms</Label>
+						<Select
+							value={form.defaultPaymentTerms}
+							onValueChange={(v) =>
+								setForm((f) => ({ ...f, defaultPaymentTerms: v }))
+							}
+						>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="due_on_receipt">Due on Receipt</SelectItem>
+								<SelectItem value="net_15">Net 15</SelectItem>
+								<SelectItem value="net_30">Net 30</SelectItem>
+								<SelectItem value="net_60">Net 60</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="flex flex-col gap-1.5">
+						<Label>Default Discount Type</Label>
+						<Select
+							value={form.defaultDiscountType}
+							onValueChange={(v) =>
+								setForm((f) => ({ ...f, defaultDiscountType: v }))
+							}
+						>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="percent">Percentage (%)</SelectItem>
+								<SelectItem value="fixed">Fixed Amount (GYD)</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="flex flex-col gap-1.5">
+						<Label>Company TIN</Label>
+						<Input
+							placeholder="e.g. 123-456-789"
+							value={form.companyTin}
+							onChange={(e) =>
+								setForm((f) => ({ ...f, companyTin: e.target.value }))
+							}
+						/>
+					</div>
+					<div className="flex flex-col gap-1.5">
+						<Label>Bank Name</Label>
+						<Input
+							placeholder="e.g. Republic Bank"
+							value={form.bankName}
+							onChange={(e) =>
+								setForm((f) => ({ ...f, bankName: e.target.value }))
+							}
+						/>
+					</div>
+					<div className="flex flex-col gap-1.5">
+						<Label>Bank Account Number</Label>
+						<Input
+							placeholder="e.g. 1234-5678-90"
+							value={form.bankAccount}
+							onChange={(e) =>
+								setForm((f) => ({ ...f, bankAccount: e.target.value }))
+							}
+						/>
+					</div>
+					<div className="flex flex-col gap-1.5">
+						<Label>Bank Branch</Label>
+						<Input
+							placeholder="e.g. Robb Street"
+							value={form.bankBranch}
+							onChange={(e) =>
+								setForm((f) => ({ ...f, bankBranch: e.target.value }))
+							}
+						/>
+					</div>
+					<div className="col-span-full flex flex-col gap-1.5">
+						<Label>Payment Instructions</Label>
+						<Textarea
+							placeholder="Printed on invoice PDFs below the totals section..."
+							value={form.paymentInstructions}
+							onChange={(e) =>
+								setForm((f) => ({ ...f, paymentInstructions: e.target.value }))
+							}
+							className="h-20 resize-none"
+						/>
+					</div>
+					<div className="col-span-full flex flex-col gap-1.5">
+						<Label>Default Quotation Terms & Conditions</Label>
+						<Textarea
+							placeholder="Auto-filled on new quotations..."
+							value={form.defaultQuotationTerms}
+							onChange={(e) =>
+								setForm((f) => ({
+									...f,
+									defaultQuotationTerms: e.target.value,
+								}))
+							}
+							className="h-28 resize-none"
+						/>
+					</div>
+					<div className="flex flex-col gap-1.5">
+						<Label>Invoice Footer Note</Label>
+						<Input
+							placeholder="e.g. Thank you for your business"
+							value={form.invoiceFooterNote}
+							onChange={(e) =>
+								setForm((f) => ({ ...f, invoiceFooterNote: e.target.value }))
+							}
+						/>
+					</div>
+					<div className="flex flex-col gap-1.5">
+						<Label>Quotation Footer Note</Label>
+						<Input
+							placeholder="e.g. This quotation is valid for 30 days"
+							value={form.quotationFooterNote}
+							onChange={(e) =>
+								setForm((f) => ({ ...f, quotationFooterNote: e.target.value }))
+							}
+						/>
+					</div>
+				</CardContent>
+				<div className="flex justify-end px-6 pb-6">
+					<Button
+						disabled={saveMut.isPending}
+						onClick={() =>
+							saveMut.mutate({
+								defaultTaxRate: Number(form.defaultTaxRate),
+								defaultTaxMode: form.defaultTaxMode as "invoice" | "line",
+								defaultPaymentTerms: form.defaultPaymentTerms,
+								defaultDiscountType: form.defaultDiscountType as
+									| "percent"
+									| "fixed",
+								companyTin: form.companyTin,
+								bankName: form.bankName,
+								bankAccount: form.bankAccount,
+								bankBranch: form.bankBranch,
+								paymentInstructions: form.paymentInstructions,
+								defaultQuotationTerms: form.defaultQuotationTerms,
+								invoiceFooterNote: form.invoiceFooterNote,
+								quotationFooterNote: form.quotationFooterNote,
+							})
+						}
+					>
+						{saveMut.isPending && (
+							<Loader2 className="mr-2 size-4 animate-spin" />
+						)}
+						Save Document Settings
+					</Button>
+				</div>
+			</Card>
+		</div>
 	);
 }
 
