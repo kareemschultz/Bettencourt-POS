@@ -40,9 +40,10 @@ COPY packages/db/package.json packages/db/
 COPY packages/env/package.json packages/env/
 COPY packages/config/package.json packages/config/
 
-# Note: --frozen-lockfile omitted because apps/fumadocs is excluded via
-# .dockerignore, causing a workspace member mismatch.
-RUN bun install
+# --ignore-scripts: fumadocs postinstall (fumadocs-mdx) needs source.config.ts
+# which isn't present at this layer. The Vite plugin regenerates .source/ during
+# bun run build, so the postinstall is redundant in Docker.
+RUN bun install --ignore-scripts
 
 # Copy source
 COPY apps/server/ apps/server/
