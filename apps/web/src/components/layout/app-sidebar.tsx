@@ -7,6 +7,7 @@ import {
 	Building2,
 	Calculator,
 	CalendarClock,
+	ChevronDown,
 	ChevronUp,
 	ClipboardCheck,
 	ClipboardList,
@@ -43,6 +44,11 @@ import {
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -61,6 +67,7 @@ import {
 	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
+	useSidebar,
 } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/auth-client";
 import type { AppUser } from "@/lib/types";
@@ -412,6 +419,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
 	const pathname = location.pathname;
 	const navigate = useNavigate();
 	const [search, setSearch] = useState("");
+	const { state: sidebarState } = useSidebar();
 
 	const { data: alertData } = useQuery({
 		...orpc.inventory.getAlerts.queryOptions({
@@ -439,36 +447,53 @@ export function AppSidebar({ user }: AppSidebarProps) {
 		);
 		if (filtered.length === 0) return null;
 
+		// In icon mode the sidebar collapses to icons — force groups open so
+		// icons remain visible even if the user previously collapsed a group.
+		const forceOpen = sidebarState === "collapsed";
+
 		return (
 			<SidebarGroup>
-				<SidebarGroupLabel>{label}</SidebarGroupLabel>
-				<SidebarGroupContent>
-					<SidebarMenu>
-						{filtered.map((item) => (
-							<SidebarMenuItem key={item.url}>
-								<SidebarMenuButton
-									asChild
-									isActive={
-										pathname === item.url ||
-										pathname + location.search === item.url
-									}
-									tooltip={item.title}
-								>
-									<a href={item.url}>
-										<item.icon className="size-4" />
-										<span>{item.title}</span>
-									</a>
-								</SidebarMenuButton>
-								{item.url === "/dashboard/stock-alerts" &&
-									unacknowledgedAlertCount > 0 && (
-										<SidebarMenuBadge>
-											{unacknowledgedAlertCount}
-										</SidebarMenuBadge>
-									)}
-							</SidebarMenuItem>
-						))}
-					</SidebarMenu>
-				</SidebarGroupContent>
+				<Collapsible
+					defaultOpen
+					{...(forceOpen ? { open: true } : {})}
+					className="group/collapsible"
+				>
+					<SidebarGroupLabel asChild>
+						<CollapsibleTrigger className="w-full">
+							{label}
+							<ChevronDown className="ml-auto size-3.5 transition-transform duration-200 group-data-[collapsible=icon]:hidden group-data-[state=open]/collapsible:rotate-180" />
+						</CollapsibleTrigger>
+					</SidebarGroupLabel>
+					<CollapsibleContent>
+						<SidebarGroupContent>
+							<SidebarMenu>
+								{filtered.map((item) => (
+									<SidebarMenuItem key={item.url}>
+										<SidebarMenuButton
+											asChild
+											isActive={
+												pathname === item.url ||
+												pathname + location.search === item.url
+											}
+											tooltip={item.title}
+										>
+											<a href={item.url}>
+												<item.icon className="size-4" />
+												<span>{item.title}</span>
+											</a>
+										</SidebarMenuButton>
+										{item.url === "/dashboard/stock-alerts" &&
+											unacknowledgedAlertCount > 0 && (
+												<SidebarMenuBadge>
+													{unacknowledgedAlertCount}
+												</SidebarMenuBadge>
+											)}
+									</SidebarMenuItem>
+								))}
+							</SidebarMenu>
+						</SidebarGroupContent>
+					</CollapsibleContent>
+				</Collapsible>
 			</SidebarGroup>
 		);
 	}
