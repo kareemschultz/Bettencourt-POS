@@ -41,6 +41,7 @@ const lineItemSchema = z.object({
 	quantity: z.number(),
 	unitPrice: z.number(),
 	total: z.number(),
+	taxExempt: z.boolean().optional(),
 });
 
 // ── list ───────────────────────────────────────────────────────────────
@@ -130,6 +131,13 @@ const create = permissionProcedure("quotations.create")
 			taxTotal: z.string().optional(),
 			total: z.string(),
 			createdBy: z.string(),
+			discountType: z.enum(["percent", "fixed"]).optional(),
+			discountValue: z.string().optional(),
+			taxMode: z.enum(["invoice", "line"]).optional(),
+			taxRate: z.string().optional(),
+			termsAndConditions: z.string().optional(),
+			parentQuotationId: z.string().uuid().optional(),
+			preparedBy: z.string().optional(),
 		}),
 	)
 	.handler(async ({ input }) => {
@@ -153,6 +161,13 @@ const create = permissionProcedure("quotations.create")
 				validUntil: input.validUntil ? new Date(input.validUntil) : null,
 				notes: input.notes ?? null,
 				createdBy: input.createdBy,
+				discountType: input.discountType ?? "percent",
+				discountValue: input.discountValue ?? "0",
+				taxMode: input.taxMode ?? "invoice",
+				taxRate: input.taxRate ?? "16.5",
+				termsAndConditions: input.termsAndConditions ?? null,
+				parentQuotationId: input.parentQuotationId ?? null,
+				preparedBy: input.preparedBy ?? null,
 			})
 			.returning();
 
@@ -176,6 +191,12 @@ const update = permissionProcedure("quotations.update")
 			taxTotal: z.string().optional(),
 			total: z.string().optional(),
 			status: z.string().optional(),
+			discountType: z.enum(["percent", "fixed"]).optional(),
+			discountValue: z.string().optional(),
+			taxMode: z.enum(["invoice", "line"]).optional(),
+			taxRate: z.string().optional(),
+			termsAndConditions: z.string().optional(),
+			preparedBy: z.string().optional(),
 		}),
 	)
 	.handler(async ({ input }) => {
@@ -205,6 +226,15 @@ const update = permissionProcedure("quotations.update")
 		if (input.taxTotal !== undefined) updates.taxTotal = input.taxTotal;
 		if (input.total !== undefined) updates.total = input.total;
 		if (input.status !== undefined) updates.status = input.status;
+		if (input.discountType !== undefined)
+			updates.discountType = input.discountType;
+		if (input.discountValue !== undefined)
+			updates.discountValue = input.discountValue;
+		if (input.taxMode !== undefined) updates.taxMode = input.taxMode;
+		if (input.taxRate !== undefined) updates.taxRate = input.taxRate;
+		if (input.termsAndConditions !== undefined)
+			updates.termsAndConditions = input.termsAndConditions;
+		if (input.preparedBy !== undefined) updates.preparedBy = input.preparedBy;
 
 		await db
 			.update(schema.quotation)
@@ -246,7 +276,8 @@ const convertToInvoice = permissionProcedure("invoices.create")
 
 		if (!["sent", "accepted"].includes(quot.status)) {
 			throw new ORPCError("BAD_REQUEST", {
-				message: "Only sent or accepted quotations can be converted to invoices",
+				message:
+					"Only sent or accepted quotations can be converted to invoices",
 			});
 		}
 
@@ -268,6 +299,11 @@ const convertToInvoice = permissionProcedure("invoices.create")
 				total: quot.total,
 				status: "draft",
 				createdBy: input.createdBy,
+				discountType: quot.discountType,
+				discountValue: quot.discountValue,
+				taxMode: quot.taxMode,
+				taxRate: quot.taxRate,
+				paymentTerms: "due_on_receipt",
 			})
 			.returning();
 
@@ -281,6 +317,120 @@ const convertToInvoice = permissionProcedure("invoices.create")
 		return newInvoice;
 	});
 
+// ── duplicate ──────────────────────────────────────────────────────────
+
+const duplicate = permissionProcedure("quotations.create")
+	.input(z.object({ id: z.string().uuid(), createdBy: z.string() }))
+	.handler(async ({ input }) => {
+		const existing = await db
+			.select()
+			.from(schema.quotation)
+			.where(eq(schema.quotation.id, input.id))
+			.limit(1);
+
+		if (existing.length === 0)
+			throw new ORPCError("NOT_FOUND", { message: "Quotation not found" });
+		const src = existing[0]!;
+		const quotationNumber = await nextQuotationNumber(DEFAULT_ORG_ID);
+
+		const rows = await db
+			.insert(schema.quotation)
+			.values({
+				organizationId: src.organizationId,
+				locationId: src.locationId,
+				quotationNumber,
+				customerName: src.customerName,
+				customerAddress: src.customerAddress,
+				customerPhone: src.customerPhone,
+				customerId: src.customerId,
+				items: src.items as Record<string, unknown>[],
+				subtotal: src.subtotal,
+				taxTotal: src.taxTotal,
+				total: src.total,
+				status: "draft",
+				discountType: src.discountType,
+				discountValue: src.discountValue,
+				taxMode: src.taxMode,
+				taxRate: src.taxRate,
+				termsAndConditions: src.termsAndConditions,
+				notes: src.notes,
+				createdBy: input.createdBy,
+			})
+			.returning();
+
+		return rows[0]!;
+	});
+
+// ── revise ─────────────────────────────────────────────────────────────
+
+const revise = permissionProcedure("quotations.create")
+	.input(z.object({ id: z.string().uuid(), createdBy: z.string() }))
+	.handler(async ({ input }) => {
+		const existing = await db
+			.select()
+			.from(schema.quotation)
+			.where(eq(schema.quotation.id, input.id))
+			.limit(1);
+
+		if (existing.length === 0)
+			throw new ORPCError("NOT_FOUND", { message: "Quotation not found" });
+		const src = existing[0]!;
+
+		// Count existing revisions of this parent to determine revision number
+		const revisions = await db
+			.select({ num: schema.quotation.quotationNumber })
+			.from(schema.quotation)
+			.where(eq(schema.quotation.parentQuotationId, input.id));
+		const revNum = revisions.length + 2; // v2, v3, etc.
+
+		const baseNumber = await nextQuotationNumber(DEFAULT_ORG_ID);
+
+		const rows = await db
+			.insert(schema.quotation)
+			.values({
+				organizationId: src.organizationId,
+				locationId: src.locationId,
+				quotationNumber: `${baseNumber}-R${revNum}`,
+				customerName: src.customerName,
+				customerAddress: src.customerAddress,
+				customerPhone: src.customerPhone,
+				customerId: src.customerId,
+				items: src.items as Record<string, unknown>[],
+				subtotal: src.subtotal,
+				taxTotal: src.taxTotal,
+				total: src.total,
+				status: "draft",
+				discountType: src.discountType,
+				discountValue: src.discountValue,
+				taxMode: src.taxMode,
+				taxRate: src.taxRate,
+				termsAndConditions: src.termsAndConditions,
+				parentQuotationId: input.id,
+				notes: src.notes,
+				createdBy: input.createdBy,
+			})
+			.returning();
+
+		return rows[0]!;
+	});
+
+// ── markSent ───────────────────────────────────────────────────────────
+
+const markSent = permissionProcedure("quotations.update")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input }) => {
+		await db
+			.update(schema.quotation)
+			.set({ status: "sent" })
+			.where(
+				and(
+					eq(schema.quotation.id, input.id),
+					eq(schema.quotation.status, "draft"),
+				),
+			);
+		return { success: true };
+	});
+
 // ── router export ──────────────────────────────────────────────────────
 
 export const quotationsRouter = {
@@ -290,4 +440,7 @@ export const quotationsRouter = {
 	update,
 	delete: remove,
 	convertToInvoice,
+	duplicate,
+	revise,
+	markSent,
 };
