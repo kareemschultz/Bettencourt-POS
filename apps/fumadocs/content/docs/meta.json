@@ -1,0 +1,21 @@
+{
+	"title": "User Manual",
+	"pages": [
+		"index",
+		"getting-started",
+		"pos-terminal",
+		"orders",
+		"kitchen",
+		"production",
+		"cash",
+		"inventory",
+		"expenses",
+		"reports",
+		"customers",
+		"commerce",
+		"settings",
+		"staff",
+		"public-pages",
+		"faq"
+	]
+}

@@ -1,0 +1,113 @@
+---
+title: Inventory & Stock
+description: Manage raw materials, stock movements, purchase orders, stock alerts, suppliers, and labels
+---
+
+## Inventory
+
+**Navigate to:** Dashboard → Inventory
+
+Manages raw materials and ingredients (not finished food products — those are in **Settings → Products**).
+
+### Viewing Stock Levels
+
+The main inventory tab shows all items with current stock on hand, unit of measure, reorder point, and status indicator.
+
+### Adding a Stock Movement
+
+1. Click **Add Movement**
+2. Select the item
+3. Choose movement type:
+   - **Received** — new stock delivered from supplier
+   - **Used** — consumed in cooking/production
+   - **Wasted** — spoiled or thrown out
+   - **Adjustment** — manual correction to match physical count
+4. Enter the quantity and a note/reason
+5. Click **Save**
+
+### Stock Ledger
+
+Click any inventory item to see its full ledger — a history of every movement with timestamps and the person who recorded it.
+
+### Stock Counts
+
+**Tab: Stock Counts**
+
+Used for physical counts (counting actual stock on hand):
+
+1. Click **New Count**
+2. Select the items to count
+3. Enter the physical quantity for each item
+4. Submit — the system records the variance between expected and actual
+
+### Purchase Orders
+
+**Tab: Purchase Orders**
+
+1. Click **New Purchase Order**
+2. Select the supplier
+3. Add items and quantities needed
+4. Save as **Draft** or set to **Ordered** (sent to supplier)
+5. When goods arrive, click **Receive** on the order to update inventory
+
+### Transfers
+
+**Tab: Transfers**
+
+Move stock between locations:
+
+1. Click **New Transfer**
+2. Select: From Location → To Location
+3. Add items and quantities
+4. Submit
+
+---
+
+## Stock Alerts
+
+**Navigate to:** Dashboard → Stock Alerts
+
+> You will see a **number badge** on this menu item in the sidebar when there are unacknowledged alerts.
+
+When an inventory item falls to or below its **reorder point**, an alert is automatically generated.
+
+### Viewing & Acknowledging Alerts
+
+Alerts show the item name, current stock level, reorder point, and alert type (Low Stock or Out of Stock).
+
+- Use the filter to toggle between All and Unacknowledged alerts
+- Click **Acknowledge** to mark an alert as seen/handled — this removes the sidebar badge
+
+### Auto-Generate Purchase Order
+
+For items with a preferred supplier set, click **Auto PO** to automatically create a purchase order.
+
+---
+
+## Suppliers
+
+**Navigate to:** Dashboard → Suppliers
+
+### Adding a Supplier
+
+1. Click **New Supplier**
+2. Enter: Name, Contact Person, Phone, Email, Address
+3. Click **Save**
+
+Suppliers are linked to inventory items and used when creating purchase orders. They also appear in the Expenses page for filtering expense cards by supplier.
+
+### Editing a Supplier
+
+Click a supplier's name in the list to edit their details.
+
+---
+
+## Labels
+
+**Navigate to:** Dashboard → Labels
+
+Print price labels or shelf labels for products.
+
+1. Search for or select products to label
+2. Choose a label format (price tag, shelf label, etc.)
+3. Click **Print Labels**

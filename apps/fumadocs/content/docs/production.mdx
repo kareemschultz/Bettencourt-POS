@@ -1,0 +1,134 @@
+---
+title: Production & Check Off
+description: Log daily production quantities, track combos, view the production report, and record waste
+---
+
+## Production Dashboard (Check Off)
+
+**Navigate to:** Dashboard → Production
+
+Used by kitchen and bakery managers to log how much was produced each day and compare it against what the POS actually sold.
+
+### Workflow Tabs
+
+At the top there are two tabs:
+- **Restaurant → Food** — soups, mains, sides, drinks
+- **Bakery → Pastry** — all bakery and pastry products
+
+Only products belonging to the selected workflow are shown, so the kitchen and bakery teams can work independently.
+
+### Entry Types
+
+| Button | Colour | When to use |
+|--------|--------|-------------|
+| **Opening** | Blue | First thing in the morning — how much you made for the day |
+| **Reorder** | Amber | Mid-day top-up when you cook more |
+| **Closing** | Green | End of day — leftover / damage / spoilage |
+
+### Logging a Product
+
+1. Tap the entry type (Opening / Reorder / Closing)
+2. Optionally use the department pills to filter to a specific section
+3. Tap any product card — a number pad dialog opens
+4. Enter the quantity using the numpad, quick-quantity buttons (5 / 10 / 20 / 25 / 50), or +/− fine-tune buttons
+5. Add a note if needed (e.g., "burnt batch")
+6. Tap **Log** to save
+
+After saving, the product card shows a badge with the running total for the day.
+
+### Combo Products (Split Items)
+
+Some products — like "Fried Rice and Baked Chicken" or "Cookup Baked Snapper" — are combos made up of two individual items. These cards show an amber **stacked layers** icon.
+
+When you log a quantity for a combo product, the system **automatically splits it** into its individual components:
+
+> *Example: Log 10 × "Fried Rice and Baked Chicken" (Opening)*
+> The system records:
+> → 10 × Fried Rice (Opening)
+> → 10 × Baked Chicken (Opening)
+
+The dialog shows exactly how the split will be recorded before you confirm.
+
+---
+
+## Production Report
+
+**Navigate to:** Dashboard → Production Report
+
+Compares what the kitchen logged against what the POS actually sold.
+
+### Columns
+
+| Column | What it means |
+|--------|---------------|
+| Opening | Quantity made at start of day |
+| Reorder | Mid-day top-up batches |
+| Closing | Leftover / unsold at end of day |
+| Expected | Opening + Reorder − Closing |
+| Actual | What the POS actually sold |
+| **% Sold** | Actual ÷ Expected × 100 |
+| Variance | Actual − Expected |
+
+### Row Sorting
+
+Rows are sorted by urgency:
+1. **Shortages** (negative variance) — appear first so you can spot problems immediately
+2. **Overages** (positive variance) — produced more than sold
+3. **Balanced** (zero variance) — at the bottom
+
+### Variance Colour Codes
+
+| Colour | Meaning |
+|--------|---------|
+| **Grey (0)** | Balanced — sales match production exactly |
+| **Red (negative)** | Short — more was rung up than produced |
+| **Amber (positive)** | Over — more was produced than sold (possible waste) |
+
+The **Closing column** is highlighted in amber whenever there is unsold stock remaining at end of day.
+
+A **Totals row** at the bottom sums all columns for an at-a-glance overview.
+
+> **Legend (shown below the table):** Closing = leftover at end of day. % Sold = Actual ÷ Expected. Combo sales are split into components in both columns.
+
+Click **Print** to print the report.
+
+---
+
+## Waste Log
+
+**Navigate to:** Dashboard → Waste Log
+
+Tracks food and ingredient waste in detail for cost control.
+
+### Recording Waste
+
+1. Click **Log Waste**
+2. Select the item (product or ingredient)
+3. Enter the quantity wasted
+4. Select the reason:
+   - Expired
+   - Overcooked
+   - Dropped/Damaged
+   - Overproduced
+   - Other
+5. Optionally add a note
+6. Click **Save**
+
+### Viewing Waste History
+
+The waste log table shows all recorded waste events with date, item, quantity, reason, who recorded it, and estimated cost value.
+
+A **summary at the top** shows total waste cost for the selected period. Use the date filter to compare week-over-week or month-over-month.
+
+---
+
+## Variance Report
+
+**Navigate to:** Dashboard → Variance
+
+Compares **expected** stock (calculated from sales and production) vs. **actual** stock (from physical counts). Unexplained differences may indicate waste, theft, or data entry errors.
+
+- **Green** = within tolerance
+- **Red** = significant variance requiring investigation
+
+Click any item to see the detailed movement history and identify where the variance occurred.
