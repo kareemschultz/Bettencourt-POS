@@ -41,7 +41,10 @@ const createEndpoint = permissionProcedure("settings.create")
 	.input(
 		z.object({
 			name: z.string().min(1, "Name is required"),
-			url: z.string().url("Must be a valid URL"),
+			url: z
+				.string()
+				.url("Must be a valid URL")
+				.refine((u) => u.startsWith("https://"), "Webhook URL must use HTTPS"),
 			secret: z.string().nullable().optional(),
 			events: z.array(z.string()).min(1, "Select at least one event"),
 			isActive: z.boolean().default(true),
@@ -70,7 +73,11 @@ const updateEndpoint = permissionProcedure("settings.update")
 		z.object({
 			id: z.string().uuid(),
 			name: z.string().min(1).optional(),
-			url: z.string().url().optional(),
+			url: z
+				.string()
+				.url("Must be a valid URL")
+				.refine((u) => u.startsWith("https://"), "Webhook URL must use HTTPS")
+				.optional(),
 			secret: z.string().nullable().optional(),
 			events: z.array(z.string()).optional(),
 			isActive: z.boolean().optional(),
