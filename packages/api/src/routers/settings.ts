@@ -330,36 +330,49 @@ const getUsers = permissionProcedure("users.read")
 	});
 
 // ── createUser ──────────────────────────────────────────────────────────
-// Note: In production, user creation should go through Better Auth's signUp flow.
-// This is a simplified admin-side creation for the POS management panel.
+// Creates a new user and atomically assigns them to the org + POS role.
 const createUser = permissionProcedure("users.create")
 	.input(
 		z.object({
 			name: z.string().min(1),
 			email: z.string().email(),
-			role: z.string().default("user"),
+			roleId: z.string().uuid("Must select a valid role"),
 		}),
 	)
 	.handler(async ({ input }) => {
+		const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 		const id = crypto.randomUUID();
 		const now = new Date();
 
-		await db.insert(schema.user).values({
-			id,
-			name: input.name,
-			email: input.email,
-			role: input.role,
-			emailVerified: true,
-			createdAt: now,
-			updatedAt: now,
+		await db.transaction(async (tx) => {
+			// 1. Create auth user
+			await tx.insert(schema.user).values({
+				id,
+				name: input.name,
+				email: input.email,
+				role: "user",
+				emailVerified: true,
+				createdAt: now,
+				updatedAt: now,
+			});
+
+			// 2. Create org membership so the user appears in the org
+			await tx.insert(schema.member).values({
+				id: crypto.randomUUID(),
+				organizationId: DEFAULT_ORG_ID,
+				userId: id,
+				role: "member",
+				createdAt: now,
+			});
+
+			// 3. Assign POS role for RBAC
+			await tx.insert(schema.userRole).values({
+				userId: id,
+				roleId: input.roleId,
+			});
 		});
 
-		return {
-			id,
-			name: input.name,
-			email: input.email,
-			role: input.role,
-		};
+		return { id, name: input.name, email: input.email };
 	});
 
 // ── verifyPin ──────────────────────────────────────────────────────────

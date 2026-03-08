@@ -98,6 +98,23 @@ export function SplitBillDialog({
 		}),
 	);
 
+	const splitCustomMut = useMutation(
+		orpc.splitBill.splitCustom.mutationOptions({
+			onSuccess: (data) => {
+				toast.success(`Bill split into ${data.length} custom amounts`);
+				queryClient.invalidateQueries({
+					queryKey: orpc.splitBill.getSplits.queryOptions({
+						input: { orderId },
+					}).queryKey,
+				});
+				onClose();
+			},
+			onError: (err) => {
+				toast.error(err.message);
+			},
+		}),
+	);
+
 	// Equal split calculations
 	const perPerson = useMemo(() => {
 		if (numberOfWays < 2) return orderTotal;
@@ -164,22 +181,16 @@ export function SplitBillDialog({
 	}
 
 	function handleSplitCustom() {
-		// Validate totals match
 		if (Math.abs(customRemaining) > 0.01) {
 			toast.error("Split amounts must equal the order total");
 			return;
 		}
-
-		// Use splitEqual approach but with custom amounts encoded
-		// We create splits via the equal split mutation by rounding to the number of non-zero entries
-		const validAmounts = customAmounts.filter((a) => Number(a) > 0);
+		const validAmounts = customAmounts.map(Number).filter((a) => a > 0);
 		if (validAmounts.length < 2) {
 			toast.error("Enter at least 2 split amounts");
 			return;
 		}
-
-		// We use splitEqual with the count
-		splitEqualMut.mutate({ orderId, numberOfWays: validAmounts.length });
+		splitCustomMut.mutate({ orderId, amounts: validAmounts });
 	}
 
 	const checkLabels = ["A", "B", "C", "D", "E", "F"];
@@ -192,7 +203,10 @@ export function SplitBillDialog({
 		"bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300",
 	];
 
-	const isProcessing = splitEqualMut.isPending || splitByItemsMut.isPending;
+	const isProcessing =
+		splitEqualMut.isPending ||
+		splitByItemsMut.isPending ||
+		splitCustomMut.isPending;
 
 	return (
 		<Dialog

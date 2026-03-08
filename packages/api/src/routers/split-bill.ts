@@ -293,8 +293,83 @@ const getSplits = permissionProcedure("orders.read")
 		};
 	});
 
+// ── splitCustom ─────────────────────────────────────────────────────────
+// Splits an order using caller-specified per-person amounts. The amounts
+// must sum to the order total (within 2 cents tolerance for rounding).
+const splitCustom = permissionProcedure("orders.create")
+	.input(
+		z.object({
+			orderId: z.string().uuid(),
+			amounts: z
+				.array(z.number().positive())
+				.min(2, "Need at least 2 split amounts")
+				.max(20),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const { orderId, amounts } = input;
+
+		const orders = await db
+			.select({
+				id: schema.order.id,
+				total: schema.order.total,
+				status: schema.order.status,
+			})
+			.from(schema.order)
+			.where(eq(schema.order.id, orderId));
+
+		if (orders.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Order not found" });
+		}
+
+		const order = orders[0]!;
+		const total = Number(order.total);
+		const inputSum = amounts.reduce((s, a) => s + a, 0);
+
+		if (Math.abs(inputSum - total) > 0.02) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: `Split amounts (${inputSum.toFixed(2)}) must equal order total (${total.toFixed(2)})`,
+			});
+		}
+
+		const inserted = await db.transaction(async (tx) => {
+			// Remove prior pending splits for idempotency
+			await tx
+				.delete(schema.payment)
+				.where(
+					and(
+						eq(schema.payment.orderId, orderId),
+						eq(schema.payment.status, "pending"),
+					),
+				);
+
+			return await tx
+				.insert(schema.payment)
+				.values(
+					amounts.map((amt, i) => ({
+						orderId,
+						method: "cash" as const,
+						amount: amt.toFixed(2),
+						status: "pending" as const,
+						splitGroup: i + 1,
+					})),
+				)
+				.returning({
+					id: schema.payment.id,
+					splitGroup: schema.payment.splitGroup,
+					amount: schema.payment.amount,
+				});
+		});
+
+		return inserted.map((p) => ({
+			...p,
+			amount: Number(p.amount),
+		}));
+	});
+
 export const splitBillRouter = {
 	splitEqual,
 	splitByItems,
+	splitCustom,
 	getSplits,
 };

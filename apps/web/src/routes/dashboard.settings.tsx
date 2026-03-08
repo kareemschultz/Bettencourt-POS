@@ -728,7 +728,7 @@ function UsersTab() {
 	const [showCreate, setShowCreate] = useState(false);
 	const [newName, setNewName] = useState("");
 	const [newEmail, setNewEmail] = useState("");
-	const [newRole, setNewRole] = useState("user");
+	const [newRoleId, setNewRoleId] = useState("");
 	const [editingUser, setEditingUser] = useState<UserRow | null>(null);
 	const [selectedRoleId, setSelectedRoleId] = useState("");
 	const [deactivateTarget, setDeactivateTarget] = useState<UserRow | null>(
@@ -751,7 +751,7 @@ function UsersTab() {
 				setShowCreate(false);
 				setNewName("");
 				setNewEmail("");
-				setNewRole("user");
+				setNewRoleId("");
 				toast.success("User created");
 			},
 			onError: (err) => toast.error(err.message || "Failed to create user"),
@@ -901,10 +901,14 @@ function UsersTab() {
 					<form
 						onSubmit={(e) => {
 							e.preventDefault();
+							if (!newRoleId) {
+								toast.error("Please select a role");
+								return;
+							}
 							createUser.mutate({
 								name: newName,
 								email: newEmail,
-								role: newRole,
+								roleId: newRoleId,
 							});
 						}}
 						className="flex flex-col gap-4"
@@ -929,14 +933,17 @@ function UsersTab() {
 							/>
 						</div>
 						<div className="flex flex-col gap-1.5">
-							<Label htmlFor="user-role">System Role</Label>
-							<Select value={newRole} onValueChange={setNewRole}>
+							<Label htmlFor="user-role">Role</Label>
+							<Select value={newRoleId} onValueChange={setNewRoleId} required>
 								<SelectTrigger id="user-role">
-									<SelectValue />
+									<SelectValue placeholder="Select a role" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="user">User</SelectItem>
-									<SelectItem value="admin">Admin</SelectItem>
+									{roles.map((r) => (
+										<SelectItem key={r.id} value={r.id}>
+											{r.name}
+										</SelectItem>
+									))}
 								</SelectContent>
 							</Select>
 						</div>

@@ -88,7 +88,7 @@ const mainNavItems = [
 		roles: ["executive", "admin", "cashier"],
 	},
 	{
-		title: "POS Terminal",
+		title: "New Sale",
 		url: "/dashboard/pos",
 		icon: UtensilsCrossed,
 		module: "orders",
@@ -103,7 +103,7 @@ const mainNavItems = [
 	},
 ];
 
-const restaurantNavItems = [
+const operationsNavItems = [
 	{
 		title: "Tables",
 		url: "/dashboard/tables",
@@ -138,6 +138,13 @@ const restaurantNavItems = [
 		icon: CalendarClock,
 		module: "settings",
 		roles: ["executive", "admin"],
+	},
+	{
+		title: "Time Clock",
+		url: "/dashboard/timeclock",
+		icon: Clock,
+		module: null,
+		roles: ["executive", "admin", "cashier", "checkoff"],
 	},
 ];
 
@@ -233,13 +240,6 @@ const customerNavItems = [
 		roles: ["executive", "admin"],
 	},
 	{
-		title: "Discounts",
-		url: "/dashboard/discounts",
-		icon: Percent,
-		module: "settings",
-		roles: ["executive", "admin"],
-	},
-	{
 		title: "Gift Cards",
 		url: "/dashboard/giftcards",
 		icon: Gift,
@@ -248,17 +248,14 @@ const customerNavItems = [
 	},
 ];
 
-const staffNavItems = [
-	{
-		title: "Time Clock",
-		url: "/dashboard/timeclock",
-		icon: Clock,
-		module: null,
-		roles: ["executive", "admin", "cashier", "checkoff"],
-	},
-];
-
 const cashNavItems = [
+	{
+		title: "Discounts",
+		url: "/dashboard/discounts",
+		icon: Percent,
+		module: "settings",
+		roles: ["executive", "admin"],
+	},
 	{
 		title: "Cash Control",
 		url: "/dashboard/cash",
@@ -291,13 +288,6 @@ const cashNavItems = [
 		title: "Expenses",
 		url: "/dashboard/expenses",
 		icon: ReceiptText,
-		module: "settings",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Currency",
-		url: "/dashboard/currency",
-		icon: Banknote,
 		module: "settings",
 		roles: ["executive", "admin"],
 	},
@@ -374,6 +364,13 @@ const systemNavItems = [
 		title: "Notifications",
 		url: "/dashboard/notifications",
 		icon: Bell,
+		module: "settings",
+		roles: ["executive", "admin"],
+	},
+	{
+		title: "Currency",
+		url: "/dashboard/currency",
+		icon: Banknote,
 		module: "settings",
 		roles: ["executive", "admin"],
 	},
@@ -538,11 +535,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
 			</SidebarHeader>
 			<SidebarContent>
 				{renderNavGroup("Main", mainNavItems)}
-				{renderNavGroup("Restaurant", restaurantNavItems)}
+				{renderNavGroup("Operations", operationsNavItems)}
 				{renderNavGroup("Inventory", inventoryNavItems)}
 				{renderNavGroup("Customers", customerNavItems)}
 				{renderNavGroup("Billing", financeNavItems)}
-				{renderNavGroup("Staff", staffNavItems)}
 				{renderNavGroup("Finance", cashNavItems)}
 				{renderNavGroup("Insights", insightsNavItems)}
 				{renderNavGroup("System", systemNavItems)}

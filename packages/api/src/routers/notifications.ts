@@ -107,17 +107,27 @@ const updateSettings = permissionProcedure("settings.update")
 			.where(eq(schema.notificationSettings.organizationId, DEFAULT_ORG_ID))
 			.limit(1);
 
+		// Only update credentials if a real new value is provided — never clear
+		// existing credentials with an empty/masked placeholder string.
+		const credentialUpdates = {
+			...(input.accountSid && !input.accountSid.includes("*")
+				? { accountSid: input.accountSid }
+				: {}),
+			...(input.authToken && !input.authToken.includes("*")
+				? { authToken: input.authToken }
+				: {}),
+		};
+
 		if (existing.length > 0) {
 			const [updated] = await db
 				.update(schema.notificationSettings)
 				.set({
 					provider: input.provider,
-					accountSid: input.accountSid || null,
-					authToken: input.authToken || null,
 					fromNumber: input.fromNumber || null,
 					whatsappNumber: input.whatsappNumber || null,
 					isActive: input.isActive,
 					dailyLimit: input.dailyLimit,
+					...credentialUpdates,
 				})
 				.where(eq(schema.notificationSettings.id, existing[0]!.id))
 				.returning();
@@ -129,8 +139,8 @@ const updateSettings = permissionProcedure("settings.update")
 			.values({
 				organizationId: DEFAULT_ORG_ID,
 				provider: input.provider,
-				accountSid: input.accountSid || null,
-				authToken: input.authToken || null,
+				accountSid: credentialUpdates.accountSid ?? null,
+				authToken: credentialUpdates.authToken ?? null,
 				fromNumber: input.fromNumber || null,
 				whatsappNumber: input.whatsappNumber || null,
 				isActive: input.isActive,
