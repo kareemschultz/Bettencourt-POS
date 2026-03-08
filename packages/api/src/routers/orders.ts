@@ -6,6 +6,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 import { createAuditLog } from "../lib/audit";
+import { requireOrganizationId } from "../lib/org-context";
 
 // ── list ────────────────────────────────────────────────────────────────
 const list = permissionProcedure("orders.read")
@@ -21,15 +22,17 @@ const list = permissionProcedure("orders.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
 		const input = rawInput ?? { page: 1, limit: 50 };
 		const { locationId, status, startDate, endDate } = input;
 		const page = input.page ?? 1;
 		const limit = input.limit ?? 50;
 		const offset = (page - 1) * limit;
 
-		// Build dynamic conditions
-		const conditions = [];
+		const orgId = requireOrganizationId(context);
+
+		// Build dynamic conditions — org filter is always first
+		const conditions = [eq(schema.order.organizationId, orgId)];
 		if (locationId) {
 			conditions.push(eq(schema.order.locationId, locationId));
 		}
@@ -91,7 +94,9 @@ const list = permissionProcedure("orders.read")
 // ── getById ─────────────────────────────────────────────────────────────
 const getById = permissionProcedure("orders.read")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+
 		// Get order with cashier, location, register, and void-authorizer names
 		const voidUser = alias(schema.user, "void_user");
 		const orders = await db
@@ -135,7 +140,12 @@ const getById = permissionProcedure("orders.read")
 				eq(schema.order.registerId, schema.register.id),
 			)
 			.leftJoin(voidUser, eq(schema.order.voidAuthorizedBy, voidUser.id))
-			.where(eq(schema.order.id, input.id));
+			.where(
+				and(
+					eq(schema.order.id, input.id),
+					eq(schema.order.organizationId, orgId),
+				),
+			);
 
 		if (orders.length === 0) {
 			throw new ORPCError("NOT_FOUND", { message: "Order not found" });

@@ -20,6 +20,17 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -99,6 +110,50 @@ export default function NotificationsPage() {
 				</TabsContent>
 			</Tabs>
 		</div>
+	);
+}
+
+// ── Delete Template Confirmation ────────────────────────────────────────
+
+function DeleteTemplateConfirmation({
+	templateId,
+	templateName,
+	onConfirm,
+}: {
+	templateId: string;
+	templateName: string;
+	onConfirm: (id: string) => void;
+}) {
+	return (
+		<AlertDialog>
+			<AlertDialogTrigger asChild>
+				<Button
+					variant="ghost"
+					size="icon"
+					className="size-7 text-destructive hover:text-destructive"
+				>
+					<Trash2 className="size-3.5" />
+				</Button>
+			</AlertDialogTrigger>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Delete Template</AlertDialogTitle>
+					<AlertDialogDescription>
+						Delete &quot;{templateName}&quot;? This cannot be undone and will
+						stop this message from being sent.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel>Cancel</AlertDialogCancel>
+					<AlertDialogAction
+						className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+						onClick={() => onConfirm(templateId)}
+					>
+						Delete
+					</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
 	);
 }
 
@@ -340,16 +395,11 @@ function TemplatesTab() {
 												>
 													<Pencil className="size-3.5" />
 												</Button>
-												<Button
-													size="icon"
-													variant="ghost"
-													className="size-7 text-destructive"
-													onClick={() =>
-														deleteMutation.mutate({ id: t.id as string })
-													}
-												>
-													<Trash2 className="size-3.5" />
-												</Button>
+												<DeleteTemplateConfirmation
+													templateId={t.id as string}
+													templateName={t.name as string}
+													onConfirm={(id) => deleteMutation.mutate({ id })}
+												/>
 											</div>
 										</TableCell>
 									</TableRow>
