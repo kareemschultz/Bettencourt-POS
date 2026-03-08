@@ -8920,6 +8920,76 @@ async function seed() {
 		})
 		.onConflictDoNothing();
 
+	// ── Loyalty Redemption Order ────────────────────────────────────────────
+	console.log("  -> Loyalty redemption order (GT-032)");
+	await db
+		.insert(schema.order)
+		.values({
+			id: ORDER_EXT.e9,
+			organizationId: ORG_ID,
+			locationId: LOC_ID,
+			registerId: REG.meals,
+			userId: USER.cashier,
+			orderNumber: "GT-032",
+			type: "sale",
+			status: "completed",
+			customerId: CUST(7),
+			customerName: "Sheila Bacchus",
+			subtotal: "5500",
+			discountTotal: "500",
+			taxTotal: "0",
+			total: "5000",
+			createdAt: daysAgo(0, 13),
+		})
+		.onConflictDoNothing();
+
+	// GT-032 line items: Duo Special with 500-pt loyalty discount applied
+	await db
+		.insert(schema.orderLineItem)
+		.values([
+			{
+				id: ELI(50),
+				orderId: ORDER_EXT.e9,
+				productId: COMBO.duoSpecial,
+				productNameSnapshot: "Duo Special",
+				reportingCategorySnapshot: "Combo",
+				quantity: 1,
+				unitPrice: "5500",
+				discount: "500",
+				total: "5000",
+				isComponent: false,
+			},
+		])
+		.onConflictDoNothing();
+
+	// GT-032 payment: cash for the discounted total
+	await db
+		.insert(schema.payment)
+		.values({
+			orderId: ORDER_EXT.e9,
+			method: "cash",
+			amount: "5000",
+			tendered: "5000",
+			changeGiven: "0",
+			currency: "GYD",
+			status: "completed",
+		})
+		.onConflictDoNothing();
+
+	// GT-032 loyalty redemption transaction (links redeem to the order)
+	await db
+		.insert(schema.loyaltyTransaction)
+		.values({
+			id: LTXN(16),
+			customerLoyaltyId: CLOY(7),
+			orderId: ORDER_EXT.e9,
+			type: "redeem",
+			points: -500,
+			description: "Redeemed 500 pts on Duo Special (GT-032)",
+			createdAt: daysAgo(0, 13),
+		})
+		.onConflictDoNothing();
+
 	console.log("Seed complete!");
 	process.exit(0);
 }
