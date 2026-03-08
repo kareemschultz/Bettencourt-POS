@@ -8899,6 +8899,516 @@ async function seed() {
 		])
 		.onConflictDoNothing();
 
+	// ── Combo Order Examples ──────────────────────────────────────────────
+	console.log("  -> Orders with combo products (GT-024, GT-025, GT-026)");
+
+	// Helper for new extended order line item IDs (f6000000 prefix)
+	const ELI = (n: number) =>
+		`f6000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+
+	await db
+		.insert(schema.order)
+		.values([
+			{
+				// GT-024: Family Meal Deal — completed, customer Anita Ramsaroop
+				id: ORDER_EXT.e1,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.cashier,
+				customerId: CUST(3),
+				orderNumber: "GT-024",
+				type: "sale",
+				status: "completed",
+				subtotal: "8500",
+				taxTotal: "0",
+				total: "8500",
+				createdAt: daysAgo(2, 12),
+			},
+			{
+				// GT-025: Duo Special — completed, customer Sheila Bacchus
+				id: ORDER_EXT.e2,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.admin,
+				customerId: CUST(7),
+				orderNumber: "GT-025",
+				type: "sale",
+				status: "completed",
+				subtotal: "5500",
+				taxTotal: "0",
+				total: "5500",
+				createdAt: daysAgo(1, 13),
+			},
+			{
+				// GT-026: 2× Fish Friday — open dine-in at table t3
+				id: ORDER_EXT.e3,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.cashier,
+				orderNumber: "GT-026",
+				type: "sale",
+				status: "open",
+				subtotal: "12000",
+				taxTotal: "0",
+				total: "12000",
+				tableId: TABLE.t3,
+				createdAt: daysAgo(0, 11),
+			},
+		])
+		.onConflictDoNothing();
+
+	// GT-024 line items: 1 combo parent + 3 component lines
+	await db
+		.insert(schema.orderLineItem)
+		.values([
+			{
+				id: ELI(1),
+				orderId: ORDER_EXT.e1,
+				productId: COMBO.familyMeal,
+				productNameSnapshot: "Family Meal Deal",
+				reportingCategorySnapshot: "Specials",
+				quantity: 1,
+				unitPrice: "8500",
+				total: "8500",
+				isComponent: false,
+			},
+			{
+				id: ELI(2),
+				orderId: ORDER_EXT.e1,
+				productId: PROD.friedRiceBakedChicken,
+				productNameSnapshot: "Fried Rice / Baked Chicken × 4",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 4,
+				unitPrice: "1500",
+				total: "6000",
+				isComponent: true,
+			},
+			{
+				id: ELI(3),
+				orderId: ORDER_EXT.e1,
+				productId: PROD.drink1Lt,
+				productNameSnapshot: "1L Drink × 2",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 2,
+				unitPrice: "800",
+				total: "1600",
+				isComponent: true,
+			},
+			{
+				id: ELI(4),
+				orderId: ORDER_EXT.e1,
+				productId: PROD.spongeCake,
+				productNameSnapshot: "Sponge Cake × 2",
+				reportingCategorySnapshot: "Pastries",
+				quantity: 2,
+				unitPrice: "450",
+				total: "900",
+				isComponent: true,
+			},
+		])
+		.onConflictDoNothing();
+
+	await db
+		.insert(schema.payment)
+		.values({
+			orderId: ORDER_EXT.e1,
+			method: "cash",
+			amount: "8500",
+			tendered: "10000",
+			changeGiven: "1500",
+			currency: "GYD",
+			status: "completed",
+		})
+		.onConflictDoNothing();
+
+	// GT-025 line items: Duo Special
+	await db
+		.insert(schema.orderLineItem)
+		.values([
+			{
+				id: ELI(10),
+				orderId: ORDER_EXT.e2,
+				productId: COMBO.duoSpecial,
+				productNameSnapshot: "Duo Special",
+				reportingCategorySnapshot: "Specials",
+				quantity: 1,
+				unitPrice: "5500",
+				total: "5500",
+				isComponent: false,
+			},
+			{
+				id: ELI(11),
+				orderId: ORDER_EXT.e2,
+				productId: PROD.curryChicken,
+				productNameSnapshot: "Any Meal × 2 (Curry Chicken)",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 2,
+				unitPrice: "2200",
+				total: "4400",
+				isComponent: true,
+			},
+			{
+				id: ELI(12),
+				orderId: ORDER_EXT.e2,
+				productId: PROD.drink12oz,
+				productNameSnapshot: "12oz Drink × 2",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 2,
+				unitPrice: "550",
+				total: "1100",
+				isComponent: true,
+			},
+		])
+		.onConflictDoNothing();
+
+	await db
+		.insert(schema.payment)
+		.values({
+			orderId: ORDER_EXT.e2,
+			method: "card",
+			amount: "5500",
+			tendered: "5500",
+			changeGiven: "0",
+			currency: "GYD",
+			status: "completed",
+		})
+		.onConflictDoNothing();
+
+	// GT-026 line items: 2× Fish Friday (open order, no payment yet)
+	await db
+		.insert(schema.orderLineItem)
+		.values([
+			{
+				id: ELI(20),
+				orderId: ORDER_EXT.e3,
+				productId: COMBO.fishFriday,
+				productNameSnapshot: "Fish Friday Combo",
+				reportingCategorySnapshot: "Specials",
+				quantity: 2,
+				unitPrice: "6000",
+				total: "12000",
+				isComponent: false,
+			},
+			{
+				id: ELI(21),
+				orderId: ORDER_EXT.e3,
+				productId: PROD.cookupBakedSnapper,
+				productNameSnapshot: "Cookup Fish × 2",
+				reportingCategorySnapshot: "Fish",
+				quantity: 4,
+				unitPrice: "2400",
+				total: "9600",
+				isComponent: true,
+			},
+			{
+				id: ELI(22),
+				orderId: ORDER_EXT.e3,
+				productId: PROD.drink1Lt,
+				productNameSnapshot: "1L Drink × 2",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 4,
+				unitPrice: "600",
+				total: "2400",
+				isComponent: true,
+			},
+		])
+		.onConflictDoNothing();
+
+	// ── Orders with Modifier Selections ──────────────────────────────────
+	console.log("  -> Orders with modifiers applied (GT-027, GT-028)");
+
+	await db
+		.insert(schema.order)
+		.values([
+			{
+				id: ORDER_EXT.e4,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.cashier,
+				customerId: CUST(1),
+				orderNumber: "GT-027",
+				type: "sale",
+				status: "completed",
+				subtotal: "4700",
+				taxTotal: "0",
+				total: "4700",
+				createdAt: daysAgo(1, 12),
+			},
+			{
+				id: ORDER_EXT.e5,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.admin,
+				orderNumber: "GT-028",
+				type: "sale",
+				status: "completed",
+				subtotal: "5400",
+				taxTotal: "0",
+				total: "5400",
+				createdAt: daysAgo(0, 13),
+			},
+		])
+		.onConflictDoNothing();
+
+	await db
+		.insert(schema.orderLineItem)
+		.values([
+			{
+				// GT-027: Curry Chicken — Spice: Hot (free) + Extra Rice (+300)
+				id: ELI(30),
+				orderId: ORDER_EXT.e4,
+				productId: PROD.curryChicken,
+				productNameSnapshot: "Curry Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 1,
+				unitPrice: "2300",
+				total: "2300",
+				modifiersSnapshot: [
+					{ name: "Hot", price: "0" },
+					{ name: "Extra Rice", price: "300" },
+				] as unknown as (typeof schema.orderLineItem.$inferInsert)["modifiersSnapshot"],
+			},
+			{
+				// GT-027: Curry Beef — Spice: Medium (free)
+				id: ELI(31),
+				orderId: ORDER_EXT.e4,
+				productId: PROD.curryBeef,
+				productNameSnapshot: "Anyrice / Curry Beef",
+				reportingCategorySnapshot: "Beef",
+				quantity: 1,
+				unitPrice: "2400",
+				total: "2400",
+				modifiersSnapshot: [
+					{ name: "Medium", price: "0" },
+				] as unknown as (typeof schema.orderLineItem.$inferInsert)["modifiersSnapshot"],
+			},
+			{
+				// GT-028: Chowmein/Baked Chicken × 2 — Extra Chicken (+500 each)
+				id: ELI(32),
+				orderId: ORDER_EXT.e5,
+				productId: PROD.chowmeinBakedChicken,
+				productNameSnapshot: "Chowmein/Baked Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 2,
+				unitPrice: "2700",
+				total: "5400",
+				modifiersSnapshot: [
+					{ name: "Extra Chicken", price: "500" },
+				] as unknown as (typeof schema.orderLineItem.$inferInsert)["modifiersSnapshot"],
+			},
+		])
+		.onConflictDoNothing();
+
+	await db
+		.insert(schema.payment)
+		.values([
+			{
+				orderId: ORDER_EXT.e4,
+				method: "cash",
+				amount: "4700",
+				tendered: "5000",
+				changeGiven: "300",
+				currency: "GYD",
+				status: "completed",
+			},
+			{
+				orderId: ORDER_EXT.e5,
+				method: "card",
+				amount: "5400",
+				tendered: "5400",
+				changeGiven: "0",
+				currency: "GYD",
+				status: "completed",
+			},
+		])
+		.onConflictDoNothing();
+
+	// ── Discount Order + VAT Beverage Order ──────────────────────────────
+	console.log("  -> Discount order (GT-029) + VAT beverage order (GT-030)");
+
+	await db
+		.insert(schema.order)
+		.values([
+			{
+				id: ORDER_EXT.e6,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.meals,
+				userId: USER.cashier,
+				customerId: CUST(4),
+				orderNumber: "GT-029",
+				type: "sale",
+				status: "completed",
+				subtotal: "4000",
+				discountTotal: "400",
+				taxTotal: "0",
+				total: "3600",
+				notes: "Staff & family discount applied",
+				createdAt: daysAgo(1, 14),
+			},
+			{
+				id: ORDER_EXT.e7,
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				registerId: REG.beverage,
+				userId: USER.cashier,
+				orderNumber: "GT-030",
+				type: "sale",
+				status: "completed",
+				subtotal: "2400",
+				taxTotal: "384",
+				total: "2784",
+				notes: "VAT applied to packaged beverages (16%)",
+				createdAt: daysAgo(0, 10),
+			},
+		])
+		.onConflictDoNothing();
+
+	await db
+		.insert(schema.orderLineItem)
+		.values([
+			{
+				id: ELI(40),
+				orderId: ORDER_EXT.e6,
+				productId: PROD.curryChicken,
+				productNameSnapshot: "Curry Chicken",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 2,
+				unitPrice: "2000",
+				discount: "400",
+				total: "3600",
+			},
+			{
+				id: ELI(41),
+				orderId: ORDER_EXT.e7,
+				productId: PROD.drink1Lt,
+				productNameSnapshot: "1 Lt Drink",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 4,
+				unitPrice: "600",
+				tax: "384",
+				total: "2784",
+			},
+		])
+		.onConflictDoNothing();
+
+	await db
+		.insert(schema.payment)
+		.values([
+			{
+				orderId: ORDER_EXT.e6,
+				method: "cash",
+				amount: "3600",
+				tendered: "4000",
+				changeGiven: "400",
+				currency: "GYD",
+				status: "completed",
+			},
+			{
+				orderId: ORDER_EXT.e7,
+				method: "cash",
+				amount: "2784",
+				tendered: "3000",
+				changeGiven: "216",
+				currency: "GYD",
+				status: "completed",
+			},
+		])
+		.onConflictDoNothing();
+
+	// ── USD/FX Payment Order ──────────────────────────────────────────────
+	console.log("  -> USD foreign exchange payment order (GT-031)");
+
+	await db
+		.insert(schema.order)
+		.values({
+			id: ORDER_EXT.e8,
+			organizationId: ORG_ID,
+			locationId: LOC_ID,
+			registerId: REG.meals,
+			userId: USER.cashier,
+			customerName: "Tourist (USD)",
+			orderNumber: "GT-031",
+			type: "sale",
+			status: "completed",
+			subtotal: "8500",
+			taxTotal: "0",
+			total: "8500",
+			notes: "Paid in USD @ 210 GYD/USD",
+			createdAt: daysAgo(3, 13),
+		})
+		.onConflictDoNothing();
+
+	await db
+		.insert(schema.orderLineItem)
+		.values([
+			{
+				id: ELI(50),
+				orderId: ORDER_EXT.e8,
+				productId: COMBO.familyMeal,
+				productNameSnapshot: "Family Meal Deal",
+				reportingCategorySnapshot: "Specials",
+				quantity: 1,
+				unitPrice: "8500",
+				total: "8500",
+				isComponent: false,
+			},
+			{
+				id: ELI(51),
+				orderId: ORDER_EXT.e8,
+				productId: PROD.friedRiceBakedChicken,
+				productNameSnapshot: "Fried Rice / Baked Chicken × 4",
+				reportingCategorySnapshot: "Chicken",
+				quantity: 4,
+				unitPrice: "1500",
+				total: "6000",
+				isComponent: true,
+			},
+			{
+				id: ELI(52),
+				orderId: ORDER_EXT.e8,
+				productId: PROD.drink1Lt,
+				productNameSnapshot: "1L Drink × 2",
+				reportingCategorySnapshot: "Beverages",
+				quantity: 2,
+				unitPrice: "800",
+				total: "1600",
+				isComponent: true,
+			},
+			{
+				id: ELI(53),
+				orderId: ORDER_EXT.e8,
+				productId: PROD.spongeCake,
+				productNameSnapshot: "Sponge Cake × 2",
+				reportingCategorySnapshot: "Pastries",
+				quantity: 2,
+				unitPrice: "450",
+				total: "900",
+				isComponent: true,
+			},
+		])
+		.onConflictDoNothing();
+
+	// USD payment: tendered = 45 USD, rate = 210 GYD/USD → 9450 GYD received
+	await db
+		.insert(schema.payment)
+		.values({
+			orderId: ORDER_EXT.e8,
+			method: "cash",
+			amount: "8500",
+			tendered: "45",
+			changeGiven: "950",
+			currency: "USD",
+			exchangeRate: "210.0000",
+			status: "completed",
+		})
+		.onConflictDoNothing();
+
 	console.log("Seed complete!");
 	process.exit(0);
 }
