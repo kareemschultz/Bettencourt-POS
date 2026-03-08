@@ -436,3 +436,51 @@ Branch: `plan9/deferred-premium`
 ### Commit
 
 `feat: Plan #9 deferred & premium features` (2026-03-08)
+
+## Plan #10 — Final Audit Closure (COMPLETE — 2026-03-08)
+
+Source: `docs/audits/2026-03-08-comprehensive-audit-handoff-v2.md`
+Branch: `plan10/final-audit`
+
+### B03 — Secrets Encrypted at Rest ✅
+
+| Item | Details |
+|------|---------|
+| `packages/api/src/lib/crypto.ts` | AES-256-GCM `encrypt`/`decrypt`/`isEncrypted`; `enc:v1:iv:ciphertext:authTag` format |
+| Backward compatibility | Legacy plaintext values pass through `decrypt()` unchanged |
+| `packages/env/src/server.ts` | `SECRET_ENCRYPTION_KEY` (min 32 chars) added to env schema |
+| Webhooks router | Secret encrypted on create/update |
+| Webhooks dispatch lib | Secret decrypted before HMAC signing |
+| Notifications router | `accountSid`/`authToken` encrypted on write; decrypted before masking display |
+
+### B09 — Route Default-Deny ✅
+
+| Item | Details |
+|------|---------|
+| `apps/web/src/lib/route-access.ts` | Extracted `ROUTE_MODULE_MAP` + `hasRouteAccess` for testability |
+| `dashboard.tsx` | Imports from route-access module; fallback changed from `return true` → `return pathname === "/dashboard"` |
+| Effect | Any `/dashboard/*` route not in the map now returns 403 instead of passing through |
+
+### Test Suite ✅
+
+| File | Tests | Coverage |
+|------|-------|---------|
+| `packages/api/src/__tests__/crypto.test.ts` | 8 | AES round-trip, unique IV, legacy passthrough, malformed detection |
+| `packages/api/src/__tests__/permissions.test.ts` | 7 | RBAC matrix, cashier vs admin, edge cases |
+| `apps/web/src/__tests__/route-access.test.ts` | 17 | Default-deny, all mapped routes, sub-paths, role boundaries |
+| `apps/web/src/__tests__/escape-html.test.ts` | 9 | XSS payloads, all 5 HTML special chars, null/undefined |
+| `apps/server/src/__tests__/pin-auth.test.ts` | 10 | Banned state logic, rate-limiter state machine |
+| **Total** | **47** | **0 failures** |
+
+### Infrastructure
+- `turbo.json`: `test` task added to pipeline
+- `package.json` (root, api, web, server): `"test": "bun test"` scripts added
+- `packages/api/src/lib/has-permission.ts`: pure zero-dep function, enables testing without env validation
+
+### TypeScript & Build
+- `bun run check-types`: 0 errors
+- `bun run build`: clean production build
+- Docker: `kt-bettencourt-pos` rebuilt with `SECRET_ENCRYPTION_KEY` in env
+
+### Commits
+- `feat: Plan #10 — final audit closure (encryption, route deny, test suite)` (2026-03-08)
