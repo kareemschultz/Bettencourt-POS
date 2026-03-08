@@ -8680,7 +8680,7 @@ async function seed() {
 				unitPrice: "2300",
 				total: "2300",
 				modifiersSnapshot: [
-					{ name: "Hot", price: "0" },
+					{ name: "Spice Level: Hot", price: "0" },
 					{ name: "Extra Rice", price: "300" },
 				] as unknown as (typeof schema.orderLineItem.$inferInsert)["modifiersSnapshot"],
 			},
@@ -8695,7 +8695,7 @@ async function seed() {
 				unitPrice: "2400",
 				total: "2400",
 				modifiersSnapshot: [
-					{ name: "Medium", price: "0" },
+					{ name: "Spice Level: Medium", price: "0" },
 				] as unknown as (typeof schema.orderLineItem.$inferInsert)["modifiersSnapshot"],
 			},
 			{
@@ -8729,7 +8729,7 @@ async function seed() {
 			},
 			{
 				orderId: ORDER_EXT.e5,
-				method: "card",
+				method: "mobile_money",
 				amount: "5400",
 				tendered: "5400",
 				changeGiven: "0",
