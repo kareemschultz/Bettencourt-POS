@@ -44,7 +44,10 @@ jobs:
         run: bun run test
 
       - name: Production build
-        run: bun run build
+        # Exclude fumadocs: its prerender config uses node:fs/promises.glob() which
+        # Vite's SSR virtual-module evaluator cannot resolve in the CI environment.
+        # Fumadocs is a static docs site — the POS app (web + server) is what we deploy.
+        run: bunx turbo build --filter="!fumadocs"
 
       - name: Biome lint & format check
         # biome ci = read-only CI mode (no --write, strict exit codes)
