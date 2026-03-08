@@ -225,7 +225,7 @@ const COMMAND_GROUPS: CommandGroupDef[] = [
 		],
 	},
 	{
-		label: "Finance",
+		label: "Finance & Billing",
 		items: [
 			{
 				title: "Discounts",
@@ -269,6 +269,20 @@ const COMMAND_GROUPS: CommandGroupDef[] = [
 				module: "settings",
 				roles: ["executive", "admin"],
 			},
+			{
+				title: "Quotations",
+				url: "/dashboard/quotations",
+				icon: FileText,
+				module: "quotations",
+				roles: ["executive", "admin"],
+			},
+			{
+				title: "Invoices",
+				url: "/dashboard/invoices",
+				icon: Receipt,
+				module: "invoices",
+				roles: ["executive", "admin"],
+			},
 		],
 	},
 	{
@@ -307,25 +321,6 @@ const COMMAND_GROUPS: CommandGroupDef[] = [
 				url: "/dashboard/profitability",
 				icon: PieChart,
 				module: "reports",
-				roles: ["executive", "admin"],
-			},
-		],
-	},
-	{
-		label: "Billing",
-		items: [
-			{
-				title: "Quotations",
-				url: "/dashboard/quotations",
-				icon: FileText,
-				module: "quotations",
-				roles: ["executive", "admin"],
-			},
-			{
-				title: "Invoices",
-				url: "/dashboard/invoices",
-				icon: Receipt,
-				module: "invoices",
 				roles: ["executive", "admin"],
 			},
 		],
