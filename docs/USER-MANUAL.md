@@ -1304,8 +1304,8 @@ Send SMS and WhatsApp messages to customers automatically when events happen —
 
 1. Go to **Notifications → Settings** tab
 2. Enter your **Twilio Account SID** and **Auth Token** (from your Twilio console)
-3. Enter your **From Number** (the Twilio phone number that sends SMS, e.g. `+15550001234`)
-4. Optionally enter a **WhatsApp Number** if using WhatsApp Business
+3. Enter your **From Number** (the Twilio phone number that sends SMS, must be E.164 format: `+15550001234`)
+4. Optionally enter a **WhatsApp Number** (same E.164 format, e.g. `+15550009999`)
 5. Set a **Daily Limit** (default 500) — stops sending if too many messages go out in a day
 6. Click **Save** and toggle **Active** to enable
 
@@ -1364,7 +1364,7 @@ When an event happens in the POS (e.g., an order is paid), the system sends a **
 
 1. Go to **Webhooks** and click **Add Endpoint**
 2. Enter a **Name** (e.g., "QuickBooks Sales Feed")
-3. Enter the **URL** — this is provided by the external service
+3. Enter the **URL** — this is provided by the external service (**must start with `https://`**)
 4. Select the **Events** to subscribe to (see list below)
 5. Optionally enter a **Secret** — used to verify that the request came from your POS (HMAC-SHA256 signature)
 6. Click **Save**
