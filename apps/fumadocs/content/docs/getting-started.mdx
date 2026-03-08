@@ -37,19 +37,58 @@ After logging in, you see the **Dashboard** — your daily overview.
 - **Kitchen/Checkoff** — Links to Kitchen Display and Production, active ticket count
 
 **Sidebar Navigation:**
-Use the left sidebar to move between sections. You can search the sidebar by typing in the search box at the top.
+Use the left sidebar to move between sections. Navigation is organized into groups:
 
-> The sidebar only shows sections your role has permission to access. Cashiers see fewer options than managers.
+| Group | What's inside |
+|-------|---------------|
+| **Operations** | New Sale, Orders, Kitchen Display, Production, Time Clock |
+| **Inventory** | Stock, Stock Alerts, Waste & Shrinkage, Variance Report, Suppliers, Labels |
+| **Finance** | Cash Control, Expenses, Discounts, P&L, Sales Journal, Reconciliation, Currency Rates |
+| **Insights** | Reports, Analytics, EOD Report, Labor Cost, Profitability |
+| **Customers** | Customers, Loyalty Program, Gift Cards |
+| **Sales** | Quotations, Invoices |
+| **System** | Settings, Locations, Webhooks, Notifications, Audit Log |
+
+> The sidebar only shows groups and sections your role can access. Cashiers see far fewer options than managers.
+
+### Quick Navigation — Ctrl+K Command Palette
+
+Press **Ctrl+K** (or **Cmd+K** on Mac) anywhere in the dashboard to open the **command palette** — a fast search that jumps to any page instantly.
+
+1. Press **Ctrl+K** — palette opens with a search box
+2. Type any page name (e.g., "inventory", "cash", "kitchen")
+3. Arrow keys or click to highlight → **Enter** to navigate
+
+The palette only shows pages your role can access, same as the sidebar.
 
 ---
 
 ## Staff Roles
 
-| Role | Description |
-|------|-------------|
-| **Cashier** | POS Terminal, view orders, time clock |
-| **Kitchen / Checkoff** | Kitchen Display, Production dashboard, time clock |
-| **Warehouse Clerk** | Inventory, purchase orders, stock alerts |
-| **Accountant** | All reports, expenses, P&L, labor |
-| **Admin / Manager** | All of the above plus settings, cash control, user management |
-| **Executive / Owner** | Full access to everything including all financial data |
+| Role | Access |
+|------|--------|
+| **Cashier** | New Sale, Orders, Time Clock |
+| **Kitchen / Checkoff** | Kitchen Display, Production, Time Clock |
+| **Warehouse Clerk** | Inventory, Stock Alerts, Purchase Orders, Suppliers, Labels |
+| **Accountant** | Reports, Analytics, Expenses, P&L, Labor Cost, Reconciliation |
+| **Admin / Manager** | All of the above + Settings, Cash Control, user management |
+| **Executive / Owner** | Full access — all pages and financial data |
+
+### Default Landing Page
+
+Each user can set their preferred startup page in **Settings → My Workspace**. The default is the Dashboard, but cashiers may prefer to start directly on New Sale, and kitchen staff on the Kitchen Display.
+
+### PIN Security
+
+After **5 failed PIN attempts** from the same device, the system locks out that IP address for 60 seconds. This is automatic and cannot be bypassed. If a legitimate user is locked out, they should wait 60 seconds or use email login instead.
+
+---
+
+## Sync & Offline Status
+
+A small indicator at the top of the sidebar shows connection status:
+- **Green dot** — connected and synced
+- **Yellow dot** — syncing in progress
+- **Red dot** — connection lost (offline mode)
+
+When offline, the system continues operating with locally cached data. Orders placed offline are synced automatically when the connection is restored.

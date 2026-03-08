@@ -73,8 +73,22 @@ When the POS is active, only the products matching the current time window will 
 
 ## Notifications
 
-**Navigate to:** Dashboard → Notifications
+**Navigate to:** Dashboard → System → Notifications
 
-Manage in-app notification settings. Configure which events trigger notifications and who receives them — for example:
-- Notify the manager when a void occurs
-- Notify when stock drops below the minimum reorder point
+Send automatic SMS and WhatsApp messages to customers when events happen. Full documentation: [Notifications](/docs/notifications)
+
+**Quick reference:**
+- Set up Twilio credentials in the **Settings** tab to enable sending
+- Edit message templates in the **Templates** tab — use variables like `{{customerName}}` and `{{orderNumber}}`
+- View every message sent (or failed) in the **Log** tab
+
+## Webhooks
+
+**Navigate to:** Dashboard → System → Webhooks
+
+Forward POS events to external systems (QuickBooks, Slack, Zapier, etc.). Full documentation: [Webhooks](/docs/webhooks)
+
+**Quick reference:**
+- Add an endpoint URL + select which events to subscribe to
+- View delivery history (status code, response, duration) in the Delivery Log
+- Optionally set a secret for HMAC payload verification

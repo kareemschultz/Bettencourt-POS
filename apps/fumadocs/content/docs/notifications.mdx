@@ -1,0 +1,112 @@
+---
+title: Notifications
+description: Send automatic SMS and WhatsApp messages to customers for order updates, loyalty points, and refunds
+---
+
+**Navigate to:** Dashboard → System → Notifications
+
+Send automated SMS or WhatsApp messages to customers when events happen — like when their takeaway order is ready, when they earn loyalty points, or when a refund is processed.
+
+The system uses **Twilio** as the SMS and WhatsApp provider. Credentials must be configured before messages will send.
+
+---
+
+## How It Works
+
+1. **Settings** — Connect your Twilio account (Account SID, Auth Token, phone number)
+2. **Templates** — Customize the message text for each event type
+3. **Automatic sending** — The POS sends the right template when a matching event occurs
+4. **Log** — Every message (sent or failed) is recorded for review
+
+---
+
+## Setting Up Twilio (Admin Only)
+
+> If you don't have a Twilio account, contact KareTech Solutions. They can set one up for you.
+
+1. Go to **Notifications → Settings** tab
+2. Enter your **Account SID** and **Auth Token** (from [twilio.com/console](https://twilio.com/console))
+3. Enter your **From Number** — the Twilio phone number that sends SMS (e.g. `+15550001234`)
+4. Optionally enter a **WhatsApp Number** if you use Twilio's WhatsApp Business API
+5. Set a **Daily Limit** (default: 500) — the system stops sending if this count is reached in a day
+6. Toggle **Active** to enable
+7. Click **Save**
+
+---
+
+## Message Templates
+
+Go to the **Templates** tab to see and edit all configured messages.
+
+### Available Events
+
+| Event | When the message sends |
+|-------|------------------------|
+| `order.ready` | When staff marks an order as Ready for pickup |
+| `loyalty.earned` | When a customer earns loyalty points |
+| `loyalty.redeemed` | When a customer redeems loyalty points at checkout |
+| `order.refunded` | When a refund is processed for a customer's order |
+
+### Template Variables
+
+Use these placeholders in message text — they are filled in automatically:
+
+| Variable | Replaced with |
+|----------|---------------|
+| `{{customerName}}` | Customer's first name |
+| `{{orderNumber}}` | Order reference number (e.g. GT-042) |
+| `{{total}}` | Order total in GYD |
+| `{{points}}` | Points earned or redeemed |
+| `{{totalPoints}}` | Customer's new running points total |
+| `{{refundAmount}}` | Amount refunded in GYD |
+
+### Editing a Template
+
+1. Click the template name
+2. Edit the message body — use variables in double curly braces
+3. Set the **Channel**: SMS, WhatsApp, or Both
+4. Toggle **Active** — inactive templates never send
+5. Click **Save**
+
+### Example Template
+
+```
+Hi {{customerName}}, your order #{{orderNumber}} is ready for pickup at Bettencourt's! 🍽️
+```
+
+> SMS messages are limited to 160 characters per segment. Longer messages are split and charged as multiple segments.
+
+---
+
+## Notification Log
+
+The **Log** tab records every notification the system has attempted:
+
+| Status | Meaning |
+|--------|---------|
+| **Delivered** | Successfully received by the customer's phone (confirmed by carrier) |
+| **Sent** | Dispatched to Twilio — delivery confirmation pending |
+| **Failed** | Error from Twilio (e.g., invalid phone number, daily limit reached) |
+| **Pending** | Queued but not yet sent |
+
+### Troubleshooting a Failed Notification
+
+1. Open the **Log** tab and find the entry for the customer
+2. Click the row to expand and see the **Error Message** from Twilio
+3. Common causes:
+   - Phone number not in international format (should start with country code, e.g. `+592...`)
+   - Daily message limit reached — increase the limit in Settings
+   - Twilio account suspended or out of credit
+   - Customer's carrier blocking the message
+
+---
+
+## SMS vs WhatsApp
+
+| | SMS | WhatsApp |
+|-|-----|----------|
+| **Requires** | Twilio From Number | Twilio WhatsApp Business number |
+| **Cost** | Per message (varies by country) | Per session (24-hour window) |
+| **Character limit** | 160 per segment | 4,096 characters |
+| **Delivery** | Works on any phone | Requires customer has WhatsApp |
+| **Best for** | Broad reach | Richer messages, media |

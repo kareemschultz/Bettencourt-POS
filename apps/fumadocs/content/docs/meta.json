@@ -14,6 +14,8 @@
 		"commerce",
 		"settings",
 		"staff",
+		"webhooks",
+		"notifications",
 		"public-pages",
 		"faq"
 	]
