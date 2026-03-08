@@ -171,17 +171,18 @@ const createCount = permissionProcedure("inventory.create")
 		z.object({
 			organizationId: z.string().uuid(),
 			locationId: z.string().uuid(),
-			createdBy: z.string(),
+			createdBy: z.string().optional(),
 			type: z.string().default("cycle"),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const createdBy = context.session.user.id;
 		const countRows = await db
 			.insert(schema.stockCount)
 			.values({
 				organizationId: input.organizationId,
 				locationId: input.locationId,
-				createdBy: input.createdBy,
+				createdBy,
 				type: input.type,
 				status: "in_progress",
 			})
@@ -277,7 +278,7 @@ const createPurchaseOrder = permissionProcedure("inventory.create")
 			organizationId: z.string().uuid(),
 			locationId: z.string().uuid(),
 			supplierId: z.string().uuid(),
-			createdBy: z.string(),
+			createdBy: z.string().optional(),
 			notes: z.string().nullable().optional(),
 			items: z
 				.array(
@@ -291,7 +292,8 @@ const createPurchaseOrder = permissionProcedure("inventory.create")
 				.default([]),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const createdBy = context.session.user.id;
 		// Calculate total
 		const totalCost = input.items.reduce(
 			(sum, item) => sum + Number(item.quantity) * Number(item.unitCost),
@@ -304,7 +306,7 @@ const createPurchaseOrder = permissionProcedure("inventory.create")
 				organizationId: input.organizationId,
 				locationId: input.locationId,
 				supplierId: input.supplierId,
-				createdBy: input.createdBy,
+				createdBy,
 				status: "draft",
 				notes: input.notes ?? null,
 				total: totalCost.toFixed(2),
@@ -374,7 +376,7 @@ const createTransfer = permissionProcedure("inventory.create")
 			organizationId: z.string().uuid(),
 			fromLocationId: z.string().uuid(),
 			toLocationId: z.string().uuid(),
-			createdBy: z.string(),
+			createdBy: z.string().optional(),
 			notes: z.string().nullable().optional(),
 			items: z
 				.array(
@@ -387,14 +389,15 @@ const createTransfer = permissionProcedure("inventory.create")
 				.default([]),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const createdBy = context.session.user.id;
 		const transferRows = await db
 			.insert(schema.transfer)
 			.values({
 				organizationId: input.organizationId,
 				fromLocationId: input.fromLocationId,
 				toLocationId: input.toLocationId,
-				createdBy: input.createdBy,
+				createdBy,
 				status: "pending",
 				notes: input.notes ?? null,
 			})

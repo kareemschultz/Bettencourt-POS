@@ -124,6 +124,10 @@ export default function WasteTrackingPage() {
 	const monthStart = startOfMonthGY();
 	const weekStart = startOfWeekGY();
 	const queryClient = useQueryClient();
+	const { data: userProfile } = useQuery(
+		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
+	);
+	const orgId = userProfile?.organizationId ?? DEFAULT_ORG_ID;
 
 	const [startDate, setStartDate] = useState(monthStart);
 	const [endDate, setEndDate] = useState(today);
@@ -265,7 +269,7 @@ export default function WasteTrackingPage() {
 		if (!formProductName.trim() || !formQuantity) return;
 
 		logWasteMutation.mutate({
-			organizationId: DEFAULT_ORG_ID,
+			organizationId: orgId,
 			inventoryItemId: formInventoryItemId,
 			productName: formProductName.trim(),
 			quantity: formQuantity,

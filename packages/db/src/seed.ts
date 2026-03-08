@@ -8221,6 +8221,520 @@ async function seed() {
 	}
 	// Bottled drinks remain 0% (retail goods, not prepared food)
 
+	// ── Webhook Endpoints & Deliveries ────────────────────────────────
+	if (!isProduction) {
+		console.log("  -> Webhook endpoints & delivery log");
+
+		const WH_ENDPOINT_1 = "e2000000-0000-4000-8000-000000000001";
+		const WH_ENDPOINT_2 = "e2000000-0000-4000-8000-000000000002";
+
+		await db
+			.insert(schema.webhookEndpoint)
+			.values([
+				{
+					id: WH_ENDPOINT_1,
+					organizationId: ORG_ID,
+					name: "QuickBooks Accounting",
+					url: "https://hooks.example.com/quickbooks/bettencourt",
+					// Stored as plaintext in seed — decrypt() passes through non-encrypted values
+					secret: "demo-secret-qb-32chars-placeholder",
+					events: ["order.completed", "order.refunded"],
+					isActive: true,
+					createdAt: daysAgo(14, 9),
+				},
+				{
+					id: WH_ENDPOINT_2,
+					organizationId: ORG_ID,
+					name: "Slack Inventory Alerts",
+					url: "https://hooks.slack.com/services/T000/B000/demo-token",
+					secret: null,
+					events: ["inventory.low_stock", "inventory.out_of_stock"],
+					isActive: true,
+					createdAt: daysAgo(7, 10),
+				},
+			])
+			.onConflictDoNothing();
+
+		// Delivery records for QuickBooks endpoint
+		await db
+			.insert(schema.webhookDelivery)
+			.values([
+				{
+					endpointId: WH_ENDPOINT_1,
+					event: "order.completed",
+					payload: {
+						event: "order.completed",
+						timestamp: daysAgo(1, 14).toISOString(),
+						data: { orderId: ORDER.o1, orderNumber: "GT-001", total: "4400" },
+					},
+					statusCode: 200,
+					responseBody: '{"status":"ok","id":"qb_txn_001"}',
+					duration: 312,
+					success: true,
+					createdAt: daysAgo(1, 14),
+				},
+				{
+					endpointId: WH_ENDPOINT_1,
+					event: "order.completed",
+					payload: {
+						event: "order.completed",
+						timestamp: daysAgo(2, 11).toISOString(),
+						data: { orderId: ORDER.o3, orderNumber: "GT-003", total: "6600" },
+					},
+					statusCode: 200,
+					responseBody: '{"status":"ok","id":"qb_txn_002"}',
+					duration: 284,
+					success: true,
+					createdAt: daysAgo(2, 11),
+				},
+				{
+					endpointId: WH_ENDPOINT_1,
+					event: "order.refunded",
+					payload: {
+						event: "order.refunded",
+						timestamp: daysAgo(3, 15).toISOString(),
+						data: {
+							orderId: ORDER.o5,
+							orderNumber: "GT-005",
+							refundAmount: "2200",
+						},
+					},
+					statusCode: 503,
+					responseBody: "Service Unavailable",
+					duration: 10023,
+					success: false,
+					createdAt: daysAgo(3, 15),
+				},
+				{
+					endpointId: WH_ENDPOINT_1,
+					event: "order.completed",
+					payload: {
+						event: "order.completed",
+						timestamp: daysAgo(4, 13).toISOString(),
+						data: { orderId: ORDER.o7, orderNumber: "GT-007", total: "8800" },
+					},
+					statusCode: 200,
+					responseBody: '{"status":"ok","id":"qb_txn_003"}',
+					duration: 198,
+					success: true,
+					createdAt: daysAgo(4, 13),
+				},
+			])
+			.onConflictDoNothing();
+
+		// Delivery records for Slack endpoint
+		await db
+			.insert(schema.webhookDelivery)
+			.values([
+				{
+					endpointId: WH_ENDPOINT_2,
+					event: "inventory.low_stock",
+					payload: {
+						event: "inventory.low_stock",
+						timestamp: daysAgo(1, 8).toISOString(),
+						data: {
+							itemId: INV_ITEM.chicken,
+							itemName: "Chicken",
+							currentQty: 5,
+							minQty: 10,
+						},
+					},
+					statusCode: 200,
+					responseBody: "ok",
+					duration: 145,
+					success: true,
+					createdAt: daysAgo(1, 8),
+				},
+				{
+					endpointId: WH_ENDPOINT_2,
+					event: "inventory.out_of_stock",
+					payload: {
+						event: "inventory.out_of_stock",
+						timestamp: daysAgo(2, 16).toISOString(),
+						data: {
+							itemId: INV_ITEM.snapper,
+							itemName: "Snapper",
+							currentQty: 0,
+						},
+					},
+					statusCode: null,
+					responseBody: "Error: connect ETIMEDOUT hooks.slack.com:443",
+					duration: 10001,
+					success: false,
+					createdAt: daysAgo(2, 16),
+				},
+				{
+					endpointId: WH_ENDPOINT_2,
+					event: "inventory.low_stock",
+					payload: {
+						event: "inventory.low_stock",
+						timestamp: daysAgo(3, 9).toISOString(),
+						data: {
+							itemId: INV_ITEM.rice,
+							itemName: "Rice",
+							currentQty: 8,
+							minQty: 20,
+						},
+					},
+					statusCode: 200,
+					responseBody: "ok",
+					duration: 167,
+					success: true,
+					createdAt: daysAgo(3, 9),
+				},
+			])
+			.onConflictDoNothing();
+
+		// ── Notification Settings & Templates ──────────────────────────
+		console.log("  -> Notification settings & templates");
+
+		const NOTIF_TMPL_1 = "e3000000-0000-4000-8000-000000000001";
+		const NOTIF_TMPL_2 = "e3000000-0000-4000-8000-000000000002";
+		const NOTIF_TMPL_3 = "e3000000-0000-4000-8000-000000000003";
+		const NOTIF_TMPL_4 = "e3000000-0000-4000-8000-000000000004";
+
+		// Organization notification settings (Twilio not configured — demo mode)
+		await db
+			.insert(schema.notificationSettings)
+			.values({
+				organizationId: ORG_ID,
+				provider: "twilio",
+				accountSid: null,
+				authToken: null,
+				fromNumber: null,
+				whatsappNumber: null,
+				isActive: false,
+				dailyLimit: 500,
+			})
+			.onConflictDoNothing();
+
+		// Message templates for common events
+		await db
+			.insert(schema.notificationTemplate)
+			.values([
+				{
+					id: NOTIF_TMPL_1,
+					organizationId: ORG_ID,
+					event: "order.ready",
+					name: "Order Ready (SMS)",
+					description:
+						"Sent to customers when their pickup/delivery order is ready",
+					channel: "sms",
+					messageTemplate:
+						"Hi {{customerName}}, your order #{{orderNumber}} is ready for pickup at Bettencourt's! 🍽️",
+					isActive: true,
+				},
+				{
+					id: NOTIF_TMPL_2,
+					organizationId: ORG_ID,
+					event: "loyalty.earned",
+					name: "Loyalty Points Earned (SMS)",
+					description:
+						"Sent when a customer earns loyalty points from an order",
+					channel: "sms",
+					messageTemplate:
+						"Hi {{customerName}}! You earned {{points}} loyalty points on order #{{orderNumber}}. Total: {{totalPoints}} pts. - Bettencourt's",
+					isActive: true,
+				},
+				{
+					id: NOTIF_TMPL_3,
+					organizationId: ORG_ID,
+					event: "order.refunded",
+					name: "Refund Processed (SMS)",
+					description: "Sent to customers when their refund has been processed",
+					channel: "sms",
+					messageTemplate:
+						"Hi {{customerName}}, your refund of ${{refundAmount}} GYD for order #{{orderNumber}} has been processed. - Bettencourt's",
+					isActive: true,
+				},
+				{
+					id: NOTIF_TMPL_4,
+					organizationId: ORG_ID,
+					event: "order.ready",
+					name: "Order Ready (WhatsApp)",
+					description: "WhatsApp message when order is ready for pickup",
+					channel: "whatsapp",
+					messageTemplate:
+						"Hello {{customerName}} 👋\n\nYour order *#{{orderNumber}}* from Bettencourt's Food Inc. is *ready for pickup*! 🍛\n\nThank you for your order!",
+					isActive: false,
+				},
+			])
+			.onConflictDoNothing();
+
+		// Sample notification log entries (simulated — Twilio not active in demo)
+		await db
+			.insert(schema.notificationLog)
+			.values([
+				{
+					organizationId: ORG_ID,
+					templateId: NOTIF_TMPL_1,
+					event: "order.ready",
+					channel: "sms",
+					recipient: "+592-600-0001",
+					message:
+						"Hi Maria, your order #GT-005 is ready for pickup at Bettencourt's! 🍽️",
+					status: "delivered",
+					externalId: "SM_demo_0001",
+					metadata: { orderId: ORDER.o5, customerId: CUST(1) },
+					cost: 1,
+					createdAt: daysAgo(1, 13),
+				},
+				{
+					organizationId: ORG_ID,
+					templateId: NOTIF_TMPL_2,
+					event: "loyalty.earned",
+					channel: "sms",
+					recipient: "+592-600-0001",
+					message:
+						"Hi Maria! You earned 44 loyalty points on order #GT-005. Total: 312 pts. - Bettencourt's",
+					status: "delivered",
+					externalId: "SM_demo_0002",
+					metadata: { orderId: ORDER.o5, customerId: CUST(1), points: 44 },
+					cost: 1,
+					createdAt: daysAgo(1, 13),
+				},
+				{
+					organizationId: ORG_ID,
+					templateId: NOTIF_TMPL_1,
+					event: "order.ready",
+					channel: "sms",
+					recipient: "+592-600-0002",
+					message:
+						"Hi John, your order #GT-008 is ready for pickup at Bettencourt's! 🍽️",
+					status: "failed",
+					externalId: null,
+					errorMessage: "Twilio: The 'To' number is not a valid phone number",
+					metadata: { orderId: ORDER.o8, customerId: CUST(2) },
+					cost: null,
+					createdAt: daysAgo(2, 10),
+				},
+				{
+					organizationId: ORG_ID,
+					templateId: NOTIF_TMPL_3,
+					event: "order.refunded",
+					channel: "sms",
+					recipient: "+592-600-0003",
+					message:
+						"Hi Sarah, your refund of $2200 GYD for order #GT-021 has been processed. - Bettencourt's",
+					status: "sent",
+					externalId: "SM_demo_0003",
+					metadata: { orderId: "f2000000-0000-4000-8000-000000000001" },
+					cost: 1,
+					createdAt: daysAgo(3, 14),
+				},
+				{
+					organizationId: ORG_ID,
+					templateId: NOTIF_TMPL_2,
+					event: "loyalty.earned",
+					channel: "sms",
+					recipient: "+592-600-0003",
+					message:
+						"Hi Sarah! You earned 66 loyalty points on order #GT-010. Total: 180 pts. - Bettencourt's",
+					status: "delivered",
+					externalId: "SM_demo_0004",
+					metadata: { orderId: ORDER.o10, customerId: CUST(3), points: 66 },
+					cost: 1,
+					createdAt: daysAgo(4, 15),
+				},
+			])
+			.onConflictDoNothing();
+
+		// ── Split Bill Orders ─────────────────────────────────────────
+		console.log("  -> Split bill demo orders");
+
+		const ORDER_SPLIT_1 = "f3000000-0000-4000-8000-000000000001";
+		const ORDER_SPLIT_2 = "f3000000-0000-4000-8000-000000000002";
+
+		// Split order: table dine-in, 4 items split between 2 people
+		await db
+			.insert(schema.order)
+			.values([
+				{
+					id: ORDER_SPLIT_1,
+					organizationId: ORG_ID,
+					locationId: LOC_ID,
+					registerId: REG.meals,
+					userId: USER.cashier,
+					orderNumber: "GT-022",
+					type: "sale",
+					status: "completed",
+					tableId: TABLE.t3,
+					isSplit: true,
+					subtotal: "8800",
+					taxTotal: "616",
+					total: "9416",
+					notes: "Split between 2 — couple's lunch",
+					createdAt: daysAgo(1, 12),
+				},
+				{
+					id: ORDER_SPLIT_2,
+					organizationId: ORG_ID,
+					locationId: LOC_ID,
+					registerId: REG.meals,
+					userId: USER.cashier,
+					orderNumber: "GT-023",
+					type: "sale",
+					status: "completed",
+					tableId: TABLE.t5,
+					isSplit: true,
+					subtotal: "13200",
+					taxTotal: "924",
+					total: "14124",
+					notes: "Split 3 ways — office group",
+					createdAt: daysAgo(2, 13),
+				},
+			])
+			.onConflictDoNothing();
+
+		// Line items for split order 1
+		await db
+			.insert(schema.orderLineItem)
+			.values([
+				{
+					id: "f3000000-0000-4000-8000-000000000011",
+					orderId: ORDER_SPLIT_1,
+					productId: PROD.friedRiceBakedChicken,
+					productNameSnapshot: "Fried Rice and Baked Chicken",
+					reportingCategorySnapshot: "Chicken",
+					quantity: 1,
+					unitPrice: "2200",
+					total: "2200",
+				},
+				{
+					id: "f3000000-0000-4000-8000-000000000012",
+					orderId: ORDER_SPLIT_1,
+					productId: PROD.curryChicken,
+					productNameSnapshot: "Curry Chicken",
+					reportingCategorySnapshot: "Chicken",
+					quantity: 1,
+					unitPrice: "2400",
+					total: "2400",
+				},
+				{
+					id: "f3000000-0000-4000-8000-000000000013",
+					orderId: ORDER_SPLIT_1,
+					productId: PROD.coke,
+					productNameSnapshot: "Coca-Cola (Can)",
+					reportingCategorySnapshot: "Beverages",
+					quantity: 2,
+					unitPrice: "600",
+					total: "1200",
+				},
+				{
+					id: "f3000000-0000-4000-8000-000000000014",
+					orderId: ORDER_SPLIT_1,
+					productId: PROD.spongeCake,
+					productNameSnapshot: "Sponge Cake",
+					reportingCategorySnapshot: "Pastries",
+					quantity: 1,
+					unitPrice: "700",
+					total: "700",
+				},
+			])
+			.onConflictDoNothing();
+
+		// Line items for split order 2
+		await db
+			.insert(schema.orderLineItem)
+			.values([
+				{
+					id: "f3000000-0000-4000-8000-000000000021",
+					orderId: ORDER_SPLIT_2,
+					productId: PROD.cookupBakedChicken,
+					productNameSnapshot: "Cookup and Baked Chicken",
+					reportingCategorySnapshot: "Chicken",
+					quantity: 3,
+					unitPrice: "2500",
+					total: "7500",
+				},
+				{
+					id: "f3000000-0000-4000-8000-000000000022",
+					orderId: ORDER_SPLIT_2,
+					productId: PROD.tamarindJuice,
+					productNameSnapshot: "Tamarind Juice",
+					reportingCategorySnapshot: "Local Juices",
+					quantity: 3,
+					unitPrice: "500",
+					total: "1500",
+				},
+				{
+					id: "f3000000-0000-4000-8000-000000000023",
+					orderId: ORDER_SPLIT_2,
+					productId: PROD.coconutBuns,
+					productNameSnapshot: "Coconut Buns",
+					reportingCategorySnapshot: "Pastries",
+					quantity: 3,
+					unitPrice: "400",
+					total: "1200",
+				},
+			])
+			.onConflictDoNothing();
+
+		// Payments for split order 1 — 2 people paid separately
+		await db
+			.insert(schema.payment)
+			.values([
+				{
+					orderId: ORDER_SPLIT_1,
+					method: "cash",
+					amount: "4708",
+					tendered: "5000",
+					changeGiven: "292",
+					currency: "GYD",
+					splitGroup: 1,
+					status: "completed",
+				},
+				{
+					orderId: ORDER_SPLIT_1,
+					method: "card",
+					amount: "4708",
+					tendered: "4708",
+					changeGiven: "0",
+					currency: "GYD",
+					splitGroup: 2,
+					status: "completed",
+				},
+			])
+			.onConflictDoNothing();
+
+		// Payments for split order 2 — 3 people paid separately
+		await db
+			.insert(schema.payment)
+			.values([
+				{
+					orderId: ORDER_SPLIT_2,
+					method: "cash",
+					amount: "4708",
+					tendered: "5000",
+					changeGiven: "292",
+					currency: "GYD",
+					splitGroup: 1,
+					status: "completed",
+				},
+				{
+					orderId: ORDER_SPLIT_2,
+					method: "cash",
+					amount: "4708",
+					tendered: "5000",
+					changeGiven: "292",
+					currency: "GYD",
+					splitGroup: 2,
+					status: "completed",
+				},
+				{
+					orderId: ORDER_SPLIT_2,
+					method: "mobile_money",
+					amount: "4708",
+					tendered: "4708",
+					changeGiven: "0",
+					currency: "GYD",
+					splitGroup: 3,
+					status: "completed",
+				},
+			])
+			.onConflictDoNothing();
+	}
+
 	// 32. Add a refunded order for status coverage (2E)
 	console.log("  -> Refunded order (status coverage)");
 	const ORDER_REFUND = "f2000000-0000-4000-8000-000000000001";

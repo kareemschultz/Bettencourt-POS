@@ -860,6 +860,7 @@ export function OrdersTable({
 	orders: initialOrders,
 	userId,
 	userRole,
+	userPermissions,
 	search = "",
 	onSearchChange,
 	statusFilter = "all",
@@ -872,6 +873,7 @@ export function OrdersTable({
 	orders: Order[];
 	userId?: string;
 	userRole?: string;
+	userPermissions?: Record<string, string[]>;
 	search?: string;
 	onSearchChange?: (v: string) => void;
 	statusFilter?: string;
@@ -885,7 +887,12 @@ export function OrdersTable({
 	const [typeFilter, setTypeFilter] = useState<string>("all");
 	const [viewingOrderId, setViewingOrderId] = useState<string | null>(null);
 
-	const canVoid = userRole === "admin" || userRole === "executive";
+	const normalizedRole = userRole?.trim().toLowerCase();
+	const canVoidByRole =
+		normalizedRole === "admin" || normalizedRole === "executive";
+	const canVoidByPermission =
+		userPermissions?.orders?.includes("void") ?? false;
+	const canVoid = canVoidByPermission || canVoidByRole;
 
 	const q = search.trim().toLowerCase();
 	const filtered = orders.filter((o) => {

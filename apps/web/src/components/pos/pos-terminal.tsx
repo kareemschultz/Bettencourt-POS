@@ -58,13 +58,14 @@ import { SellGiftCardDialog } from "./sell-gift-card-dialog";
 import { SplitBillDialog } from "./split-bill-dialog";
 
 const BEVERAGE_REGISTER = "c0000000-0000-4000-8000-000000000003";
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+const FALLBACK_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 const DEFAULT_LOCATION_ID = "b0000000-0000-4000-8000-000000000001";
 
 interface POSTerminalProps {
 	userId: string | null;
 	userName?: string;
 	locationId?: string | null;
+	organizationId?: string | null;
 	userPermissions?: Record<string, string[]>;
 }
 
@@ -72,6 +73,7 @@ export function POSTerminal({
 	userId,
 	userName = "Cashier",
 	locationId: propLocationId,
+	organizationId,
 	userPermissions = {},
 }: POSTerminalProps) {
 	// Discount permission: only users with discounts.apply can open the discount dialog
@@ -142,6 +144,7 @@ export function POSTerminal({
 
 	// Resolve effective location: prefer prop from LocationContext, fall back to hardcoded default
 	const effectiveLocationId = propLocationId || DEFAULT_LOCATION_ID;
+	const effectiveOrganizationId = organizationId || FALLBACK_ORG_ID;
 
 	// Fetch products via oRPC (filtered by location; skip register filter when override active)
 	const { data: posData, isLoading } = useQuery(
@@ -364,7 +367,7 @@ export function POSTerminal({
 			userId: userId,
 			registerId: selectedRegister,
 			locationId: effectiveLocationId,
-			organizationId: DEFAULT_ORG_ID,
+			organizationId: effectiveOrganizationId,
 			orderType: isBeverageTerminal ? orderMode : "dine_in",
 			discountTotal: discount,
 			customerId: selectedCustomer?.id ?? null,

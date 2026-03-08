@@ -89,7 +89,8 @@ CREATE TABLE "user" (
 	"hourly_rate" numeric(10, 2),
 	"organization_id" uuid,
 	CONSTRAINT "user_email_unique" UNIQUE("email"),
-	CONSTRAINT "user_username_unique" UNIQUE("username")
+	CONSTRAINT "user_username_unique" UNIQUE("username"),
+	CONSTRAINT "user_pin_hash_unique" UNIQUE("pin_hash")
 );
 --> statement-breakpoint
 CREATE TABLE "verification" (
@@ -949,6 +950,7 @@ CREATE INDEX "idx_cash_recon_rule_org" ON "cash_reconciliation_rule" USING btree
 CREATE INDEX "idx_cash_session_register" ON "cash_session" USING btree ("register_id");--> statement-breakpoint
 CREATE INDEX "idx_cash_session_location" ON "cash_session" USING btree ("location_id");--> statement-breakpoint
 CREATE INDEX "idx_cash_session_status" ON "cash_session" USING btree ("status");--> statement-breakpoint
+CREATE UNIQUE INDEX "uq_cash_session_open_register" ON "cash_session" USING btree ("register_id") WHERE "cash_session"."status" = 'open';--> statement-breakpoint
 CREATE INDEX "idx_expense_session" ON "expense" USING btree ("cash_session_id");--> statement-breakpoint
 CREATE INDEX "idx_expense_org" ON "expense" USING btree ("organization_id");--> statement-breakpoint
 CREATE INDEX "idx_expense_created" ON "expense" USING btree ("created_at");--> statement-breakpoint

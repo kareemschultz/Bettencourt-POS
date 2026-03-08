@@ -8,6 +8,56 @@ import { decrypt, encrypt } from "../lib/crypto";
 
 const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 
+type NotificationSettingsRow = {
+	id: string;
+	organizationId: string;
+	provider: "twilio" | "vonage";
+	accountSid: string | null;
+	authToken: string | null;
+	fromNumber: string | null;
+	whatsappNumber: string | null;
+	isActive: boolean;
+	dailyLimit: number;
+	createdAt: Date;
+	updatedAt: Date;
+};
+
+function toPublicSettings(settings: NotificationSettingsRow | null) {
+	if (!settings) return null;
+	let accountSidMasked: string | null = null;
+
+	if (settings.accountSid) {
+		try {
+			const sid = decrypt(settings.accountSid);
+			accountSidMasked =
+				sid.length > 8
+					? `${sid.slice(0, 4)}${"*".repeat(sid.length - 8)}${sid.slice(-4)}`
+					: "********";
+		} catch {
+			accountSidMasked = "********";
+		}
+	}
+
+	return {
+		id: settings.id,
+		organizationId: settings.organizationId,
+		provider: settings.provider,
+		isActive: settings.isActive,
+		dailyLimit: settings.dailyLimit,
+		fromNumber: settings.fromNumber,
+		whatsappNumber: settings.whatsappNumber,
+		hasCredentials: !!(settings.accountSid && settings.authToken),
+		accountSidMasked,
+	};
+}
+
+function normalizePhone(value: string): string {
+	const trimmed = value.trim();
+	if (!trimmed) return "";
+	if (trimmed.startsWith("+")) return `+${trimmed.slice(1).replace(/\D/g, "")}`;
+	return `+${trimmed.replace(/\D/g, "")}`;
+}
+
 // Available notification events with human-readable descriptions
 const NOTIFICATION_EVENTS = [
 	{
@@ -69,29 +119,11 @@ const getSettings = permissionProcedure("settings.read")
 			.where(eq(schema.notificationSettings.organizationId, DEFAULT_ORG_ID))
 			.limit(1);
 
-		if (!rows[0]) return null;
-		const s = rows[0];
-		return {
-			id: s.id,
-			organizationId: s.organizationId,
-			provider: s.provider,
-			isActive: s.isActive,
-			dailyLimit: s.dailyLimit,
-			fromNumber: s.fromNumber,
-			whatsappNumber: s.whatsappNumber,
-			// Decrypt at read time before masking — never expose raw encrypted blob
-			hasCredentials: !!(s.accountSid && s.authToken),
-			accountSidMasked: s.accountSid
-				? (() => {
-						const p = decrypt(s.accountSid!);
-						return `${p.slice(0, 4)}${"*".repeat(Math.max(0, p.length - 8))}${p.slice(-4)}`;
-					})()
-				: null,
-		};
+		return toPublicSettings((rows[0] as NotificationSettingsRow) ?? null);
 	});
 
 // ── updateSettings ─────────────────────────────────────────────────────
-// Saves Twilio/provider configuration. Credentials are stored as-is for now.
+// Saves Twilio/provider configuration. Credentials are encrypted at rest.
 const updateSettings = permissionProcedure("settings.update")
 	.input(
 		z.object({
@@ -135,7 +167,7 @@ const updateSettings = permissionProcedure("settings.update")
 				})
 				.where(eq(schema.notificationSettings.id, existing[0]!.id))
 				.returning();
-			return updated!;
+			return toPublicSettings(updated as NotificationSettingsRow);
 		}
 
 		const [created] = await db
@@ -151,7 +183,7 @@ const updateSettings = permissionProcedure("settings.update")
 				dailyLimit: input.dailyLimit,
 			})
 			.returning();
-		return created!;
+		return toPublicSettings(created as NotificationSettingsRow);
 	});
 
 // ── getAvailableEvents ─────────────────────────────────────────────────
@@ -338,29 +370,52 @@ const sendTest = permissionProcedure("settings.update")
 	)
 	.handler(async ({ input }) => {
 		// Check if settings are configured
-		const settings = await db
+		const settingsRows = await db
 			.select()
 			.from(schema.notificationSettings)
 			.where(eq(schema.notificationSettings.organizationId, DEFAULT_ORG_ID))
 			.limit(1);
 
-		if (!settings.length || !settings[0]?.isActive) {
+		const settings = settingsRows[0];
+		if (!settings || !settings.isActive) {
 			throw new ORPCError("BAD_REQUEST", {
 				message:
 					"Notifications are not configured. Add your Twilio credentials in Settings to enable SMS.",
 			});
 		}
 
-		if (!settings[0]?.accountSid || !settings[0]?.authToken) {
+		if (!settings.accountSid || !settings.authToken) {
 			throw new ORPCError("BAD_REQUEST", {
 				message:
 					"Missing Twilio credentials. Add your Account SID and Auth Token to send notifications.",
 			});
 		}
 
-		// Credentials are encrypted at rest — decrypt here when Twilio API is wired:
-		// const twilioSid = decrypt(settings[0].accountSid);
-		// const twilioToken = decrypt(settings[0].authToken);
+		if (settings.provider !== "twilio") {
+			throw new ORPCError("NOT_IMPLEMENTED", {
+				message: `Provider '${settings.provider}' is not yet supported for test sends.`,
+			});
+		}
+
+		const twilioSid = decrypt(settings.accountSid);
+		const twilioToken = decrypt(settings.authToken);
+		const to = normalizePhone(input.phoneNumber);
+		const fromBase =
+			input.channel === "whatsapp"
+				? settings.whatsappNumber || settings.fromNumber
+				: settings.fromNumber;
+		const from = normalizePhone(fromBase ?? "");
+
+		if (!to || !from) {
+			throw new ORPCError("BAD_REQUEST", {
+				message:
+					"Invalid phone numbers. Ensure test destination and sender numbers are valid E.164 values.",
+			});
+		}
+
+		const toAddress = input.channel === "whatsapp" ? `whatsapp:${to}` : to;
+		const fromAddress =
+			input.channel === "whatsapp" ? `whatsapp:${from}` : from;
 
 		// Log the test attempt
 		const [log] = await db
@@ -376,20 +431,72 @@ const sendTest = permissionProcedure("settings.update")
 			})
 			.returning();
 
-		// Twilio integration not yet implemented — mark as failed instead of faking success
-		await db
-			.update(schema.notificationLog)
-			.set({
-				status: "failed",
-				errorMessage:
-					"Twilio API integration not yet implemented. Configure and connect your Twilio account.",
-			})
-			.where(eq(schema.notificationLog.id, log!.id));
+		try {
+			const payload = new URLSearchParams({
+				To: toAddress,
+				From: fromAddress,
+				Body: `Test notification from Bettencourt's POS. If you received this, your ${input.channel.toUpperCase()} notifications are working correctly!`,
+			});
 
-		throw new ORPCError("NOT_IMPLEMENTED", {
-			message:
-				"SMS/WhatsApp provider integration is not yet connected. Your credentials are saved but the Twilio API call is pending implementation.",
-		});
+			const response = await fetch(
+				`https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(twilioSid)}/Messages.json`,
+				{
+					method: "POST",
+					headers: {
+						Authorization: `Basic ${Buffer.from(`${twilioSid}:${twilioToken}`).toString("base64")}`,
+						"Content-Type": "application/x-www-form-urlencoded",
+					},
+					body: payload.toString(),
+				},
+			);
+
+			type TwilioResponse = {
+				sid?: string;
+				error_message?: string | null;
+				message?: string;
+			};
+			const body = (await response.json().catch(() => ({}))) as TwilioResponse;
+
+			if (!response.ok) {
+				const errorMessage =
+					body.error_message ||
+					body.message ||
+					`Twilio request failed with status ${response.status}`;
+				await db
+					.update(schema.notificationLog)
+					.set({
+						status: "failed",
+						errorMessage,
+					})
+					.where(eq(schema.notificationLog.id, log!.id));
+				throw new ORPCError("BAD_REQUEST", { message: errorMessage });
+			}
+
+			await db
+				.update(schema.notificationLog)
+				.set({
+					status: "sent",
+					externalId: body.sid ?? null,
+				})
+				.where(eq(schema.notificationLog.id, log!.id));
+
+			return {
+				success: true,
+				message: `Test ${input.channel.toUpperCase()} notification queued successfully.`,
+			};
+		} catch (error) {
+			if (error instanceof ORPCError) throw error;
+			const message =
+				error instanceof Error ? error.message : "Failed to send test message";
+			await db
+				.update(schema.notificationLog)
+				.set({
+					status: "failed",
+					errorMessage: message,
+				})
+				.where(eq(schema.notificationLog.id, log!.id));
+			throw new ORPCError("INTERNAL_SERVER_ERROR", { message });
+		}
 	});
 
 export const notificationsRouter = {

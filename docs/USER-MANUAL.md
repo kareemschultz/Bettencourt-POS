@@ -10,23 +10,23 @@
 
 1. [Getting Started — Logging In](#1-getting-started--logging-in)
 2. [Dashboard (Home)](#2-dashboard-home)
-3. [POS Terminal (Taking Orders)](#3-pos-terminal-taking-orders)
+3. [New Sale (Taking Orders)](#3-new-sale-taking-orders)
 4. [Orders](#4-orders)
 5. [Kitchen Display System (KDS)](#5-kitchen-display-system-kds)
 6. [Production Dashboard](#6-production-dashboard)
 7. [Cash Control](#7-cash-control)
 8. [Inventory](#8-inventory)
 9. [Stock Alerts](#9-stock-alerts)
-10. [Waste Log](#10-waste-log)
-11. [Variance Report](#11-variance-report)
+10. [Waste & Shrinkage Log](#10-waste--shrinkage-log)
+11. [Stock Variance Report](#11-stock-variance-report)
 12. [Suppliers](#12-suppliers)
 13. [Labels](#13-labels)
 14. [Reports](#14-reports)
 15. [Analytics](#15-analytics)
-16. [Sales Journal](#16-sales-journal)
-17. [Reconciliation](#17-reconciliation)
+16. [Daily Sales Journal](#16-daily-sales-journal)
+17. [Cash Reconciliation](#17-cash-reconciliation)
 18. [Profitability](#18-profitability)
-19. [P&L Statement](#19-pl-statement)
+19. [Profit & Loss Statement](#19-profit--loss-statement)
 20. [Labor Cost](#20-labor-cost)
 21. [End of Day (EOD) Report](#21-end-of-day-eod-report)
 22. [Expenses](#22-expenses)
@@ -41,13 +41,14 @@
 31. [Settings](#31-settings)
 32. [Locations](#32-locations)
 33. [Audit Log](#33-audit-log)
-34. [Menu Schedules](#34-menu-schedules)
+34. [Menu Calendar](#34-menu-calendar)
 35. [Tables](#35-tables)
 36. [Notifications](#36-notifications)
-37. [Menu Board (TV Display)](#37-menu-board-tv-display)
-38. [Online Ordering](#38-online-ordering)
-39. [Frequently Asked Questions](#39-frequently-asked-questions)
-40. [Getting Help](#40-getting-help)
+37. [Webhooks](#37-webhooks)
+38. [Menu Board (TV Display)](#38-menu-board-tv-display)
+39. [Online Ordering](#39-online-ordering)
+40. [Frequently Asked Questions](#40-frequently-asked-questions)
+41. [Getting Help](#41-getting-help)
 
 ---
 
@@ -85,15 +86,35 @@ After logging in, you see the **Dashboard** — your daily overview.
 - Quick-action cards to start common tasks
 
 **Sidebar Navigation:**
-Use the left sidebar to move between sections. You can search the sidebar by typing in the search box at the top.
+Use the left sidebar to move between sections. Navigation is grouped into logical areas:
+
+- **Operations** — New Sale, Orders, Kitchen Display, Production Board, Time Clock
+- **Inventory** — Inventory, Stock Alerts, Waste & Shrinkage, Stock Variance, Suppliers, Labels
+- **Finance** — Cash Control, Expenses, Discounts, Profit & Loss, Daily Sales Journal, Cash Reconciliation, Currency Rates
+- **Insights** — Reports, Analytics, EOD Report, Labor Cost, Profitability
+- **Customers** — Customers, Loyalty Program, Gift Cards
+- **Sales** — Quotations, Invoices
+- **System** — Settings, Locations, Webhooks, Notifications, Audit Log
 
 > The sidebar only shows sections your role has permission to access. Cashiers see fewer options than managers.
 
+### Quick Navigation — Command Palette (Ctrl+K)
+
+Press **Ctrl+K** (or **Cmd+K** on Mac) from anywhere in the dashboard to open the **command palette** — a fast search bar that lets you jump to any page instantly.
+
+**How to use:**
+1. Press **Ctrl+K** — the palette opens with a search box
+2. Start typing any page name (e.g., "inventory", "cash", "reports")
+3. The list filters instantly — use arrow keys or click to navigate
+4. Press **Enter** to go to the highlighted page
+
+The command palette shows only the pages your role can access — the same as the sidebar. It's the fastest way to navigate the system, especially on a busy shift.
+
 ---
 
-## 3. POS Terminal (Taking Orders)
+## 3. New Sale (Taking Orders)
 
-**Navigate to:** POS Terminal (or click "Open POS" from the Dashboard)
+**Navigate to:** New Sale (or click "Open POS" from the Dashboard)
 
 This is the main screen for taking orders. It has two main parts:
 - **Left/Center:** Product grid organized by category
@@ -180,6 +201,10 @@ Click the trash icon next to any cart item to remove it. This does not record a 
 ### Voiding an Order After Payment
 
 Go to **Orders**, find the order, click it, then click **Void Order**. See [Section 4 — Orders](#4-orders).
+
+### Keyboard Shortcut
+
+Press **Ctrl+K** (Cmd+K on Mac) from the New Sale screen or anywhere in the dashboard to open the command palette and jump to any section instantly.
 
 ### Linking a Customer to an Order
 
@@ -1262,13 +1287,119 @@ View and manage your dine-in table layout.
 
 ## 36. Notifications
 
-**Navigate to:** Dashboard → Notifications
+**Navigate to:** Dashboard → System → Notifications
 
-Manage in-app notification settings. Configure which events trigger notifications and who receives them (e.g., notify the manager when a void occurs, or when stock drops below minimum).
+Send SMS and WhatsApp messages to customers automatically when events happen — e.g., "Your order is ready!" or "You earned loyalty points."
+
+### How Notifications Work
+
+1. **Provider** — The system uses **Twilio** to send SMS and WhatsApp messages. Twilio credentials must be configured before notifications will send.
+2. **Templates** — Each event type has a customizable message template with variables like `{{customerName}}` and `{{orderNumber}}`.
+3. **Channels** — Each template can send via **SMS**, **WhatsApp**, or **both**.
+4. **Log** — Every message sent (or that failed to send) is recorded in the **Notification Log** tab.
+
+### Setting Up Twilio (Admin Only)
+
+> Ask KareTech Solutions to set up Twilio if you haven't already.
+
+1. Go to **Notifications → Settings** tab
+2. Enter your **Twilio Account SID** and **Auth Token** (from your Twilio console)
+3. Enter your **From Number** (the Twilio phone number that sends SMS, e.g. `+15550001234`)
+4. Optionally enter a **WhatsApp Number** if using WhatsApp Business
+5. Set a **Daily Limit** (default 500) — stops sending if too many messages go out in a day
+6. Click **Save** and toggle **Active** to enable
+
+### Managing Message Templates
+
+Go to the **Templates** tab to see all configured message templates.
+
+**Available events:**
+| Event | When it triggers |
+|---|---|
+| `order.ready` | When staff marks an order as "Ready" |
+| `order.refunded` | When a refund is processed |
+| `loyalty.earned` | When a customer earns loyalty points |
+| `loyalty.redeemed` | When a customer redeems loyalty points |
+
+**Template variables you can use:**
+- `{{customerName}}` — Customer's first name
+- `{{orderNumber}}` — Order reference (e.g., GT-012)
+- `{{total}}` — Order total in GYD
+- `{{points}}` — Points earned or redeemed
+- `{{totalPoints}}` — Customer's new total points
+- `{{refundAmount}}` — Amount refunded
+
+**Editing a template:**
+1. Click the template name in the Templates tab
+2. Edit the message text — use variables in double curly braces
+3. Change the **Channel** (SMS / WhatsApp / Both)
+4. Toggle **Active** — inactive templates won't send
+5. Click **Save**
+
+### Notification Log
+
+The **Log** tab shows every message the system has tried to send:
+- **Delivered** — Successfully received by the customer's phone
+- **Sent** — Sent to Twilio, awaiting delivery confirmation
+- **Failed** — Twilio returned an error (e.g., invalid number, daily limit reached)
+- **Pending** — Queued but not yet sent
+
+> If a customer says they didn't receive a notification, check the Log tab and look for error messages on their phone number.
 
 ---
 
-## 37. Menu Board (TV Display)
+## 37. Webhooks
+
+**Navigate to:** Dashboard → System → Webhooks
+
+Webhooks let the POS automatically notify other software systems (accounting tools, Slack, spreadsheets, etc.) whenever something happens — like an order completing or stock running low.
+
+> **For Shakira:** Webhooks are an advanced feature usually set up by KareTech Solutions to connect your POS to tools like QuickBooks or Zapier.
+
+### What Are Webhooks?
+
+When an event happens in the POS (e.g., an order is paid), the system sends a **POST request** with the event data to a URL you configure. The receiving system (QuickBooks, Slack, a custom script, etc.) can then react automatically.
+
+### Adding a Webhook Endpoint
+
+1. Go to **Webhooks** and click **Add Endpoint**
+2. Enter a **Name** (e.g., "QuickBooks Sales Feed")
+3. Enter the **URL** — this is provided by the external service
+4. Select the **Events** to subscribe to (see list below)
+5. Optionally enter a **Secret** — used to verify that the request came from your POS (HMAC-SHA256 signature)
+6. Click **Save**
+
+### Available Events
+
+| Event | When it fires |
+|---|---|
+| `order.completed` | An order is paid and completed |
+| `order.refunded` | A refund is processed |
+| `order.voided` | An order is voided |
+| `inventory.low_stock` | An inventory item drops below its minimum threshold |
+| `inventory.out_of_stock` | An inventory item reaches zero |
+| `*` (wildcard) | All events |
+
+### Delivery Log
+
+The **Delivery Log** tab shows every webhook send attempt for each endpoint:
+- **Status code** — HTTP response from the receiving server (200 = success, 5xx = server error)
+- **Duration** — How long the request took (ms)
+- **Success/Failed** — Whether the delivery was acknowledged
+
+If a delivery failed, click on it to see the full error response.
+
+### Webhook Security (Signatures)
+
+When you set a **Secret** on an endpoint, the POS signs each request with an HMAC-SHA256 signature sent in the `X-Webhook-Signature` header. The receiving system can verify this to confirm the request is authentic.
+
+### Toggling an Endpoint On/Off
+
+Click the **Active** toggle next to any endpoint to temporarily pause deliveries without deleting the endpoint.
+
+---
+
+## 38. Menu Board (TV Display)
 
 **Access at:** https://pos.karetechsolutions.com/menu-board
 
@@ -1289,7 +1420,7 @@ This is a public page (no login required) designed to be displayed on a TV scree
 
 ---
 
-## 38. Online Ordering
+## 39. Online Ordering
 
 **Access at:** https://pos.karetechsolutions.com/order
 
@@ -1316,7 +1447,7 @@ Online orders appear in the Orders list tagged as "Pickup" or "Delivery". The KD
 
 ---
 
-## 39. Frequently Asked Questions
+## 40. Frequently Asked Questions
 
 **Q: A customer wants a refund. How do I process it?**
 Go to **Orders** → find the order → click **Refund**. Enter the amount to refund and confirm. The refund is logged against the original payment method.
@@ -1325,7 +1456,7 @@ Go to **Orders** → find the order → click **Refund**. Enter the amount to re
 When closing the shift, enter the actual cash count. The system records the variance. Report discrepancies to the manager. The Audit Log and no-sale event log can help explain what happened.
 
 **Q: How do I void an order that's already been paid?**
-Go to **Orders** → open the order → click **Void Order** → confirm. Only managers can void completed orders.
+Go to **Operations → Orders** → open the order → click **Void Order** → confirm. Only managers can void completed orders.
 
 **Q: A product is sold out. How do I hide it from the POS?**
 Go to **Settings → Products** → find the product → toggle **Active** to off. It disappears from the POS grid immediately.
@@ -1364,7 +1495,7 @@ Go to **Cash Control → Shift History** and click a shift to see who opened and
 4. If nothing works, contact KareTech Solutions
 
 **Q: Can I use the POS on a tablet or phone?**
-Yes. The system is mobile-responsive and works on tablets. The POS Terminal is designed to work on 10" and larger screens for the best experience.
+Yes. The system is mobile-responsive and works on tablets. The New Sale screen is designed to work on 10" and larger screens for the best experience.
 
 **Q: How do I set up the menu board TV?**
 Open a browser on the TV, go to https://pos.karetechsolutions.com/menu-board, and click the fullscreen button.
@@ -1372,9 +1503,18 @@ Open a browser on the TV, go to https://pos.karetechsolutions.com/menu-board, an
 **Q: Customers want to order online. Where do they go?**
 Send them to **https://pos.karetechsolutions.com/order** — or make a link/button on your WhatsApp or Facebook page.
 
+**Q: Is there a faster way to navigate between sections?**
+Yes — press **Ctrl+K** (or **Cmd+K** on Mac) anywhere in the dashboard to open the command palette. Start typing any section name and press Enter to jump there instantly.
+
+**Q: A customer didn't receive their SMS notification. How do I check?**
+Go to **System → Notifications → Log** tab and search for their phone number. The log shows whether the message was delivered, failed, or had an error. Check for typos in the phone number.
+
+**Q: How do I connect the POS to QuickBooks or another accounting system?**
+Go to **System → Webhooks** and add a new endpoint with the URL provided by your accounting software or integration (e.g., a Zapier webhook URL). Select the events you want to sync (e.g., `order.completed`). Contact KareTech Solutions for help setting this up.
+
 ---
 
-## 40. Getting Help
+## 41. Getting Help
 
 For technical support or system questions:
 

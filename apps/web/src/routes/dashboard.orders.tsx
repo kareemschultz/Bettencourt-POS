@@ -255,6 +255,7 @@ export default function OrdersPage() {
 				orders={orders}
 				userId={session?.user?.id}
 				userRole={userProfile?.roleName ?? "Cashier"}
+				userPermissions={userProfile?.permissions ?? {}}
 				search={search}
 				onSearchChange={setSearch}
 				statusFilter={statusFilter}

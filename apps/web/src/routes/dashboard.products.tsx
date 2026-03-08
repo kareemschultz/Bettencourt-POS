@@ -78,6 +78,10 @@ export default function ProductsPage() {
 	} | null>(null);
 	const queryClient = useQueryClient();
 	const { requestOverride, SupervisorDialog } = useSupervisorOverride();
+	const { data: userProfile } = useQuery(
+		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
+	);
+	const orgId = userProfile?.organizationId ?? DEFAULT_ORG_ID;
 
 	const { data: products = [] } = useQuery(
 		orpc.products.list.queryOptions({ input: {} }),
@@ -195,7 +199,7 @@ export default function ProductsPage() {
 			});
 		} else {
 			createProduct.mutate({
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				name: form.name,
 				sku: form.sku || null,
 				price: form.price,

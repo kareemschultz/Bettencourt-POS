@@ -8,6 +8,7 @@ import {
 	useState,
 } from "react";
 import {
+	Link,
 	Outlet,
 	useLocation,
 	useNavigate,
@@ -332,12 +333,12 @@ export default function DashboardLayout() {
 								<p className="text-muted-foreground text-sm">
 									You do not have permission to view this page.
 								</p>
-								<a
-									href="/dashboard"
+								<Link
+									to="/dashboard"
 									className="text-primary text-sm underline underline-offset-4"
 								>
 									Return to Dashboard
-								</a>
+								</Link>
 							</div>
 						)}
 					</LocationContext.Provider>

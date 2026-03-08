@@ -2704,23 +2704,105 @@ function DocumentSettingsTab() {
 
 // ── Roles & Permissions Tab ────────────────────────────────────────────
 
-const ALL_MODULES = [
-	{ key: "orders", label: "Orders" },
-	{ key: "products", label: "Products" },
-	{ key: "customers", label: "Customers" },
-	{ key: "reports", label: "Reports" },
-	{ key: "settings", label: "Settings" },
-	{ key: "users", label: "Users" },
-	{ key: "modifiers", label: "Modifiers" },
-	{ key: "categories", label: "Categories" },
-	{ key: "suppliers", label: "Suppliers" },
-	{ key: "inventory", label: "Inventory" },
-	{ key: "invoices", label: "Invoices" },
-	{ key: "quotations", label: "Quotations" },
-	{ key: "expenses", label: "Expenses" },
-	{ key: "staff", label: "Staff" },
+const MODULE_PERMISSION_MATRIX: Array<{
+	key: string;
+	label: string;
+	actions: string[];
+}> = [
+	{
+		key: "orders",
+		label: "Orders",
+		actions: [
+			"create",
+			"read",
+			"update",
+			"delete",
+			"void",
+			"refund",
+			"approve",
+			"override",
+		],
+	},
+	{
+		key: "products",
+		label: "Products",
+		actions: ["create", "read", "update", "delete"],
+	},
+	{
+		key: "customers",
+		label: "Customers",
+		actions: ["create", "read", "update", "delete"],
+	},
+	{
+		key: "inventory",
+		label: "Inventory",
+		actions: ["create", "read", "update", "delete", "approve"],
+	},
+	{
+		key: "departments",
+		label: "Departments",
+		actions: ["create", "read", "update", "delete", "override"],
+	},
+	{
+		key: "modifiers",
+		label: "Modifiers",
+		actions: ["create", "read", "update", "delete"],
+	},
+	{
+		key: "discounts",
+		label: "Discounts",
+		actions: ["create", "read", "update", "delete", "apply"],
+	},
+	{
+		key: "prices",
+		label: "Pricing Overrides",
+		actions: ["override"],
+	},
+	{
+		key: "reports",
+		label: "Reports",
+		actions: ["read"],
+	},
+	{
+		key: "settings",
+		label: "Settings",
+		actions: ["create", "read", "update", "delete"],
+	},
+	{
+		key: "shifts",
+		label: "Cash & Shifts",
+		actions: ["create", "read", "update", "delete", "approve"],
+	},
+	{
+		key: "users",
+		label: "Users",
+		actions: ["create", "read", "update", "delete"],
+	},
+	{
+		key: "audit",
+		label: "Audit Log",
+		actions: ["read"],
+	},
+	{
+		key: "hardware",
+		label: "Hardware",
+		actions: ["create", "read", "update", "delete"],
+	},
+	{
+		key: "invoices",
+		label: "Invoices",
+		actions: ["create", "read", "update", "delete"],
+	},
+	{
+		key: "quotations",
+		label: "Quotations",
+		actions: ["create", "read", "update", "delete"],
+	},
 ];
-const ALL_ACTIONS = ["create", "read", "update", "delete"];
+
+const ALL_ACTIONS = Array.from(
+	new Set(MODULE_PERMISSION_MATRIX.flatMap((module) => module.actions)),
+);
 
 type RoleRecord = {
 	id: string;
@@ -2794,11 +2876,28 @@ function RolesTab() {
 		});
 	}
 
+	function getModuleActions(
+		module: string,
+		currentPerms?: Record<string, string[]>,
+	) {
+		const fromMatrix = MODULE_PERMISSION_MATRIX.find(
+			(item) => item.key === module,
+		)?.actions;
+		if (fromMatrix && fromMatrix.length > 0) return fromMatrix;
+		return currentPerms?.[module] ?? [];
+	}
+
 	function toggleModule(module: string) {
 		setEditPerms((prev) => {
 			const current = prev[module] ?? [];
-			const next =
-				current.length === ALL_ACTIONS.length ? [] : [...ALL_ACTIONS];
+			const moduleActions = getModuleActions(module, prev);
+			if (moduleActions.length === 0) return prev;
+			const allGranted = moduleActions.every((action) =>
+				current.includes(action),
+			);
+			const next = allGranted
+				? current.filter((action) => !moduleActions.includes(action))
+				: Array.from(new Set([...current, ...moduleActions]));
 			return { ...prev, [module]: next };
 		});
 	}
@@ -2888,92 +2987,145 @@ function RolesTab() {
 					</DialogHeader>
 					{editingRole && (
 						<div className="flex flex-col gap-4">
-							<div className="flex flex-col gap-1.5">
-								<Label>Role Name</Label>
-								<Input
-									value={editName}
-									onChange={(e) => setEditName(e.target.value)}
-									disabled={editingRole.isSystem}
-								/>
-							</div>
-							<div className="overflow-x-auto">
-								<table className="w-full text-sm">
-									<thead>
-										<tr className="border-border border-b">
-											<th className="py-2 pr-4 text-left font-medium">
-												Module
-											</th>
-											{ALL_ACTIONS.map((a) => (
-												<th
-													key={a}
-													className="w-16 py-2 text-center font-medium capitalize"
-												>
-													{a}
-												</th>
-											))}
-											<th className="w-12 py-2 text-center text-muted-foreground text-xs">
-												All
-											</th>
-										</tr>
-									</thead>
-									<tbody>
-										{ALL_MODULES.map(({ key, label }) => {
-											const granted = editPerms[key] ?? [];
-											const allGranted = ALL_ACTIONS.every((a) =>
-												granted.includes(a),
-											);
-											return (
-												<tr
-													key={key}
-													className="border-border/50 border-b last:border-0"
-												>
-													<td className="py-2 pr-4 font-medium">{label}</td>
-													{ALL_ACTIONS.map((action) => (
-														<td key={action} className="py-2 text-center">
-															<button
-																type="button"
-																onClick={() => togglePerm(key, action)}
-																className={`inline-flex size-6 items-center justify-center rounded border transition-colors ${granted.includes(action) ? "border-primary bg-primary text-primary-foreground" : "border-border text-transparent hover:border-primary/50"}`}
+							{(() => {
+								const extraModules = Object.keys(editPerms)
+									.filter(
+										(key) =>
+											!MODULE_PERMISSION_MATRIX.some(
+												(module) => module.key === key,
+											),
+									)
+									.map((key) => ({
+										key,
+										label: key
+											.split("_")
+											.map(
+												(part) => part.charAt(0).toUpperCase() + part.slice(1),
+											)
+											.join(" "),
+										actions: editPerms[key] ?? [],
+									}));
+								const moduleRows = [
+									...MODULE_PERMISSION_MATRIX,
+									...extraModules,
+								];
+
+								return (
+									<>
+										<div className="flex flex-col gap-1.5">
+											<Label>Role Name</Label>
+											<Input
+												value={editName}
+												onChange={(e) => setEditName(e.target.value)}
+												disabled={editingRole.isSystem}
+											/>
+										</div>
+										<div className="overflow-x-auto">
+											<table className="w-full text-sm">
+												<thead>
+													<tr className="border-border border-b">
+														<th className="py-2 pr-4 text-left font-medium">
+															Module
+														</th>
+														{ALL_ACTIONS.map((a) => (
+															<th
+																key={a}
+																className="w-16 py-2 text-center font-medium capitalize"
 															>
-																<Check className="size-3.5" />
-															</button>
-														</td>
-													))}
-													<td className="py-2 text-center">
-														<button
-															type="button"
-															onClick={() => toggleModule(key)}
-															className={`inline-flex size-6 items-center justify-center rounded border transition-colors ${allGranted ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:border-primary/50"}`}
-														>
-															<Check className="size-3.5" />
-														</button>
-													</td>
-												</tr>
-											);
-										})}
-									</tbody>
-								</table>
-							</div>
-							<DialogFooter>
-								<Button variant="outline" onClick={() => setEditingRole(null)}>
-									Cancel
-								</Button>
-								<Button
-									disabled={updateRoleMut.isPending}
-									onClick={() =>
-										updateRoleMut.mutate({
-											id: editingRole.id,
-											name: editName,
-											permissions: editPerms,
-										})
-									}
-								>
-									{updateRoleMut.isPending && (
-										<Loader2 className="mr-2 size-4 animate-spin" />
-									)}
-									Save Permissions
-								</Button>
-							</DialogFooter>
+																{a}
+															</th>
+														))}
+														<th className="w-12 py-2 text-center text-muted-foreground text-xs">
+															All
+														</th>
+													</tr>
+												</thead>
+												<tbody>
+													{moduleRows.map(({ key, label, actions }) => {
+														const granted = editPerms[key] ?? [];
+														const moduleActions =
+															actions.length > 0
+																? actions
+																: getModuleActions(key, editPerms);
+														const allGranted =
+															moduleActions.length > 0 &&
+															moduleActions.every((a) => granted.includes(a));
+														return (
+															<tr
+																key={key}
+																className="border-border/50 border-b last:border-0"
+															>
+																<td className="py-2 pr-4 font-medium">
+																	{label}
+																</td>
+																{ALL_ACTIONS.map((action) => {
+																	const applicable =
+																		moduleActions.includes(action);
+																	return (
+																		<td
+																			key={action}
+																			className="py-2 text-center"
+																		>
+																			{applicable ? (
+																				<button
+																					type="button"
+																					onClick={() =>
+																						togglePerm(key, action)
+																					}
+																					className={`inline-flex size-6 items-center justify-center rounded border transition-colors ${granted.includes(action) ? "border-primary bg-primary text-primary-foreground" : "border-border text-transparent hover:border-primary/50"}`}
+																				>
+																					<Check className="size-3.5" />
+																				</button>
+																			) : (
+																				<span className="text-muted-foreground/40 text-xs">
+																					-
+																				</span>
+																			)}
+																		</td>
+																	);
+																})}
+																<td className="py-2 text-center">
+																	<button
+																		type="button"
+																		onClick={() => toggleModule(key)}
+																		disabled={moduleActions.length === 0}
+																		className={`inline-flex size-6 items-center justify-center rounded border transition-colors ${allGranted ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:border-primary/50"}`}
+																	>
+																		<Check className="size-3.5" />
+																	</button>
+																</td>
+															</tr>
+														);
+													})}
+												</tbody>
+											</table>
+										</div>
+										<DialogFooter>
+											<Button
+												variant="outline"
+												onClick={() => setEditingRole(null)}
+											>
+												Cancel
+											</Button>
+											<Button
+												disabled={updateRoleMut.isPending}
+												onClick={() =>
+													updateRoleMut.mutate({
+														id: editingRole.id,
+														name: editName,
+														permissions: editPerms,
+													})
+												}
+											>
+												{updateRoleMut.isPending && (
+													<Loader2 className="mr-2 size-4 animate-spin" />
+												)}
+												Save Permissions
+											</Button>
+										</DialogFooter>
+									</>
+								);
+							})()}
 						</div>
 					)}
 				</DialogContent>

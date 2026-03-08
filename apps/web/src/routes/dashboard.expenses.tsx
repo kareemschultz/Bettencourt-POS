@@ -182,6 +182,10 @@ export default function ExpensesPage() {
 	const { data: session } = authClient.useSession();
 	const today = todayGY();
 	const queryClient = useQueryClient();
+	const { data: userProfile } = useQuery(
+		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
+	);
+	const orgId = userProfile?.organizationId ?? DEFAULT_ORG_ID;
 
 	function datePreset(preset: "today" | "week" | "month" | "lastmonth") {
 		const now = new Date(
@@ -224,7 +228,7 @@ export default function ExpensesPage() {
 	const { data: expensesRaw = [] } = useQuery(
 		orpc.cash.getExpenses.queryOptions({
 			input: {
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				startDate,
 				endDate: `${endDate}T23:59:59`,
 			},
@@ -235,7 +239,7 @@ export default function ExpensesPage() {
 	const { data: reportData } = useQuery(
 		orpc.cash.getExpenseReport.queryOptions({
 			input: {
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				startDate,
 				endDate: `${endDate}T23:59:59`,
 			},
@@ -253,12 +257,12 @@ export default function ExpensesPage() {
 	function invalidateExpenses() {
 		queryClient.invalidateQueries({
 			queryKey: orpc.cash.getExpenses.queryOptions({
-				input: { organizationId: DEFAULT_ORG_ID },
+				input: { organizationId: orgId },
 			}).queryKey,
 		});
 		queryClient.invalidateQueries({
 			queryKey: orpc.cash.getExpenseReport.queryOptions({
-				input: { organizationId: DEFAULT_ORG_ID },
+				input: { organizationId: orgId },
 			}).queryKey,
 		});
 	}
@@ -398,7 +402,7 @@ export default function ExpensesPage() {
 				paymentMethod: form.paymentMethod || null,
 				referenceNumber: form.referenceNumber || null,
 				notes: form.notes || null,
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 			});
 		}
 	}
