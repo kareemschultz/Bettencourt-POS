@@ -8772,6 +8772,133 @@ async function seed() {
 		})
 		.onConflictDoNothing();
 
+	// ── Combo Products ────────────────────────────────────────────────────
+	console.log("  -> Combo Products");
+
+	const COMBO = {
+		familyMeal: "cb000000-0000-4000-8000-000000000001",
+		duoSpecial: "cb000000-0000-4000-8000-000000000002",
+		fishFriday: "cb000000-0000-4000-8000-000000000003",
+	} as const;
+
+	const CPROD = {
+		familyMeal: "cb100000-0000-4000-8000-000000000001",
+		duoSpecial: "cb100000-0000-4000-8000-000000000002",
+		fishFriday: "cb100000-0000-4000-8000-000000000003",
+	} as const;
+
+	// Insert the 3 combo products into the product table
+	await db
+		.insert(schema.product)
+		.values([
+			{
+				id: COMBO.familyMeal,
+				organizationId: ORG_ID,
+				name: "Family Meal Deal",
+				reportingName: "Family Meal Deal",
+				reportingCategoryId: DEPT.specials,
+				price: "8500",
+				taxRate: "0",
+				sortOrder: 1,
+			},
+			{
+				id: COMBO.duoSpecial,
+				organizationId: ORG_ID,
+				name: "Duo Special",
+				reportingName: "Duo Special",
+				reportingCategoryId: DEPT.specials,
+				price: "5500",
+				taxRate: "0",
+				sortOrder: 2,
+			},
+			{
+				id: COMBO.fishFriday,
+				organizationId: ORG_ID,
+				name: "Fish Friday Combo",
+				reportingName: "Fish Friday Combo",
+				reportingCategoryId: DEPT.specials,
+				price: "6000",
+				taxRate: "0",
+				sortOrder: 3,
+			},
+		])
+		.onConflictDoNothing();
+
+	// Create comboProduct bridge rows (one per combo product)
+	await db
+		.insert(schema.comboProduct)
+		.values([
+			{ id: CPROD.familyMeal, productId: COMBO.familyMeal },
+			{ id: CPROD.duoSpecial, productId: COMBO.duoSpecial },
+			{ id: CPROD.fishFriday, productId: COMBO.fishFriday },
+		])
+		.onConflictDoNothing();
+
+	// Create combo components with allocated prices
+	const CC = (n: number) =>
+		`cb200000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+
+	await db
+		.insert(schema.comboComponent)
+		.values([
+			// Family Meal Deal: 4× Fried Rice/Baked Chicken + 2× 1L Drink + 2× Sponge Cake
+			// Allocated: 6000 + 1600 + 900 = 8500
+			{
+				id: CC(1),
+				comboProductId: CPROD.familyMeal,
+				componentName: "Fried Rice / Baked Chicken × 4",
+				departmentId: DEPT.chicken,
+				allocatedPrice: "6000",
+			},
+			{
+				id: CC(2),
+				comboProductId: CPROD.familyMeal,
+				componentName: "1L Drink × 2",
+				departmentId: DEPT.beverages,
+				allocatedPrice: "1600",
+			},
+			{
+				id: CC(3),
+				comboProductId: CPROD.familyMeal,
+				componentName: "Sponge Cake × 2",
+				departmentId: DEPT.pastries,
+				allocatedPrice: "900",
+			},
+			// Duo Special: 2× Any Meal + 2× 12oz Drink
+			// Allocated: 4400 + 1100 = 5500
+			{
+				id: CC(4),
+				comboProductId: CPROD.duoSpecial,
+				componentName: "Any Meal × 2",
+				departmentId: DEPT.chicken,
+				allocatedPrice: "4400",
+			},
+			{
+				id: CC(5),
+				comboProductId: CPROD.duoSpecial,
+				componentName: "12oz Drink × 2",
+				departmentId: DEPT.beverages,
+				allocatedPrice: "1100",
+			},
+			// Fish Friday Combo: 2× Cookup Fish + 2× 1L Drink
+			// Allocated: 4800 + 1200 = 6000
+			{
+				id: CC(6),
+				comboProductId: CPROD.fishFriday,
+				componentName: "Cookup Fish × 2",
+				departmentId: DEPT.fish,
+				allocatedPrice: "4800",
+			},
+			{
+				id: CC(7),
+				comboProductId: CPROD.fishFriday,
+				componentName: "1L Drink × 2",
+				departmentId: DEPT.beverages,
+				allocatedPrice: "1200",
+			},
+		])
+		.onConflictDoNothing();
+
 	console.log("Seed complete!");
 	process.exit(0);
 }
