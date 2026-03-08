@@ -59,11 +59,11 @@ const openSession = permissionProcedure("shifts.create")
 		z.object({
 			locationId: z.string().uuid(),
 			registerId: z.string().uuid(),
-			userId: z.string(),
 			openingFloat: z.string().default("0"),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const userId = context.session.user.id;
 		// Guard: only one open session allowed per register at a time
 		const existingOpen = await db
 			.select({ id: schema.cashSession.id })
@@ -88,7 +88,7 @@ const openSession = permissionProcedure("shifts.create")
 			.values({
 				locationId: input.locationId,
 				registerId: input.registerId,
-				openedBy: input.userId,
+				openedBy: userId,
 				openingFloat: input.openingFloat,
 				status: "open",
 			})
@@ -102,13 +102,13 @@ const closeSession = permissionProcedure("shifts.update")
 	.input(
 		z.object({
 			sessionId: z.string().uuid(),
-			userId: z.string(),
 			closingNotes: z.string().nullable().optional(),
 			expectedCash: z.string().default("0"),
 			actualCash: z.string().default("0"),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const userId = context.session.user.id;
 		const existing = await db
 			.select({ id: schema.cashSession.id, status: schema.cashSession.status })
 			.from(schema.cashSession)
@@ -131,7 +131,7 @@ const closeSession = permissionProcedure("shifts.update")
 			.set({
 				status: "closed",
 				closedAt: new Date(),
-				closedBy: input.userId,
+				closedBy: userId,
 				closingCount: input.actualCash,
 				expectedCash: input.expectedCash,
 				variance: variance.toFixed(2),
@@ -148,17 +148,17 @@ const createDrop = permissionProcedure("shifts.create")
 		z.object({
 			cashSessionId: z.string().uuid(),
 			amount: z.string(),
-			userId: z.string(),
 			reason: z.string().nullable().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const userId = context.session.user.id;
 		const dropRows = await db
 			.insert(schema.cashDrop)
 			.values({
 				cashSessionId: input.cashSessionId,
 				amount: input.amount,
-				userId: input.userId,
+				userId: userId,
 				reason: input.reason ?? null,
 			})
 			.returning({ id: schema.cashDrop.id });
@@ -172,17 +172,17 @@ const createPayout = permissionProcedure("shifts.create")
 		z.object({
 			cashSessionId: z.string().uuid(),
 			amount: z.string(),
-			userId: z.string(),
 			reason: z.string(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const userId = context.session.user.id;
 		const payoutRows = await db
 			.insert(schema.cashPayout)
 			.values({
 				cashSessionId: input.cashSessionId,
 				amount: input.amount,
-				userId: input.userId,
+				userId: userId,
 				reason: input.reason,
 			})
 			.returning({ id: schema.cashPayout.id });
@@ -195,15 +195,15 @@ const approveVariance = permissionProcedure("shifts.update")
 	.input(
 		z.object({
 			sessionId: z.string().uuid(),
-			approvedBy: z.string(),
 			reason: z.string(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const approvedBy = context.session.user.id;
 		await db
 			.update(schema.cashSession)
 			.set({
-				varianceApprovedBy: input.approvedBy,
+				varianceApprovedBy: approvedBy,
 				varianceReason: input.reason,
 				varianceApprovedAt: new Date(),
 			})
@@ -334,21 +334,21 @@ const initiateHandoff = permissionProcedure("shifts.create")
 	.input(
 		z.object({
 			cashSessionId: z.string().uuid(),
-			fromUserId: z.string(),
 			toUserId: z.string(),
 			countedAmount: z.string(),
 			expectedAmount: z.string(),
 			notes: z.string().nullable().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const fromUserId = context.session.user.id;
 		const variance = Number(input.countedAmount) - Number(input.expectedAmount);
 
 		const rows = await db
 			.insert(schema.shiftHandoff)
 			.values({
 				cashSessionId: input.cashSessionId,
-				fromUserId: input.fromUserId,
+				fromUserId: fromUserId,
 				toUserId: input.toUserId,
 				countedAmount: input.countedAmount,
 				expectedAmount: input.expectedAmount,
@@ -424,13 +424,12 @@ const createExpense = permissionProcedure("shifts.create")
 			paymentMethod: z.string().nullable().optional(),
 			referenceNumber: z.string().nullable().optional(),
 			notes: z.string().nullable().optional(),
-			authorizedBy: z.string(),
-			createdBy: z.string(),
 			organizationId: z.string().uuid(),
 			supplierId: z.string().uuid().nullable().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const actorId = context.session.user.id;
 		const rows = await db
 			.insert(schema.expense)
 			.values({
@@ -442,8 +441,8 @@ const createExpense = permissionProcedure("shifts.create")
 				paymentMethod: input.paymentMethod ?? null,
 				referenceNumber: input.referenceNumber ?? null,
 				notes: input.notes ?? null,
-				authorizedBy: input.authorizedBy,
-				createdBy: input.createdBy,
+				authorizedBy: actorId,
+				createdBy: actorId,
 				organizationId: input.organizationId,
 				supplierId: input.supplierId ?? null,
 			})
@@ -552,7 +551,7 @@ const createExpenseCategory = permissionProcedure("shifts.create")
 	});
 
 // ── 7.4 deleteExpenseCategory ───────────────────────────────────────────
-const deleteExpenseCategory = permissionProcedure("shifts.create")
+const deleteExpenseCategory = permissionProcedure("shifts.delete")
 	.input(z.object({ id: z.string().uuid() }))
 	.handler(async ({ input }) => {
 		await db
@@ -562,7 +561,7 @@ const deleteExpenseCategory = permissionProcedure("shifts.create")
 	});
 
 // ── 7.4 updateExpense ──────────────────────────────────────────────────
-const updateExpense = permissionProcedure("shifts.create")
+const updateExpense = permissionProcedure("shifts.update")
 	.input(
 		z.object({
 			expenseId: z.string().uuid(),
@@ -608,16 +607,16 @@ const logNoSale = permissionProcedure("shifts.create")
 	.input(
 		z.object({
 			cashSessionId: z.string().uuid(),
-			userId: z.string(),
 			reason: z.string(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const userId = context.session.user.id;
 		const rows = await db
 			.insert(schema.noSaleEvent)
 			.values({
 				cashSessionId: input.cashSessionId,
-				userId: input.userId,
+				userId: userId,
 				reason: input.reason,
 			})
 			.returning({ id: schema.noSaleEvent.id });

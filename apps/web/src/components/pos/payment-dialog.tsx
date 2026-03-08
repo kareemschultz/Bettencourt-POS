@@ -31,7 +31,11 @@ interface PaymentDialogProps {
 	items: CartItem[];
 	onClose: () => void;
 	onComplete: (
-		payments: { method: string; amount: number; reference?: string }[],
+		payments: {
+			method: "cash" | "card" | "mobile_money" | "gift_card" | "credit";
+			amount: number;
+			reference?: string;
+		}[],
 	) => Promise<void>;
 }
 

@@ -192,7 +192,7 @@ export default function WebhooksPage() {
 		id: string;
 		name: string;
 		url: string;
-		secret: string | null;
+		hasSecret: boolean;
 		events: unknown;
 		isActive: boolean;
 	}) {
@@ -200,7 +200,8 @@ export default function WebhooksPage() {
 		setForm({
 			name: ep.name,
 			url: ep.url,
-			secret: ep.secret || "",
+			// Leave secret blank — user must type a new value to rotate it
+			secret: "",
 			events: (ep.events as string[]) || [],
 			isActive: ep.isActive,
 		});
@@ -446,12 +447,17 @@ export default function WebhooksPage() {
 							<Input
 								value={form.secret}
 								onChange={(e) => setForm({ ...form, secret: e.target.value })}
-								placeholder="Used for HMAC-SHA256 signature verification"
+								placeholder={
+									editingId
+										? "Leave blank to keep existing secret"
+										: "Used for HMAC-SHA256 signature verification"
+								}
 								type="password"
 							/>
 							<p className="mt-1 text-muted-foreground text-xs">
-								If set, each delivery will include an X-Webhook-Signature
-								header.
+								{editingId
+									? "The secret is stored securely. Enter a new value to rotate it."
+									: "If set, each delivery will include an X-Webhook-Signature header."}
 							</p>
 						</div>
 

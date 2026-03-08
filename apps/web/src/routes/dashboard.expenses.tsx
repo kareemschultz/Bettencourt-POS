@@ -49,7 +49,7 @@ import {
 } from "@/components/ui/table";
 import { authClient } from "@/lib/auth-client";
 import { formatGYD } from "@/lib/types";
-import { todayGY } from "@/lib/utils";
+import { escapeHtml, todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
 
 function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
@@ -89,18 +89,18 @@ function downloadPdf(title: string, rows: ExpenseRow[], period: string) {
 		.map(
 			(e) => `<tr>
 			<td>${new Date(e.created_at).toLocaleString("en-GY", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</td>
-			<td>${e.supplier_name ?? "—"}</td>
-			<td>${e.category}</td>
-			<td>${e.description}</td>
-			<td>${e.payment_method ?? "—"}</td>
-			<td>${e.reference_number ?? "—"}</td>
+			<td>${escapeHtml(e.supplier_name) || "—"}</td>
+			<td>${escapeHtml(e.category)}</td>
+			<td>${escapeHtml(e.description)}</td>
+			<td>${escapeHtml(e.payment_method) || "—"}</td>
+			<td>${escapeHtml(e.reference_number) || "—"}</td>
 			<td style="text-align:right;font-weight:600">${fmt(Number(e.amount))}</td>
-			<td>${e.authorized_by_name ?? "—"}</td>
+			<td>${escapeHtml(e.authorized_by_name) || "—"}</td>
 		</tr>`,
 		)
 		.join("\n");
 	const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
-<title>${title}</title>
+<title>${escapeHtml(title)}</title>
 <style>
   body { font-family: Arial, sans-serif; font-size: 11px; color: #111; padding: 24px; }
   h1 { font-size: 18px; margin: 0 0 4px; }
@@ -112,8 +112,8 @@ function downloadPdf(title: string, rows: ExpenseRow[], period: string) {
   .total { font-weight: bold; font-size: 13px; text-align: right; margin-top: 12px; }
   @media print { button { display: none; } }
 </style></head><body>
-<h1>${title}</h1>
-<p>Period: ${period} &nbsp;·&nbsp; ${rows.length} entries</p>
+<h1>${escapeHtml(title)}</h1>
+<p>Period: ${escapeHtml(period)} &nbsp;·&nbsp; ${rows.length} entries</p>
 <table>
 <thead><tr>
   <th>Date</th><th>Supplier</th><th>Category</th><th>Description</th>
@@ -398,8 +398,6 @@ export default function ExpensesPage() {
 				paymentMethod: form.paymentMethod || null,
 				referenceNumber: form.referenceNumber || null,
 				notes: form.notes || null,
-				authorizedBy: session?.user?.id || "",
-				createdBy: session?.user?.id || "",
 				organizationId: DEFAULT_ORG_ID,
 			});
 		}

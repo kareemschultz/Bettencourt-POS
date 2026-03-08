@@ -6,7 +6,7 @@
 		"build": "react-router build",
 		"dev": "react-router dev --port=4000",
 		"start": "serve ./build/client --config ../../serve.json",
-		"types:check": "react-router typegen && fumadocs-mdx && tsc --noEmit",
+		"check-types": "react-router typegen && fumadocs-mdx && tsc --noEmit",
 		"postinstall": "fumadocs-mdx",
 		"lint": "biome check",
 		"format": "biome format --write"

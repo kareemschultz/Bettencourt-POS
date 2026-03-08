@@ -53,6 +53,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { formatGYD } from "@/lib/types";
+import { escapeHtml } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
 
 interface Order {
@@ -139,7 +140,7 @@ function printOrderPdf(
 				? ' style="text-decoration:line-through;opacity:0.45"'
 				: "";
 			return `<tr${voided}>
-			<td>${item.productNameSnapshot}${mods ? `<br><small style="color:#666">${mods}</small>` : ""}${item.notes ? `<br><small style="color:#888;font-style:italic">${item.notes}</small>` : ""}</td>
+			<td>${escapeHtml(item.productNameSnapshot)}${mods ? `<br><small style="color:#666">${escapeHtml(mods)}</small>` : ""}${item.notes ? `<br><small style="color:#888;font-style:italic">${escapeHtml(item.notes)}</small>` : ""}</td>
 			<td style="text-align:center">${item.quantity}</td>
 			<td style="text-align:right">${fmt(item.unitPrice)}</td>
 			${Number(item.discount ?? 0) > 0 ? `<td style="text-align:right;color:#dc2626">-${fmt(item.discount)}</td>` : "<td></td>"}
@@ -191,20 +192,20 @@ function printOrderPdf(
   @media print { button { display: none; } }
 </style></head><body>
 <div style="display:flex;justify-content:space-between;align-items:flex-start">
-  <div><h1>Order ${data.orderNumber}</h1><p style="margin:4px 0 0;color:#555">${fmtDate(data.createdAt)}</p></div>
-  <span class="badge" style="background:#f3f4f6;color:#374151;font-size:12px;padding:4px 12px">${data.status?.toUpperCase()}</span>
+  <div><h1>Order ${escapeHtml(data.orderNumber)}</h1><p style="margin:4px 0 0;color:#555">${fmtDate(data.createdAt)}</p></div>
+  <span class="badge" style="background:#f3f4f6;color:#374151;font-size:12px;padding:4px 12px">${escapeHtml(data.status?.toUpperCase())}</span>
 </div>
 <hr class="divider"/>
 <div class="meta">
-  <div class="meta-item"><span class="label">Cashier</span><span class="value">${data.cashierName ?? "—"}</span></div>
-  <div class="meta-item"><span class="label">Location</span><span class="value">${data.locationName ?? "—"}</span></div>
-  <div class="meta-item"><span class="label">Register</span><span class="value">${data.registerName ?? "—"}</span></div>
-  <div class="meta-item"><span class="label">Order Type</span><span class="value">${(data.type ?? "").replace("_", " ")}</span></div>
-  ${data.customerName ? `<div class="meta-item"><span class="label">Customer</span><span class="value">${data.customerName}${data.customerPhone ? ` · ${data.customerPhone}` : ""}</span></div>` : ""}
-  ${data.deliveryAddress ? `<div class="meta-item" style="grid-column:span 2"><span class="label">Delivery Address</span><span class="value">${data.deliveryAddress}</span></div>` : ""}
-  ${data.tableId ? `<div class="meta-item"><span class="label">Table</span><span class="value">${data.tableId}</span></div>` : ""}
+  <div class="meta-item"><span class="label">Cashier</span><span class="value">${escapeHtml(data.cashierName) || "—"}</span></div>
+  <div class="meta-item"><span class="label">Location</span><span class="value">${escapeHtml(data.locationName) || "—"}</span></div>
+  <div class="meta-item"><span class="label">Register</span><span class="value">${escapeHtml(data.registerName) || "—"}</span></div>
+  <div class="meta-item"><span class="label">Order Type</span><span class="value">${escapeHtml((data.type ?? "").replace("_", " "))}</span></div>
+  ${data.customerName ? `<div class="meta-item"><span class="label">Customer</span><span class="value">${escapeHtml(data.customerName)}${data.customerPhone ? ` · ${escapeHtml(data.customerPhone)}` : ""}</span></div>` : ""}
+  ${data.deliveryAddress ? `<div class="meta-item" style="grid-column:span 2"><span class="label">Delivery Address</span><span class="value">${escapeHtml(data.deliveryAddress)}</span></div>` : ""}
+  ${data.tableId ? `<div class="meta-item"><span class="label">Table</span><span class="value">${escapeHtml(data.tableId)}</span></div>` : ""}
 </div>
-${data.notes ? `<p style="background:#fefce8;border:1px solid #fde047;border-radius:4px;padding:8px 12px;margin:0 0 12px">${data.notes}</p>` : ""}
+${data.notes ? `<p style="background:#fefce8;border:1px solid #fde047;border-radius:4px;padding:8px 12px;margin:0 0 12px">${escapeHtml(data.notes)}</p>` : ""}
 <h2>Items</h2>
 <table>
 <thead><tr><th>Product</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Disc.</th><th style="text-align:right">Total</th></tr></thead>
@@ -218,7 +219,7 @@ ${data.notes ? `<p style="background:#fefce8;border:1px solid #fde047;border-rad
   ${Number(data.taxTotal ?? 0) > 0 ? `<tr><td style="color:#666">Tax (16.5% VAT)</td><td style="text-align:right">${fmt(data.taxTotal)}</td></tr>` : ""}
   <tr class="grand"><td>Total</td><td style="text-align:right">${fmt(data.total)}</td></tr>
 </table>
-${data.status === "voided" ? `<div class="void-box"><strong style="color:#dc2626">Order Voided</strong><br>Reason: ${data.voidReason ?? "—"}<br>Authorized by: ${data.voidAuthorizedByName ?? "—"}</div>` : ""}
+${data.status === "voided" ? `<div class="void-box"><strong style="color:#dc2626">Order Voided</strong><br>Reason: ${escapeHtml(data.voidReason) || "—"}<br>Authorized by: ${escapeHtml(data.voidAuthorizedByName) || "—"}</div>` : ""}
 <button onclick="window.print()" style="margin-top:20px;padding:8px 20px;cursor:pointer;border:1px solid #ccc;border-radius:4px;background:#f9fafb">Print / Save as PDF</button>
 </body></html>`;
 	const w = window.open("", "_blank");
@@ -764,7 +765,6 @@ function OrderDetailDialog({
 														if (!orderId) return;
 														voidMutation.mutate({
 															id: orderId,
-															userId,
 															reason: voidReason,
 														});
 														setVoidReason("");
@@ -881,7 +881,7 @@ export function OrdersTable({
 	dateTo?: string;
 	onDateToChange?: (v: string) => void;
 }) {
-	const [orders] = useState(initialOrders);
+	const orders = initialOrders;
 	const [typeFilter, setTypeFilter] = useState<string>("all");
 	const [viewingOrderId, setViewingOrderId] = useState<string | null>(null);
 

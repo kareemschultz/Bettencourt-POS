@@ -150,6 +150,9 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:12px 0}
 
 export default function OrdersPage() {
 	const { data: session } = authClient.useSession();
+	const { data: userProfile } = useQuery(
+		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
+	);
 
 	const [search, setSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState("all");
@@ -251,7 +254,7 @@ export default function OrdersPage() {
 			<OrdersTable
 				orders={orders}
 				userId={session?.user?.id}
-				userRole="admin"
+				userRole={userProfile?.roleName ?? "Cashier"}
 				search={search}
 				onSearchChange={setSearch}
 				statusFilter={statusFilter}

@@ -8,7 +8,7 @@ import { permissionProcedure } from "../index";
 const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 
 // ── list ──────────────────────────────────────────────────────────────
-const list = permissionProcedure("orders.read")
+const list = permissionProcedure("customers.read")
 	.input(
 		z
 			.object({
@@ -56,7 +56,7 @@ const list = permissionProcedure("orders.read")
 	});
 
 // ── getById ───────────────────────────────────────────────────────────
-const getById = permissionProcedure("orders.read")
+const getById = permissionProcedure("customers.read")
 	.input(z.object({ id: z.string().uuid() }))
 	.handler(async ({ input }) => {
 		const rows = await db
@@ -73,7 +73,7 @@ const getById = permissionProcedure("orders.read")
 	});
 
 // ── create ────────────────────────────────────────────────────────────
-const create = permissionProcedure("orders.create")
+const create = permissionProcedure("customers.create")
 	.input(
 		z.object({
 			name: z.string().min(1),
@@ -118,7 +118,7 @@ const create = permissionProcedure("orders.create")
 	});
 
 // ── update ────────────────────────────────────────────────────────────
-const update = permissionProcedure("orders.create")
+const update = permissionProcedure("customers.update")
 	.input(
 		z.object({
 			id: z.string().uuid(),
@@ -176,7 +176,7 @@ const update = permissionProcedure("orders.create")
 	});
 
 // ── search (quick POS lookup by phone) ───────────────────────────────
-const search = permissionProcedure("orders.read")
+const search = permissionProcedure("customers.read")
 	.input(z.object({ query: z.string().min(1) }))
 	.handler(async ({ input }) => {
 		const term = `%${input.query}%`;
@@ -205,7 +205,7 @@ const search = permissionProcedure("orders.read")
 	});
 
 // ── getHistory (order history for a customer) ─────────────────────────
-const getHistory = permissionProcedure("orders.read")
+const getHistory = permissionProcedure("customers.read")
 	.input(
 		z.object({
 			customerId: z.string().uuid(),

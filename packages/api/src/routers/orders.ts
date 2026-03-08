@@ -188,13 +188,13 @@ const voidOrder = permissionProcedure("orders.void")
 	.input(
 		z.object({
 			id: z.string().uuid(),
-			userId: z.string().optional(),
 			reason: z.string().optional(),
-			authorizedBy: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
-		const { id, userId, reason, authorizedBy } = input;
+	.handler(async ({ input, context }) => {
+		const { id, reason } = input;
+		const userId = context.session.user.id;
+		const authorizedBy = userId;
 
 		// Get the order
 		const orders = await db
@@ -279,14 +279,14 @@ const refund = permissionProcedure("orders.refund")
 	.input(
 		z.object({
 			id: z.string().uuid(),
-			userId: z.string().optional(),
 			reason: z.string().min(1, "Reason is required"),
 			amount: z.number().optional(),
-			authorizedBy: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
-		const { id, userId, reason, amount, authorizedBy } = input;
+	.handler(async ({ input, context }) => {
+		const { id, reason, amount } = input;
+		const userId = context.session.user.id;
+		const authorizedBy = userId;
 
 		// Check order exists and is completed
 		const orders = await db

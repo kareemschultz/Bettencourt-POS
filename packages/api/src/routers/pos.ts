@@ -264,7 +264,7 @@ const checkout = permissionProcedure("orders.create")
 					productName: z.string(),
 					department: z.string().nullable(),
 					quantity: z.number().int().min(1),
-					unitPrice: z.number(),
+					unitPrice: z.number().nonnegative(),
 					taxRate: z.number().default(0),
 					isCombo: z.boolean().default(false),
 					comboComponents: z
@@ -283,7 +283,13 @@ const checkout = permissionProcedure("orders.create")
 			payments: z
 				.array(
 					z.object({
-						method: z.string(),
+						method: z.enum([
+							"cash",
+							"card",
+							"mobile_money",
+							"gift_card",
+							"credit",
+						]),
 						amount: z.number().positive("Payment amount must be positive"),
 						reference: z.string().optional(),
 					}),
@@ -296,7 +302,7 @@ const checkout = permissionProcedure("orders.create")
 			userId: z.string().nullable().optional(),
 			tableId: z.string().uuid().nullable().optional(),
 			notes: z.string().nullable().optional(),
-			discountTotal: z.number().default(0),
+			discountTotal: z.number().min(0).default(0),
 			customerId: z.string().uuid().nullable().optional(),
 			customerName: z.string().nullable().optional(),
 			customerPhone: z.string().nullable().optional(),
@@ -326,7 +332,7 @@ const checkout = permissionProcedure("orders.create")
 		} = input;
 
 		if (!items || items.length === 0) {
-			throw new Error("No items");
+			throw new ORPCError("BAD_REQUEST", { message: "No items" });
 		}
 
 		// Calculate totals
@@ -339,7 +345,7 @@ const checkout = permissionProcedure("orders.create")
 			subtotal += lineSubtotal;
 			taxTotal += lineTax;
 		}
-		const total = subtotal + taxTotal - discountTotal;
+		const total = Math.max(0, subtotal + taxTotal - discountTotal);
 
 		// Validate payment sum covers order total
 		const paymentSum = payments.reduce((s, p) => s + p.amount, 0);
@@ -459,11 +465,16 @@ const checkout = permissionProcedure("orders.create")
 			let remaining = total;
 			let totalCashAllocated = 0;
 			for (const pmt of payments) {
+				const remainingBefore = remaining;
 				const allocated = Math.min(pmt.amount, remaining);
 				remaining -= allocated;
 				const tendered = pmt.method === "cash" ? pmt.amount : null;
+				// Change is computed against the remaining balance before this payment,
+				// not the global total — handles split-payment correctly.
 				const changeGiven =
-					pmt.method === "cash" && pmt.amount > total ? pmt.amount - total : 0;
+					pmt.method === "cash" && pmt.amount > remainingBefore
+						? pmt.amount - remainingBefore
+						: 0;
 
 				if (pmt.method === "cash") {
 					totalCashAllocated += allocated;

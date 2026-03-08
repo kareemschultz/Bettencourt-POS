@@ -45,14 +45,12 @@ interface CashSession {
 interface CashControlPanelProps {
 	sessions: CashSession[];
 	openSession: CashSession | null;
-	userId: string;
 	locationId: string;
 }
 
 export function CashControlPanel({
 	sessions,
 	openSession,
-	userId,
 	locationId,
 }: CashControlPanelProps) {
 	const queryClient = useQueryClient();
@@ -129,7 +127,6 @@ export function CashControlPanel({
 	function handleOpenShift() {
 		openShiftMutation.mutate({
 			openingFloat: String(Number(amount) || 0),
-			userId,
 			locationId,
 			registerId: "c0000000-0000-4000-8000-000000000001",
 		});
@@ -139,7 +136,6 @@ export function CashControlPanel({
 		if (!openSession) return;
 		closeShiftMutation.mutate({
 			sessionId: openSession.id,
-			userId,
 			actualCash: String(Number(amount) || 0),
 			expectedCash: openSession.expectedCash || openSession.openingFloat,
 		});
@@ -150,7 +146,6 @@ export function CashControlPanel({
 		dropMutation.mutate({
 			cashSessionId: openSession.id,
 			amount: String(Number(amount)),
-			userId,
 			reason: reason || null,
 		});
 	}
@@ -160,7 +155,6 @@ export function CashControlPanel({
 		payoutMutation.mutate({
 			cashSessionId: openSession.id,
 			amount: String(Number(amount)),
-			userId,
 			reason,
 		});
 	}
@@ -169,7 +163,6 @@ export function CashControlPanel({
 		if (!openSession) return;
 		noSaleMutation.mutate({
 			cashSessionId: openSession.id,
-			userId,
 			reason: reason || "No reason provided",
 		});
 	}

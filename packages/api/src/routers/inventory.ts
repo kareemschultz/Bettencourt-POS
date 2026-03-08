@@ -510,10 +510,10 @@ const acknowledgeAlert = permissionProcedure("inventory.update")
 		z.object({
 			inventoryItemId: z.string().uuid(),
 			organizationId: z.string().uuid(),
-			userId: z.string(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const userId = context.session.user.id;
 		// Find existing unacknowledged alert for this item
 		const existing = await db
 			.select({ id: schema.stockAlert.id })
@@ -532,7 +532,7 @@ const acknowledgeAlert = permissionProcedure("inventory.update")
 			await db
 				.update(schema.stockAlert)
 				.set({
-					acknowledgedBy: input.userId,
+					acknowledgedBy: userId,
 					acknowledgedAt: new Date(),
 				})
 				.where(eq(schema.stockAlert.id, existing[0]!.id));
@@ -546,7 +546,7 @@ const acknowledgeAlert = permissionProcedure("inventory.update")
 				inventoryItemId: input.inventoryItemId,
 				organizationId: input.organizationId,
 				type: "low_stock",
-				acknowledgedBy: input.userId,
+				acknowledgedBy: userId,
 				acknowledgedAt: new Date(),
 			})
 			.returning({ id: schema.stockAlert.id });
@@ -561,7 +561,6 @@ const autoGeneratePO = permissionProcedure("inventory.create")
 		z.object({
 			organizationId: z.string().uuid(),
 			locationId: z.string().uuid(),
-			createdBy: z.string(),
 			items: z.array(
 				z.object({
 					inventoryItemId: z.string().uuid(),
@@ -572,7 +571,8 @@ const autoGeneratePO = permissionProcedure("inventory.create")
 			),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const createdBy = context.session.user.id;
 		// Group items by supplier
 		const grouped = new Map<
 			string,
@@ -610,7 +610,7 @@ const autoGeneratePO = permissionProcedure("inventory.create")
 					organizationId: input.organizationId,
 					locationId: input.locationId,
 					supplierId,
-					createdBy: input.createdBy,
+					createdBy,
 					status: "draft",
 					notes: "Auto-generated from stock alerts",
 					total: totalCost.toFixed(2),
@@ -705,10 +705,10 @@ const logWaste = permissionProcedure("inventory.create")
 			estimatedCost: z.string(),
 			reason: z.enum(["spoilage", "over_prep", "expired", "dropped", "other"]),
 			notes: z.string().optional(),
-			loggedBy: z.string(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const loggedBy = context.session.user.id;
 		let productName = input.productName;
 		let estimatedCost = input.estimatedCost;
 
@@ -744,7 +744,7 @@ const logWaste = permissionProcedure("inventory.create")
 				estimatedCost,
 				reason: input.reason,
 				notes: input.notes ?? null,
-				loggedBy: input.loggedBy,
+				loggedBy: loggedBy,
 			})
 			.returning({ id: schema.wasteLog.id });
 

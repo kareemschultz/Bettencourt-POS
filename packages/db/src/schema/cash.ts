@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
 	boolean,
 	index,
@@ -7,6 +7,7 @@ import {
 	text,
 	timestamp,
 	unique,
+	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
@@ -51,6 +52,9 @@ export const cashSession = pgTable(
 		index("idx_cash_session_register").on(table.registerId),
 		index("idx_cash_session_location").on(table.locationId),
 		index("idx_cash_session_status").on(table.status),
+		uniqueIndex("uq_cash_session_open_register")
+			.on(table.registerId)
+			.where(sql`status = 'open'`),
 	],
 );
 

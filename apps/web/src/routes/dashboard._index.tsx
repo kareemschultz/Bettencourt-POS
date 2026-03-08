@@ -41,23 +41,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { authClient } from "@/lib/auth-client";
 import { formatGYD } from "@/lib/types";
 import { orpc } from "@/utils/orpc";
-
-// ── Role mapping (mirrors dashboard.tsx) ────────────────────────────────
-function mapRoleToSidebarRole(roleName: string): string {
-	switch (roleName.toLowerCase()) {
-		case "executive":
-		case "owner":
-			return "executive";
-		case "manager":
-		case "warehouse clerk":
-		case "accountant":
-			return "admin";
-		case "kitchen":
-			return "checkoff";
-		default:
-			return "cashier";
-	}
-}
+import { mapRoleToSidebarRole } from "./dashboard";
 
 // ── Types ───────────────────────────────────────────────────────────────
 interface HourlyData {

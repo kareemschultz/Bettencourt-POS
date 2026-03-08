@@ -13,16 +13,30 @@ const listEndpoints = permissionProcedure("settings.read")
 	.input(z.object({}).optional())
 	.handler(async () => {
 		const endpoints = await db
-			.select()
+			.select({
+				id: schema.webhookEndpoint.id,
+				organizationId: schema.webhookEndpoint.organizationId,
+				url: schema.webhookEndpoint.url,
+				name: schema.webhookEndpoint.name,
+				hasSecret: schema.webhookEndpoint.secret,
+				events: schema.webhookEndpoint.events,
+				isActive: schema.webhookEndpoint.isActive,
+				createdAt: schema.webhookEndpoint.createdAt,
+				updatedAt: schema.webhookEndpoint.updatedAt,
+			})
 			.from(schema.webhookEndpoint)
 			.where(eq(schema.webhookEndpoint.organizationId, DEFAULT_ORG_ID))
 			.orderBy(desc(schema.webhookEndpoint.createdAt));
 
-		return endpoints;
+		// Replace raw secret with boolean indicator — never expose secret value
+		return endpoints.map((ep) => ({
+			...ep,
+			hasSecret: ep.hasSecret !== null && ep.hasSecret !== "",
+		}));
 	});
 
 // ── createEndpoint ─────────────────────────────────────────────────────
-const createEndpoint = permissionProcedure("settings.write")
+const createEndpoint = permissionProcedure("settings.create")
 	.input(
 		z.object({
 			name: z.string().min(1, "Name is required"),
@@ -49,7 +63,7 @@ const createEndpoint = permissionProcedure("settings.write")
 	});
 
 // ── updateEndpoint ─────────────────────────────────────────────────────
-const updateEndpoint = permissionProcedure("settings.write")
+const updateEndpoint = permissionProcedure("settings.update")
 	.input(
 		z.object({
 			id: z.string().uuid(),
@@ -81,7 +95,15 @@ const updateEndpoint = permissionProcedure("settings.write")
 		const updates: Record<string, unknown> = {};
 		if (input.name !== undefined) updates.name = input.name;
 		if (input.url !== undefined) updates.url = input.url;
-		if (input.secret !== undefined) updates.secret = input.secret;
+		// Only update secret if a real new value is provided (non-empty, not the masked placeholder)
+		if (
+			input.secret !== undefined &&
+			input.secret !== null &&
+			input.secret !== "" &&
+			!input.secret.includes("•")
+		) {
+			updates.secret = input.secret;
+		}
 		if (input.events !== undefined) updates.events = input.events;
 		if (input.isActive !== undefined) updates.isActive = input.isActive;
 
@@ -94,7 +116,7 @@ const updateEndpoint = permissionProcedure("settings.write")
 	});
 
 // ── deleteEndpoint ─────────────────────────────────────────────────────
-const deleteEndpoint = permissionProcedure("settings.write")
+const deleteEndpoint = permissionProcedure("settings.delete")
 	.input(z.object({ id: z.string().uuid() }))
 	.handler(async ({ input }) => {
 		const existing = await db
@@ -161,7 +183,7 @@ const getDeliveries = permissionProcedure("settings.read")
 	});
 
 // ── testEndpoint ───────────────────────────────────────────────────────
-const testEndpoint = permissionProcedure("settings.write")
+const testEndpoint = permissionProcedure("settings.update")
 	.input(z.object({ id: z.string().uuid() }))
 	.handler(async ({ input }) => {
 		const rows = await db

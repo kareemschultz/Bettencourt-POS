@@ -44,7 +44,7 @@ import {
 	Webhook,
 } from "lucide-react";
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -119,7 +119,7 @@ const restaurantNavItems = [
 		roles: ["executive", "admin", "cashier", "checkoff"],
 	},
 	{
-		title: "Check Off",
+		title: "Production Board",
 		url: "/dashboard/production",
 		icon: CookingPot,
 		module: null,
@@ -133,7 +133,7 @@ const restaurantNavItems = [
 		roles: ["executive", "admin"],
 	},
 	{
-		title: "Menu Schedules",
+		title: "Menu Calendar",
 		url: "/dashboard/menu-schedules",
 		icon: CalendarClock,
 		module: "settings",
@@ -178,14 +178,14 @@ const inventoryNavItems = [
 		roles: ["executive", "admin"],
 	},
 	{
-		title: "Waste Log",
+		title: "Waste & Shrinkage",
 		url: "/dashboard/waste",
 		icon: Trash2,
 		module: "inventory",
 		roles: ["executive", "admin"],
 	},
 	{
-		title: "Variance",
+		title: "Stock Variance",
 		url: "/dashboard/variance",
 		icon: GitCompareArrows,
 		module: "inventory",
@@ -258,7 +258,7 @@ const staffNavItems = [
 	},
 ];
 
-const managementNavItems = [
+const cashNavItems = [
 	{
 		title: "Cash Control",
 		url: "/dashboard/cash",
@@ -267,56 +267,21 @@ const managementNavItems = [
 		roles: ["executive", "admin", "cashier"],
 	},
 	{
-		title: "Reports",
-		url: "/dashboard/reports",
-		icon: BarChart3,
-		module: "reports",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Reconciliation",
+		title: "Cash Reconciliation",
 		url: "/dashboard/reconciliation",
 		icon: Scale,
 		module: "reports",
 		roles: ["executive", "admin"],
 	},
 	{
-		title: "EOD Report",
-		url: "/dashboard/eod",
-		icon: FileText,
-		module: "reports",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Analytics",
-		url: "/dashboard/analytics",
-		icon: TrendingUp,
-		module: "reports",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Sales Journal",
+		title: "Daily Sales Journal",
 		url: "/dashboard/journal",
 		icon: BookOpen,
 		module: "reports",
 		roles: ["executive", "admin"],
 	},
 	{
-		title: "Labor Cost",
-		url: "/dashboard/labor",
-		icon: Calculator,
-		module: "reports",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Profitability",
-		url: "/dashboard/profitability",
-		icon: PieChart,
-		module: "reports",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "P&L Statement",
+		title: "Profit & Loss",
 		url: "/dashboard/pnl",
 		icon: Receipt,
 		module: "reports",
@@ -336,6 +301,47 @@ const managementNavItems = [
 		module: "settings",
 		roles: ["executive", "admin"],
 	},
+];
+
+const insightsNavItems = [
+	{
+		title: "Reports",
+		url: "/dashboard/reports",
+		icon: BarChart3,
+		module: "reports",
+		roles: ["executive", "admin"],
+	},
+	{
+		title: "EOD Report",
+		url: "/dashboard/eod",
+		icon: FileText,
+		module: "reports",
+		roles: ["executive", "admin"],
+	},
+	{
+		title: "Analytics",
+		url: "/dashboard/analytics",
+		icon: TrendingUp,
+		module: "reports",
+		roles: ["executive", "admin"],
+	},
+	{
+		title: "Labor Cost",
+		url: "/dashboard/labor",
+		icon: Calculator,
+		module: "reports",
+		roles: ["executive", "admin"],
+	},
+	{
+		title: "Profitability",
+		url: "/dashboard/profitability",
+		icon: PieChart,
+		module: "reports",
+		roles: ["executive", "admin"],
+	},
+];
+
+const systemNavItems = [
 	{
 		title: "Audit Log",
 		url: "/dashboard/audit",
@@ -373,22 +379,15 @@ const managementNavItems = [
 	},
 ];
 
-const WAREHOUSE_MODULES = new Set([
-	"dashboard",
-	"inventory",
-	"purchase-orders",
-	"transfers",
-	"stock-counts",
-	"suppliers",
-]);
+const WAREHOUSE_MODULES = new Set(["dashboard", "inventory", "products"]);
 
 const ACCOUNTANT_MODULES = new Set([
 	"dashboard",
 	"reports",
-	"expenses",
-	"cash",
 	"invoices",
-	"customers",
+	"settings",
+	"shifts",
+	"orders",
 ]);
 
 function canSeeItem(
@@ -479,10 +478,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
 											}
 											tooltip={item.title}
 										>
-											<a href={item.url}>
+											<Link to={item.url}>
 												<item.icon className="size-4" />
 												<span>{item.title}</span>
-											</a>
+											</Link>
 										</SidebarMenuButton>
 										{item.url === "/dashboard/stock-alerts" &&
 											unacknowledgedAlertCount > 0 && (
@@ -506,7 +505,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
 				<SidebarMenu>
 					<SidebarMenuItem>
 						<SidebarMenuButton size="lg" asChild className="h-auto py-2">
-							<a href="/dashboard">
+							<Link to="/dashboard">
 								<div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md">
 									<img
 										src="/images/bettencourts-logo.png"
@@ -522,7 +521,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
 										Food Inc.
 									</span>
 								</div>
-							</a>
+							</Link>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 				</SidebarMenu>
@@ -542,9 +541,11 @@ export function AppSidebar({ user }: AppSidebarProps) {
 				{renderNavGroup("Restaurant", restaurantNavItems)}
 				{renderNavGroup("Inventory", inventoryNavItems)}
 				{renderNavGroup("Customers", customerNavItems)}
-				{renderNavGroup("Finance", financeNavItems)}
+				{renderNavGroup("Billing", financeNavItems)}
 				{renderNavGroup("Staff", staffNavItems)}
-				{renderNavGroup("Management", managementNavItems)}
+				{renderNavGroup("Finance", cashNavItems)}
+				{renderNavGroup("Insights", insightsNavItems)}
+				{renderNavGroup("System", systemNavItems)}
 			</SidebarContent>
 			<SidebarFooter>
 				<SidebarMenu>

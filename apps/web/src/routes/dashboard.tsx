@@ -57,7 +57,7 @@ const PAGE_TITLES: Record<string, string> = {
 	"/dashboard/invoices": "Invoices",
 	"/dashboard/quotations": "Quotations",
 	"/dashboard/tables": "Tables",
-	"/dashboard/waste": "Waste Log",
+	"/dashboard/waste": "Waste & Shrinkage",
 	"/dashboard/audit": "Audit Log",
 	"/dashboard/analytics": "Analytics",
 	"/dashboard/locations": "Locations",
@@ -67,15 +67,15 @@ const PAGE_TITLES: Record<string, string> = {
 	"/dashboard/profitability": "Profitability",
 	"/dashboard/products": "Products",
 	"/dashboard/stock-alerts": "Stock Alerts",
-	"/dashboard/variance": "Variance Report",
+	"/dashboard/variance": "Stock Variance",
 	"/dashboard/labor": "Labor Report",
 	"/dashboard/production-report": "Production Report",
-	"/dashboard/pnl": "P&L Report",
+	"/dashboard/pnl": "Profit & Loss",
 	"/dashboard/eod": "End of Day",
 	"/dashboard/journal": "Journal",
-	"/dashboard/menu-schedules": "Menu Schedules",
+	"/dashboard/menu-schedules": "Menu Calendar",
 	"/dashboard/currency": "Currency",
-	"/dashboard/reconciliation": "Reconciliation",
+	"/dashboard/reconciliation": "Cash Reconciliation",
 	"/dashboard/labels": "Labels",
 };
 
@@ -147,6 +147,11 @@ const ROUTE_MODULE_MAP: Record<string, string> = {
 	"/dashboard/giftcards": "orders",
 	"/dashboard/products": "products",
 	"/dashboard/production": "orders",
+	"/dashboard/pos": "orders",
+	"/dashboard/orders": "orders",
+	"/dashboard/cash": "shifts",
+	"/dashboard/kitchen": "orders",
+	"/dashboard/timeclock": "shifts",
 };
 
 function hasRouteAccess(
@@ -166,7 +171,7 @@ function hasRouteAccess(
  * Map the custom role name from the DB to a sidebar role identifier.
  * Sidebar nav items use these identifiers in their `roles` arrays.
  */
-function mapRoleToSidebarRole(roleName: string): string {
+export function mapRoleToSidebarRole(roleName: string): string {
 	switch (roleName.toLowerCase()) {
 		case "executive":
 		case "owner":
@@ -281,7 +286,7 @@ export default function DashboardLayout() {
 			name: userProfile.name,
 			email: userProfile.email,
 			role: mapRoleToSidebarRole(userProfile.roleName),
-			organization_id: null,
+			organization_id: userProfile.organizationId ?? null,
 			location_id: null,
 			custom_role_id: userProfile.roleId,
 			permissions: userProfile.permissions,

@@ -1,5 +1,9 @@
 import { createContext } from "@Bettencourt-POS/api/context";
 import { onKitchenEvent } from "@Bettencourt-POS/api/lib/kitchen-events";
+import {
+	hasPermission,
+	loadUserPermissions,
+} from "@Bettencourt-POS/api/lib/permissions";
 import { appRouter } from "@Bettencourt-POS/api/routers/index";
 import { auth } from "@Bettencourt-POS/auth";
 import { db } from "@Bettencourt-POS/db";
@@ -36,6 +40,7 @@ app.use(
 );
 
 // PIN login: look up user by PIN hash, then sign in via Better Auth
+// Rate-limit keyed by client IP (not PIN hash) — prevents credential stuffing across accounts
 const pinFailures = new Map<string, { count: number; lockedUntil: number }>();
 
 app.post("/api/auth/pin-login", async (c) => {
@@ -46,11 +51,13 @@ app.post("/api/auth/pin-login", async (c) => {
 			return c.json({ error: "PIN must be 4-8 digits" }, 400);
 		}
 
-		const hash = createHash("sha256").update(pin).digest("hex");
-
-		// Rate limit check
-		const attempt = pinFailures.get(hash);
-		if (attempt && attempt.count >= 3 && Date.now() < attempt.lockedUntil) {
+		// Rate limit by IP — prevents brute-force across any target account
+		const clientIp =
+			c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
+			c.req.header("x-real-ip") ||
+			"unknown";
+		const attempt = pinFailures.get(clientIp);
+		if (attempt && attempt.count >= 5 && Date.now() < attempt.lockedUntil) {
 			const remaining = Math.ceil((attempt.lockedUntil - Date.now()) / 1000);
 			return c.json(
 				{ error: `Too many attempts. Try again in ${remaining}s` },
@@ -58,32 +65,53 @@ app.post("/api/auth/pin-login", async (c) => {
 			);
 		}
 
-		// Look up user by PIN hash
+		const hash = createHash("sha256").update(pin).digest("hex");
+
+		// Look up user by PIN hash — only return non-banned users
 		const users = await db
 			.select({
 				id: schema.user.id,
 				email: schema.user.email,
 				name: schema.user.name,
+				banned: schema.user.banned,
+				banExpires: schema.user.banExpires,
 			})
 			.from(schema.user)
 			.where(eq(schema.user.pinHash, hash))
 			.limit(1);
 
-		if (users.length === 0) {
-			// Track failed attempt
-			const existing = pinFailures.get(hash) || { count: 0, lockedUntil: 0 };
+		// Track failed attempt for any miss (wrong PIN or banned)
+		const trackFailure = () => {
+			const existing = pinFailures.get(clientIp) || {
+				count: 0,
+				lockedUntil: 0,
+			};
 			existing.count += 1;
-			if (existing.count >= 3) {
-				existing.lockedUntil = Date.now() + 30_000; // 30s lockout
+			if (existing.count >= 5) {
+				existing.lockedUntil = Date.now() + 60_000; // 60s lockout
 			}
-			pinFailures.set(hash, existing);
+			pinFailures.set(clientIp, existing);
+		};
+
+		if (users.length === 0) {
+			trackFailure();
 			return c.json({ error: "Invalid PIN" }, 401);
 		}
 
-		// Clear failures on success
-		pinFailures.delete(hash);
-
+		// biome-ignore lint/style/noNonNullAssertion: length guard above ensures element exists
 		const user = users[0]!;
+
+		// Check banned state — allow if ban has expired
+		const isBanned =
+			user.banned === true &&
+			(user.banExpires === null || user.banExpires > new Date());
+		if (isBanned) {
+			trackFailure();
+			return c.json({ error: "Account is disabled" }, 403);
+		}
+
+		// Clear failures on success
+		pinFailures.delete(clientIp);
 
 		// Create a session directly via Better Auth's internal adapter (no password needed)
 		const ctx = await auth.$context;
@@ -108,9 +136,9 @@ app.post("/api/auth/pin-login", async (c) => {
 			.filter(Boolean)
 			.join("; ");
 
+		// Session is set via cookie only — do not expose token in response body
 		return new Response(
 			JSON.stringify({
-				token: session.token,
 				user: { id: user.id, email: user.email, name: user.name },
 			}),
 			{
@@ -195,11 +223,16 @@ app.get("/health", (c) => {
 	return c.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// SSE endpoint for kitchen display real-time updates — requires auth
+// SSE endpoint for kitchen display real-time updates — requires auth + orders.read permission
 app.get("/api/kitchen/events", async (c) => {
 	const session = await auth.api.getSession({ headers: c.req.raw.headers });
 	if (!session?.user) {
 		return c.json({ error: "Unauthorized" }, 401);
+	}
+
+	const permissions = await loadUserPermissions(session.user.id);
+	if (!hasPermission(permissions, "orders.read")) {
+		return c.json({ error: "Forbidden" }, 403);
 	}
 	const stream = new ReadableStream({
 		start(controller) {

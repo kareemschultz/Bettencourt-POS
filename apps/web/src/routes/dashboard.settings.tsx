@@ -24,7 +24,7 @@ import {
 	Users,
 	X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
 	AlertDialog,
@@ -193,10 +193,12 @@ function OrganizationTab() {
 	const [name, setName] = useState("");
 	const [initialized, setInitialized] = useState(false);
 
-	if (org && !initialized) {
-		setName(org.name ?? "");
-		setInitialized(true);
-	}
+	useEffect(() => {
+		if (org && !initialized) {
+			setName(org.name ?? "");
+			setInitialized(true);
+		}
+	}, [org, initialized]);
 
 	const updateOrg = useMutation(
 		orpc.settings.updateOrganization.mutationOptions({
@@ -1336,19 +1338,21 @@ function ReceiptConfigTab() {
 	const [initialized, setInitialized] = useState(false);
 
 	// Populate form when config loads
-	if (config && !initialized) {
-		setForm({
-			businessName: config.businessName ?? "",
-			tagline: config.tagline ?? "",
-			addressLine1: config.addressLine1 ?? "",
-			addressLine2: config.addressLine2 ?? "",
-			phone: config.phone ?? "",
-			footerMessage: config.footerMessage ?? "",
-			promoMessage: config.promoMessage ?? "",
-			showLogo: config.showLogo ?? true,
-		});
-		setInitialized(true);
-	}
+	useEffect(() => {
+		if (config && !initialized) {
+			setForm({
+				businessName: config.businessName ?? "",
+				tagline: config.tagline ?? "",
+				addressLine1: config.addressLine1 ?? "",
+				addressLine2: config.addressLine2 ?? "",
+				phone: config.phone ?? "",
+				footerMessage: config.footerMessage ?? "",
+				promoMessage: config.promoMessage ?? "",
+				showLogo: config.showLogo ?? true,
+			});
+			setInitialized(true);
+		}
+	}, [config, initialized]);
 
 	const updateConfig = useMutation(
 		orpc.settings.updateReceiptConfig.mutationOptions({
@@ -2461,23 +2465,25 @@ function DocumentSettingsTab() {
 
 	const [loaded, setLoaded] = useState(false);
 
-	if (data && !loaded) {
-		setForm({
-			defaultTaxRate: String(data.defaultTaxRate ?? "16.5"),
-			defaultTaxMode: data.defaultTaxMode ?? "invoice",
-			defaultPaymentTerms: data.defaultPaymentTerms ?? "due_on_receipt",
-			defaultDiscountType: data.defaultDiscountType ?? "percent",
-			companyTin: data.companyTin ?? "",
-			bankName: data.bankName ?? "",
-			bankAccount: data.bankAccount ?? "",
-			bankBranch: data.bankBranch ?? "",
-			paymentInstructions: data.paymentInstructions ?? "",
-			defaultQuotationTerms: data.defaultQuotationTerms ?? "",
-			invoiceFooterNote: data.invoiceFooterNote ?? "",
-			quotationFooterNote: data.quotationFooterNote ?? "",
-		});
-		setLoaded(true);
-	}
+	useEffect(() => {
+		if (data && !loaded) {
+			setForm({
+				defaultTaxRate: String(data.defaultTaxRate ?? "16.5"),
+				defaultTaxMode: data.defaultTaxMode ?? "invoice",
+				defaultPaymentTerms: data.defaultPaymentTerms ?? "due_on_receipt",
+				defaultDiscountType: data.defaultDiscountType ?? "percent",
+				companyTin: data.companyTin ?? "",
+				bankName: data.bankName ?? "",
+				bankAccount: data.bankAccount ?? "",
+				bankBranch: data.bankBranch ?? "",
+				paymentInstructions: data.paymentInstructions ?? "",
+				defaultQuotationTerms: data.defaultQuotationTerms ?? "",
+				invoiceFooterNote: data.invoiceFooterNote ?? "",
+				quotationFooterNote: data.quotationFooterNote ?? "",
+			});
+			setLoaded(true);
+		}
+	}, [data, loaded]);
 
 	const saveMut = useMutation(
 		orpc.settings.updateDocumentSettings.mutationOptions({

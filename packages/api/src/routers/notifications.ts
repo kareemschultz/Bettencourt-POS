@@ -88,7 +88,7 @@ const getSettings = permissionProcedure("settings.read")
 
 // ── updateSettings ─────────────────────────────────────────────────────
 // Saves Twilio/provider configuration. Credentials are stored as-is for now.
-const updateSettings = permissionProcedure("settings.write")
+const updateSettings = permissionProcedure("settings.update")
 	.input(
 		z.object({
 			provider: z.enum(["twilio", "vonage"]).default("twilio"),
@@ -162,7 +162,7 @@ const listTemplates = permissionProcedure("settings.read")
 
 // ── createTemplate ─────────────────────────────────────────────────────
 // Creates a new notification template for a specific event
-const createTemplate = permissionProcedure("settings.write")
+const createTemplate = permissionProcedure("settings.create")
 	.input(
 		z.object({
 			event: z.string().min(1),
@@ -190,7 +190,7 @@ const createTemplate = permissionProcedure("settings.write")
 	});
 
 // ── updateTemplate ─────────────────────────────────────────────────────
-const updateTemplate = permissionProcedure("settings.write")
+const updateTemplate = permissionProcedure("settings.update")
 	.input(
 		z.object({
 			id: z.string().uuid(),
@@ -223,7 +223,7 @@ const updateTemplate = permissionProcedure("settings.write")
 	});
 
 // ── deleteTemplate ─────────────────────────────────────────────────────
-const deleteTemplate = permissionProcedure("settings.write")
+const deleteTemplate = permissionProcedure("settings.delete")
 	.input(z.object({ id: z.string().uuid() }))
 	.handler(async ({ input }) => {
 		await db
@@ -315,7 +315,7 @@ const getStats = permissionProcedure("settings.read")
 
 // ── sendTest ───────────────────────────────────────────────────────────
 // Sends a test notification to verify the provider configuration
-const sendTest = permissionProcedure("settings.write")
+const sendTest = permissionProcedure("settings.update")
 	.input(
 		z.object({
 			phoneNumber: z.string().min(7).max(20),

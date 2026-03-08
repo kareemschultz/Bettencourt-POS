@@ -34,6 +34,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { orpc } from "@/utils/orpc";
+import { useLocationContext } from "./dashboard";
 
 const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 const DEFAULT_LOCATION_ID = "b0000000-0000-4000-8000-000000000001";
@@ -42,11 +43,19 @@ export default function StockAlertsPage() {
 	const queryClient = useQueryClient();
 	const [filter, setFilter] = useState<"all" | "unacknowledged">("all");
 	const [generatingPO, setGeneratingPO] = useState(false);
+	const { locationId } = useLocationContext();
+
+	const { data: userProfile } = useQuery(
+		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
+	);
+
+	const orgId = userProfile?.organizationId ?? DEFAULT_ORG_ID;
+	const locId = locationId ?? DEFAULT_LOCATION_ID;
 
 	const { data: alerts = [], isLoading } = useQuery(
 		orpc.inventory.getAlerts.queryOptions({
 			input: {
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				unacknowledgedOnly: filter === "unacknowledged",
 			},
 		}),
@@ -55,7 +64,7 @@ export default function StockAlertsPage() {
 	// For generating POs, we need suppliers list
 	const { data: suppliers = [] } = useQuery(
 		orpc.settings.getSuppliers.queryOptions({
-			input: { organizationId: DEFAULT_ORG_ID },
+			input: { organizationId: orgId },
 		}),
 	);
 
@@ -64,7 +73,7 @@ export default function StockAlertsPage() {
 			onSuccess: () => {
 				queryClient.invalidateQueries({
 					queryKey: orpc.inventory.getAlerts.queryOptions({
-						input: { organizationId: DEFAULT_ORG_ID },
+						input: { organizationId: orgId },
 					}).queryKey,
 				});
 				toast.success("Alert acknowledged");
@@ -79,7 +88,7 @@ export default function StockAlertsPage() {
 			onSuccess: (data) => {
 				queryClient.invalidateQueries({
 					queryKey: orpc.inventory.getAlerts.queryOptions({
-						input: { organizationId: DEFAULT_ORG_ID },
+						input: { organizationId: orgId },
 					}).queryKey,
 				});
 				queryClient.invalidateQueries({
@@ -100,8 +109,7 @@ export default function StockAlertsPage() {
 	function handleAcknowledge(inventoryItemId: string) {
 		acknowledgeMutation.mutate({
 			inventoryItemId,
-			organizationId: DEFAULT_ORG_ID,
-			userId: "system",
+			organizationId: orgId,
 		});
 	}
 
@@ -118,9 +126,8 @@ export default function StockAlertsPage() {
 
 		setGeneratingPO(true);
 		generatePOMutation.mutate({
-			organizationId: DEFAULT_ORG_ID,
-			locationId: DEFAULT_LOCATION_ID,
-			createdBy: "system",
+			organizationId: orgId,
+			locationId: locId,
 			items: eligibleAlerts.map((a) => ({
 				inventoryItemId: a.inventoryItemId,
 				preferredSupplierId: a.preferredSupplierId,

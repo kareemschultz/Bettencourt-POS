@@ -24,8 +24,8 @@ const getCurrentUser = protectedProcedure
 	.handler(async ({ context }) => {
 		const userId = context.session.user.id;
 
-		// Get user's role assignment from the user_role → custom_role tables
-		const roleAssignment = await db
+		// Get all of the user's role assignments from the user_role → custom_role tables
+		const roleAssignments = await db
 			.select({
 				roleName: schema.customRole.name,
 				roleId: schema.customRole.id,
@@ -36,20 +36,42 @@ const getCurrentUser = protectedProcedure
 				schema.customRole,
 				eq(schema.userRole.roleId, schema.customRole.id),
 			)
-			.where(eq(schema.userRole.userId, userId))
+			.where(eq(schema.userRole.userId, userId));
+
+		// Merge permissions across all assigned roles
+		const merged: Record<string, string[]> = {};
+		for (const role of roleAssignments) {
+			const perms = role.permissions as Record<string, string[]>;
+			for (const [resource, actions] of Object.entries(perms)) {
+				if (!merged[resource]) merged[resource] = [];
+				for (const action of actions) {
+					if (!merged[resource].includes(action)) {
+						merged[resource].push(action);
+					}
+				}
+			}
+		}
+
+		// Get user's organization via member table
+		const memberRow = await db
+			.select({ organizationId: schema.member.organizationId })
+			.from(schema.member)
+			.where(eq(schema.member.userId, userId))
 			.limit(1);
 
-		const role = roleAssignment[0];
+		const primaryRole = roleAssignments[0];
 
 		return {
 			id: userId,
 			name: context.session.user.name || "User",
 			email: context.session.user.email || "",
-			roleName: role?.roleName || "Cashier",
-			roleId: role?.roleId || null,
-			permissions: (role?.permissions as Record<string, string[]>) || {
-				orders: ["create", "read"],
-			},
+			roleName: primaryRole?.roleName || "Cashier",
+			roleId: primaryRole?.roleId || null,
+			organizationId: memberRow[0]?.organizationId ?? null,
+			permissions:
+				Object.keys(merged).length > 0
+					? merged
+					: { orders: ["create", "read"] },
 		};
 	});
 

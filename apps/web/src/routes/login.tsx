@@ -213,6 +213,7 @@ function PinLogin({ onSwitchToEmail }: { onSwitchToEmail: () => void }) {
 								className="h-16 text-lg"
 								onClick={handleBackspace}
 								disabled={pin.length === 0 || loading}
+								aria-label="Backspace"
 							>
 								<Delete className="size-5" />
 							</Button>

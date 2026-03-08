@@ -278,7 +278,6 @@ export default function WasteTrackingPage() {
 				| "dropped"
 				| "other",
 			notes: formNotes || undefined,
-			loggedBy: "system", // Will be overridden by auth context in production
 		});
 	}
 

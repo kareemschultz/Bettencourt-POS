@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Edit2, Gift, Plus, Star, Trash2, Trophy } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
 	AlertDialog,
@@ -140,13 +140,15 @@ export default function LoyaltyPage() {
 	);
 
 	// Sync form when program loads
-	if (program && programForm.name === "" && program.name) {
-		setProgramForm({
-			name: program.name,
-			pointsPerDollar: program.pointsPerDollar,
-			isActive: program.isActive,
-		});
-	}
+	useEffect(() => {
+		if (program && programForm.name === "" && program.name) {
+			setProgramForm({
+				name: program.name,
+				pointsPerDollar: program.pointsPerDollar,
+				isActive: program.isActive,
+			});
+		}
+	}, [program, programForm.name]);
 
 	function handleSaveProgram() {
 		if (!programForm.name.trim()) {

@@ -240,8 +240,13 @@ export default function CustomersPage() {
 										customers.map((c) => (
 											<TableRow
 												key={c.id}
+												role="button"
+												tabIndex={0}
 												className={`cursor-pointer ${selectedCustomer === c.id ? "bg-muted" : ""}`}
 												onClick={() => setSelectedCustomer(c.id)}
+												onKeyDown={(e) => {
+													if (e.key === "Enter") setSelectedCustomer(c.id);
+												}}
 											>
 												<TableCell className="font-medium">{c.name}</TableCell>
 												<TableCell>

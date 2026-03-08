@@ -32,7 +32,7 @@ export const user = pgTable("user", {
 	// two-factor plugin
 	twoFactorEnabled: boolean("two_factor_enabled").default(false),
 	// POS-specific columns
-	pinHash: text("pin_hash"),
+	pinHash: text("pin_hash").unique(),
 	hourlyRate: numeric("hourly_rate", { precision: 10, scale: 2 }),
 	organizationId: uuid("organization_id").references(() => organization.id),
 });

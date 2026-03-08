@@ -125,6 +125,7 @@ export function PinLockScreen({ userName, onUnlock }: PinLockScreenProps) {
 									className="h-14 text-lg"
 									onClick={handleBackspace}
 									disabled={pin.length === 0}
+									aria-label="Backspace"
 								>
 									<Delete className="size-5" />
 								</Button>

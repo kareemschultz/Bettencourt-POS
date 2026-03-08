@@ -777,6 +777,7 @@ async function seed() {
 					invoices: ["create", "read", "update", "delete"],
 					quotations: ["create", "read", "update", "delete"],
 					modifiers: ["create", "read", "update", "delete"],
+					customers: ["create", "read", "update", "delete"],
 				},
 			},
 			{
@@ -809,6 +810,7 @@ async function seed() {
 					invoices: ["create", "read", "update", "delete"],
 					quotations: ["create", "read", "update", "delete"],
 					modifiers: ["create", "read", "update", "delete"],
+					customers: ["create", "read", "update", "delete"],
 				},
 			},
 			{
@@ -831,6 +833,7 @@ async function seed() {
 					invoices: ["create", "read", "update"],
 					quotations: ["create", "read", "update"],
 					modifiers: ["create", "read", "update", "delete"],
+					customers: ["create", "read", "update", "delete"],
 				},
 			},
 			{
@@ -852,6 +855,7 @@ async function seed() {
 					discounts: [],
 					prices: [],
 					modifiers: ["read"],
+					customers: ["create", "read", "update", "delete"],
 				},
 			},
 			{

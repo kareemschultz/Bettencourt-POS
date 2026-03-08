@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRightLeft, DollarSign, Info, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,11 +29,13 @@ export default function CurrencyPage() {
 	const [initialized, setInitialized] = useState(false);
 
 	// Populate form when data loads
-	if (exchangeData && !initialized) {
-		setRate(exchangeData.usdToGydRate.toString());
-		setAcceptUsd(exchangeData.acceptUsd);
-		setInitialized(true);
-	}
+	useEffect(() => {
+		if (exchangeData && !initialized) {
+			setRate(exchangeData.usdToGydRate.toString());
+			setAcceptUsd(exchangeData.acceptUsd);
+			setInitialized(true);
+		}
+	}, [exchangeData, initialized]);
 
 	const updateMutation = useMutation(
 		orpc.settings.updateExchangeRate.mutationOptions({

@@ -315,7 +315,11 @@ export function POSTerminal({
 	const grandTotal = cartTotal + cartTax - discount;
 
 	async function handlePaymentComplete(
-		payments: { method: string; amount: number; reference?: string }[],
+		payments: {
+			method: "cash" | "card" | "mobile_money" | "gift_card" | "credit";
+			amount: number;
+			reference?: string;
+		}[],
 	) {
 		const checkoutItems = cart.map((item) => ({
 			productId: item.product.id,
@@ -526,38 +530,38 @@ export function POSTerminal({
 
 				{/* Department filter */}
 				<div className="flex flex-1 items-center gap-1.5 overflow-x-auto py-0.5">
-					<Badge
-						variant={selectedDepartment === "all" ? "default" : "outline"}
-						className="shrink-0 cursor-pointer touch-manipulation px-2.5 py-1 text-xs sm:px-3"
+					<button
+						type="button"
+						className={`shrink-0 touch-manipulation rounded-full border px-2.5 py-1 font-medium text-xs sm:px-3 ${selectedDepartment === "all" ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background hover:bg-accent"}`}
 						onClick={() => setSelectedDepartment("all")}
 					>
 						All
-					</Badge>
+					</button>
 					{departments.map((dept) => (
-						<Badge
+						<button
 							key={dept.id}
-							variant={selectedDepartment === dept.id ? "default" : "outline"}
-							className="shrink-0 cursor-pointer touch-manipulation px-2.5 py-1 text-xs sm:px-3"
+							type="button"
+							className={`shrink-0 touch-manipulation rounded-full border px-2.5 py-1 font-medium text-xs sm:px-3 ${selectedDepartment === dept.id ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background hover:bg-accent"}`}
 							onClick={() => setSelectedDepartment(dept.id)}
 						>
 							{dept.name}
-						</Badge>
+						</button>
 					))}
 					{departmentOverrideActive ? (
-						<Badge
-							variant="outline"
-							className="shrink-0 cursor-pointer touch-manipulation border-amber-400 bg-amber-50 px-2.5 py-1 text-amber-700 text-xs sm:px-3 dark:bg-amber-900/20 dark:text-amber-400"
+						<button
+							type="button"
+							className="shrink-0 touch-manipulation rounded-full border border-amber-400 bg-amber-50 px-2.5 py-1 font-medium text-amber-700 text-xs sm:px-3 dark:bg-amber-900/20 dark:text-amber-400"
 							onClick={() => {
 								setDepartmentOverrideActive(false);
 								setSelectedDepartment("all");
 							}}
 						>
 							Override Active ✕
-						</Badge>
+						</button>
 					) : (
-						<Badge
-							variant="outline"
-							className="shrink-0 cursor-pointer touch-manipulation border-dashed px-2.5 py-1 text-xs sm:px-3"
+						<button
+							type="button"
+							className="shrink-0 touch-manipulation rounded-full border border-input border-dashed bg-background px-2.5 py-1 font-medium text-xs hover:bg-accent sm:px-3"
 							onClick={async () => {
 								try {
 									await requestOverride(
@@ -572,7 +576,7 @@ export function POSTerminal({
 							}}
 						>
 							+ Other Depts
-						</Badge>
+						</button>
 					)}
 				</div>
 
@@ -580,6 +584,7 @@ export function POSTerminal({
 				<div className="flex shrink-0 items-center gap-1.5">
 					{heldOrders.map((_held, i) => (
 						<button
+							type="button"
 							key={i}
 							className="touch-manipulation rounded border border-primary border-dashed px-2 py-1 font-medium text-primary text-xs hover:bg-primary/10"
 							onClick={() => handleRecallOrder(i)}
@@ -603,15 +608,25 @@ export function POSTerminal({
 											{loyaltyData.membership.currentPoints} pts
 										</span>
 									)}
-									<button
+									{/* biome-ignore lint/a11y/useSemanticElements: span needed to avoid invalid nested button */}
+									<span
+										role="button"
+										tabIndex={0}
+										aria-label="Clear customer"
 										className="ml-1 rounded-full p-0.5 hover:bg-muted"
 										onClick={(e) => {
 											e.stopPropagation();
 											setSelectedCustomer(null);
 										}}
+										onKeyDown={(e) => {
+											if (e.key === "Enter" || e.key === " ") {
+												e.stopPropagation();
+												setSelectedCustomer(null);
+											}
+										}}
 									>
 										<XIcon className="size-3" />
-									</button>
+									</span>
 								</Button>
 							) : (
 								<Button variant="ghost" size="sm" className="gap-1.5 text-xs">
@@ -637,6 +652,7 @@ export function POSTerminal({
 									) : (
 										customerResults.map((c) => (
 											<button
+												type="button"
 												key={c.id}
 												className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
 												onClick={() => {

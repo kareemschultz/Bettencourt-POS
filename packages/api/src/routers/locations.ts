@@ -43,7 +43,7 @@ const getLocation = protectedProcedure
 	});
 
 // ── createLocation ───────────────────────────────────────────────────
-const createLocation = permissionProcedure("settings.write")
+const createLocation = permissionProcedure("settings.create")
 	.input(
 		z.object({
 			name: z.string().min(1),
@@ -74,7 +74,7 @@ const createLocation = permissionProcedure("settings.write")
 	});
 
 // ── updateLocation ───────────────────────────────────────────────────
-const updateLocation = permissionProcedure("settings.write")
+const updateLocation = permissionProcedure("settings.update")
 	.input(
 		z.object({
 			id: z.string().uuid(),
@@ -126,7 +126,7 @@ const updateLocation = permissionProcedure("settings.write")
 
 // ── deleteLocation ───────────────────────────────────────────────────
 // Soft-delete: sets isActive = false. Prevents deletion if active orders exist.
-const deleteLocation = permissionProcedure("settings.write")
+const deleteLocation = permissionProcedure("settings.delete")
 	.input(z.object({ id: z.string().uuid() }))
 	.handler(async ({ input }) => {
 		const existing = await db
