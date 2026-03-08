@@ -396,3 +396,43 @@ Branch: `plan5/audit-fixes-v2`
 ### Commit
 
 `feat: comprehensive security, RBAC, and UX audit fixes (Plan #5)` (2026-03-07)
+
+## Plan #9 — Deferred & Premium Features (COMPLETE — 2026-03-08)
+
+Source: `docs/plans/2026-03-08-v2-deferred-and-premium.md`
+Branch: `plan9/deferred-premium`
+
+### Wave 1 — Bug Fixes ✅
+
+| Task | Status | Details |
+|------|--------|---------|
+| B18: Split bill custom amounts | ✅ Done | `splitCustom` API procedure added; frontend wired to use it (was incorrectly calling `splitEqual`) |
+| B03 notifications creds | ✅ Done | `updateSettings` guards against clearing credentials when input is empty/masked |
+| Atomic user creation | ✅ Done | `createUser` now runs user + member + userRole inserts in a DB transaction |
+| User form dynamic roles | ✅ Done | Create-user form uses `roleId` UUID with dynamic role select from DB instead of static system roles |
+
+### Wave 2 — Nav Alignment ✅
+
+| Task | Status | Details |
+|------|--------|---------|
+| Rename POS Terminal | ✅ Done | "POS Terminal" → "New Sale" in sidebar and PAGE_TITLES |
+| Merge Restaurant + Staff | ✅ Done | Combined into "Operations" group; Time Clock moved from standalone Staff |
+| Currency to System | ✅ Done | Currency nav item moved from Finance → System group |
+| Discounts to Finance | ✅ Done | Discounts nav item moved from Customers → Finance group |
+
+### Wave 3 — Premium Features ✅
+
+| Task | Status | Details |
+|------|--------|---------|
+| Webhook event center | ✅ Already done | `DeliveryLog` component with expandable payload/response rows was complete in Plan #8 |
+| Global Ctrl+K command palette | ✅ Done | `command-palette.tsx` component; permission-aware; wired to dashboard layout |
+
+### TypeScript & Build
+
+- `bun run check-types`: 0 errors
+- `bun run build`: clean production build
+- Docker: `kt-bettencourt-pos` rebuilt and running
+
+### Commit
+
+`feat: Plan #9 deferred & premium features` (2026-03-08)
