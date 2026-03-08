@@ -675,6 +675,141 @@ function KitchenDashboard() {
 	);
 }
 
+function WarehouseDashboard() {
+	return (
+		<>
+			<div className="flex flex-col gap-2">
+				<h1 className="text-balance font-bold text-xl sm:text-2xl">
+					Inventory Workspace
+				</h1>
+				<p className="text-muted-foreground text-sm">
+					Monitor stock, product data, alerts, and supplier activity from one
+					place.
+				</p>
+			</div>
+
+			<Link to="/dashboard/inventory">
+				<Card className="border-blue-500/30 bg-blue-500/5 transition-colors hover:border-blue-500/60 hover:bg-blue-500/10">
+					<CardContent className="flex items-center gap-4 p-6">
+						<div className="flex size-14 items-center justify-center rounded-xl bg-blue-500 text-white">
+							<Warehouse className="size-7" />
+						</div>
+						<div className="flex-1">
+							<h2 className="font-bold text-lg">Open Inventory Control</h2>
+							<p className="text-muted-foreground text-sm">
+								Review levels, transfers, and purchase workflow.
+							</p>
+						</div>
+						<ArrowRight className="size-5 text-muted-foreground" />
+					</CardContent>
+				</Card>
+			</Link>
+
+			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+				<Link to="/dashboard/inventory" className="group">
+					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
+						<CardContent className="flex flex-col items-center gap-2 p-4">
+							<Warehouse className="size-6 text-primary" />
+							<span className="font-medium text-xs">Inventory</span>
+						</CardContent>
+					</Card>
+				</Link>
+				<Link to="/dashboard/products" className="group">
+					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
+						<CardContent className="flex flex-col items-center gap-2 p-4">
+							<ShoppingBag className="size-6 text-primary" />
+							<span className="font-medium text-xs">Products</span>
+						</CardContent>
+					</Card>
+				</Link>
+				<Link to="/dashboard/stock-alerts" className="group">
+					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
+						<CardContent className="flex flex-col items-center gap-2 p-4">
+							<AlertTriangle className="size-6 text-primary" />
+							<span className="font-medium text-xs">Stock Alerts</span>
+						</CardContent>
+					</Card>
+				</Link>
+				<Link to="/dashboard/suppliers" className="group">
+					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
+						<CardContent className="flex flex-col items-center gap-2 p-4">
+							<Users className="size-6 text-primary" />
+							<span className="font-medium text-xs">Suppliers</span>
+						</CardContent>
+					</Card>
+				</Link>
+			</div>
+		</>
+	);
+}
+
+function AccountantDashboard() {
+	return (
+		<>
+			<div className="flex flex-col gap-2">
+				<h1 className="text-balance font-bold text-xl sm:text-2xl">
+					Finance Workspace
+				</h1>
+				<p className="text-muted-foreground text-sm">
+					Jump into reporting, reconciliation, invoicing, and journal review.
+				</p>
+			</div>
+
+			<Link to="/dashboard/reports">
+				<Card className="border-emerald-500/30 bg-emerald-500/5 transition-colors hover:border-emerald-500/60 hover:bg-emerald-500/10">
+					<CardContent className="flex items-center gap-4 p-6">
+						<div className="flex size-14 items-center justify-center rounded-xl bg-emerald-500 text-white">
+							<BarChart3 className="size-7" />
+						</div>
+						<div className="flex-1">
+							<h2 className="font-bold text-lg">Open Financial Reports</h2>
+							<p className="text-muted-foreground text-sm">
+								Analyze sales, margins, labor, and performance trends.
+							</p>
+						</div>
+						<ArrowRight className="size-5 text-muted-foreground" />
+					</CardContent>
+				</Card>
+			</Link>
+
+			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+				<Link to="/dashboard/reports" className="group">
+					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
+						<CardContent className="flex flex-col items-center gap-2 p-4">
+							<BarChart3 className="size-6 text-primary" />
+							<span className="font-medium text-xs">Reports</span>
+						</CardContent>
+					</Card>
+				</Link>
+				<Link to="/dashboard/invoices" className="group">
+					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
+						<CardContent className="flex flex-col items-center gap-2 p-4">
+							<Banknote className="size-6 text-primary" />
+							<span className="font-medium text-xs">Invoices</span>
+						</CardContent>
+					</Card>
+				</Link>
+				<Link to="/dashboard/reconciliation" className="group">
+					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
+						<CardContent className="flex flex-col items-center gap-2 p-4">
+							<DollarSign className="size-6 text-primary" />
+							<span className="font-medium text-xs">Reconcile</span>
+						</CardContent>
+					</Card>
+				</Link>
+				<Link to="/dashboard/journal" className="group">
+					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
+						<CardContent className="flex flex-col items-center gap-2 p-4">
+							<ClipboardList className="size-6 text-primary" />
+							<span className="font-medium text-xs">Journal</span>
+						</CardContent>
+					</Card>
+				</Link>
+			</div>
+		</>
+	);
+}
+
 // ── Main Page Export ────────────────────────────────────────────────────
 export default function DashboardIndexPage() {
 	const { data: userProfile, isLoading } = useQuery(
@@ -705,6 +840,12 @@ export default function DashboardIndexPage() {
 		case "executive":
 		case "admin":
 			content = <ExecutiveDashboard />;
+			break;
+		case "warehouse":
+			content = <WarehouseDashboard />;
+			break;
+		case "accountant":
+			content = <AccountantDashboard />;
 			break;
 		case "checkoff":
 			content = <KitchenDashboard />;

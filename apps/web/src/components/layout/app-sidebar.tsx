@@ -293,6 +293,8 @@ const cashNavItems = [
 	},
 ];
 
+const financeAndBillingNavItems = [...financeNavItems, ...cashNavItems];
+
 const insightsNavItems = [
 	{
 		title: "Reports",
@@ -538,8 +540,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
 				{renderNavGroup("Operations", operationsNavItems)}
 				{renderNavGroup("Inventory", inventoryNavItems)}
 				{renderNavGroup("Customers", customerNavItems)}
-				{renderNavGroup("Billing", financeNavItems)}
-				{renderNavGroup("Finance", cashNavItems)}
+				{renderNavGroup("Finance & Billing", financeAndBillingNavItems)}
 				{renderNavGroup("Insights", insightsNavItems)}
 				{renderNavGroup("System", systemNavItems)}
 			</SidebarContent>

@@ -24,7 +24,7 @@ import {
 	Users,
 	X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
 	AlertDialog,
@@ -79,7 +79,16 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { hasRouteAccess } from "@/lib/route-access";
 import { todayGY } from "@/lib/utils";
+import {
+	getRoleDefaultWorkspaceRoute,
+	getSavedWorkspaceRoute,
+	roleNameToSidebarRole,
+	setSavedWorkspaceRoute,
+	WORKSPACE_ROUTE_OPTIONS,
+	type WorkspaceRoute,
+} from "@/lib/workspace-preferences";
 import { orpc } from "@/utils/orpc";
 
 export default function SettingsPage() {
@@ -146,7 +155,7 @@ export default function SettingsPage() {
 				</TabsList>
 
 				<TabsContent value="organization" className="mt-4">
-					<OrganizationTab />
+					<OrganizationTab onNavigateTab={setActiveTab} />
 				</TabsContent>
 				<TabsContent value="locations" className="mt-4">
 					<LocationsTab />
@@ -185,13 +194,43 @@ export default function SettingsPage() {
 
 // ── Organization Tab ───────────────────────────────────────────────────
 
-function OrganizationTab() {
+function OrganizationTab({
+	onNavigateTab,
+}: {
+	onNavigateTab: (tab: string) => void;
+}) {
 	const queryClient = useQueryClient();
 	const { data: org, isLoading } = useQuery(
 		orpc.settings.getOrganization.queryOptions({ input: {} }),
 	);
+	const { data: locations = [] } = useQuery(
+		orpc.settings.getLocations.queryOptions({ input: {} }),
+	);
+	const { data: registers = [] } = useQuery(
+		orpc.settings.getRegisters.queryOptions({ input: {} }),
+	);
+	const { data: users = [] } = useQuery(
+		orpc.settings.getUsers.queryOptions({ input: {} }),
+	);
+	const { data: rates = [] } = useQuery(
+		orpc.settings.getTaxRates.queryOptions({ input: {} }),
+	);
+	const { data: receiptConfig } = useQuery(
+		orpc.settings.getReceiptConfig.queryOptions({ input: {} }),
+	);
+	const { data: pos } = useQuery(
+		orpc.settings.getPosSettings.queryOptions({ input: {} }),
+	);
+	const { data: currentUser } = useQuery(
+		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
+	);
 	const [name, setName] = useState("");
 	const [initialized, setInitialized] = useState(false);
+	const [workspaceRoute, setWorkspaceRoute] =
+		useState<WorkspaceRoute>("/dashboard");
+	const [workspaceReady, setWorkspaceReady] = useState(false);
+	const [savedWorkspaceRoute, setSavedWorkspaceRouteState] =
+		useState<WorkspaceRoute | null>(null);
 
 	useEffect(() => {
 		if (org && !initialized) {
@@ -199,6 +238,138 @@ function OrganizationTab() {
 			setInitialized(true);
 		}
 	}, [org, initialized]);
+
+	const availableWorkspaceOptions = useMemo(() => {
+		const permissions = currentUser?.permissions ?? {};
+		return WORKSPACE_ROUTE_OPTIONS.filter((opt) =>
+			hasRouteAccess(opt.value, permissions),
+		);
+	}, [currentUser?.permissions]);
+
+	const routeLabelMap = useMemo(
+		() =>
+			new Map(
+				WORKSPACE_ROUTE_OPTIONS.map((opt) => [opt.value, opt.label] as const),
+			),
+		[],
+	);
+
+	const roleDefaultWorkspace = useMemo<WorkspaceRoute>(() => {
+		const mappedRole = roleNameToSidebarRole(
+			currentUser?.roleName ?? "cashier",
+		);
+		const roleDefault = getRoleDefaultWorkspaceRoute(mappedRole);
+		const inOptions = availableWorkspaceOptions.some(
+			(opt) => opt.value === roleDefault,
+		);
+		if (inOptions) return roleDefault;
+		return availableWorkspaceOptions[0]?.value ?? "/dashboard";
+	}, [availableWorkspaceOptions, currentUser?.roleName]);
+
+	useEffect(() => {
+		if (!currentUser || workspaceReady) return;
+		const saved = getSavedWorkspaceRoute();
+		const savedAllowed = saved
+			? availableWorkspaceOptions.some((opt) => opt.value === saved)
+			: false;
+		const persisted = savedAllowed ? saved : null;
+		const initial = persisted ?? roleDefaultWorkspace;
+		setSavedWorkspaceRouteState(persisted);
+		setWorkspaceRoute(initial);
+		setWorkspaceReady(true);
+	}, [
+		availableWorkspaceOptions,
+		currentUser,
+		roleDefaultWorkspace,
+		workspaceReady,
+	]);
+
+	const activeLocations = locations.filter((loc) => loc.isActive).length;
+	const activeRegisters = registers.filter((reg) => reg.isActive).length;
+	const activeUsers = users.filter(
+		(user) => !(user as { banned?: string | null }).banned,
+	).length;
+
+	const setupSteps = [
+		{
+			id: "org-profile",
+			title: "Business profile",
+			description: "Set your organization name and identity details.",
+			done: Boolean(name.trim()),
+			tab: "organization",
+		},
+		{
+			id: "locations",
+			title: "Location setup",
+			description:
+				activeLocations > 0
+					? `${activeLocations} active location${activeLocations === 1 ? "" : "s"} configured`
+					: "Add at least one active location.",
+			done: activeLocations > 0,
+			tab: "locations",
+		},
+		{
+			id: "registers",
+			title: "Register readiness",
+			description:
+				activeRegisters > 0
+					? `${activeRegisters} active register${activeRegisters === 1 ? "" : "s"} configured`
+					: "Configure at least one active register.",
+			done: activeRegisters > 0,
+			tab: "registers",
+		},
+		{
+			id: "users",
+			title: "Team access",
+			description:
+				activeUsers > 0
+					? `${activeUsers} active staff account${activeUsers === 1 ? "" : "s"}`
+					: "Create staff users and assign roles.",
+			done: activeUsers > 0,
+			tab: "users",
+		},
+		{
+			id: "tax",
+			title: "Tax configuration",
+			description:
+				rates.length > 0
+					? `${rates.length} tax rate${rates.length === 1 ? "" : "s"} configured`
+					: "Create at least one tax rate.",
+			done: rates.length > 0,
+			tab: "tax",
+		},
+		{
+			id: "receipt",
+			title: "Receipt branding",
+			description: receiptConfig?.businessName?.trim()
+				? "Receipt profile is configured."
+				: "Add receipt branding and footer messaging.",
+			done: Boolean(receiptConfig?.businessName?.trim()),
+			tab: "receipt",
+		},
+		{
+			id: "pos",
+			title: "POS guardrails",
+			description:
+				pos?.requireCashSession && pos?.requireNoteOnVoid
+					? "Cash session and void-reason protections are enabled."
+					: "Enable cash session and void-reason controls.",
+			done: Boolean(pos?.requireCashSession && pos?.requireNoteOnVoid),
+			tab: "pos",
+		},
+	] as const;
+
+	const completedSteps = setupSteps.filter((step) => step.done).length;
+	const completionPercent = Math.round(
+		(completedSteps / setupSteps.length) * 100,
+	);
+	const nextIncompleteStep = setupSteps.find((step) => !step.done) ?? null;
+	const selectedRouteLabel = routeLabelMap.get(workspaceRoute) ?? "Dashboard";
+	const roleDefaultLabel =
+		routeLabelMap.get(roleDefaultWorkspace) ?? "Dashboard";
+	const workspaceDirty =
+		workspaceReady &&
+		workspaceRoute !== (savedWorkspaceRoute ?? roleDefaultWorkspace);
 
 	const updateOrg = useMutation(
 		orpc.settings.updateOrganization.mutationOptions({
@@ -215,53 +386,223 @@ function OrganizationTab() {
 
 	if (isLoading) return <LoadingCard />;
 
+	function saveWorkspacePreference() {
+		const routeToPersist =
+			workspaceRoute === roleDefaultWorkspace ? null : workspaceRoute;
+		setSavedWorkspaceRoute(routeToPersist);
+		setSavedWorkspaceRouteState(routeToPersist);
+		toast.success("Default landing page updated");
+	}
+
+	function resetWorkspacePreference() {
+		setWorkspaceRoute(roleDefaultWorkspace);
+		setSavedWorkspaceRoute(null);
+		setSavedWorkspaceRouteState(null);
+		toast.success("Landing page reset to role default");
+	}
+
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>Organization Details</CardTitle>
-				<CardDescription>
-					Your business name and core identifiers.
-				</CardDescription>
-			</CardHeader>
-			<CardContent>
-				<div className="grid gap-4 sm:grid-cols-2">
-					<div className="flex flex-col gap-1.5">
-						<Label htmlFor="org-name">Business Name</Label>
-						<Input
-							id="org-name"
-							value={name}
-							onChange={(e) => setName(e.target.value)}
-						/>
-					</div>
-					<div className="flex flex-col gap-1.5">
-						<Label>Currency</Label>
-						<Input defaultValue="GYD" disabled />
-					</div>
-					<div className="flex flex-col gap-1.5 sm:col-span-2">
-						<Label>Slug</Label>
-						<Input
-							defaultValue={org?.slug ?? ""}
-							readOnly
-							className="text-muted-foreground"
-						/>
-						<p className="text-muted-foreground text-xs">
-							Slug is permanent and cannot be changed.
-						</p>
-					</div>
-				</div>
-			</CardContent>
-			<div className="flex justify-end px-6 pb-6">
-				<Button
-					disabled={updateOrg.isPending || !name.trim()}
-					onClick={() => updateOrg.mutate({ id: org?.id ?? "", name })}
-				>
-					{updateOrg.isPending && (
-						<Loader2 className="mr-2 size-4 animate-spin" />
-					)}
-					Save Changes
-				</Button>
+		<div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+			<div className="flex flex-col gap-6">
+				<Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
+					<CardHeader>
+						<div className="flex flex-wrap items-start justify-between gap-2">
+							<div>
+								<CardTitle>Setup Assistant</CardTitle>
+								<CardDescription>
+									Track go-live readiness and jump directly to the right
+									settings tab.
+								</CardDescription>
+							</div>
+							<Badge
+								variant={
+									completedSteps === setupSteps.length ? "default" : "secondary"
+								}
+							>
+								{completedSteps}/{setupSteps.length} complete
+							</Badge>
+						</div>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<div className="space-y-1.5">
+							<div className="flex items-center justify-between text-xs">
+								<span className="text-muted-foreground">Readiness</span>
+								<span className="font-medium">{completionPercent}%</span>
+							</div>
+							<div className="h-2 overflow-hidden rounded-full bg-primary/10">
+								<div
+									className="h-full rounded-full bg-primary transition-all"
+									style={{ width: `${completionPercent}%` }}
+								/>
+							</div>
+						</div>
+						<div className="space-y-2">
+							{setupSteps.map((step) => (
+								<div
+									key={step.id}
+									className="flex items-center gap-3 rounded-md border bg-card/70 p-3"
+								>
+									<div
+										className={`flex size-6 shrink-0 items-center justify-center rounded-full ${step.done ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground"}`}
+									>
+										{step.done ? (
+											<Check className="size-3.5" />
+										) : (
+											<ChevronRight className="size-3.5" />
+										)}
+									</div>
+									<div className="min-w-0 flex-1">
+										<p className="font-medium text-sm">{step.title}</p>
+										<p className="text-muted-foreground text-xs">
+											{step.description}
+										</p>
+									</div>
+									<Button
+										size="sm"
+										variant={step.done ? "secondary" : "outline"}
+										className="h-8"
+										onClick={() => onNavigateTab(step.tab)}
+									>
+										{step.done ? "Review" : "Configure"}
+									</Button>
+								</div>
+							))}
+						</div>
+						{nextIncompleteStep ? (
+							<div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/40 border-dashed bg-primary/5 p-3">
+								<p className="text-muted-foreground text-xs">
+									Next recommended action:{" "}
+									<span className="font-medium text-foreground">
+										{nextIncompleteStep.title}
+									</span>
+								</p>
+								<Button
+									size="sm"
+									className="h-8"
+									onClick={() => onNavigateTab(nextIncompleteStep.tab)}
+								>
+									Open
+								</Button>
+							</div>
+						) : (
+							<div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-3 text-emerald-700 text-xs dark:text-emerald-300">
+								Core setup is complete. You are ready for production operations.
+							</div>
+						)}
+					</CardContent>
+				</Card>
+
+				<Card>
+					<CardHeader>
+						<CardTitle>Default Workspace</CardTitle>
+						<CardDescription>
+							Choose which page opens first after login on this device.
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<div className="flex flex-col gap-1.5">
+							<Label>Landing page</Label>
+							<Select
+								value={workspaceRoute}
+								onValueChange={(value) =>
+									setWorkspaceRoute(value as WorkspaceRoute)
+								}
+								disabled={!workspaceReady}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{availableWorkspaceOptions.map((option) => (
+										<SelectItem key={option.value} value={option.value}>
+											{option.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<p className="text-muted-foreground text-xs">
+								Role default:{" "}
+								<span className="font-medium">{roleDefaultLabel}</span>
+							</p>
+						</div>
+						<div className="rounded-md border bg-muted/40 p-3">
+							<p className="font-medium text-xs">Current selection</p>
+							<p className="text-muted-foreground text-xs">
+								{selectedRouteLabel}
+							</p>
+						</div>
+						<div className="flex flex-wrap items-center justify-end gap-2">
+							<Button
+								variant="outline"
+								size="sm"
+								className="h-8"
+								onClick={resetWorkspacePreference}
+								disabled={
+									!workspaceReady || workspaceRoute === roleDefaultWorkspace
+								}
+							>
+								Reset to Role Default
+							</Button>
+							<Button
+								size="sm"
+								className="h-8"
+								onClick={saveWorkspacePreference}
+								disabled={!workspaceDirty}
+							>
+								Save Landing Page
+							</Button>
+						</div>
+					</CardContent>
+				</Card>
 			</div>
-		</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Organization Details</CardTitle>
+					<CardDescription>
+						Your business name and core identifiers.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<div className="grid gap-4 sm:grid-cols-2">
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="org-name">Business Name</Label>
+							<Input
+								id="org-name"
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+							/>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label>Currency</Label>
+							<Input defaultValue="GYD" disabled />
+						</div>
+						<div className="flex flex-col gap-1.5 sm:col-span-2">
+							<Label>Slug</Label>
+							<Input
+								defaultValue={org?.slug ?? ""}
+								readOnly
+								className="text-muted-foreground"
+							/>
+							<p className="text-muted-foreground text-xs">
+								Slug is permanent and cannot be changed.
+							</p>
+						</div>
+					</div>
+				</CardContent>
+				<div className="flex justify-end px-6 pb-6">
+					<Button
+						disabled={updateOrg.isPending || !name.trim()}
+						onClick={() => updateOrg.mutate({ id: org?.id ?? "", name })}
+					>
+						{updateOrg.isPending && (
+							<Loader2 className="mr-2 size-4 animate-spin" />
+						)}
+						Save Changes
+					</Button>
+				</div>
+			</Card>
+		</div>
 	);
 }
 
@@ -1658,11 +1999,11 @@ function CategoriesTab() {
 				name: formName,
 				sortOrder: Number.isNaN(sortNum) ? 0 : sortNum,
 			});
-			} else {
-				createCat.mutate({
-					name: formName,
-					sortOrder: Number.isNaN(sortNum) ? 0 : sortNum,
-				});
+		} else {
+			createCat.mutate({
+				name: formName,
+				sortOrder: Number.isNaN(sortNum) ? 0 : sortNum,
+			});
 		}
 	}
 

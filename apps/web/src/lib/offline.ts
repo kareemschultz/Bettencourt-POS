@@ -10,7 +10,7 @@ const STORE_NAME = "pending_operations";
 const PRODUCT_STORE = "cached_products";
 const DATA_STORE = "cached_data";
 
-interface PendingOperation {
+export interface PendingOperation {
 	id: string;
 	url: string;
 	method: string;
@@ -55,7 +55,12 @@ async function getAllOperations(): Promise<PendingOperation[]> {
 	return new Promise((resolve, reject) => {
 		const tx = db.transaction(STORE_NAME, "readonly");
 		const request = tx.objectStore(STORE_NAME).getAll();
-		request.onsuccess = () => resolve(request.result);
+		request.onsuccess = () =>
+			resolve(
+				(request.result as PendingOperation[]).sort(
+					(a, b) => a.createdAt - b.createdAt,
+				),
+			);
 		request.onerror = () => reject(request.error);
 	});
 }
@@ -161,6 +166,68 @@ export async function syncPendingOperations(): Promise<{
 export async function getPendingCount(): Promise<number> {
 	const ops = await getAllOperations();
 	return ops.length;
+}
+
+export async function listPendingOperations(): Promise<PendingOperation[]> {
+	return getAllOperations();
+}
+
+export async function clearPendingOperations(): Promise<void> {
+	const ops = await getAllOperations();
+	for (const op of ops) {
+		await removeOperation(op.id);
+	}
+}
+
+export async function removePendingOperationById(id: string): Promise<void> {
+	await removeOperation(id);
+}
+
+export async function retryPendingOperation(
+	id: string,
+): Promise<{ success: boolean; status?: number; error?: string }> {
+	const ops = await getAllOperations();
+	const op = ops.find((item) => item.id === id);
+	if (!op) {
+		return { success: false, error: "Operation not found" };
+	}
+	try {
+		const response = await fetch(op.url, {
+			method: op.method,
+			headers: { "Content-Type": "application/json" },
+			body: op.body,
+		});
+		if (response.ok) {
+			await removeOperation(op.id);
+			return { success: true, status: response.status };
+		}
+		op.retries += 1;
+		if (op.retries >= op.maxRetries) {
+			await removeOperation(op.id);
+			return {
+				success: false,
+				status: response.status,
+				error: `Dropped after max retries (${op.maxRetries})`,
+			};
+		}
+		await updateOperation(op);
+		return {
+			success: false,
+			status: response.status,
+			error: `Server responded ${response.status}`,
+		};
+	} catch {
+		op.retries += 1;
+		if (op.retries >= op.maxRetries) {
+			await removeOperation(op.id);
+			return {
+				success: false,
+				error: `Dropped after max retries (${op.maxRetries})`,
+			};
+		}
+		await updateOperation(op);
+		return { success: false, error: "Still offline" };
+	}
 }
 
 // === Online/Offline Status ===

@@ -16,7 +16,7 @@ import {
 } from "react-router";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { authClient } from "@/lib/auth-client";
-import { hasRouteAccess, ROUTE_MODULE_MAP } from "@/lib/route-access";
+import { hasRouteAccess } from "@/lib/route-access";
 import { orpc } from "@/utils/orpc";
 export { ErrorBoundary };
 
@@ -39,6 +39,13 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AppUser } from "@/lib/types";
+import {
+	getRoleDefaultWorkspaceRoute,
+	getSavedWorkspaceRoute,
+	roleNameToSidebarRole,
+	type SidebarRole,
+	type WorkspaceRoute,
+} from "@/lib/workspace-preferences";
 
 // Derive a human-readable page title from pathname
 const PAGE_TITLES: Record<string, string> = {
@@ -122,22 +129,8 @@ const AUTO_LOCK_MS = 5 * 60 * 1000; // 5 minutes of inactivity
  * Map the custom role name from the DB to a sidebar role identifier.
  * Sidebar nav items use these identifiers in their `roles` arrays.
  */
-export function mapRoleToSidebarRole(roleName: string): string {
-	switch (roleName.toLowerCase()) {
-		case "executive":
-		case "owner":
-			return "executive";
-		case "manager":
-			return "admin";
-		case "warehouse clerk":
-			return "warehouse";
-		case "accountant":
-			return "accountant";
-		case "kitchen":
-			return "checkoff";
-		default:
-			return "cashier";
-	}
+export function mapRoleToSidebarRole(roleName: string): SidebarRole {
+	return roleNameToSidebarRole(roleName);
 }
 
 export default function DashboardLayout() {
@@ -146,6 +139,7 @@ export default function DashboardLayout() {
 	const { pathname } = useLocation();
 	const [locked, setLocked] = useState(false);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const landingAppliedRef = useRef(false);
 
 	// Fetch the current user's role and permissions from the DB
 	const { data: userProfile, isLoading: loadingProfile } = useQuery(
@@ -243,6 +237,25 @@ export default function DashboardLayout() {
 			permissions: userProfile.permissions,
 		};
 	}, [session, userProfile]);
+
+	const resolvedLandingRoute = useMemo<WorkspaceRoute>(() => {
+		if (!user) return "/dashboard";
+		const saved = getSavedWorkspaceRoute();
+		if (saved && hasRouteAccess(saved, user.permissions)) return saved;
+		const roleDefault = getRoleDefaultWorkspaceRoute(
+			roleNameToSidebarRole(user.role),
+		);
+		if (hasRouteAccess(roleDefault, user.permissions)) return roleDefault;
+		return "/dashboard";
+	}, [user]);
+
+	useEffect(() => {
+		if (!user || pathname !== "/dashboard" || landingAppliedRef.current) return;
+		landingAppliedRef.current = true;
+		if (resolvedLandingRoute !== "/dashboard") {
+			navigate(resolvedLandingRoute, { replace: true });
+		}
+	}, [navigate, pathname, resolvedLandingRoute, user]);
 
 	if (isPending || loadingProfile) {
 		return (
