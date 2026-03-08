@@ -327,3 +327,72 @@ Full 4-phase audit covering all critical, high, medium, and low priority issues 
 ### Commit
 
 `fix: comprehensive codebase audit — critical bugs, security, UX polish, schema fixes` (2026-03-07)
+
+## Plan #8 — V2 Comprehensive Audit Fixes (COMPLETE — 2026-03-07)
+
+Source: `docs/audits/2026-03-08-comprehensive-audit-handoff-v2.md`
+Branch: `plan5/audit-fixes-v2`
+
+### Wave 1 — Security Hardening ✅
+
+| Task | Status | Details |
+|------|--------|---------|
+| B01: PIN banned check | ✅ Done | `isBanned` check with expiry; removed token from response body |
+| B01: PIN uniqueness | ✅ Done | `.unique()` added to `pinHash` column in schema |
+| B02: PIN rate-limit by IP | ✅ Done | Rate-limit key changed from hash to `x-forwarded-for`/`x-real-ip`; 60s lockout |
+| B03b: Mask webhook secrets | ✅ Done | API never returns secret value; UI shows placeholder; only sends if user types new one |
+| B04: Kitchen SSE permission | ✅ Done | Requires `orders.read` permission before streaming |
+| B05: Server-side actor attribution | ✅ Done | Removed `userId`/`createdBy`/`authorizedBy` from all mutation inputs; derived from session |
+| B06: HTML escaping in print templates | ✅ Done | `escapeHtml()` utility added; applied to orders + expenses print templates |
+| B07: Checkout financial bounds | ✅ Done | `nonnegative()` prices, enum payment methods, clamped totals, per-payment change calc |
+
+### Wave 2 — RBAC & Permission Normalization ✅
+
+| Task | Status | Details |
+|------|--------|---------|
+| B08: settings.write normalization | ✅ Done | All `settings.write` → CRUD verbs across webhooks, locations, notifications |
+| B09: Complete ROUTE_MODULE_MAP | ✅ Done | Added pos, orders, cash, kitchen, timeclock entries |
+| B10: Unify mapRoleToSidebarRole | ✅ Done | Exported from `dashboard.tsx`, imported in `dashboard._index.tsx` |
+| B11: Sidebar module allowlists | ✅ Done | WAREHOUSE_MODULES and ACCOUNTANT_MODULES verified/corrected |
+| B12: Real user role to OrdersTable | ✅ Done | Passes `userProfile?.roleName` instead of hardcoded "admin" |
+| B13: Customers permission module | ✅ Done | All customer procedures use `customers.*` instead of `orders.*` |
+| B14: Cash/expense permission verbs | ✅ Done | `deleteExpenseCategory` → shifts.delete, `updateExpense` → shifts.update |
+| B15: getCurrentUser merged permissions | ✅ Done | Returns merged permissions + organizationId from member table |
+| B16: organizationId from session | ✅ Done | Wired to enable sidebar stock alert badge |
+
+### Wave 3 — Stability & Code Quality ✅
+
+| Task | Status | Details |
+|------|--------|---------|
+| B17: setState during render | ✅ Done | Wrapped in `useEffect` in settings, currency, loyalty pages |
+| B19: Orders table stale state | ✅ Done | Removed `useState` wrapper; component uses prop directly |
+| B20: Link vs anchor in sidebar | ✅ Done | Replaced `<a href>` with `<Link to>` for SPA navigation |
+| B21: Hardcoded org/location IDs | ✅ Done | Removed from stock-alerts and cash; use context + session |
+| B23: Partial unique index on cash sessions | ✅ Done | `uq_cash_session_open_register` filtered by `status = 'open'` |
+| B24: Fumadocs check-types script | ✅ Done | Renamed `types:check` → `check-types` for Turbo pipeline |
+
+### Wave 4 — Accessibility ✅
+
+| Task | Status | Details |
+|------|--------|---------|
+| POS clickable badges | ✅ Done | Replaced `<Badge onClick>` with `<button type="button">` |
+| POS nested button | ✅ Done | Used `<span role="button" tabIndex={0}>` with biome-ignore comment |
+| PIN keypad backspace | ✅ Done | Added `aria-label="Backspace"` to both login + lock screen |
+| Customer table rows | ✅ Done | Added `role="button"`, `tabIndex={0}`, `onKeyDown` handler |
+
+### Wave 5 — Navigation Polish ✅
+
+| Task | Status | Details |
+|------|--------|---------|
+| B: Sidebar label renames | ✅ Done | 7 labels renamed for clarity |
+| B: Management group split | ✅ Done | 16-item group → Finance / Insights / System; old Finance → Billing |
+
+### TypeScript & Build
+
+- `bun run check-types`: 0 errors across all 8 packages
+- `bun run build`: clean production build
+- Docker: `kt-bettencourt-pos` rebuilt and running
+
+### Commit
+
+`feat: comprehensive security, RBAC, and UX audit fixes (Plan #5)` (2026-03-07)
