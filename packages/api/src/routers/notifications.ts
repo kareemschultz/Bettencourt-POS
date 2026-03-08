@@ -4,6 +4,7 @@ import { ORPCError } from "@orpc/server";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
+import { decrypt, encrypt } from "../lib/crypto";
 
 const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 
@@ -78,10 +79,13 @@ const getSettings = permissionProcedure("settings.read")
 			dailyLimit: s.dailyLimit,
 			fromNumber: s.fromNumber,
 			whatsappNumber: s.whatsappNumber,
-			// Never expose full credentials — mask and return presence flag
+			// Decrypt at read time before masking — never expose raw encrypted blob
 			hasCredentials: !!(s.accountSid && s.authToken),
 			accountSidMasked: s.accountSid
-				? `${s.accountSid.slice(0, 4)}${"*".repeat(Math.max(0, s.accountSid.length - 8))}${s.accountSid.slice(-4)}`
+				? (() => {
+						const p = decrypt(s.accountSid!);
+						return `${p.slice(0, 4)}${"*".repeat(Math.max(0, p.length - 8))}${p.slice(-4)}`;
+					})()
 				: null,
 		};
 	});
@@ -111,10 +115,10 @@ const updateSettings = permissionProcedure("settings.update")
 		// existing credentials with an empty/masked placeholder string.
 		const credentialUpdates = {
 			...(input.accountSid && !input.accountSid.includes("*")
-				? { accountSid: input.accountSid }
+				? { accountSid: encrypt(input.accountSid) }
 				: {}),
 			...(input.authToken && !input.authToken.includes("*")
-				? { authToken: input.authToken }
+				? { authToken: encrypt(input.authToken) }
 				: {}),
 		};
 
@@ -353,6 +357,10 @@ const sendTest = permissionProcedure("settings.update")
 					"Missing Twilio credentials. Add your Account SID and Auth Token to send notifications.",
 			});
 		}
+
+		// Credentials are encrypted at rest — decrypt here when Twilio API is wired:
+		// const twilioSid = decrypt(settings[0].accountSid);
+		// const twilioToken = decrypt(settings[0].authToken);
 
 		// Log the test attempt
 		const [log] = await db

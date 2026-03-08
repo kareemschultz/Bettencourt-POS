@@ -4,6 +4,7 @@ import { ORPCError } from "@orpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
+import { encrypt } from "../lib/crypto";
 import { dispatchWebhookEvent } from "../lib/webhooks";
 
 const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
@@ -53,7 +54,7 @@ const createEndpoint = permissionProcedure("settings.create")
 				organizationId: DEFAULT_ORG_ID,
 				name: input.name,
 				url: input.url,
-				secret: input.secret ?? null,
+				secret: input.secret ? encrypt(input.secret) : null,
 				events: input.events,
 				isActive: input.isActive,
 			})
@@ -102,7 +103,7 @@ const updateEndpoint = permissionProcedure("settings.update")
 			input.secret !== "" &&
 			!input.secret.includes("•")
 		) {
-			updates.secret = input.secret;
+			updates.secret = encrypt(input.secret);
 		}
 		if (input.events !== undefined) updates.events = input.events;
 		if (input.isActive !== undefined) updates.isActive = input.isActive;

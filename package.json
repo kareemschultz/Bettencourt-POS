@@ -36,7 +36,8 @@
 		"db:down": "turbo -F @Bettencourt-POS/db db:down",
 		"db:seed": "turbo -F @Bettencourt-POS/db db:seed",
 		"check": "biome check --write .",
-		"prepare": "husky"
+		"prepare": "husky",
+		"test": "turbo test"
 	},
 	"dependencies": {
 		"@Bettencourt-POS/env": "workspace:*",

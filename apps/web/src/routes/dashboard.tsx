@@ -15,6 +15,7 @@ import {
 } from "react-router";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { authClient } from "@/lib/auth-client";
+import { hasRouteAccess, ROUTE_MODULE_MAP } from "@/lib/route-access";
 import { orpc } from "@/utils/orpc";
 export { ErrorBoundary };
 
@@ -115,58 +116,6 @@ const AUTO_LOCK_MS = 5 * 60 * 1000; // 5 minutes of inactivity
 // ── Route permission map ──────────────────────────────────────────────
 // Maps URL path prefixes to the permission module required to access them.
 // Routes not listed here are accessible to all authenticated users.
-const ROUTE_MODULE_MAP: Record<string, string> = {
-	"/dashboard/reports": "reports",
-	"/dashboard/reconciliation": "reports",
-	"/dashboard/eod": "reports",
-	"/dashboard/analytics": "reports",
-	"/dashboard/journal": "reports",
-	"/dashboard/labor": "reports",
-	"/dashboard/profitability": "reports",
-	"/dashboard/pnl": "reports",
-	"/dashboard/production-report": "reports",
-	"/dashboard/inventory": "inventory",
-	"/dashboard/stock-alerts": "inventory",
-	"/dashboard/waste": "inventory",
-	"/dashboard/variance": "inventory",
-	"/dashboard/suppliers": "inventory",
-	"/dashboard/settings": "settings",
-	"/dashboard/locations": "settings",
-	"/dashboard/webhooks": "settings",
-	"/dashboard/notifications": "settings",
-	"/dashboard/menu-schedules": "settings",
-	"/dashboard/discounts": "settings",
-	"/dashboard/currency": "settings",
-	"/dashboard/expenses": "settings",
-	"/dashboard/audit": "audit",
-	"/dashboard/invoices": "invoices",
-	"/dashboard/quotations": "quotations",
-	"/dashboard/labels": "products",
-	"/dashboard/tables": "orders",
-	"/dashboard/loyalty": "orders",
-	"/dashboard/customers": "orders",
-	"/dashboard/giftcards": "orders",
-	"/dashboard/products": "products",
-	"/dashboard/production": "orders",
-	"/dashboard/pos": "orders",
-	"/dashboard/orders": "orders",
-	"/dashboard/cash": "shifts",
-	"/dashboard/kitchen": "orders",
-	"/dashboard/timeclock": "shifts",
-};
-
-function hasRouteAccess(
-	pathname: string,
-	permissions: Record<string, string[]>,
-): boolean {
-	for (const [prefix, module] of Object.entries(ROUTE_MODULE_MAP)) {
-		if (pathname === prefix || pathname.startsWith(prefix + "/")) {
-			const perms = permissions[module];
-			return Array.isArray(perms) && perms.length > 0;
-		}
-	}
-	return true;
-}
 
 /**
  * Map the custom role name from the DB to a sidebar role identifier.

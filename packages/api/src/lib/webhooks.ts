@@ -2,6 +2,7 @@ import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { createHmac } from "node:crypto";
 import { and, eq } from "drizzle-orm";
+import { decrypt } from "./crypto";
 
 const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 
@@ -75,9 +76,10 @@ async function deliverToEndpoint(
 		"X-Webhook-Id": deliveryId,
 	};
 
-	// Sign with HMAC-SHA256 if secret is configured
+	// Sign with HMAC-SHA256 if secret is configured (decrypt at point of use)
 	if (endpoint.secret) {
-		const signature = createHmac("sha256", endpoint.secret)
+		const plainSecret = decrypt(endpoint.secret);
+		const signature = createHmac("sha256", plainSecret)
 			.update(body)
 			.digest("hex");
 		headers["X-Webhook-Signature"] = signature;

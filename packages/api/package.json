@@ -10,7 +10,8 @@
 		}
 	},
 	"scripts": {
-		"check-types": "tsc --noEmit --declaration false --declarationMap false --composite false"
+		"check-types": "tsc --noEmit --declaration false --declarationMap false --composite false",
+		"test": "bun test"
 	},
 	"dependencies": {
 		"@Bettencourt-POS/auth": "workspace:*",

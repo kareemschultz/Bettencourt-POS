@@ -11,7 +11,8 @@
 		"tauri": "tauri",
 		"desktop:dev": "tauri dev",
 		"desktop:build": "tauri build",
-		"check-types": "react-router typegen && tsc --noEmit"
+		"check-types": "react-router typegen && tsc --noEmit",
+		"test": "bun test"
 	},
 	"dependencies": {
 		"@Bettencourt-POS/api": "workspace:*",

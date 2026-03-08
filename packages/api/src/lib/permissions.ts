@@ -2,8 +2,11 @@ import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { eq } from "drizzle-orm";
 
-// Permission format in DB: { "orders": ["create", "read", "void"], "products": ["read"] }
-export type Permissions = Record<string, string[]>;
+// Re-exported from zero-dependency module for testability
+export type { Permissions } from "./has-permission";
+export { hasPermission } from "./has-permission";
+
+type Permissions = Record<string, string[]>;
 
 export async function loadUserPermissions(
 	userId: string,
@@ -33,17 +36,4 @@ export async function loadUserPermissions(
 		}
 	}
 	return merged;
-}
-
-/**
- * Check if permissions include the required permission.
- * Format: "resource.action" e.g. "orders.void", "products.read"
- */
-export function hasPermission(
-	permissions: Permissions,
-	required: string,
-): boolean {
-	const [resource, action] = required.split(".");
-	if (!resource || !action) return false;
-	return permissions[resource]?.includes(action) ?? false;
 }
