@@ -1886,19 +1886,19 @@ async function seed() {
 	);
 	// T8-T10 cleanup: stock alerts, recipe ingredients, menu schedules, barcodes
 	await db.execute(
-		sql`DELETE FROM stock_alert WHERE id::text LIKE 'sa000000%'`,
+		sql`DELETE FROM stock_alert WHERE id::text LIKE 'a4000000%'`,
 	);
 	await db.execute(
-		sql`DELETE FROM recipe_ingredient WHERE id::text LIKE 'ri000000%'`,
+		sql`DELETE FROM recipe_ingredient WHERE id::text LIKE 'a3000000%'`,
 	);
 	await db.execute(
-		sql`DELETE FROM menu_schedule_product WHERE menu_schedule_id::text LIKE 'ms000000%'`,
+		sql`DELETE FROM menu_schedule_product WHERE menu_schedule_id::text LIKE 'ae000000%'`,
 	);
 	await db.execute(
-		sql`DELETE FROM menu_schedule WHERE id::text LIKE 'ms000000%'`,
+		sql`DELETE FROM menu_schedule WHERE id::text LIKE 'ae000000%'`,
 	);
 	await db.execute(
-		sql`DELETE FROM product_barcode WHERE id::text LIKE 'pb000000%'`,
+		sql`DELETE FROM product_barcode WHERE id::text LIKE 'a2000000%'`,
 	);
 	// T2-T6 ELI line items and loyalty transaction
 	await db.execute(
@@ -9017,7 +9017,7 @@ async function seed() {
 	// ── Stock Alerts ────────────────────────────────────────────────────────
 	console.log("  -> Stock alerts (T8)");
 	const SALERT = (n: number) =>
-		`sa000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+		`a4000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 	// Update snapper to low-stock qty (8 < reorderPoint 30) and beef to out-of-stock (0)
 	await db.execute(
 		sql`UPDATE inventory_stock SET quantity_on_hand = '8' WHERE inventory_item_id = ${INV_ITEM.snapper} AND location_id = ${LOC_ID}`,
@@ -9060,7 +9060,7 @@ async function seed() {
 	// ── Recipe Ingredients ──────────────────────────────────────────────────
 	console.log("  -> Recipe ingredients (T9)");
 	const RINGR = (n: number) =>
-		`ri000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+		`a3000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 	await db
 		.insert(schema.recipeIngredient)
 		.values([
@@ -9195,7 +9195,7 @@ async function seed() {
 
 	// ── Menu Schedule + Product Barcodes ───────────────────────────────────
 	console.log("  -> Menu schedule + barcodes (T10)");
-	const MSCH_ID = "ms000000-0000-4000-8000-000000000001";
+	const MSCH_ID = "ae000000-0000-4000-8000-000000000001";
 	await db
 		.insert(schema.menuSchedule)
 		.values({
@@ -9233,7 +9233,7 @@ async function seed() {
 
 	// Product barcodes: EAN-13 for beverages
 	const PBAR = (n: number) =>
-		`pb000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+		`a2000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 	await db
 		.insert(schema.productBarcode)
 		.values([
