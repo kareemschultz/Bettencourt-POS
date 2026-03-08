@@ -17,9 +17,13 @@ const getStockLevels = permissionProcedure("inventory.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
 		const input = rawInput ?? {};
-		const conditions = [eq(schema.inventoryItem.isActive, true)];
+		const orgId = requireOrganizationId(context);
+		const conditions = [
+			eq(schema.inventoryItem.organizationId, orgId),
+			eq(schema.inventoryItem.isActive, true),
+		];
 
 		if (input.locationId) {
 			conditions.push(eq(schema.inventoryStock.locationId, input.locationId));
@@ -74,11 +78,12 @@ const getLedger = permissionProcedure("inventory.read")
 			limit: z.number().int().min(1).max(200).default(50),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
 		const { inventoryItemId, locationId, page, limit } = input;
 		const offset = (page - 1) * limit;
+		const orgId = requireOrganizationId(context);
 
-		const conditions = [];
+		const conditions = [eq(schema.inventoryItem.organizationId, orgId)];
 		if (inventoryItemId) {
 			conditions.push(eq(schema.stockLedger.inventoryItemId, inventoryItemId));
 		}
@@ -86,7 +91,7 @@ const getLedger = permissionProcedure("inventory.read")
 			conditions.push(eq(schema.stockLedger.locationId, locationId));
 		}
 
-		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const whereClause = and(...conditions);
 
 		const entries = await db
 			.select({
