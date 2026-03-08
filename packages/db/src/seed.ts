@@ -1884,6 +1884,30 @@ async function seed() {
 	await db.execute(
 		sql`DELETE FROM production_log WHERE id::text LIKE 'fe000000%'`,
 	);
+	// T8-T10 cleanup: stock alerts, recipe ingredients, menu schedules, barcodes
+	await db.execute(
+		sql`DELETE FROM stock_alert WHERE id::text LIKE 'sa000000%'`,
+	);
+	await db.execute(
+		sql`DELETE FROM recipe_ingredient WHERE id::text LIKE 'ri000000%'`,
+	);
+	await db.execute(
+		sql`DELETE FROM menu_schedule_product WHERE menu_schedule_id::text LIKE 'ms000000%'`,
+	);
+	await db.execute(
+		sql`DELETE FROM menu_schedule WHERE id::text LIKE 'ms000000%'`,
+	);
+	await db.execute(
+		sql`DELETE FROM product_barcode WHERE id::text LIKE 'pb000000%'`,
+	);
+	// T2-T6 ELI line items and loyalty transaction
+	await db.execute(
+		sql`DELETE FROM order_line_item WHERE id::text LIKE 'f6000000%'`,
+	);
+	// LTXN(16) = GT-032 loyalty redeem transaction
+	await db.execute(
+		sql`DELETE FROM loyalty_transaction WHERE id = '1d000000-0000-4000-8000-000000000016'`,
+	);
 
 	// 11. Table Layouts
 	console.log("  -> Table Layouts");
@@ -8988,6 +9012,274 @@ async function seed() {
 			description: "Redeemed 500 pts on Duo Special (GT-032)",
 			createdAt: daysAgo(0, 13),
 		})
+		.onConflictDoNothing();
+
+	// ── Stock Alerts ────────────────────────────────────────────────────────
+	console.log("  -> Stock alerts (T8)");
+	const SALERT = (n: number) =>
+		`sa000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	// Update snapper to low-stock qty (8 < reorderPoint 30) and beef to out-of-stock (0)
+	await db.execute(
+		sql`UPDATE inventory_stock SET quantity_on_hand = '8' WHERE inventory_item_id = ${INV_ITEM.snapper} AND location_id = ${LOC_ID}`,
+	);
+	await db.execute(
+		sql`UPDATE inventory_stock SET quantity_on_hand = '0' WHERE inventory_item_id = ${INV_ITEM.beef} AND location_id = ${LOC_ID}`,
+	);
+	await db
+		.insert(schema.stockAlert)
+		.values([
+			{
+				// Snapper low stock — unacknowledged (visible in sidebar badge)
+				id: SALERT(1),
+				organizationId: ORG_ID,
+				inventoryItemId: INV_ITEM.snapper,
+				type: "low_stock",
+				createdAt: daysAgo(1, 8),
+			},
+			{
+				// Beef out of stock — unacknowledged
+				id: SALERT(2),
+				organizationId: ORG_ID,
+				inventoryItemId: INV_ITEM.beef,
+				type: "out_of_stock",
+				createdAt: daysAgo(0, 9),
+			},
+			{
+				// Garlic low stock — acknowledged (demonstrates acknowledged state)
+				id: SALERT(3),
+				organizationId: ORG_ID,
+				inventoryItemId: INV_ITEM.garlic,
+				type: "low_stock",
+				acknowledgedBy: USER.admin,
+				acknowledgedAt: daysAgo(2, 14),
+				createdAt: daysAgo(3, 10),
+			},
+		])
+		.onConflictDoNothing();
+
+	// ── Recipe Ingredients ──────────────────────────────────────────────────
+	console.log("  -> Recipe ingredients (T9)");
+	const RINGR = (n: number) =>
+		`ri000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.recipeIngredient)
+		.values([
+			// Curry Chicken: chicken + rice
+			{
+				id: RINGR(1),
+				productId: PROD.curryChicken,
+				inventoryItemId: INV_ITEM.chicken,
+				quantity: "0.5000",
+				unit: "lb",
+			},
+			{
+				id: RINGR(2),
+				productId: PROD.curryChicken,
+				inventoryItemId: INV_ITEM.rice,
+				quantity: "0.3000",
+				unit: "lb",
+			},
+			// Curry Beef: beef + rice
+			{
+				id: RINGR(3),
+				productId: PROD.curryBeef,
+				inventoryItemId: INV_ITEM.beef,
+				quantity: "0.5000",
+				unit: "lb",
+			},
+			{
+				id: RINGR(4),
+				productId: PROD.curryBeef,
+				inventoryItemId: INV_ITEM.rice,
+				quantity: "0.3000",
+				unit: "lb",
+			},
+			// Curry Snapper: snapper + rice
+			{
+				id: RINGR(5),
+				productId: PROD.currySnapper,
+				inventoryItemId: INV_ITEM.snapper,
+				quantity: "0.5000",
+				unit: "lb",
+			},
+			{
+				id: RINGR(6),
+				productId: PROD.currySnapper,
+				inventoryItemId: INV_ITEM.rice,
+				quantity: "0.3000",
+				unit: "lb",
+			},
+			// Fried Rice / Baked Chicken: chicken + rice + oil
+			{
+				id: RINGR(7),
+				productId: PROD.friedRiceBakedChicken,
+				inventoryItemId: INV_ITEM.chicken,
+				quantity: "0.4000",
+				unit: "lb",
+			},
+			{
+				id: RINGR(8),
+				productId: PROD.friedRiceBakedChicken,
+				inventoryItemId: INV_ITEM.rice,
+				quantity: "0.5000",
+				unit: "lb",
+			},
+			{
+				id: RINGR(9),
+				productId: PROD.friedRiceBakedChicken,
+				inventoryItemId: INV_ITEM.oil,
+				quantity: "0.0500",
+				unit: "L",
+			},
+			// Sponge Cake: flour + sugar + oil
+			{
+				id: RINGR(10),
+				productId: PROD.spongeCake,
+				inventoryItemId: INV_ITEM.flour,
+				quantity: "1.0000",
+				unit: "cup",
+			},
+			{
+				id: RINGR(11),
+				productId: PROD.spongeCake,
+				inventoryItemId: INV_ITEM.sugar,
+				quantity: "0.5000",
+				unit: "cup",
+			},
+			{
+				id: RINGR(12),
+				productId: PROD.spongeCake,
+				inventoryItemId: INV_ITEM.oil,
+				quantity: "0.2000",
+				unit: "cup",
+			},
+			// Coconut Buns: flour + coconut + sugar
+			{
+				id: RINGR(13),
+				productId: PROD.coconutBuns,
+				inventoryItemId: INV_ITEM.flour,
+				quantity: "2.0000",
+				unit: "cup",
+			},
+			{
+				id: RINGR(14),
+				productId: PROD.coconutBuns,
+				inventoryItemId: INV_ITEM.coconut,
+				quantity: "0.5000",
+				unit: "lb",
+			},
+			{
+				id: RINGR(15),
+				productId: PROD.coconutBuns,
+				inventoryItemId: INV_ITEM.sugar,
+				quantity: "0.3000",
+				unit: "cup",
+			},
+			// Tamarind Juice: tamarind + water
+			{
+				id: RINGR(16),
+				productId: PROD.tamarindJuice,
+				inventoryItemId: INV_ITEM.tamarind,
+				quantity: "0.1000",
+				unit: "lb",
+			},
+			{
+				id: RINGR(17),
+				productId: PROD.tamarindJuice,
+				inventoryItemId: INV_ITEM.water,
+				quantity: "1.0000",
+				unit: "L",
+			},
+		])
+		.onConflictDoNothing();
+
+	// ── Menu Schedule + Product Barcodes ───────────────────────────────────
+	console.log("  -> Menu schedule + barcodes (T10)");
+	const MSCH_ID = "ms000000-0000-4000-8000-000000000001";
+	await db
+		.insert(schema.menuSchedule)
+		.values({
+			id: MSCH_ID,
+			organizationId: ORG_ID,
+			name: "Lunch Special",
+			startTime: "11:00",
+			endTime: "14:00",
+			daysOfWeek: "1,2,3,4,5", // Mon–Fri
+			isActive: true,
+		})
+		.onConflictDoNothing();
+
+	// Menu schedule products with lunch-discount overrides
+	await db
+		.insert(schema.menuScheduleProduct)
+		.values([
+			{
+				menuScheduleId: MSCH_ID,
+				productId: PROD.friedRiceBakedChicken,
+				overridePrice: "1800",
+			},
+			{
+				menuScheduleId: MSCH_ID,
+				productId: PROD.chowmeinBakedChicken,
+				overridePrice: "2200",
+			},
+			{
+				menuScheduleId: MSCH_ID,
+				productId: PROD.vegRice,
+				overridePrice: "1200",
+			},
+		])
+		.onConflictDoNothing();
+
+	// Product barcodes: EAN-13 for beverages
+	const PBAR = (n: number) =>
+		`pb000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.productBarcode)
+		.values([
+			{
+				id: PBAR(1),
+				productId: PROD.drink1Lt,
+				barcode: "4890008100309",
+				format: "EAN13",
+				isPrimary: true,
+			},
+			{
+				id: PBAR(2),
+				productId: PROD.drink12oz,
+				barcode: "4890008100316",
+				format: "EAN13",
+				isPrimary: true,
+			},
+			{
+				id: PBAR(3),
+				productId: PROD.coke,
+				barcode: "5449000000996",
+				format: "EAN13",
+				isPrimary: true,
+			},
+			{
+				id: PBAR(4),
+				productId: PROD.water,
+				barcode: "5060432390057",
+				format: "EAN13",
+				isPrimary: true,
+			},
+			{
+				id: PBAR(5),
+				productId: PROD.vitaMalt,
+				barcode: "4890008101078",
+				format: "EAN13",
+				isPrimary: true,
+			},
+			{
+				id: PBAR(6),
+				productId: PROD.xlEnergy,
+				barcode: "4890008102198",
+				format: "EAN13",
+				isPrimary: true,
+			},
+		])
 		.onConflictDoNothing();
 
 	console.log("Seed complete!");
