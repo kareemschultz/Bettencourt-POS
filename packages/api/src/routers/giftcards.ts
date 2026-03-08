@@ -4,8 +4,7 @@ import { ORPCError } from "@orpc/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+import { requireOrganizationId } from "../lib/org-context";
 
 function generateGiftCardCode(): string {
 	const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed I,O,0,1 for readability
@@ -29,6 +28,7 @@ const create = permissionProcedure("orders.create")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		// Generate unique code (retry if collision)
 		let code = generateGiftCardCode();
 		let attempts = 0;
@@ -49,7 +49,7 @@ const create = permissionProcedure("orders.create")
 		const rows = await db
 			.insert(schema.giftCard)
 			.values({
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				code,
 				initialBalance: balanceStr,
 				currentBalance: balanceStr,
@@ -75,14 +75,15 @@ const create = permissionProcedure("orders.create")
 // ── lookup ────────────────────────────────────────────────────────────
 const lookup = permissionProcedure("orders.read")
 	.input(z.object({ code: z.string().min(1) }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const cards = await db
 			.select()
 			.from(schema.giftCard)
 			.where(
 				and(
 					eq(schema.giftCard.code, input.code.toUpperCase()),
-					eq(schema.giftCard.organizationId, DEFAULT_ORG_ID),
+					eq(schema.giftCard.organizationId, orgId),
 				),
 			)
 			.limit(1);
@@ -112,10 +113,16 @@ const reload = permissionProcedure("orders.create")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const cards = await db
 			.select()
 			.from(schema.giftCard)
-			.where(eq(schema.giftCard.id, input.giftCardId))
+			.where(
+				and(
+					eq(schema.giftCard.id, input.giftCardId),
+					eq(schema.giftCard.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (cards.length === 0) {
@@ -155,10 +162,16 @@ const redeem = permissionProcedure("orders.create")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const cards = await db
 			.select()
 			.from(schema.giftCard)
-			.where(eq(schema.giftCard.id, input.giftCardId))
+			.where(
+				and(
+					eq(schema.giftCard.id, input.giftCardId),
+					eq(schema.giftCard.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (cards.length === 0) {
@@ -226,9 +239,10 @@ const list = permissionProcedure("settings.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
+		const orgId = requireOrganizationId(context);
 		const activeOnly = rawInput?.activeOnly ?? false;
-		const conditions = [eq(schema.giftCard.organizationId, DEFAULT_ORG_ID)];
+		const conditions = [eq(schema.giftCard.organizationId, orgId)];
 
 		if (activeOnly) {
 			conditions.push(eq(schema.giftCard.isActive, true));

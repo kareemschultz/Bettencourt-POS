@@ -4,6 +4,7 @@ import { ORPCError } from "@orpc/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
+import { requireOrganizationId } from "../lib/org-context";
 
 // ── getSessions ─────────────────────────────────────────────────────────
 const getSessions = permissionProcedure("shifts.read")
@@ -15,9 +16,10 @@ const getSessions = permissionProcedure("shifts.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
 		const input = rawInput ?? {};
-		const conditions = [];
+		const orgId = requireOrganizationId(context);
+		const conditions = [eq(schema.location.organizationId, orgId)];
 		if (input.locationId) {
 			conditions.push(eq(schema.cashSession.locationId, input.locationId));
 		}
@@ -45,6 +47,10 @@ const getSessions = permissionProcedure("shifts.read")
 				userName: schema.user.name,
 			})
 			.from(schema.cashSession)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
 			.leftJoin(schema.user, eq(schema.cashSession.openedBy, schema.user.id))
 			.where(whereClause)
 			.orderBy(desc(schema.cashSession.openedAt))
@@ -63,7 +69,21 @@ const openSession = permissionProcedure("shifts.create")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const userId = context.session.user.id;
+		const locationRows = await db
+			.select({ id: schema.location.id })
+			.from(schema.location)
+			.where(
+				and(
+					eq(schema.location.id, input.locationId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (locationRows.length === 0) {
+			throw new ORPCError("FORBIDDEN", { message: "Invalid location scope" });
+		}
 		// Guard: only one open session allowed per register at a time
 		const existingOpen = await db
 			.select({ id: schema.cashSession.id })
@@ -108,11 +128,21 @@ const closeSession = permissionProcedure("shifts.update")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const userId = context.session.user.id;
 		const existing = await db
 			.select({ id: schema.cashSession.id, status: schema.cashSession.status })
 			.from(schema.cashSession)
-			.where(eq(schema.cashSession.id, input.sessionId))
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.where(
+				and(
+					eq(schema.cashSession.id, input.sessionId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0) {
@@ -152,7 +182,27 @@ const createDrop = permissionProcedure("shifts.create")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const userId = context.session.user.id;
+		const sessionRows = await db
+			.select({ id: schema.cashSession.id })
+			.from(schema.cashSession)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.where(
+				and(
+					eq(schema.cashSession.id, input.cashSessionId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (sessionRows.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Cash session is outside your organization scope",
+			});
+		}
 		const dropRows = await db
 			.insert(schema.cashDrop)
 			.values({
@@ -176,7 +226,27 @@ const createPayout = permissionProcedure("shifts.create")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const userId = context.session.user.id;
+		const sessionRows = await db
+			.select({ id: schema.cashSession.id })
+			.from(schema.cashSession)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.where(
+				and(
+					eq(schema.cashSession.id, input.cashSessionId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (sessionRows.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Cash session is outside your organization scope",
+			});
+		}
 		const payoutRows = await db
 			.insert(schema.cashPayout)
 			.values({
@@ -199,7 +269,27 @@ const approveVariance = permissionProcedure("shifts.update")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const approvedBy = context.session.user.id;
+		const scopedSession = await db
+			.select({ id: schema.cashSession.id })
+			.from(schema.cashSession)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.where(
+				and(
+					eq(schema.cashSession.id, input.sessionId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (scopedSession.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Cash session is outside your organization scope",
+			});
+		}
 		await db
 			.update(schema.cashSession)
 			.set({
@@ -222,12 +312,14 @@ const getVarianceHistory = permissionProcedure("shifts.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
 		const input = rawInput ?? {};
+		const orgId = requireOrganizationId(context);
 		const conditions = [
 			sql`${schema.cashSession.status} = 'closed'`,
 			sql`${schema.cashSession.variance} IS NOT NULL`,
 			sql`${schema.cashSession.variance}::numeric != 0`,
+			eq(schema.location.organizationId, orgId),
 		];
 
 		if (input.startDate) {
@@ -255,6 +347,10 @@ const getVarianceHistory = permissionProcedure("shifts.read")
 				userName: schema.user.name,
 			})
 			.from(schema.cashSession)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
 			.leftJoin(schema.user, eq(schema.cashSession.openedBy, schema.user.id))
 			.where(and(...conditions))
 			.orderBy(desc(schema.cashSession.closedAt))
@@ -265,14 +361,13 @@ const getVarianceHistory = permissionProcedure("shifts.read")
 
 // ── 7.1 getReconciliationRules ──────────────────────────────────────────
 const getReconciliationRules = permissionProcedure("shifts.read")
-	.input(z.object({ organizationId: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.input(z.object({}).optional())
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.select()
 			.from(schema.cashReconciliationRule)
-			.where(
-				eq(schema.cashReconciliationRule.organizationId, input.organizationId),
-			)
+			.where(eq(schema.cashReconciliationRule.organizationId, orgId))
 			.limit(1);
 
 		return rows[0] ?? null;
@@ -282,26 +377,24 @@ const getReconciliationRules = permissionProcedure("shifts.read")
 const updateReconciliationRules = permissionProcedure("shifts.update")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
 			maxVarianceAmount: z.string().optional(),
 			requirePhotoEvidence: z.boolean().optional(),
 			notifyManagers: z.boolean().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select()
 			.from(schema.cashReconciliationRule)
-			.where(
-				eq(schema.cashReconciliationRule.organizationId, input.organizationId),
-			)
+			.where(eq(schema.cashReconciliationRule.organizationId, orgId))
 			.limit(1);
 
 		if (existing.length === 0) {
 			const rows = await db
 				.insert(schema.cashReconciliationRule)
 				.values({
-					organizationId: input.organizationId,
+					organizationId: orgId,
 					maxVarianceAmount: input.maxVarianceAmount ?? "500",
 					requirePhotoEvidence: input.requirePhotoEvidence ?? false,
 					notifyManagers: input.notifyManagers ?? true,
@@ -321,9 +414,7 @@ const updateReconciliationRules = permissionProcedure("shifts.update")
 		const rows = await db
 			.update(schema.cashReconciliationRule)
 			.set(updateData)
-			.where(
-				eq(schema.cashReconciliationRule.organizationId, input.organizationId),
-			)
+			.where(eq(schema.cashReconciliationRule.organizationId, orgId))
 			.returning();
 
 		return rows[0]!;
@@ -341,8 +432,28 @@ const initiateHandoff = permissionProcedure("shifts.create")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const fromUserId = context.session.user.id;
 		const variance = Number(input.countedAmount) - Number(input.expectedAmount);
+		const scopedSession = await db
+			.select({ id: schema.cashSession.id })
+			.from(schema.cashSession)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.where(
+				and(
+					eq(schema.cashSession.id, input.cashSessionId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (scopedSession.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Cash session is outside your organization scope",
+			});
+		}
 
 		const rows = await db
 			.insert(schema.shiftHandoff)
@@ -368,7 +479,31 @@ const acceptHandoff = permissionProcedure("shifts.update")
 			handoffId: z.string().uuid(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const scoped = await db
+			.select({ id: schema.shiftHandoff.id })
+			.from(schema.shiftHandoff)
+			.innerJoin(
+				schema.cashSession,
+				eq(schema.shiftHandoff.cashSessionId, schema.cashSession.id),
+			)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.where(
+				and(
+					eq(schema.shiftHandoff.id, input.handoffId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (scoped.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Handoff is outside your organization scope",
+			});
+		}
 		await db
 			.update(schema.shiftHandoff)
 			.set({ status: "accepted" })
@@ -386,25 +521,30 @@ const getHandoffs = permissionProcedure("shifts.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
 		const input = rawInput ?? {};
+		const orgId = requireOrganizationId(context);
 		const conditions = [];
 		if (input.cashSessionId) {
 			conditions.push(
 				eq(schema.shiftHandoff.cashSessionId, input.cashSessionId),
 			);
 		}
-
-		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const whereClause = and(
+			eq(schema.location.organizationId, orgId),
+			...(conditions.length > 0 ? conditions : []),
+		);
 
 		const result = await db.execute(
 			sql`SELECT sh.*,
 				fu.name as from_user_name,
 				tu.name as to_user_name
 			FROM shift_handoff sh
+			INNER JOIN cash_session cs ON cs.id = sh.cash_session_id
+			INNER JOIN location l ON l.id = cs.location_id
 			LEFT JOIN "user" fu ON fu.id = sh.from_user_id
 			LEFT JOIN "user" tu ON tu.id = sh.to_user_id
-			${whereClause ? sql`WHERE ${whereClause}` : sql``}
+			WHERE ${whereClause}
 			ORDER BY sh.created_at DESC
 			LIMIT 50`,
 		);
@@ -424,12 +564,13 @@ const createExpense = permissionProcedure("shifts.create")
 			paymentMethod: z.string().nullable().optional(),
 			referenceNumber: z.string().nullable().optional(),
 			notes: z.string().nullable().optional(),
-			organizationId: z.string().uuid(),
+			organizationId: z.string().uuid().optional(),
 			supplierId: z.string().uuid().nullable().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
 		const actorId = context.session.user.id;
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.insert(schema.expense)
 			.values({
@@ -443,7 +584,7 @@ const createExpense = permissionProcedure("shifts.create")
 				notes: input.notes ?? null,
 				authorizedBy: actorId,
 				createdBy: actorId,
-				organizationId: input.organizationId,
+				organizationId: orgId,
 				supplierId: input.supplierId ?? null,
 			})
 			.returning({ id: schema.expense.id });
@@ -455,13 +596,14 @@ const createExpense = permissionProcedure("shifts.create")
 const getExpenses = permissionProcedure("shifts.read")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
+			organizationId: z.string().uuid().optional(),
 			startDate: z.string().optional(),
 			endDate: z.string().optional(),
 			supplierId: z.string().uuid().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const result = await db.execute(
 			sql`SELECT e.*,
 				au.name as authorized_by_name,
@@ -471,7 +613,7 @@ const getExpenses = permissionProcedure("shifts.read")
 			LEFT JOIN "user" au ON au.id = e.authorized_by
 			LEFT JOIN "user" cu ON cu.id = e.created_by
 			LEFT JOIN supplier s ON s.id = e.supplier_id
-			WHERE e.organization_id = ${input.organizationId}::uuid
+			WHERE e.organization_id = ${orgId}::uuid
 				${input.startDate ? sql`AND e.created_at >= ${input.startDate}::timestamptz` : sql``}
 				${input.endDate ? sql`AND e.created_at <= ${input.endDate}::timestamptz` : sql``}
 				${input.supplierId ? sql`AND e.supplier_id = ${input.supplierId}::uuid` : sql``}
@@ -486,12 +628,13 @@ const getExpenses = permissionProcedure("shifts.read")
 const getExpenseReport = permissionProcedure("shifts.read")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
+			organizationId: z.string().uuid().optional(),
 			startDate: z.string().optional(),
 			endDate: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		// Daily expenses grouped by supplier with totals
 		const result = await db.execute(
 			sql`SELECT
@@ -502,7 +645,7 @@ const getExpenseReport = permissionProcedure("shifts.read")
 				SUM(e.amount::numeric)::text as total
 			FROM expense e
 			LEFT JOIN supplier s ON s.id = e.supplier_id
-			WHERE e.organization_id = ${input.organizationId}::uuid
+			WHERE e.organization_id = ${orgId}::uuid
 				${input.startDate ? sql`AND e.created_at >= ${input.startDate}::timestamptz` : sql``}
 				${input.endDate ? sql`AND e.created_at <= ${input.endDate}::timestamptz` : sql``}
 			GROUP BY s.name, e.supplier_id, e.category
@@ -512,7 +655,7 @@ const getExpenseReport = permissionProcedure("shifts.read")
 		const grandTotal = await db.execute(
 			sql`SELECT SUM(amount::numeric)::text as total
 			FROM expense
-			WHERE organization_id = ${input.organizationId}::uuid
+			WHERE organization_id = ${orgId}::uuid
 				${input.startDate ? sql`AND created_at >= ${input.startDate}::timestamptz` : sql``}
 				${input.endDate ? sql`AND created_at <= ${input.endDate}::timestamptz` : sql``}`,
 		);
@@ -525,15 +668,15 @@ const getExpenseReport = permissionProcedure("shifts.read")
 
 // ── 7.4 getExpenseCategories ────────────────────────────────────────────
 const getExpenseCategories = permissionProcedure("shifts.read").handler(
-	async () => {
-		const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+	async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		return db
 			.select({
 				id: schema.expenseCategory.id,
 				name: schema.expenseCategory.name,
 			})
 			.from(schema.expenseCategory)
-			.where(eq(schema.expenseCategory.organizationId, DEFAULT_ORG_ID))
+			.where(eq(schema.expenseCategory.organizationId, orgId))
 			.orderBy(schema.expenseCategory.name);
 	},
 );
@@ -541,11 +684,11 @@ const getExpenseCategories = permissionProcedure("shifts.read").handler(
 // ── 7.4 createExpenseCategory ───────────────────────────────────────────
 const createExpenseCategory = permissionProcedure("shifts.create")
 	.input(z.object({ name: z.string().min(1).max(100) }))
-	.handler(async ({ input }) => {
-		const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const [row] = await db
 			.insert(schema.expenseCategory)
-			.values({ name: input.name.trim(), organizationId: DEFAULT_ORG_ID })
+			.values({ name: input.name.trim(), organizationId: orgId })
 			.returning();
 		return row;
 	});
@@ -553,10 +696,16 @@ const createExpenseCategory = permissionProcedure("shifts.create")
 // ── 7.4 deleteExpenseCategory ───────────────────────────────────────────
 const deleteExpenseCategory = permissionProcedure("shifts.delete")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		await db
 			.delete(schema.expenseCategory)
-			.where(eq(schema.expenseCategory.id, input.id));
+			.where(
+				and(
+					eq(schema.expenseCategory.id, input.id),
+					eq(schema.expenseCategory.organizationId, orgId),
+				),
+			);
 		return { success: true };
 	});
 
@@ -574,7 +723,8 @@ const updateExpense = permissionProcedure("shifts.update")
 			notes: z.string().nullable().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		await db
 			.update(schema.expense)
 			.set({
@@ -586,7 +736,12 @@ const updateExpense = permissionProcedure("shifts.update")
 				referenceNumber: input.referenceNumber ?? null,
 				notes: input.notes ?? null,
 			})
-			.where(eq(schema.expense.id, input.expenseId));
+			.where(
+				and(
+					eq(schema.expense.id, input.expenseId),
+					eq(schema.expense.organizationId, orgId),
+				),
+			);
 
 		return { status: "updated" };
 	});
@@ -594,10 +749,16 @@ const updateExpense = permissionProcedure("shifts.update")
 // ── 7.4 deleteExpense ──────────────────────────────────────────────────
 const deleteExpense = permissionProcedure("shifts.delete")
 	.input(z.object({ expenseId: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		await db
 			.delete(schema.expense)
-			.where(eq(schema.expense.id, input.expenseId));
+			.where(
+				and(
+					eq(schema.expense.id, input.expenseId),
+					eq(schema.expense.organizationId, orgId),
+				),
+			);
 
 		return { status: "deleted" };
 	});
@@ -634,15 +795,18 @@ const getNoSaleReport = permissionProcedure("shifts.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
 		const input = rawInput ?? {};
+		const orgId = requireOrganizationId(context);
 		const result = await db.execute(
 			sql`SELECT
 				nse.id, nse.cash_session_id, nse.reason, nse.created_at,
 				u.name as user_name, u.id as user_id
 			FROM no_sale_event nse
+			INNER JOIN cash_session cs ON cs.id = nse.cash_session_id
+			INNER JOIN location l ON l.id = cs.location_id
 			LEFT JOIN "user" u ON u.id = nse.user_id
-			WHERE 1=1
+			WHERE l.organization_id = ${orgId}::uuid
 				${input.startDate ? sql`AND nse.created_at >= ${input.startDate}::timestamptz` : sql``}
 				${input.endDate ? sql`AND nse.created_at <= ${input.endDate}::timestamptz` : sql``}
 			ORDER BY nse.created_at DESC

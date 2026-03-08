@@ -16,10 +16,8 @@ export default function PosPage() {
 
 	return (
 		<POSTerminal
-			userId={session?.user?.id || null}
 			userName={session?.user?.name || "Cashier"}
 			locationId={locationId}
-			organizationId={userProfile?.organizationId ?? null}
 			userPermissions={permissions}
 		/>
 	);

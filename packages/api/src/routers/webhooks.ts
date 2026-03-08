@@ -5,14 +5,14 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 import { encrypt } from "../lib/crypto";
+import { requireOrganizationId } from "../lib/org-context";
 import { dispatchWebhookEvent } from "../lib/webhooks";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 
 // ── listEndpoints ──────────────────────────────────────────────────────
 const listEndpoints = permissionProcedure("settings.read")
 	.input(z.object({}).optional())
-	.handler(async () => {
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const endpoints = await db
 			.select({
 				id: schema.webhookEndpoint.id,
@@ -26,7 +26,7 @@ const listEndpoints = permissionProcedure("settings.read")
 				updatedAt: schema.webhookEndpoint.updatedAt,
 			})
 			.from(schema.webhookEndpoint)
-			.where(eq(schema.webhookEndpoint.organizationId, DEFAULT_ORG_ID))
+			.where(eq(schema.webhookEndpoint.organizationId, orgId))
 			.orderBy(desc(schema.webhookEndpoint.createdAt));
 
 		// Replace raw secret with boolean indicator — never expose secret value
@@ -47,11 +47,12 @@ const createEndpoint = permissionProcedure("settings.create")
 			isActive: z.boolean().default(true),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.insert(schema.webhookEndpoint)
 			.values({
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				name: input.name,
 				url: input.url,
 				secret: input.secret ? encrypt(input.secret) : null,
@@ -75,14 +76,15 @@ const updateEndpoint = permissionProcedure("settings.update")
 			isActive: z.boolean().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select({ id: schema.webhookEndpoint.id })
 			.from(schema.webhookEndpoint)
 			.where(
 				and(
 					eq(schema.webhookEndpoint.id, input.id),
-					eq(schema.webhookEndpoint.organizationId, DEFAULT_ORG_ID),
+					eq(schema.webhookEndpoint.organizationId, orgId),
 				),
 			)
 			.limit(1);
@@ -111,7 +113,12 @@ const updateEndpoint = permissionProcedure("settings.update")
 		await db
 			.update(schema.webhookEndpoint)
 			.set(updates)
-			.where(eq(schema.webhookEndpoint.id, input.id));
+			.where(
+				and(
+					eq(schema.webhookEndpoint.id, input.id),
+					eq(schema.webhookEndpoint.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -119,14 +126,15 @@ const updateEndpoint = permissionProcedure("settings.update")
 // ── deleteEndpoint ─────────────────────────────────────────────────────
 const deleteEndpoint = permissionProcedure("settings.delete")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select({ id: schema.webhookEndpoint.id })
 			.from(schema.webhookEndpoint)
 			.where(
 				and(
 					eq(schema.webhookEndpoint.id, input.id),
-					eq(schema.webhookEndpoint.organizationId, DEFAULT_ORG_ID),
+					eq(schema.webhookEndpoint.organizationId, orgId),
 				),
 			)
 			.limit(1);
@@ -139,7 +147,12 @@ const deleteEndpoint = permissionProcedure("settings.delete")
 
 		await db
 			.delete(schema.webhookEndpoint)
-			.where(eq(schema.webhookEndpoint.id, input.id));
+			.where(
+				and(
+					eq(schema.webhookEndpoint.id, input.id),
+					eq(schema.webhookEndpoint.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -153,7 +166,8 @@ const getDeliveries = permissionProcedure("settings.read")
 			offset: z.number().min(0).default(0),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		// Verify endpoint belongs to org
 		const endpoint = await db
 			.select({ id: schema.webhookEndpoint.id })
@@ -161,7 +175,7 @@ const getDeliveries = permissionProcedure("settings.read")
 			.where(
 				and(
 					eq(schema.webhookEndpoint.id, input.endpointId),
-					eq(schema.webhookEndpoint.organizationId, DEFAULT_ORG_ID),
+					eq(schema.webhookEndpoint.organizationId, orgId),
 				),
 			)
 			.limit(1);
@@ -186,14 +200,15 @@ const getDeliveries = permissionProcedure("settings.read")
 // ── testEndpoint ───────────────────────────────────────────────────────
 const testEndpoint = permissionProcedure("settings.update")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.select()
 			.from(schema.webhookEndpoint)
 			.where(
 				and(
 					eq(schema.webhookEndpoint.id, input.id),
-					eq(schema.webhookEndpoint.organizationId, DEFAULT_ORG_ID),
+					eq(schema.webhookEndpoint.organizationId, orgId),
 				),
 			)
 			.limit(1);
@@ -207,6 +222,7 @@ const testEndpoint = permissionProcedure("settings.update")
 		dispatchWebhookEvent("test.ping", {
 			message: "This is a test webhook from Bettencourt's POS",
 			endpointId: input.id,
+			organizationId: orgId,
 			timestamp: new Date().toISOString(),
 		});
 

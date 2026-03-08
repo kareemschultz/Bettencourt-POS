@@ -4,13 +4,13 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+import { requireOrganizationId } from "../lib/org-context";
 
 // ── list ──────────────────────────────────────────────────────────────
 const list = permissionProcedure("settings.read")
 	.input(z.object({}).optional())
-	.handler(async () => {
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const schedules = await db
 			.select({
 				id: schema.menuSchedule.id,
@@ -27,7 +27,7 @@ const list = permissionProcedure("settings.read")
 				)`,
 			})
 			.from(schema.menuSchedule)
-			.where(eq(schema.menuSchedule.organizationId, DEFAULT_ORG_ID))
+			.where(eq(schema.menuSchedule.organizationId, orgId))
 			.orderBy(asc(schema.menuSchedule.name));
 
 		return schedules;
@@ -36,11 +36,17 @@ const list = permissionProcedure("settings.read")
 // ── getById ──────────────────────────────────────────────────────────
 const getById = permissionProcedure("settings.read")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.select()
 			.from(schema.menuSchedule)
-			.where(eq(schema.menuSchedule.id, input.id))
+			.where(
+				and(
+					eq(schema.menuSchedule.id, input.id),
+					eq(schema.menuSchedule.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (rows.length === 0) {
@@ -80,11 +86,12 @@ const create = permissionProcedure("settings.update")
 			isActive: z.boolean().default(true),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.insert(schema.menuSchedule)
 			.values({
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				name: input.name,
 				startTime: input.startTime,
 				endTime: input.endTime,
@@ -108,11 +115,17 @@ const update = permissionProcedure("settings.update")
 			isActive: z.boolean().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select()
 			.from(schema.menuSchedule)
-			.where(eq(schema.menuSchedule.id, input.id))
+			.where(
+				and(
+					eq(schema.menuSchedule.id, input.id),
+					eq(schema.menuSchedule.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0) {
@@ -129,7 +142,12 @@ const update = permissionProcedure("settings.update")
 		await db
 			.update(schema.menuSchedule)
 			.set(updates)
-			.where(eq(schema.menuSchedule.id, input.id));
+			.where(
+				and(
+					eq(schema.menuSchedule.id, input.id),
+					eq(schema.menuSchedule.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -137,10 +155,16 @@ const update = permissionProcedure("settings.update")
 // ── delete ───────────────────────────────────────────────────────────
 const deleteSchedule = permissionProcedure("settings.update")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		await db
 			.delete(schema.menuSchedule)
-			.where(eq(schema.menuSchedule.id, input.id));
+			.where(
+				and(
+					eq(schema.menuSchedule.id, input.id),
+					eq(schema.menuSchedule.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -158,12 +182,18 @@ const assignProducts = permissionProcedure("settings.update")
 			),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		// Verify schedule exists
 		const existing = await db
 			.select({ id: schema.menuSchedule.id })
 			.from(schema.menuSchedule)
-			.where(eq(schema.menuSchedule.id, input.scheduleId))
+			.where(
+				and(
+					eq(schema.menuSchedule.id, input.scheduleId),
+					eq(schema.menuSchedule.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0) {
@@ -198,7 +228,21 @@ const removeProduct = permissionProcedure("settings.update")
 			productId: z.string().uuid(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const schedule = await db
+			.select({ id: schema.menuSchedule.id })
+			.from(schema.menuSchedule)
+			.where(
+				and(
+					eq(schema.menuSchedule.id, input.scheduleId),
+					eq(schema.menuSchedule.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (!schedule[0]) {
+			throw new ORPCError("NOT_FOUND", { message: "Schedule not found" });
+		}
 		await db
 			.delete(schema.menuScheduleProduct)
 			.where(
@@ -214,14 +258,15 @@ const removeProduct = permissionProcedure("settings.update")
 // ── getActiveSchedule ────────────────────────────────────────────────
 const getActiveSchedule = permissionProcedure("settings.read")
 	.input(z.object({}).optional())
-	.handler(async () => {
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		// Get all active schedules
 		const schedules = await db
 			.select()
 			.from(schema.menuSchedule)
 			.where(
 				and(
-					eq(schema.menuSchedule.organizationId, DEFAULT_ORG_ID),
+					eq(schema.menuSchedule.organizationId, orgId),
 					eq(schema.menuSchedule.isActive, true),
 				),
 			);

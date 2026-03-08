@@ -4,6 +4,7 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, gt, gte, isNull, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
+import { requireOrganizationId } from "../lib/org-context";
 
 // ── getStockLevels ──────────────────────────────────────────────────────
 // Uses inventory_stock joined with inventory_item and location
@@ -169,18 +170,19 @@ const getCounts = permissionProcedure("inventory.read")
 const createCount = permissionProcedure("inventory.create")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
+			organizationId: z.string().uuid().optional(),
 			locationId: z.string().uuid(),
 			createdBy: z.string().optional(),
 			type: z.string().default("cycle"),
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const createdBy = context.session.user.id;
 		const countRows = await db
 			.insert(schema.stockCount)
 			.values({
-				organizationId: input.organizationId,
+				organizationId: orgId,
 				locationId: input.locationId,
 				createdBy,
 				type: input.type,
@@ -275,7 +277,7 @@ const getPurchaseOrders = permissionProcedure("inventory.read")
 const createPurchaseOrder = permissionProcedure("inventory.create")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
+			organizationId: z.string().uuid().optional(),
 			locationId: z.string().uuid(),
 			supplierId: z.string().uuid(),
 			createdBy: z.string().optional(),
@@ -293,6 +295,7 @@ const createPurchaseOrder = permissionProcedure("inventory.create")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const createdBy = context.session.user.id;
 		// Calculate total
 		const totalCost = input.items.reduce(
@@ -303,7 +306,7 @@ const createPurchaseOrder = permissionProcedure("inventory.create")
 		const poRows = await db
 			.insert(schema.purchaseOrder)
 			.values({
-				organizationId: input.organizationId,
+				organizationId: orgId,
 				locationId: input.locationId,
 				supplierId: input.supplierId,
 				createdBy,
@@ -373,7 +376,7 @@ const getTransfers = permissionProcedure("inventory.read")
 const createTransfer = permissionProcedure("inventory.create")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
+			organizationId: z.string().uuid().optional(),
 			fromLocationId: z.string().uuid(),
 			toLocationId: z.string().uuid(),
 			createdBy: z.string().optional(),
@@ -390,11 +393,12 @@ const createTransfer = permissionProcedure("inventory.create")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const createdBy = context.session.user.id;
 		const transferRows = await db
 			.insert(schema.transfer)
 			.values({
-				organizationId: input.organizationId,
+				organizationId: orgId,
 				fromLocationId: input.fromLocationId,
 				toLocationId: input.toLocationId,
 				createdBy,
@@ -422,12 +426,12 @@ const createTransfer = permissionProcedure("inventory.create")
 const getAlerts = permissionProcedure("inventory.read")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
+			organizationId: z.string().uuid().optional(),
 			unacknowledgedOnly: z.boolean().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
-		const orgId = input.organizationId;
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 
 		// Get all active inventory items with their total stock across locations
 		const items = await db
@@ -512,10 +516,11 @@ const acknowledgeAlert = permissionProcedure("inventory.update")
 	.input(
 		z.object({
 			inventoryItemId: z.string().uuid(),
-			organizationId: z.string().uuid(),
+			organizationId: z.string().uuid().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const userId = context.session.user.id;
 		// Find existing unacknowledged alert for this item
 		const existing = await db
@@ -524,7 +529,7 @@ const acknowledgeAlert = permissionProcedure("inventory.update")
 			.where(
 				and(
 					eq(schema.stockAlert.inventoryItemId, input.inventoryItemId),
-					eq(schema.stockAlert.organizationId, input.organizationId),
+					eq(schema.stockAlert.organizationId, orgId),
 					isNull(schema.stockAlert.acknowledgedBy),
 				),
 			)
@@ -547,7 +552,7 @@ const acknowledgeAlert = permissionProcedure("inventory.update")
 			.insert(schema.stockAlert)
 			.values({
 				inventoryItemId: input.inventoryItemId,
-				organizationId: input.organizationId,
+				organizationId: orgId,
 				type: "low_stock",
 				acknowledgedBy: userId,
 				acknowledgedAt: new Date(),
@@ -562,7 +567,7 @@ const acknowledgeAlert = permissionProcedure("inventory.update")
 const autoGeneratePO = permissionProcedure("inventory.create")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
+			organizationId: z.string().uuid().optional(),
 			locationId: z.string().uuid(),
 			items: z.array(
 				z.object({
@@ -575,6 +580,7 @@ const autoGeneratePO = permissionProcedure("inventory.create")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const createdBy = context.session.user.id;
 		// Group items by supplier
 		const grouped = new Map<
@@ -610,7 +616,7 @@ const autoGeneratePO = permissionProcedure("inventory.create")
 			const poRows = await db
 				.insert(schema.purchaseOrder)
 				.values({
-					organizationId: input.organizationId,
+					organizationId: orgId,
 					locationId: input.locationId,
 					supplierId,
 					createdBy,
@@ -700,7 +706,7 @@ const updateReorderSettings = permissionProcedure("inventory.update")
 const logWaste = permissionProcedure("inventory.create")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
+			organizationId: z.string().uuid().optional(),
 			inventoryItemId: z.string().uuid().optional(),
 			productName: z.string().min(1),
 			quantity: z.string(),
@@ -711,6 +717,7 @@ const logWaste = permissionProcedure("inventory.create")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const loggedBy = context.session.user.id;
 		let productName = input.productName;
 		let estimatedCost = input.estimatedCost;
@@ -739,7 +746,7 @@ const logWaste = permissionProcedure("inventory.create")
 		const rows = await db
 			.insert(schema.wasteLog)
 			.values({
-				organizationId: input.organizationId,
+				organizationId: orgId,
 				inventoryItemId: input.inventoryItemId ?? null,
 				productName,
 				quantity: input.quantity,

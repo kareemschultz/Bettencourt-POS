@@ -3,6 +3,7 @@ import * as schema from "@Bettencourt-POS/db/schema";
 import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
+import { requireOrganizationId } from "../lib/org-context";
 
 // ── getEntries ──────────────────────────────────────────────────────────
 // GET production logs for a date, plus running totals per product
@@ -242,8 +243,8 @@ const getReport = permissionProcedure("reports.read")
 			workflow: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
-		const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 
 		const conditions: ReturnType<typeof eq>[] = [
 			eq(schema.productionLog.logDate, input.date),
@@ -297,7 +298,7 @@ const getReport = permissionProcedure("reports.read")
 			)
 			.where(
 				and(
-					eq(schema.order.organizationId, DEFAULT_ORG_ID),
+					eq(schema.order.organizationId, orgId),
 					eq(schema.order.status, "completed"),
 					gte(schema.order.createdAt, dateStart),
 					lte(schema.order.createdAt, dateEnd),

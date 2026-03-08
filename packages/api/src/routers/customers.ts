@@ -4,8 +4,7 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+import { requireOrganizationId } from "../lib/org-context";
 
 // ── list ──────────────────────────────────────────────────────────────
 const list = permissionProcedure("customers.read")
@@ -18,11 +17,12 @@ const list = permissionProcedure("customers.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
+		const orgId = requireOrganizationId(context);
 		const search = rawInput?.search;
 		const limit = rawInput?.limit ?? 50;
 		const offset = rawInput?.offset ?? 0;
-		const conditions = [eq(schema.customer.organizationId, DEFAULT_ORG_ID)];
+		const conditions = [eq(schema.customer.organizationId, orgId)];
 
 		if (search && search.trim().length > 0) {
 			const term = `%${search.trim()}%`;
@@ -58,11 +58,17 @@ const list = permissionProcedure("customers.read")
 // ── getById ───────────────────────────────────────────────────────────
 const getById = permissionProcedure("customers.read")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.select()
 			.from(schema.customer)
-			.where(eq(schema.customer.id, input.id))
+			.where(
+				and(
+					eq(schema.customer.id, input.id),
+					eq(schema.customer.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (rows.length === 0) {
@@ -82,7 +88,8 @@ const create = permissionProcedure("customers.create")
 			notes: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		// Check phone uniqueness within org
 		if (input.phone) {
 			const existing = await db
@@ -90,7 +97,7 @@ const create = permissionProcedure("customers.create")
 				.from(schema.customer)
 				.where(
 					and(
-						eq(schema.customer.organizationId, DEFAULT_ORG_ID),
+						eq(schema.customer.organizationId, orgId),
 						eq(schema.customer.phone, input.phone),
 					),
 				)
@@ -106,7 +113,7 @@ const create = permissionProcedure("customers.create")
 		const rows = await db
 			.insert(schema.customer)
 			.values({
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				name: input.name,
 				phone: input.phone ?? null,
 				email: input.email ?? null,
@@ -128,11 +135,17 @@ const update = permissionProcedure("customers.update")
 			notes: z.string().nullable().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select()
 			.from(schema.customer)
-			.where(eq(schema.customer.id, input.id))
+			.where(
+				and(
+					eq(schema.customer.id, input.id),
+					eq(schema.customer.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0) {
@@ -147,7 +160,7 @@ const update = permissionProcedure("customers.update")
 					.from(schema.customer)
 					.where(
 						and(
-							eq(schema.customer.organizationId, DEFAULT_ORG_ID),
+							eq(schema.customer.organizationId, orgId),
 							eq(schema.customer.phone, input.phone),
 						),
 					)
@@ -170,7 +183,12 @@ const update = permissionProcedure("customers.update")
 		await db
 			.update(schema.customer)
 			.set(updates)
-			.where(eq(schema.customer.id, input.id));
+			.where(
+				and(
+					eq(schema.customer.id, input.id),
+					eq(schema.customer.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -178,7 +196,8 @@ const update = permissionProcedure("customers.update")
 // ── search (quick POS lookup by phone) ───────────────────────────────
 const search = permissionProcedure("customers.read")
 	.input(z.object({ query: z.string().min(1) }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const term = `%${input.query}%`;
 		const customers = await db
 			.select({
@@ -191,7 +210,7 @@ const search = permissionProcedure("customers.read")
 			.from(schema.customer)
 			.where(
 				and(
-					eq(schema.customer.organizationId, DEFAULT_ORG_ID),
+					eq(schema.customer.organizationId, orgId),
 					or(
 						ilike(schema.customer.name, term),
 						ilike(schema.customer.phone, term),
@@ -212,7 +231,8 @@ const getHistory = permissionProcedure("customers.read")
 			limit: z.number().int().min(1).max(50).default(20),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const orders = await db
 			.select({
 				id: schema.order.id,
@@ -222,7 +242,12 @@ const getHistory = permissionProcedure("customers.read")
 				createdAt: schema.order.createdAt,
 			})
 			.from(schema.order)
-			.where(eq(schema.order.customerId, input.customerId))
+			.where(
+				and(
+					eq(schema.order.customerId, input.customerId),
+					eq(schema.order.organizationId, orgId),
+				),
+			)
 			.orderBy(desc(schema.order.createdAt))
 			.limit(input.limit);
 
@@ -232,8 +257,16 @@ const getHistory = permissionProcedure("customers.read")
 // ── delete ────────────────────────────────────────────────────────────
 const deleteCustomer = permissionProcedure("customers.delete")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
-		await db.delete(schema.customer).where(eq(schema.customer.id, input.id));
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		await db
+			.delete(schema.customer)
+			.where(
+				and(
+					eq(schema.customer.id, input.id),
+					eq(schema.customer.organizationId, orgId),
+				),
+			);
 		return { status: "deleted" };
 	});
 

@@ -4,17 +4,17 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+import { requireOrganizationId } from "../lib/org-context";
 
 // ── getProgram ────────────────────────────────────────────────────────
 const getProgram = permissionProcedure("orders.read")
 	.input(z.object({}).optional())
-	.handler(async () => {
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const programs = await db
 			.select()
 			.from(schema.loyaltyProgram)
-			.where(eq(schema.loyaltyProgram.organizationId, DEFAULT_ORG_ID))
+			.where(eq(schema.loyaltyProgram.organizationId, orgId))
 			.limit(1);
 
 		if (programs.length === 0) {
@@ -40,11 +40,12 @@ const updateProgram = permissionProcedure("settings.update")
 			isActive: z.boolean(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select({ id: schema.loyaltyProgram.id })
 			.from(schema.loyaltyProgram)
-			.where(eq(schema.loyaltyProgram.organizationId, DEFAULT_ORG_ID))
+			.where(eq(schema.loyaltyProgram.organizationId, orgId))
 			.limit(1);
 
 		if (existing.length > 0) {
@@ -63,7 +64,7 @@ const updateProgram = permissionProcedure("settings.update")
 		const rows = await db
 			.insert(schema.loyaltyProgram)
 			.values({
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				name: input.name,
 				pointsPerDollar: input.pointsPerDollar,
 				isActive: input.isActive,
@@ -90,7 +91,21 @@ const createTier = permissionProcedure("settings.update")
 			sortOrder: z.number().int().default(0),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const program = await db
+			.select({ id: schema.loyaltyProgram.id })
+			.from(schema.loyaltyProgram)
+			.where(
+				and(
+					eq(schema.loyaltyProgram.id, input.programId),
+					eq(schema.loyaltyProgram.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (!program[0]) {
+			throw new ORPCError("NOT_FOUND", { message: "Loyalty program not found" });
+		}
 		const rows = await db
 			.insert(schema.loyaltyTier)
 			.values({
@@ -122,7 +137,25 @@ const updateTier = permissionProcedure("settings.update")
 			sortOrder: z.number().int().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const belongs = await db
+			.select({ id: schema.loyaltyTier.id })
+			.from(schema.loyaltyTier)
+			.innerJoin(
+				schema.loyaltyProgram,
+				eq(schema.loyaltyTier.programId, schema.loyaltyProgram.id),
+			)
+			.where(
+				and(
+					eq(schema.loyaltyTier.id, input.id),
+					eq(schema.loyaltyProgram.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (!belongs[0]) {
+			throw new ORPCError("NOT_FOUND", { message: "Tier not found" });
+		}
 		const updates: Record<string, unknown> = {};
 		if (input.name !== undefined) updates.name = input.name;
 		if (input.pointsRequired !== undefined)
@@ -145,7 +178,25 @@ const updateTier = permissionProcedure("settings.update")
 // ── deleteTier ────────────────────────────────────────────────────────
 const deleteTier = permissionProcedure("settings.update")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const belongs = await db
+			.select({ id: schema.loyaltyTier.id })
+			.from(schema.loyaltyTier)
+			.innerJoin(
+				schema.loyaltyProgram,
+				eq(schema.loyaltyTier.programId, schema.loyaltyProgram.id),
+			)
+			.where(
+				and(
+					eq(schema.loyaltyTier.id, input.id),
+					eq(schema.loyaltyProgram.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (!belongs[0]) {
+			throw new ORPCError("NOT_FOUND", { message: "Tier not found" });
+		}
 		await db
 			.delete(schema.loyaltyTier)
 			.where(eq(schema.loyaltyTier.id, input.id));
@@ -156,14 +207,15 @@ const deleteTier = permissionProcedure("settings.update")
 // ── getCustomerPoints ─────────────────────────────────────────────────
 const getCustomerPoints = permissionProcedure("orders.read")
 	.input(z.object({ customerId: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		// Get the org's loyalty program
 		const programs = await db
 			.select()
 			.from(schema.loyaltyProgram)
 			.where(
 				and(
-					eq(schema.loyaltyProgram.organizationId, DEFAULT_ORG_ID),
+					eq(schema.loyaltyProgram.organizationId, orgId),
 					eq(schema.loyaltyProgram.isActive, true),
 				),
 			)
@@ -235,13 +287,14 @@ const earnPoints = permissionProcedure("orders.create")
 			orderTotal: z.number().min(0),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const programs = await db
 			.select()
 			.from(schema.loyaltyProgram)
 			.where(
 				and(
-					eq(schema.loyaltyProgram.organizationId, DEFAULT_ORG_ID),
+					eq(schema.loyaltyProgram.organizationId, orgId),
 					eq(schema.loyaltyProgram.isActive, true),
 				),
 			)
@@ -312,19 +365,29 @@ const redeemReward = permissionProcedure("orders.create")
 			orderId: z.string().uuid().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		// Get the tier
 		const tiers = await db
 			.select()
 			.from(schema.loyaltyTier)
-			.where(eq(schema.loyaltyTier.id, input.tierId))
+			.innerJoin(
+				schema.loyaltyProgram,
+				eq(schema.loyaltyTier.programId, schema.loyaltyProgram.id),
+			)
+			.where(
+				and(
+					eq(schema.loyaltyTier.id, input.tierId),
+					eq(schema.loyaltyProgram.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (tiers.length === 0) {
 			throw new ORPCError("NOT_FOUND", { message: "Reward tier not found" });
 		}
 
-		const tier = tiers[0]!;
+		const tier = tiers[0]!.loyalty_tier;
 
 		// Get membership
 		const membership = await db
@@ -381,7 +444,8 @@ const getLeaderboard = permissionProcedure("reports.read")
 	.input(
 		z.object({ limit: z.number().int().min(1).max(50).default(10) }).optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
+		const orgId = requireOrganizationId(context);
 		const limit = rawInput?.limit ?? 10;
 
 		const result = await db
@@ -397,6 +461,7 @@ const getLeaderboard = permissionProcedure("reports.read")
 				schema.customer,
 				eq(schema.customerLoyalty.customerId, schema.customer.id),
 			)
+			.where(eq(schema.customer.organizationId, orgId))
 			.orderBy(desc(schema.customerLoyalty.lifetimePoints))
 			.limit(limit);
 

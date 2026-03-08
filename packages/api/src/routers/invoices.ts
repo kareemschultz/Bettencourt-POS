@@ -4,9 +4,10 @@ import { ORPCError } from "@orpc/server";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
-const DEFAULT_LOC_ID = "b0000000-0000-4000-8000-000000000001";
+import {
+	requireOrganizationId,
+	resolveDefaultLocationId,
+} from "../lib/org-context";
 
 // ── helpers ────────────────────────────────────────────────────────────
 
@@ -44,13 +45,14 @@ const list = permissionProcedure("invoices.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
+		const orgId = requireOrganizationId(context);
 		const search = rawInput?.search;
 		const status = rawInput?.status;
 		const limit = rawInput?.limit ?? 50;
 		const offset = rawInput?.offset ?? 0;
 
-		const conditions = [eq(schema.invoice.organizationId, DEFAULT_ORG_ID)];
+		const conditions = [eq(schema.invoice.organizationId, orgId)];
 
 		if (search?.trim()) {
 			const term = `%${search.trim()}%`;
@@ -87,11 +89,17 @@ const list = permissionProcedure("invoices.read")
 
 const getById = permissionProcedure("invoices.read")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.select()
 			.from(schema.invoice)
-			.where(eq(schema.invoice.id, input.id))
+			.where(
+				and(
+					eq(schema.invoice.id, input.id),
+					eq(schema.invoice.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (rows.length === 0) {
@@ -118,7 +126,7 @@ const create = permissionProcedure("invoices.create")
 			subtotal: z.string(),
 			taxTotal: z.string().optional(),
 			total: z.string(),
-			createdBy: z.string(),
+			createdBy: z.string().optional(),
 			discountType: z.enum(["percent", "fixed"]).optional(),
 			discountValue: z.string().optional(),
 			taxMode: z.enum(["invoice", "line"]).optional(),
@@ -127,14 +135,18 @@ const create = permissionProcedure("invoices.create")
 			preparedBy: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
-		const invoiceNumber = await nextInvoiceNumber(DEFAULT_ORG_ID);
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const invoiceNumber = await nextInvoiceNumber(orgId);
+		const locationId =
+			input.locationId ?? (await resolveDefaultLocationId(orgId));
+		const createdBy = context.session.user.id;
 
 		const rows = await db
 			.insert(schema.invoice)
 			.values({
-				organizationId: DEFAULT_ORG_ID,
-				locationId: input.locationId ?? DEFAULT_LOC_ID,
+				organizationId: orgId,
+				locationId,
 				invoiceNumber,
 				customerId: input.customerId ?? null,
 				customerName: input.customerName,
@@ -148,7 +160,7 @@ const create = permissionProcedure("invoices.create")
 				issuedDate: input.issuedDate ? new Date(input.issuedDate) : null,
 				dueDate: input.dueDate ? new Date(input.dueDate) : null,
 				notes: input.notes ?? null,
-				createdBy: input.createdBy,
+				createdBy,
 				discountType: input.discountType ?? "percent",
 				discountValue: input.discountValue ?? "0",
 				taxMode: input.taxMode ?? "invoice",
@@ -187,11 +199,17 @@ const update = permissionProcedure("invoices.update")
 			preparedBy: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select({ id: schema.invoice.id })
 			.from(schema.invoice)
-			.where(eq(schema.invoice.id, input.id))
+			.where(
+				and(
+					eq(schema.invoice.id, input.id),
+					eq(schema.invoice.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0) {
@@ -228,7 +246,12 @@ const update = permissionProcedure("invoices.update")
 		await db
 			.update(schema.invoice)
 			.set(updates)
-			.where(eq(schema.invoice.id, input.id));
+			.where(
+				and(
+					eq(schema.invoice.id, input.id),
+					eq(schema.invoice.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -237,11 +260,17 @@ const update = permissionProcedure("invoices.update")
 
 const remove = permissionProcedure("invoices.delete")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		await db
 			.update(schema.invoice)
 			.set({ status: "cancelled" })
-			.where(eq(schema.invoice.id, input.id));
+			.where(
+				and(
+					eq(schema.invoice.id, input.id),
+					eq(schema.invoice.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -259,11 +288,17 @@ const markPaid = permissionProcedure("invoices.update")
 			chequeDepositDate: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.select({ total: schema.invoice.total })
 			.from(schema.invoice)
-			.where(eq(schema.invoice.id, input.id))
+			.where(
+				and(
+					eq(schema.invoice.id, input.id),
+					eq(schema.invoice.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (rows.length === 0) {
@@ -294,7 +329,12 @@ const markPaid = permissionProcedure("invoices.update")
 					: null,
 				status,
 			})
-			.where(eq(schema.invoice.id, input.id));
+			.where(
+				and(
+					eq(schema.invoice.id, input.id),
+					eq(schema.invoice.organizationId, orgId),
+				),
+			);
 
 		return { success: true, status };
 	});
@@ -302,18 +342,24 @@ const markPaid = permissionProcedure("invoices.update")
 // ── duplicate ──────────────────────────────────────────────────────────
 
 const duplicate = permissionProcedure("invoices.create")
-	.input(z.object({ id: z.string().uuid(), createdBy: z.string() }))
-	.handler(async ({ input }) => {
+	.input(z.object({ id: z.string().uuid(), createdBy: z.string().optional() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select()
 			.from(schema.invoice)
-			.where(eq(schema.invoice.id, input.id))
+			.where(
+				and(
+					eq(schema.invoice.id, input.id),
+					eq(schema.invoice.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0)
 			throw new ORPCError("NOT_FOUND", { message: "Invoice not found" });
 		const src = existing[0]!;
-		const invoiceNumber = await nextInvoiceNumber(DEFAULT_ORG_ID);
+		const invoiceNumber = await nextInvoiceNumber(orgId);
 
 		const rows = await db
 			.insert(schema.invoice)
@@ -336,7 +382,7 @@ const duplicate = permissionProcedure("invoices.create")
 				taxRate: src.taxRate,
 				paymentTerms: src.paymentTerms,
 				notes: src.notes,
-				createdBy: input.createdBy,
+				createdBy: context.session.user.id,
 			})
 			.returning();
 
@@ -347,7 +393,8 @@ const duplicate = permissionProcedure("invoices.create")
 
 const getSummary = permissionProcedure("invoices.read")
 	.input(z.object({}).optional())
-	.handler(async () => {
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const result = await db.execute(sql`
 			SELECT
 				COALESCE(SUM(CASE WHEN status NOT IN ('paid','cancelled') THEN total::numeric - amount_paid::numeric ELSE 0 END), 0) as total_outstanding,
@@ -356,7 +403,7 @@ const getSummary = permissionProcedure("invoices.read")
 				COUNT(CASE WHEN status = 'draft' THEN 1 END)::int as draft_count,
 				COUNT(CASE WHEN status NOT IN ('paid','cancelled') AND due_date < NOW() THEN 1 END)::int as overdue_count
 			FROM invoice
-			WHERE organization_id = ${DEFAULT_ORG_ID}
+			WHERE organization_id = ${orgId}
 		`);
 		return (result.rows[0] ?? {}) as Record<string, unknown>;
 	});
@@ -365,13 +412,15 @@ const getSummary = permissionProcedure("invoices.read")
 
 const markSent = permissionProcedure("invoices.update")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		await db
 			.update(schema.invoice)
 			.set({ status: "sent" })
 			.where(
 				and(
 					eq(schema.invoice.id, input.id),
+					eq(schema.invoice.organizationId, orgId),
 					eq(schema.invoice.status, "draft"),
 				),
 			);

@@ -1658,12 +1658,11 @@ function CategoriesTab() {
 				name: formName,
 				sortOrder: Number.isNaN(sortNum) ? 0 : sortNum,
 			});
-		} else {
-			createCat.mutate({
-				organizationId: org?.id ?? "",
-				name: formName,
-				sortOrder: Number.isNaN(sortNum) ? 0 : sortNum,
-			});
+			} else {
+				createCat.mutate({
+					name: formName,
+					sortOrder: Number.isNaN(sortNum) ? 0 : sortNum,
+				});
 		}
 	}
 

@@ -10,6 +10,12 @@ import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { env } from "@Bettencourt-POS/env/server";
 import { createHash } from "node:crypto";
+import {
+	clearPinFailures,
+	getClientIp,
+	getPinLockoutRemainingSeconds,
+	recordPinFailure,
+} from "./pin-rate-limit";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
@@ -39,9 +45,8 @@ app.use(
 	}),
 );
 
-// PIN login: look up user by PIN hash, then sign in via Better Auth
-// Rate-limit keyed by client IP (not PIN hash) — prevents credential stuffing across accounts
-const pinFailures = new Map<string, { count: number; lockedUntil: number }>();
+// PIN login: look up user by PIN hash, then sign in via Better Auth.
+// Rate limiting is DB-backed (with memory fallback) and keyed by client IP.
 
 app.post("/api/auth/pin-login", async (c) => {
 	try {
@@ -52,13 +57,9 @@ app.post("/api/auth/pin-login", async (c) => {
 		}
 
 		// Rate limit by IP — prevents brute-force across any target account
-		const clientIp =
-			c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
-			c.req.header("x-real-ip") ||
-			"unknown";
-		const attempt = pinFailures.get(clientIp);
-		if (attempt && attempt.count >= 5 && Date.now() < attempt.lockedUntil) {
-			const remaining = Math.ceil((attempt.lockedUntil - Date.now()) / 1000);
+		const clientIp = getClientIp(c.req.raw.headers);
+		const remaining = await getPinLockoutRemainingSeconds(clientIp);
+		if (remaining > 0) {
 			return c.json(
 				{ error: `Too many attempts. Try again in ${remaining}s` },
 				429,
@@ -80,21 +81,8 @@ app.post("/api/auth/pin-login", async (c) => {
 			.where(eq(schema.user.pinHash, hash))
 			.limit(1);
 
-		// Track failed attempt for any miss (wrong PIN or banned)
-		const trackFailure = () => {
-			const existing = pinFailures.get(clientIp) || {
-				count: 0,
-				lockedUntil: 0,
-			};
-			existing.count += 1;
-			if (existing.count >= 5) {
-				existing.lockedUntil = Date.now() + 60_000; // 60s lockout
-			}
-			pinFailures.set(clientIp, existing);
-		};
-
 		if (users.length === 0) {
-			trackFailure();
+			await recordPinFailure(clientIp);
 			return c.json({ error: "Invalid PIN" }, 401);
 		}
 
@@ -106,12 +94,12 @@ app.post("/api/auth/pin-login", async (c) => {
 			user.banned === true &&
 			(user.banExpires === null || user.banExpires > new Date());
 		if (isBanned) {
-			trackFailure();
+			await recordPinFailure(clientIp);
 			return c.json({ error: "Account is disabled" }, 403);
 		}
 
 		// Clear failures on success
-		pinFailures.delete(clientIp);
+		await clearPinFailures(clientIp);
 
 		// Create a session directly via Better Auth's internal adapter (no password needed)
 		const ctx = await auth.$context;

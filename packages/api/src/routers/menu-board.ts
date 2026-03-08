@@ -1,12 +1,12 @@
 import { db } from "@Bettencourt-POS/db";
 import { sql } from "drizzle-orm";
 import { publicProcedure } from "../index";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+import { resolvePublicOrganizationId } from "../lib/org-context";
 
 // ── getMenuProducts ─────────────────────────────────────────────────
 // Public procedure (no auth) - returns active products grouped by department
 const getMenuProducts = publicProcedure.handler(async () => {
+	const orgId = await resolvePublicOrganizationId();
 	const result = await db.execute(
 		sql`SELECT
 				p.id,
@@ -20,7 +20,7 @@ const getMenuProducts = publicProcedure.handler(async () => {
 			FROM product p
 			LEFT JOIN reporting_category rc ON rc.id = p.reporting_category_id
 			WHERE p.is_active = true
-				AND p.organization_id = ${DEFAULT_ORG_ID}
+				AND p.organization_id = ${orgId}
 			ORDER BY department_sort_order ASC, rc.name ASC, p.sort_order ASC, p.name ASC`,
 	);
 

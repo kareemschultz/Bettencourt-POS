@@ -4,17 +4,17 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure, protectedProcedure } from "../index";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+import { requireOrganizationId } from "../lib/org-context";
 
 // ── listLocations ────────────────────────────────────────────────────
 const listLocations = permissionProcedure("settings.read")
 	.input(z.object({}).optional())
-	.handler(async () => {
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const locations = await db
 			.select()
 			.from(schema.location)
-			.where(eq(schema.location.organizationId, DEFAULT_ORG_ID))
+			.where(eq(schema.location.organizationId, orgId))
 			.orderBy(asc(schema.location.name));
 
 		return locations;
@@ -23,14 +23,15 @@ const listLocations = permissionProcedure("settings.read")
 // ── getLocation ──────────────────────────────────────────────────────
 const getLocation = protectedProcedure
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.select()
 			.from(schema.location)
 			.where(
 				and(
 					eq(schema.location.id, input.id),
-					eq(schema.location.organizationId, DEFAULT_ORG_ID),
+					eq(schema.location.organizationId, orgId),
 				),
 			)
 			.limit(1);
@@ -55,11 +56,12 @@ const createLocation = permissionProcedure("settings.create")
 			isActive: z.boolean().default(true),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.insert(schema.location)
 			.values({
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				name: input.name,
 				address: input.address ?? null,
 				phone: input.phone ?? null,
@@ -87,14 +89,15 @@ const updateLocation = permissionProcedure("settings.update")
 			isActive: z.boolean().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select()
 			.from(schema.location)
 			.where(
 				and(
 					eq(schema.location.id, input.id),
-					eq(schema.location.organizationId, DEFAULT_ORG_ID),
+					eq(schema.location.organizationId, orgId),
 				),
 			)
 			.limit(1);
@@ -118,7 +121,12 @@ const updateLocation = permissionProcedure("settings.update")
 			await db
 				.update(schema.location)
 				.set(updates)
-				.where(eq(schema.location.id, input.id));
+				.where(
+					and(
+						eq(schema.location.id, input.id),
+						eq(schema.location.organizationId, orgId),
+					),
+				);
 		}
 
 		return { success: true };
@@ -128,14 +136,15 @@ const updateLocation = permissionProcedure("settings.update")
 // Soft-delete: sets isActive = false. Prevents deletion if active orders exist.
 const deleteLocation = permissionProcedure("settings.delete")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select()
 			.from(schema.location)
 			.where(
 				and(
 					eq(schema.location.id, input.id),
-					eq(schema.location.organizationId, DEFAULT_ORG_ID),
+					eq(schema.location.organizationId, orgId),
 				),
 			)
 			.limit(1);
@@ -165,7 +174,12 @@ const deleteLocation = permissionProcedure("settings.delete")
 		await db
 			.update(schema.location)
 			.set({ isActive: false })
-			.where(eq(schema.location.id, input.id));
+			.where(
+				and(
+					eq(schema.location.id, input.id),
+					eq(schema.location.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});

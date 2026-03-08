@@ -130,10 +130,6 @@ function elapsedMinutes(from: Date | string | null): string {
 	return `${hrs}h ${mins % 60}m`;
 }
 
-// ── Default location ID ──────────────────────────────────────────────────
-
-const _DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
-
 // ── Component ────────────────────────────────────────────────────────────
 
 export default function TablesPage() {

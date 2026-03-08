@@ -47,7 +47,6 @@ import { useSupervisorOverride } from "@/hooks/use-supervisor-override";
 import { formatGYD } from "@/lib/types";
 import { orpc } from "@/utils/orpc";
 
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 
 const emptyProduct = {
 	name: "",
@@ -81,7 +80,7 @@ export default function ProductsPage() {
 	const { data: userProfile } = useQuery(
 		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
 	);
-	const orgId = userProfile?.organizationId ?? DEFAULT_ORG_ID;
+	const orgId = userProfile?.organizationId;
 
 	const { data: products = [] } = useQuery(
 		orpc.products.list.queryOptions({ input: {} }),
@@ -164,6 +163,10 @@ export default function ProductsPage() {
 	}
 
 	async function handleSave() {
+		if (!orgId) {
+			toast.error("Organization context is missing");
+			return;
+		}
 		if (editingId) {
 			const priceChanged =
 				originalPrices &&
@@ -197,11 +200,10 @@ export default function ProductsPage() {
 				isActive: form.isActive,
 				supervisorId,
 			});
-		} else {
-			createProduct.mutate({
-				organizationId: orgId,
-				name: form.name,
-				sku: form.sku || null,
+			} else {
+				createProduct.mutate({
+					name: form.name,
+					sku: form.sku || null,
 				price: form.price,
 				cost: form.cost || "0",
 				taxRate: form.taxRate || "0",

@@ -4,8 +4,7 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+import { requireOrganizationId } from "../lib/org-context";
 
 // ── list ──────────────────────────────────────────────────────────────
 const list = permissionProcedure("settings.read")
@@ -16,9 +15,10 @@ const list = permissionProcedure("settings.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
+		const orgId = requireOrganizationId(context);
 		const activeOnly = rawInput?.activeOnly ?? false;
-		const conditions = [eq(schema.discountRule.organizationId, DEFAULT_ORG_ID)];
+		const conditions = [eq(schema.discountRule.organizationId, orgId)];
 
 		if (activeOnly) {
 			conditions.push(eq(schema.discountRule.isActive, true));
@@ -61,7 +61,8 @@ const create = permissionProcedure("settings.update")
 			stackable: z.boolean().default(false),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		// If promo code, check uniqueness within org
 		if (input.promoCode) {
 			const existing = await db
@@ -69,7 +70,7 @@ const create = permissionProcedure("settings.update")
 				.from(schema.discountRule)
 				.where(
 					and(
-						eq(schema.discountRule.organizationId, DEFAULT_ORG_ID),
+						eq(schema.discountRule.organizationId, orgId),
 						eq(schema.discountRule.promoCode, input.promoCode.toUpperCase()),
 						eq(schema.discountRule.isActive, true),
 					),
@@ -86,7 +87,7 @@ const create = permissionProcedure("settings.update")
 		const rows = await db
 			.insert(schema.discountRule)
 			.values({
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				name: input.name,
 				type: input.type,
 				value: input.value.toFixed(2),
@@ -141,11 +142,17 @@ const update = permissionProcedure("settings.update")
 			isActive: z.boolean().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select()
 			.from(schema.discountRule)
-			.where(eq(schema.discountRule.id, input.id))
+			.where(
+				and(
+					eq(schema.discountRule.id, input.id),
+					eq(schema.discountRule.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0) {
@@ -187,7 +194,12 @@ const update = permissionProcedure("settings.update")
 		await db
 			.update(schema.discountRule)
 			.set(updates)
-			.where(eq(schema.discountRule.id, input.id));
+			.where(
+				and(
+					eq(schema.discountRule.id, input.id),
+					eq(schema.discountRule.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -195,11 +207,17 @@ const update = permissionProcedure("settings.update")
 // ── remove (soft delete) ─────────────────────────────────────────────
 const remove = permissionProcedure("settings.update")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		await db
 			.update(schema.discountRule)
 			.set({ isActive: false })
-			.where(eq(schema.discountRule.id, input.id));
+			.where(
+				and(
+					eq(schema.discountRule.id, input.id),
+					eq(schema.discountRule.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -220,14 +238,15 @@ const getApplicable = permissionProcedure("discounts.apply")
 			),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		// Get all active auto-apply rules
 		const rules = await db
 			.select()
 			.from(schema.discountRule)
 			.where(
 				and(
-					eq(schema.discountRule.organizationId, DEFAULT_ORG_ID),
+					eq(schema.discountRule.organizationId, orgId),
 					eq(schema.discountRule.isActive, true),
 					eq(schema.discountRule.isAutoApply, true),
 				),
@@ -321,13 +340,14 @@ const getApplicable = permissionProcedure("discounts.apply")
 // ── validatePromo ─────────────────────────────────────────────────────
 const validatePromo = permissionProcedure("discounts.apply")
 	.input(z.object({ code: z.string().min(1) }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rules = await db
 			.select()
 			.from(schema.discountRule)
 			.where(
 				and(
-					eq(schema.discountRule.organizationId, DEFAULT_ORG_ID),
+					eq(schema.discountRule.organizationId, orgId),
 					eq(schema.discountRule.promoCode, input.code.toUpperCase()),
 					eq(schema.discountRule.isActive, true),
 				),
@@ -368,13 +388,19 @@ const validatePromo = permissionProcedure("discounts.apply")
 // ── incrementUsage ────────────────────────────────────────────────────
 const incrementUsage = permissionProcedure("discounts.apply")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		await db
 			.update(schema.discountRule)
 			.set({
 				currentUses: sql`${schema.discountRule.currentUses} + 1`,
 			})
-			.where(eq(schema.discountRule.id, input.id));
+			.where(
+				and(
+					eq(schema.discountRule.id, input.id),
+					eq(schema.discountRule.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});

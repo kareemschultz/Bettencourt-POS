@@ -5,13 +5,15 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { publicProcedure } from "../index";
 import { emitKitchenEvent } from "../lib/kitchen-events";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
-const DEFAULT_LOCATION_ID = "b0000000-0000-4000-8000-000000000001";
+import {
+	resolveDefaultLocationId,
+	resolvePublicOrganizationId,
+} from "../lib/org-context";
 
 // ── getMenu ─────────────────────────────────────────────────────────────
 // Public: returns active products grouped by department (no cost data)
 const getMenu = publicProcedure.handler(async () => {
+	const orgId = await resolvePublicOrganizationId();
 	const result = await db.execute(
 		sql`SELECT
 			p.id,
@@ -25,7 +27,7 @@ const getMenu = publicProcedure.handler(async () => {
 		FROM product p
 		LEFT JOIN reporting_category rc ON rc.id = p.reporting_category_id
 		WHERE p.is_active = true
-			AND p.organization_id = ${DEFAULT_ORG_ID}
+			AND p.organization_id = ${orgId}
 		ORDER BY department_sort_order ASC, rc.name ASC, p.sort_order ASC, p.name ASC`,
 	);
 
@@ -90,6 +92,8 @@ const placeOrder = publicProcedure
 		}),
 	)
 	.handler(async ({ input }) => {
+		const orgId = await resolvePublicOrganizationId();
+		const locationId = await resolveDefaultLocationId(orgId);
 		const {
 			customerName,
 			customerPhone,
@@ -123,7 +127,7 @@ const placeOrder = publicProcedure
 			.where(
 				and(
 					inArray(schema.product.id, productIds),
-					eq(schema.product.organizationId, DEFAULT_ORG_ID),
+					eq(schema.product.organizationId, orgId),
 				),
 			);
 
@@ -195,7 +199,7 @@ const placeOrder = publicProcedure
 			// Generate daily order number
 			const dailyResult = await tx.execute(
 				sql`INSERT INTO daily_order_counter (location_id, counter_date, last_number)
-					VALUES (${DEFAULT_LOCATION_ID}, CURRENT_DATE, 1)
+					VALUES (${locationId}, CURRENT_DATE, 1)
 					ON CONFLICT (location_id, counter_date)
 					DO UPDATE SET last_number = daily_order_counter.last_number + 1
 					RETURNING last_number`,
@@ -212,8 +216,8 @@ const placeOrder = publicProcedure
 			const orderRows = await tx
 				.insert(schema.order)
 				.values({
-					organizationId: DEFAULT_ORG_ID,
-					locationId: DEFAULT_LOCATION_ID,
+					organizationId: orgId,
+					locationId,
 					registerId: null,
 					userId: null,
 					orderNumber: orderNum,
@@ -267,7 +271,7 @@ const placeOrder = publicProcedure
 				.insert(schema.kitchenOrderTicket)
 				.values({
 					orderId: createdOrder.id,
-					locationId: DEFAULT_LOCATION_ID,
+					locationId,
 					status: "pending",
 					printerTarget: "kitchen",
 				})

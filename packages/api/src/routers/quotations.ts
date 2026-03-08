@@ -4,9 +4,10 @@ import { ORPCError } from "@orpc/server";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
-const DEFAULT_LOC_ID = "b0000000-0000-4000-8000-000000000001";
+import {
+	requireOrganizationId,
+	resolveDefaultLocationId,
+} from "../lib/org-context";
 
 // ── helpers ────────────────────────────────────────────────────────────
 
@@ -57,13 +58,14 @@ const list = permissionProcedure("quotations.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
+		const orgId = requireOrganizationId(context);
 		const search = rawInput?.search;
 		const status = rawInput?.status;
 		const limit = rawInput?.limit ?? 50;
 		const offset = rawInput?.offset ?? 0;
 
-		const conditions = [eq(schema.quotation.organizationId, DEFAULT_ORG_ID)];
+		const conditions = [eq(schema.quotation.organizationId, orgId)];
 
 		if (search?.trim()) {
 			const term = `%${search.trim()}%`;
@@ -100,11 +102,17 @@ const list = permissionProcedure("quotations.read")
 
 const getById = permissionProcedure("quotations.read")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.select()
 			.from(schema.quotation)
-			.where(eq(schema.quotation.id, input.id))
+			.where(
+				and(
+					eq(schema.quotation.id, input.id),
+					eq(schema.quotation.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (rows.length === 0) {
@@ -130,7 +138,7 @@ const create = permissionProcedure("quotations.create")
 			subtotal: z.string(),
 			taxTotal: z.string().optional(),
 			total: z.string(),
-			createdBy: z.string(),
+			createdBy: z.string().optional(),
 			discountType: z.enum(["percent", "fixed"]).optional(),
 			discountValue: z.string().optional(),
 			taxMode: z.enum(["invoice", "line"]).optional(),
@@ -140,14 +148,17 @@ const create = permissionProcedure("quotations.create")
 			preparedBy: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
-		const quotationNumber = await nextQuotationNumber(DEFAULT_ORG_ID);
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const quotationNumber = await nextQuotationNumber(orgId);
+		const locationId =
+			input.locationId ?? (await resolveDefaultLocationId(orgId));
 
 		const rows = await db
 			.insert(schema.quotation)
 			.values({
-				organizationId: DEFAULT_ORG_ID,
-				locationId: input.locationId ?? DEFAULT_LOC_ID,
+				organizationId: orgId,
+				locationId,
 				quotationNumber,
 				customerId: input.customerId ?? null,
 				customerName: input.customerName,
@@ -160,7 +171,7 @@ const create = permissionProcedure("quotations.create")
 				status: "draft",
 				validUntil: input.validUntil ? new Date(input.validUntil) : null,
 				notes: input.notes ?? null,
-				createdBy: input.createdBy,
+				createdBy: context.session.user.id,
 				discountType: input.discountType ?? "percent",
 				discountValue: input.discountValue ?? "0",
 				taxMode: input.taxMode ?? "invoice",
@@ -199,11 +210,17 @@ const update = permissionProcedure("quotations.update")
 			preparedBy: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select({ id: schema.quotation.id })
 			.from(schema.quotation)
-			.where(eq(schema.quotation.id, input.id))
+			.where(
+				and(
+					eq(schema.quotation.id, input.id),
+					eq(schema.quotation.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0) {
@@ -239,7 +256,12 @@ const update = permissionProcedure("quotations.update")
 		await db
 			.update(schema.quotation)
 			.set(updates)
-			.where(eq(schema.quotation.id, input.id));
+			.where(
+				and(
+					eq(schema.quotation.id, input.id),
+					eq(schema.quotation.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -248,11 +270,17 @@ const update = permissionProcedure("quotations.update")
 
 const remove = permissionProcedure("quotations.delete")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		await db
 			.update(schema.quotation)
 			.set({ status: "cancelled" })
-			.where(eq(schema.quotation.id, input.id));
+			.where(
+				and(
+					eq(schema.quotation.id, input.id),
+					eq(schema.quotation.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -260,12 +288,18 @@ const remove = permissionProcedure("quotations.delete")
 // ── convertToInvoice ───────────────────────────────────────────────────
 
 const convertToInvoice = permissionProcedure("invoices.create")
-	.input(z.object({ id: z.string().uuid(), createdBy: z.string() }))
-	.handler(async ({ input }) => {
+	.input(z.object({ id: z.string().uuid(), createdBy: z.string().optional() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.select()
 			.from(schema.quotation)
-			.where(eq(schema.quotation.id, input.id))
+			.where(
+				and(
+					eq(schema.quotation.id, input.id),
+					eq(schema.quotation.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (rows.length === 0) {
@@ -281,7 +315,7 @@ const convertToInvoice = permissionProcedure("invoices.create")
 			});
 		}
 
-		const invoiceNumber = await nextInvoiceNumber(DEFAULT_ORG_ID);
+		const invoiceNumber = await nextInvoiceNumber(orgId);
 
 		const invoiceRows = await db
 			.insert(schema.invoice)
@@ -298,7 +332,7 @@ const convertToInvoice = permissionProcedure("invoices.create")
 				taxTotal: quot.taxTotal,
 				total: quot.total,
 				status: "draft",
-				createdBy: input.createdBy,
+				createdBy: context.session.user.id,
 				discountType: quot.discountType,
 				discountValue: quot.discountValue,
 				taxMode: quot.taxMode,
@@ -312,7 +346,12 @@ const convertToInvoice = permissionProcedure("invoices.create")
 		await db
 			.update(schema.quotation)
 			.set({ status: "converted", convertedInvoiceId: newInvoice.id })
-			.where(eq(schema.quotation.id, input.id));
+			.where(
+				and(
+					eq(schema.quotation.id, input.id),
+					eq(schema.quotation.organizationId, orgId),
+				),
+			);
 
 		return newInvoice;
 	});
@@ -320,18 +359,24 @@ const convertToInvoice = permissionProcedure("invoices.create")
 // ── duplicate ──────────────────────────────────────────────────────────
 
 const duplicate = permissionProcedure("quotations.create")
-	.input(z.object({ id: z.string().uuid(), createdBy: z.string() }))
-	.handler(async ({ input }) => {
+	.input(z.object({ id: z.string().uuid(), createdBy: z.string().optional() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select()
 			.from(schema.quotation)
-			.where(eq(schema.quotation.id, input.id))
+			.where(
+				and(
+					eq(schema.quotation.id, input.id),
+					eq(schema.quotation.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0)
 			throw new ORPCError("NOT_FOUND", { message: "Quotation not found" });
 		const src = existing[0]!;
-		const quotationNumber = await nextQuotationNumber(DEFAULT_ORG_ID);
+		const quotationNumber = await nextQuotationNumber(orgId);
 
 		const rows = await db
 			.insert(schema.quotation)
@@ -354,7 +399,7 @@ const duplicate = permissionProcedure("quotations.create")
 				taxRate: src.taxRate,
 				termsAndConditions: src.termsAndConditions,
 				notes: src.notes,
-				createdBy: input.createdBy,
+				createdBy: context.session.user.id,
 			})
 			.returning();
 
@@ -364,12 +409,18 @@ const duplicate = permissionProcedure("quotations.create")
 // ── revise ─────────────────────────────────────────────────────────────
 
 const revise = permissionProcedure("quotations.create")
-	.input(z.object({ id: z.string().uuid(), createdBy: z.string() }))
-	.handler(async ({ input }) => {
+	.input(z.object({ id: z.string().uuid(), createdBy: z.string().optional() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select()
 			.from(schema.quotation)
-			.where(eq(schema.quotation.id, input.id))
+			.where(
+				and(
+					eq(schema.quotation.id, input.id),
+					eq(schema.quotation.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0)
@@ -380,10 +431,15 @@ const revise = permissionProcedure("quotations.create")
 		const revisions = await db
 			.select({ num: schema.quotation.quotationNumber })
 			.from(schema.quotation)
-			.where(eq(schema.quotation.parentQuotationId, input.id));
+			.where(
+				and(
+					eq(schema.quotation.parentQuotationId, input.id),
+					eq(schema.quotation.organizationId, orgId),
+				),
+			);
 		const revNum = revisions.length + 2; // v2, v3, etc.
 
-		const baseNumber = await nextQuotationNumber(DEFAULT_ORG_ID);
+		const baseNumber = await nextQuotationNumber(orgId);
 
 		const rows = await db
 			.insert(schema.quotation)
@@ -407,7 +463,7 @@ const revise = permissionProcedure("quotations.create")
 				termsAndConditions: src.termsAndConditions,
 				parentQuotationId: input.id,
 				notes: src.notes,
-				createdBy: input.createdBy,
+				createdBy: context.session.user.id,
 			})
 			.returning();
 
@@ -418,13 +474,15 @@ const revise = permissionProcedure("quotations.create")
 
 const markSent = permissionProcedure("quotations.update")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		await db
 			.update(schema.quotation)
 			.set({ status: "sent" })
 			.where(
 				and(
 					eq(schema.quotation.id, input.id),
+					eq(schema.quotation.organizationId, orgId),
 					eq(schema.quotation.status, "draft"),
 				),
 			);

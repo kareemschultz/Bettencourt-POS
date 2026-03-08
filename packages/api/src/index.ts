@@ -15,6 +15,7 @@ const requireAuth = o.middleware(async ({ context, next }) => {
 		context: {
 			session: context.session,
 			userPermissions: context.userPermissions,
+			organizationId: context.organizationId,
 		},
 	});
 });

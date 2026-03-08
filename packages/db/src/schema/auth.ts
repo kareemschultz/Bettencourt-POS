@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
 	boolean,
+	integer,
 	index,
 	numeric,
 	pgTable,
@@ -56,6 +57,26 @@ export const session = pgTable(
 		activeOrganizationId: uuid("active_organization_id"),
 	},
 	(table) => [index("session_userId_idx").on(table.userId)],
+);
+
+// ── PIN Login Rate Limit (shared across instances) ─────────────────────
+export const pinLoginRateLimit = pgTable(
+	"pin_login_rate_limit",
+	{
+		ipAddress: text("ip_address").primaryKey(),
+		failCount: integer("fail_count").notNull().default(0),
+		windowStartedAt: timestamp("window_started_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+		lockedUntil: timestamp("locked_until", { withTimezone: true }),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(table) => [
+		index("idx_pin_login_rate_limit_locked_until").on(table.lockedUntil),
+		index("idx_pin_login_rate_limit_updated_at").on(table.updatedAt),
+	],
 );
 
 // ── Two Factor (Better Auth two-factor plugin) ──────────────────────

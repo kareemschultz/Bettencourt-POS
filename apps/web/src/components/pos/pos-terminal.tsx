@@ -58,22 +58,16 @@ import { SellGiftCardDialog } from "./sell-gift-card-dialog";
 import { SplitBillDialog } from "./split-bill-dialog";
 
 const BEVERAGE_REGISTER = "c0000000-0000-4000-8000-000000000003";
-const FALLBACK_ORG_ID = "a0000000-0000-4000-8000-000000000001";
-const DEFAULT_LOCATION_ID = "b0000000-0000-4000-8000-000000000001";
 
 interface POSTerminalProps {
-	userId: string | null;
 	userName?: string;
 	locationId?: string | null;
-	organizationId?: string | null;
 	userPermissions?: Record<string, string[]>;
 }
 
 export function POSTerminal({
-	userId,
 	userName = "Cashier",
 	locationId: propLocationId,
-	organizationId,
 	userPermissions = {},
 }: POSTerminalProps) {
 	// Discount permission: only users with discounts.apply can open the discount dialog
@@ -142,9 +136,8 @@ export function POSTerminal({
 	const [deliveryAddress, setDeliveryAddress] = useState("");
 	const [estimatedReady, setEstimatedReady] = useState("15");
 
-	// Resolve effective location: prefer prop from LocationContext, fall back to hardcoded default
-	const effectiveLocationId = propLocationId || DEFAULT_LOCATION_ID;
-	const effectiveOrganizationId = organizationId || FALLBACK_ORG_ID;
+	// Resolve effective location from the active dashboard location context/prop.
+	const effectiveLocationId = propLocationId ?? undefined;
 
 	// Fetch products via oRPC (filtered by location; skip register filter when override active)
 	const { data: posData, isLoading } = useQuery(
@@ -345,6 +338,10 @@ export function POSTerminal({
 			toast.error("Phone number required for pickup orders");
 			return;
 		}
+		if (!effectiveLocationId) {
+			toast.error("Please select a location before checkout");
+			return;
+		}
 		if (orderMode === "delivery") {
 			if (!customerPhone.trim()) {
 				toast.error("Phone number required for delivery orders");
@@ -361,14 +358,12 @@ export function POSTerminal({
 			? Number.parseInt(estimatedReady, 10) * 60_000
 			: 0;
 
-		checkoutMutation.mutate({
-			items: checkoutItems,
-			payments,
-			userId: userId,
-			registerId: selectedRegister,
-			locationId: effectiveLocationId,
-			organizationId: effectiveOrganizationId,
-			orderType: isBeverageTerminal ? orderMode : "dine_in",
+			checkoutMutation.mutate({
+				items: checkoutItems,
+				payments,
+				registerId: selectedRegister,
+				locationId: effectiveLocationId,
+				orderType: isBeverageTerminal ? orderMode : "dine_in",
 			discountTotal: discount,
 			customerId: selectedCustomer?.id ?? null,
 			customerName: isPickupOrDelivery ? customerName || null : null,
@@ -602,35 +597,31 @@ export function POSTerminal({
 					>
 						<PopoverTrigger asChild>
 							{selectedCustomer ? (
-								<Button variant="outline" size="sm" className="gap-1.5 text-xs">
-									<UserSearch className="size-3.5" />
-									{selectedCustomer.name}
-									{loyaltyData && (
-										<span className="flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 font-semibold text-[10px] text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-											<Star className="size-2.5" />
-											{loyaltyData.membership.currentPoints} pts
-										</span>
-									)}
-									{/* biome-ignore lint/a11y/useSemanticElements: span needed to avoid invalid nested button */}
-									<span
-										role="button"
-										tabIndex={0}
+								<div className="flex items-center gap-1">
+									<Button variant="outline" size="sm" className="gap-1.5 text-xs">
+										<UserSearch className="size-3.5" />
+										{selectedCustomer.name}
+										{loyaltyData && (
+											<span className="flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 font-semibold text-[10px] text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+												<Star className="size-2.5" />
+												{loyaltyData.membership.currentPoints} pts
+											</span>
+										)}
+									</Button>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										className="size-7"
 										aria-label="Clear customer"
-										className="ml-1 rounded-full p-0.5 hover:bg-muted"
 										onClick={(e) => {
 											e.stopPropagation();
 											setSelectedCustomer(null);
 										}}
-										onKeyDown={(e) => {
-											if (e.key === "Enter" || e.key === " ") {
-												e.stopPropagation();
-												setSelectedCustomer(null);
-											}
-										}}
 									>
-										<XIcon className="size-3" />
-									</span>
-								</Button>
+										<XIcon className="size-3.5" />
+									</Button>
+								</div>
 							) : (
 								<Button variant="ghost" size="sm" className="gap-1.5 text-xs">
 									<UserSearch className="size-3.5" />

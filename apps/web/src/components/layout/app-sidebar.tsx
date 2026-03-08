@@ -527,7 +527,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
 					<Input
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
-						placeholder="Search..."
+						placeholder="Search... (Ctrl/Cmd+K)"
 						className="h-8 pl-7 text-sm"
 						aria-label="Search navigation"
 					/>

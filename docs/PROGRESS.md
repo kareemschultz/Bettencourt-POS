@@ -484,3 +484,29 @@ Branch: `plan10/final-audit`
 
 ### Commits
 - `feat: Plan #10 — final audit closure (encryption, route deny, test suite)` (2026-03-08)
+
+## Plan #11 — Future-Proof Hardening (IN PROGRESS — 2026-03-08)
+
+### Worktree / Branch State
+- `master` and `origin/master` verified in sync before this pass (`ahead/behind = 0/0`).
+- Local worktree remains intentionally dirty while final hardening changes are being batched.
+
+### Completed in this pass
+- Added DB-backed PIN rate-limit state with in-memory fallback if the limiter table is missing:
+  - `apps/server/src/pin-rate-limit.ts`
+  - `apps/server/src/pin-rate-limit-state.ts`
+  - `apps/server/src/index.ts` now uses shared limiter helpers
+  - `packages/db/src/schema/auth.ts` adds `pin_login_rate_limit` schema
+  - `packages/db/src/migrations/0008_pin_login_rate_limit.sql`
+- Added focused rate-limit state tests:
+  - `apps/server/src/__tests__/pin-rate-limit.test.ts`
+- Fixed server test duplication issue (compiled `dist` tests being re-run) by narrowing the test glob:
+  - `apps/server/package.json` → `bun test ./src/__tests__/*.test.ts`
+- Hardened CI gates:
+  - `.github/workflows/ci.yml` now runs `bun run test` and `bun run build` in the check job
+  - Deploy job now verifies public FQDN health at `https://pos.karetechsolutions.com/health`
+
+### Verification
+- `bun run check-types`: pass
+- `bun run test`: pass
+- `bun run build`: pass

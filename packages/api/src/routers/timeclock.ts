@@ -4,9 +4,10 @@ import { ORPCError } from "@orpc/server";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure, protectedProcedure } from "../index";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
-const DEFAULT_LOCATION_ID = "b0000000-0000-4000-8000-000000000001";
+import {
+	requireOrganizationId,
+	resolveDefaultLocationId,
+} from "../lib/org-context";
 
 // ── clockIn ───────────────────────────────────────────────────────────
 const clockIn = protectedProcedure
@@ -21,6 +22,9 @@ const clockIn = protectedProcedure
 	.handler(async ({ input: rawInput, context }) => {
 		const input = rawInput ?? {};
 		const userId = context.session.user.id;
+		const orgId = requireOrganizationId(context);
+		const locationId =
+			input.locationId ?? (await resolveDefaultLocationId(orgId));
 
 		// Check for existing active shift
 		const active = await db
@@ -29,6 +33,7 @@ const clockIn = protectedProcedure
 			.where(
 				and(
 					eq(schema.timeEntry.userId, userId),
+					eq(schema.timeEntry.organizationId, orgId),
 					isNull(schema.timeEntry.clockOut),
 				),
 			)
@@ -44,8 +49,8 @@ const clockIn = protectedProcedure
 			.insert(schema.timeEntry)
 			.values({
 				userId,
-				locationId: input.locationId ?? DEFAULT_LOCATION_ID,
-				organizationId: DEFAULT_ORG_ID,
+				locationId,
+				organizationId: orgId,
 				notes: input.notes ?? null,
 			})
 			.returning({
@@ -62,6 +67,7 @@ const clockOut = protectedProcedure
 	.handler(async ({ input: rawInput, context }) => {
 		const input = rawInput ?? {};
 		const userId = context.session.user.id;
+		const orgId = requireOrganizationId(context);
 
 		const active = await db
 			.select()
@@ -69,6 +75,7 @@ const clockOut = protectedProcedure
 			.where(
 				and(
 					eq(schema.timeEntry.userId, userId),
+					eq(schema.timeEntry.organizationId, orgId),
 					isNull(schema.timeEntry.clockOut),
 				),
 			)
@@ -92,7 +99,12 @@ const clockOut = protectedProcedure
 				status: "completed",
 				notes: input.notes ?? entry.notes,
 			})
-			.where(eq(schema.timeEntry.id, entry.id));
+			.where(
+				and(
+					eq(schema.timeEntry.id, entry.id),
+					eq(schema.timeEntry.organizationId, orgId),
+				),
+			);
 
 		return { id: entry.id, duration: durationHours };
 	});
@@ -102,6 +114,7 @@ const getActiveShift = protectedProcedure
 	.input(z.object({}).optional())
 	.handler(async ({ context }) => {
 		const userId = context.session.user.id;
+		const orgId = requireOrganizationId(context);
 
 		const active = await db
 			.select()
@@ -109,6 +122,7 @@ const getActiveShift = protectedProcedure
 			.where(
 				and(
 					eq(schema.timeEntry.userId, userId),
+					eq(schema.timeEntry.organizationId, orgId),
 					isNull(schema.timeEntry.clockOut),
 				),
 			)
@@ -126,12 +140,14 @@ const getShifts = permissionProcedure("reports.read")
 			userId: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const result = await db.execute(
 			sql`SELECT te.*, u.name as user_name
 				FROM time_entry te
 				LEFT JOIN "user" u ON u.id = te.user_id
-				WHERE te.clock_in >= ${input.startDate}::timestamptz
+				WHERE te.organization_id = ${orgId}::uuid
+					AND te.clock_in >= ${input.startDate}::timestamptz
 					AND te.clock_in <= ${`${input.endDate}T23:59:59`}::timestamptz
 					${input.userId ? sql`AND te.user_id = ${input.userId}` : sql``}
 				ORDER BY te.clock_in DESC`,
@@ -152,10 +168,16 @@ const editEntry = permissionProcedure("settings.update")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select()
 			.from(schema.timeEntry)
-			.where(eq(schema.timeEntry.id, input.id))
+			.where(
+				and(
+					eq(schema.timeEntry.id, input.id),
+					eq(schema.timeEntry.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0) {
@@ -179,7 +201,12 @@ const editEntry = permissionProcedure("settings.update")
 		await db
 			.update(schema.timeEntry)
 			.set(updates)
-			.where(eq(schema.timeEntry.id, input.id));
+			.where(
+				and(
+					eq(schema.timeEntry.id, input.id),
+					eq(schema.timeEntry.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -192,7 +219,8 @@ const getSummary = permissionProcedure("reports.read")
 			endDate: z.string(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const result = await db.execute(
 			sql`SELECT
 				te.user_id,
@@ -204,7 +232,8 @@ const getSummary = permissionProcedure("reports.read")
 				COALESCE(SUM(te.break_minutes::int), 0)::int as total_break_minutes
 			FROM time_entry te
 			LEFT JOIN "user" u ON u.id = te.user_id
-			WHERE te.clock_in >= ${input.startDate}::timestamptz
+			WHERE te.organization_id = ${orgId}::uuid
+				AND te.clock_in >= ${input.startDate}::timestamptz
 				AND te.clock_in <= ${`${input.endDate}T23:59:59`}::timestamptz
 			GROUP BY te.user_id, u.name
 			ORDER BY total_hours DESC`,

@@ -245,7 +245,10 @@ export default function CustomersPage() {
 												className={`cursor-pointer ${selectedCustomer === c.id ? "bg-muted" : ""}`}
 												onClick={() => setSelectedCustomer(c.id)}
 												onKeyDown={(e) => {
-													if (e.key === "Enter") setSelectedCustomer(c.id);
+													if (e.key === "Enter" || e.key === " ") {
+														e.preventDefault();
+														setSelectedCustomer(c.id);
+													}
 												}}
 											>
 												<TableCell className="font-medium">{c.name}</TableCell>

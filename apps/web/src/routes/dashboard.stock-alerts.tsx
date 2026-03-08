@@ -36,9 +36,6 @@ import {
 import { orpc } from "@/utils/orpc";
 import { useLocationContext } from "./dashboard";
 
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
-const DEFAULT_LOCATION_ID = "b0000000-0000-4000-8000-000000000001";
-
 export default function StockAlertsPage() {
 	const queryClient = useQueryClient();
 	const [filter, setFilter] = useState<"all" | "unacknowledged">("all");
@@ -49,22 +46,23 @@ export default function StockAlertsPage() {
 		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
 	);
 
-	const orgId = userProfile?.organizationId ?? DEFAULT_ORG_ID;
-	const locId = locationId ?? DEFAULT_LOCATION_ID;
+	const orgId = userProfile?.organizationId;
+	const locId = locationId;
 
 	const { data: alerts = [], isLoading } = useQuery(
 		orpc.inventory.getAlerts.queryOptions({
 			input: {
-				organizationId: orgId,
+				organizationId: orgId ?? "",
 				unacknowledgedOnly: filter === "unacknowledged",
 			},
+			enabled: !!orgId,
 		}),
 	);
 
 	// For generating POs, we need suppliers list
 	const { data: suppliers = [] } = useQuery(
 		orpc.settings.getSuppliers.queryOptions({
-			input: { organizationId: orgId },
+			input: { organizationId: orgId ?? undefined },
 		}),
 	);
 
@@ -107,6 +105,7 @@ export default function StockAlertsPage() {
 	);
 
 	function handleAcknowledge(inventoryItemId: string) {
+		if (!orgId) return;
 		acknowledgeMutation.mutate({
 			inventoryItemId,
 			organizationId: orgId,
@@ -114,6 +113,10 @@ export default function StockAlertsPage() {
 	}
 
 	function handleGeneratePO() {
+		if (!orgId || !locId) {
+			toast.error("Location or organization is not selected");
+			return;
+		}
 		// Get unacknowledged alerts with assigned suppliers
 		const eligibleAlerts = alerts.filter(
 			(a) => !a.acknowledgedBy && a.preferredSupplierId,

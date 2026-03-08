@@ -21,12 +21,6 @@ export default function StandalonePosPage() {
 		enabled: !!session,
 	});
 
-	// Fetch user's location from role assignment
-	const { data: userRole } = useQuery({
-		...orpc.settings.getRegisters.queryOptions({ input: {} }),
-		enabled: !!session,
-	});
-
 	useEffect(() => {
 		if (!isPending && !session) {
 			navigate("/login");
@@ -49,7 +43,6 @@ export default function StandalonePosPage() {
 	if (!session) return null;
 
 	const permissions = userProfile?.permissions ?? {};
-	const locationId = session.user.id ? null : null; // resolved via POSTerminal's prop default
 
 	return (
 		<div className="flex h-svh flex-col">
@@ -86,9 +79,7 @@ export default function StandalonePosPage() {
 			{/* Full-screen POS */}
 			<div className="flex-1 overflow-hidden">
 				<POSTerminal
-					userId={session.user.id}
 					userName={session.user.name || "Cashier"}
-					locationId={locationId}
 					userPermissions={permissions}
 				/>
 			</div>

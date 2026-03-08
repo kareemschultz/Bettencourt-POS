@@ -74,7 +74,6 @@ function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
 	URL.revokeObjectURL(url);
 }
 
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 
 const REASON_OPTIONS = [
 	{ value: "spoilage", label: "Spoilage" },
@@ -127,7 +126,7 @@ export default function WasteTrackingPage() {
 	const { data: userProfile } = useQuery(
 		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
 	);
-	const orgId = userProfile?.organizationId ?? DEFAULT_ORG_ID;
+	const orgId = userProfile?.organizationId;
 
 	const [startDate, setStartDate] = useState(monthStart);
 	const [endDate, setEndDate] = useState(today);
@@ -266,6 +265,10 @@ export default function WasteTrackingPage() {
 
 	function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
+		if (!orgId) {
+			toast.error("Organization context is missing");
+			return;
+		}
 		if (!formProductName.trim() || !formQuantity) return;
 
 		logWasteMutation.mutate({

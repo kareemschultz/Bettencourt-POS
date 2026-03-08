@@ -6,6 +6,7 @@ import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure, protectedProcedure } from "../index";
 import { hasPermission, loadUserPermissions } from "../lib/permissions";
+import { requireOrganizationId } from "../lib/org-context";
 
 // ── Rate limiter for supervisor PIN attempts ───────────────────────────
 // Key: requestingUserId, Value: { count, resetAt }
@@ -139,17 +140,17 @@ const getSuppliers = permissionProcedure("settings.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
-		const input = rawInput ?? {};
-		const conditions = [eq(schema.supplier.isActive, true)];
-		if (input.organizationId) {
-			conditions.push(eq(schema.supplier.organizationId, input.organizationId));
-		}
-
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const suppliers = await db
 			.select()
 			.from(schema.supplier)
-			.where(and(...conditions))
+			.where(
+				and(
+					eq(schema.supplier.isActive, true),
+					eq(schema.supplier.organizationId, orgId),
+				),
+			)
 			.orderBy(asc(schema.supplier.name));
 
 		return suppliers;
@@ -159,7 +160,6 @@ const getSuppliers = permissionProcedure("settings.read")
 const createSupplier = permissionProcedure("settings.update")
 	.input(
 		z.object({
-			organizationId: z.string().uuid().optional(),
 			name: z.string().min(1),
 			contactName: z.string().nullable().optional(),
 			email: z.string().email().nullable().optional(),
@@ -170,12 +170,12 @@ const createSupplier = permissionProcedure("settings.update")
 			itemsSupplied: z.string().nullable().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
-		const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.insert(schema.supplier)
 			.values({
-				organizationId: input.organizationId ?? DEFAULT_ORG_ID,
+				organizationId: orgId,
 				name: input.name,
 				contactName: input.contactName ?? null,
 				email: input.email ?? null,
@@ -205,7 +205,8 @@ const updateSupplier = permissionProcedure("settings.update")
 			itemsSupplied: z.string().nullable().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const { id, ...rest } = input;
 		const updates: Record<string, unknown> = {};
 		if (rest.name !== undefined) updates.name = rest.name;
@@ -220,18 +221,29 @@ const updateSupplier = permissionProcedure("settings.update")
 		await db
 			.update(schema.supplier)
 			.set(updates)
-			.where(eq(schema.supplier.id, id));
+			.where(
+				and(
+					eq(schema.supplier.id, id),
+					eq(schema.supplier.organizationId, orgId),
+				),
+			);
 		return { success: true };
 	});
 
 // ── deleteSupplier ──────────────────────────────────────────────────────
 const deleteSupplier = permissionProcedure("settings.update")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		await db
 			.update(schema.supplier)
 			.set({ isActive: false })
-			.where(eq(schema.supplier.id, input.id));
+			.where(
+				and(
+					eq(schema.supplier.id, input.id),
+					eq(schema.supplier.organizationId, orgId),
+				),
+			);
 		return { success: true };
 	});
 
@@ -313,7 +325,8 @@ const updateTable = permissionProcedure("settings.update")
 // ── getUsers ────────────────────────────────────────────────────────────
 const getUsers = permissionProcedure("users.read")
 	.input(z.object({}).optional())
-	.handler(async () => {
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const users = await db
 			.select({
 				id: schema.user.id,
@@ -324,6 +337,8 @@ const getUsers = permissionProcedure("users.read")
 				updatedAt: schema.user.updatedAt,
 			})
 			.from(schema.user)
+			.innerJoin(schema.member, eq(schema.member.userId, schema.user.id))
+			.where(eq(schema.member.organizationId, orgId))
 			.orderBy(desc(schema.user.createdAt));
 
 		return users;
@@ -339,10 +354,25 @@ const createUser = permissionProcedure("users.create")
 			roleId: z.string().uuid("Must select a valid role"),
 		}),
 	)
-	.handler(async ({ input }) => {
-		const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const id = crypto.randomUUID();
 		const now = new Date();
+		const roleRows = await db
+			.select({ id: schema.customRole.id })
+			.from(schema.customRole)
+			.where(
+				and(
+					eq(schema.customRole.id, input.roleId),
+					eq(schema.customRole.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (roleRows.length === 0) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Selected role is not valid for your organization",
+			});
+		}
 
 		await db.transaction(async (tx) => {
 			// 1. Create auth user
@@ -359,7 +389,7 @@ const createUser = permissionProcedure("users.create")
 			// 2. Create org membership so the user appears in the org
 			await tx.insert(schema.member).values({
 				id: crypto.randomUUID(),
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				userId: id,
 				role: "member",
 				createdAt: now,
@@ -426,16 +456,12 @@ const setPin = protectedProcedure
 // ── getReceiptConfig ──────────────────────────────────────────────────
 const getReceiptConfig = permissionProcedure("settings.read")
 	.input(z.object({ organizationId: z.string().uuid().optional() }).optional())
-	.handler(async ({ input: rawInput }) => {
-		const input = rawInput ?? {};
-		const conditions = input.organizationId
-			? [eq(schema.receiptConfig.organizationId, input.organizationId)]
-			: [];
-
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.select()
 			.from(schema.receiptConfig)
-			.where(conditions.length ? and(...conditions) : undefined)
+			.where(eq(schema.receiptConfig.organizationId, orgId))
 			.limit(1);
 
 		if (rows.length > 0) return rows[0]!;
@@ -443,7 +469,7 @@ const getReceiptConfig = permissionProcedure("settings.read")
 		// Return defaults if no config exists
 		return {
 			id: null,
-			organizationId: input.organizationId ?? null,
+			organizationId: orgId,
 			businessName: "Bettencourt's Food Inc.",
 			tagline: "'A True Guyanese Gem'",
 			addressLine1: "Lot 12 Robb Street",
@@ -461,7 +487,7 @@ const getReceiptConfig = permissionProcedure("settings.read")
 const updateReceiptConfig = permissionProcedure("settings.update")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
+			organizationId: z.string().uuid().optional(),
 			businessName: z.string().min(1),
 			tagline: z.string().nullable().optional(),
 			addressLine1: z.string().nullable().optional(),
@@ -472,11 +498,12 @@ const updateReceiptConfig = permissionProcedure("settings.update")
 			showLogo: z.boolean().default(true),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select({ id: schema.receiptConfig.id })
 			.from(schema.receiptConfig)
-			.where(eq(schema.receiptConfig.organizationId, input.organizationId))
+			.where(eq(schema.receiptConfig.organizationId, orgId))
 			.limit(1);
 
 		if (existing.length > 0) {
@@ -495,7 +522,7 @@ const updateReceiptConfig = permissionProcedure("settings.update")
 				.where(eq(schema.receiptConfig.id, existing[0]!.id));
 		} else {
 			await db.insert(schema.receiptConfig).values({
-				organizationId: input.organizationId,
+				organizationId: orgId,
 				businessName: input.businessName,
 				tagline: input.tagline ?? null,
 				addressLine1: input.addressLine1 ?? null,
@@ -514,14 +541,15 @@ const updateReceiptConfig = permissionProcedure("settings.update")
 const createTaxRate = permissionProcedure("settings.update")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
+			organizationId: z.string().uuid().optional(),
 			name: z.string().min(1),
 			rate: z.number().min(0).max(100),
 			isDefault: z.boolean().default(false),
 			isInclusive: z.boolean().default(false),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rateDecimal = (input.rate / 100).toFixed(4);
 
 		if (input.isDefault) {
@@ -530,7 +558,7 @@ const createTaxRate = permissionProcedure("settings.update")
 				.set({ isDefault: false })
 				.where(
 					and(
-						eq(schema.taxRate.organizationId, input.organizationId),
+						eq(schema.taxRate.organizationId, orgId),
 						eq(schema.taxRate.isDefault, true),
 					),
 				);
@@ -539,7 +567,7 @@ const createTaxRate = permissionProcedure("settings.update")
 		const rows = await db
 			.insert(schema.taxRate)
 			.values({
-				organizationId: input.organizationId,
+				organizationId: orgId,
 				name: input.name,
 				rate: rateDecimal,
 				isDefault: input.isDefault,
@@ -560,11 +588,17 @@ const updateTaxRate = permissionProcedure("settings.update")
 			isInclusive: z.boolean().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select()
 			.from(schema.taxRate)
-			.where(eq(schema.taxRate.id, input.id))
+			.where(
+				and(
+					eq(schema.taxRate.id, input.id),
+					eq(schema.taxRate.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0) {
@@ -592,7 +626,12 @@ const updateTaxRate = permissionProcedure("settings.update")
 		await db
 			.update(schema.taxRate)
 			.set(updates)
-			.where(eq(schema.taxRate.id, input.id));
+			.where(
+				and(
+					eq(schema.taxRate.id, input.id),
+					eq(schema.taxRate.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -600,11 +639,17 @@ const updateTaxRate = permissionProcedure("settings.update")
 // ── deleteTaxRate ─────────────────────────────────────────────────────
 const deleteTaxRate = permissionProcedure("settings.update")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		await db
 			.update(schema.taxRate)
 			.set({ isActive: false })
-			.where(eq(schema.taxRate.id, input.id));
+			.where(
+				and(
+					eq(schema.taxRate.id, input.id),
+					eq(schema.taxRate.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -753,22 +798,21 @@ const verifySupervisor = protectedProcedure
 		};
 	});
 
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
-
 // ── getDocumentSettings ───────────────────────────────────────────────
 const getDocumentSettings = permissionProcedure("settings.read")
 	.input(z.object({}).optional())
-	.handler(async () => {
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.select()
 			.from(schema.invoiceDocumentSettings)
-			.where(eq(schema.invoiceDocumentSettings.organizationId, DEFAULT_ORG_ID))
+			.where(eq(schema.invoiceDocumentSettings.organizationId, orgId))
 			.limit(1);
 
 		if (rows.length === 0) {
 			const inserted = await db
 				.insert(schema.invoiceDocumentSettings)
-				.values({ organizationId: DEFAULT_ORG_ID })
+				.values({ organizationId: orgId })
 				.returning();
 			return inserted[0]!;
 		}
@@ -793,7 +837,8 @@ const updateDocumentSettings = permissionProcedure("settings.update")
 			quotationFooterNote: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const updates: Record<string, unknown> = {};
 		if (input.defaultTaxRate !== undefined)
 			updates.defaultTaxRate = String(input.defaultTaxRate);
@@ -819,7 +864,7 @@ const updateDocumentSettings = permissionProcedure("settings.update")
 
 		await db
 			.insert(schema.invoiceDocumentSettings)
-			.values({ organizationId: DEFAULT_ORG_ID, ...updates })
+			.values({ organizationId: orgId, ...updates })
 			.onConflictDoUpdate({
 				target: schema.invoiceDocumentSettings.organizationId,
 				set: updates,
@@ -916,7 +961,24 @@ const updateUser = permissionProcedure("users.update")
 			name: z.string().min(1).optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const memberRows = await db
+			.select({ userId: schema.member.userId })
+			.from(schema.member)
+			.where(
+				and(
+					eq(schema.member.userId, input.userId),
+					eq(schema.member.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (memberRows.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "User is outside your organization scope",
+			});
+		}
+
 		// Update user name / banned status
 		const userUpdates: Record<string, unknown> = {};
 		if (input.name !== undefined) userUpdates.name = input.name;
@@ -930,6 +992,21 @@ const updateUser = permissionProcedure("users.update")
 
 		// Change role: delete existing assignment then insert new one
 		if (input.roleId !== undefined) {
+			const roleRows = await db
+				.select({ id: schema.customRole.id })
+				.from(schema.customRole)
+				.where(
+					and(
+						eq(schema.customRole.id, input.roleId),
+						eq(schema.customRole.organizationId, orgId),
+					),
+				)
+				.limit(1);
+			if (roleRows.length === 0) {
+				throw new ORPCError("BAD_REQUEST", {
+					message: "Selected role is not valid for your organization",
+				});
+			}
 			await db
 				.delete(schema.userRole)
 				.where(eq(schema.userRole.userId, input.userId));
@@ -945,7 +1022,8 @@ const updateUser = permissionProcedure("users.update")
 // ── getRoles ──────────────────────────────────────────────────────────
 const getRoles = permissionProcedure("settings.read")
 	.input(z.object({}).optional())
-	.handler(async () => {
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const roles = await db
 			.select({
 				id: schema.customRole.id,
@@ -955,6 +1033,7 @@ const getRoles = permissionProcedure("settings.read")
 				createdAt: schema.customRole.createdAt,
 			})
 			.from(schema.customRole)
+			.where(eq(schema.customRole.organizationId, orgId))
 			.orderBy(asc(schema.customRole.name));
 
 		return roles;
@@ -968,12 +1047,8 @@ const createRole = permissionProcedure("settings.update")
 			permissions: z.record(z.string(), z.array(z.string())).default({}),
 		}),
 	)
-	.handler(async ({ input }) => {
-		const rows = await db
-			.select({ id: schema.organization.id })
-			.from(schema.organization)
-			.limit(1);
-		const orgId = rows[0]?.id ?? DEFAULT_ORG_ID;
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 
 		const inserted = await db
 			.insert(schema.customRole)

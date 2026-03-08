@@ -1,8 +1,9 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
+import { requireOrganizationId } from "../lib/org-context";
 
 // ── list ────────────────────────────────────────────────────────────────
 const list = permissionProcedure("departments.read")
@@ -13,17 +14,10 @@ const list = permissionProcedure("departments.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
-		const input = rawInput ?? {};
-		const conditions = [];
-		if (input.organizationId) {
-			conditions.push(
-				eq(schema.reportingCategory.organizationId, input.organizationId),
-			);
-		}
-
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const categories = await db.query.reportingCategory.findMany({
-			where: conditions.length > 0 ? conditions[0] : undefined,
+			where: eq(schema.reportingCategory.organizationId, orgId),
 			orderBy: [
 				asc(schema.reportingCategory.sortOrder),
 				asc(schema.reportingCategory.name),
@@ -37,16 +31,16 @@ const list = permissionProcedure("departments.read")
 const create = permissionProcedure("departments.create")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
 			name: z.string().min(1),
 			sortOrder: z.number().int().optional().default(0),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.insert(schema.reportingCategory)
 			.values({
-				organizationId: input.organizationId,
+				organizationId: orgId,
 				name: input.name,
 				sortOrder: input.sortOrder,
 			})
@@ -65,7 +59,8 @@ const update = permissionProcedure("departments.update")
 			isActive: z.boolean().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const { id, ...updates } = input;
 		const setValues: Record<string, unknown> = {};
 		for (const [key, value] of Object.entries(updates)) {
@@ -77,7 +72,12 @@ const update = permissionProcedure("departments.update")
 		await db
 			.update(schema.reportingCategory)
 			.set(setValues)
-			.where(eq(schema.reportingCategory.id, id));
+			.where(
+				and(
+					eq(schema.reportingCategory.id, id),
+					eq(schema.reportingCategory.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -85,10 +85,16 @@ const update = permissionProcedure("departments.update")
 // ── delete ──────────────────────────────────────────────────────────────
 const remove = permissionProcedure("departments.delete")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		await db
 			.delete(schema.reportingCategory)
-			.where(eq(schema.reportingCategory.id, input.id));
+			.where(
+				and(
+					eq(schema.reportingCategory.id, input.id),
+					eq(schema.reportingCategory.organizationId, orgId),
+				),
+			);
 
 		return { ok: true };
 	});

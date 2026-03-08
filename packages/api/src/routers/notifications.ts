@@ -5,8 +5,7 @@ import { and, count, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 import { decrypt, encrypt } from "../lib/crypto";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
+import { requireOrganizationId } from "../lib/org-context";
 
 type NotificationSettingsRow = {
 	id: string;
@@ -112,11 +111,12 @@ const NOTIFICATION_EVENTS = [
 // Returns notification settings with credentials masked — never sends full secrets to client
 const getSettings = permissionProcedure("settings.read")
 	.input(z.object({}).optional())
-	.handler(async () => {
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.select()
 			.from(schema.notificationSettings)
-			.where(eq(schema.notificationSettings.organizationId, DEFAULT_ORG_ID))
+			.where(eq(schema.notificationSettings.organizationId, orgId))
 			.limit(1);
 
 		return toPublicSettings((rows[0] as NotificationSettingsRow) ?? null);
@@ -136,11 +136,12 @@ const updateSettings = permissionProcedure("settings.update")
 			dailyLimit: z.number().int().min(0).max(10000).default(500),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const existing = await db
 			.select()
 			.from(schema.notificationSettings)
-			.where(eq(schema.notificationSettings.organizationId, DEFAULT_ORG_ID))
+			.where(eq(schema.notificationSettings.organizationId, orgId))
 			.limit(1);
 
 		// Only update credentials if a real new value is provided — never clear
@@ -173,7 +174,7 @@ const updateSettings = permissionProcedure("settings.update")
 		const [created] = await db
 			.insert(schema.notificationSettings)
 			.values({
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				provider: input.provider,
 				accountSid: credentialUpdates.accountSid ?? null,
 				authToken: credentialUpdates.authToken ?? null,
@@ -198,11 +199,12 @@ const getAvailableEvents = permissionProcedure("settings.read")
 // Returns all notification templates for the organization
 const listTemplates = permissionProcedure("settings.read")
 	.input(z.object({}).optional())
-	.handler(async () => {
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		return db
 			.select()
 			.from(schema.notificationTemplate)
-			.where(eq(schema.notificationTemplate.organizationId, DEFAULT_ORG_ID))
+			.where(eq(schema.notificationTemplate.organizationId, orgId))
 			.orderBy(schema.notificationTemplate.event);
 	});
 
@@ -219,11 +221,12 @@ const createTemplate = permissionProcedure("settings.create")
 			isActive: z.boolean().default(true),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const [template] = await db
 			.insert(schema.notificationTemplate)
 			.values({
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				event: input.event,
 				name: input.name,
 				description: input.description || null,
@@ -290,13 +293,12 @@ const getLog = permissionProcedure("settings.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const limit = input?.limit ?? 50;
 		const offset = input?.offset ?? 0;
 
-		const conditions = [
-			eq(schema.notificationLog.organizationId, DEFAULT_ORG_ID),
-		];
+		const conditions = [eq(schema.notificationLog.organizationId, orgId)];
 		if (input?.status) {
 			conditions.push(eq(schema.notificationLog.status, input.status));
 		}
@@ -327,7 +329,8 @@ const getLog = permissionProcedure("settings.read")
 // Returns notification delivery stats for the dashboard overview
 const getStats = permissionProcedure("settings.read")
 	.input(z.object({}).optional())
-	.handler(async () => {
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
 
@@ -347,7 +350,7 @@ const getStats = permissionProcedure("settings.read")
 			.from(schema.notificationLog)
 			.where(
 				and(
-					eq(schema.notificationLog.organizationId, DEFAULT_ORG_ID),
+					eq(schema.notificationLog.organizationId, orgId),
 					sql`${schema.notificationLog.createdAt} >= ${today}`,
 				),
 			);
@@ -368,12 +371,13 @@ const sendTest = permissionProcedure("settings.update")
 			channel: z.enum(["sms", "whatsapp"]).default("sms"),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		// Check if settings are configured
 		const settingsRows = await db
 			.select()
 			.from(schema.notificationSettings)
-			.where(eq(schema.notificationSettings.organizationId, DEFAULT_ORG_ID))
+			.where(eq(schema.notificationSettings.organizationId, orgId))
 			.limit(1);
 
 		const settings = settingsRows[0];
@@ -421,7 +425,7 @@ const sendTest = permissionProcedure("settings.update")
 		const [log] = await db
 			.insert(schema.notificationLog)
 			.values({
-				organizationId: DEFAULT_ORG_ID,
+				organizationId: orgId,
 				event: "test",
 				channel: input.channel,
 				recipient: input.phoneNumber,

@@ -131,7 +131,6 @@ function downloadPdf(title: string, rows: ExpenseRow[], period: string) {
 	}
 }
 
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 
 const SUPPLIER_COLORS = [
 	"bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
@@ -185,7 +184,7 @@ export default function ExpensesPage() {
 	const { data: userProfile } = useQuery(
 		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
 	);
-	const orgId = userProfile?.organizationId ?? DEFAULT_ORG_ID;
+	const orgId = userProfile?.organizationId;
 
 	function datePreset(preset: "today" | "week" | "month" | "lastmonth") {
 		const now = new Date(
@@ -228,10 +227,11 @@ export default function ExpensesPage() {
 	const { data: expensesRaw = [] } = useQuery(
 		orpc.cash.getExpenses.queryOptions({
 			input: {
-				organizationId: orgId,
+				organizationId: orgId ?? "",
 				startDate,
 				endDate: `${endDate}T23:59:59`,
 			},
+			enabled: !!orgId,
 		}),
 	);
 	const expenses = expensesRaw as ExpenseRow[];
@@ -239,10 +239,11 @@ export default function ExpensesPage() {
 	const { data: reportData } = useQuery(
 		orpc.cash.getExpenseReport.queryOptions({
 			input: {
-				organizationId: orgId,
+				organizationId: orgId ?? "",
 				startDate,
 				endDate: `${endDate}T23:59:59`,
 			},
+			enabled: !!orgId,
 		}),
 	);
 
@@ -255,6 +256,7 @@ export default function ExpensesPage() {
 	);
 
 	function invalidateExpenses() {
+		if (!orgId) return;
 		queryClient.invalidateQueries({
 			queryKey: orpc.cash.getExpenses.queryOptions({
 				input: { organizationId: orgId },
@@ -378,6 +380,10 @@ export default function ExpensesPage() {
 	}
 
 	function handleSubmit() {
+		if (!orgId) {
+			toast.error("Organization context is missing");
+			return;
+		}
 		if (!form.amount || !form.category || !form.description) {
 			toast.error("Amount, category, and description are required");
 			return;

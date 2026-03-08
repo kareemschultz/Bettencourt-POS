@@ -6,9 +6,7 @@ import { z } from "zod";
 import { permissionProcedure } from "../index";
 import { createAuditLog } from "../lib/audit";
 import { emitKitchenEvent } from "../lib/kitchen-events";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
-const DEFAULT_LOC_ID = "b0000000-0000-4000-8000-000000000001";
+import { requireOrganizationId } from "../lib/org-context";
 
 async function nextInvoiceNumber(orgId: string): Promise<string> {
 	const result = await db
@@ -298,8 +296,6 @@ const checkout = permissionProcedure("orders.create")
 			orderType: z.string().default("sale"),
 			locationId: z.string().uuid(),
 			registerId: z.string().uuid(),
-			organizationId: z.string().uuid(),
-			userId: z.string().nullable().optional(),
 			tableId: z.string().uuid().nullable().optional(),
 			notes: z.string().nullable().optional(),
 			discountTotal: z.number().min(0).default(0),
@@ -311,15 +307,13 @@ const checkout = permissionProcedure("orders.create")
 			fulfillmentStatus: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
 		const {
 			items,
 			payments,
 			orderType,
 			locationId,
 			registerId,
-			organizationId,
-			userId,
 			tableId,
 			notes,
 			discountTotal,
@@ -330,6 +324,8 @@ const checkout = permissionProcedure("orders.create")
 			estimatedReadyAt,
 			fulfillmentStatus,
 		} = input;
+		const organizationId = requireOrganizationId(context);
+		const actorUserId = context.session.user.id;
 
 		if (!items || items.length === 0) {
 			throw new ORPCError("BAD_REQUEST", { message: "No items" });
@@ -345,7 +341,13 @@ const checkout = permissionProcedure("orders.create")
 			subtotal += lineSubtotal;
 			taxTotal += lineTax;
 		}
-		const total = Math.max(0, subtotal + taxTotal - discountTotal);
+		const grossTotal = subtotal + taxTotal;
+		if (discountTotal > grossTotal + 0.01) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: `Discount (${discountTotal.toFixed(2)}) cannot exceed subtotal + tax (${grossTotal.toFixed(2)})`,
+			});
+		}
+		const total = Math.max(0, grossTotal - discountTotal);
 
 		// Validate payment sum covers order total
 		const paymentSum = payments.reduce((s, p) => s + p.amount, 0);
@@ -389,7 +391,7 @@ const checkout = permissionProcedure("orders.create")
 					locationId,
 					registerId,
 					tableId: tableId ?? null,
-					userId: userId ?? null,
+					userId: actorUserId,
 					customerId: customerId ?? null,
 					customerName: customerName ?? null,
 					customerPhone: customerPhone ?? null,
@@ -555,13 +557,11 @@ const checkout = permissionProcedure("orders.create")
 
 			// Get user name for receipt
 			let userName = "Cashier";
-			if (userId) {
-				const userRows = await tx
-					.select({ name: schema.user.name })
-					.from(schema.user)
-					.where(eq(schema.user.id, userId));
-				if (userRows.length > 0) userName = userRows[0]!.name;
-			}
+			const userRows = await tx
+				.select({ name: schema.user.name })
+				.from(schema.user)
+				.where(eq(schema.user.id, actorUserId));
+			if (userRows.length > 0) userName = userRows[0]!.name;
 
 			return {
 				order: {
@@ -582,13 +582,11 @@ const checkout = permissionProcedure("orders.create")
 
 		// Auto-create draft invoice for credit sales
 		const creditPayment = payments.find((p) => p.method === "credit");
-		if (creditPayment && userId) {
-			const invoiceNumber = await nextInvoiceNumber(
-				organizationId ?? DEFAULT_ORG_ID,
-			);
+		if (creditPayment) {
+			const invoiceNumber = await nextInvoiceNumber(organizationId);
 			await db.insert(schema.invoice).values({
-				organizationId: organizationId ?? DEFAULT_ORG_ID,
-				locationId: locationId ?? DEFAULT_LOC_ID,
+				organizationId,
+				locationId,
 				invoiceNumber,
 				customerId: customerId ?? null,
 				customerName: customerName ?? "Walk-in",
@@ -603,13 +601,13 @@ const checkout = permissionProcedure("orders.create")
 				total: total.toFixed(2),
 				status: "outstanding",
 				notes: `Credit sale from POS — Order ${result.order.orderNumber}`,
-				createdBy: userId,
+				createdBy: actorUserId,
 			});
 		}
 
 		// Audit log — runs after transaction commits so it's not rolled back with failed orders
 		await createAuditLog({
-			userId: userId ?? null,
+			userId: actorUserId,
 			entityType: "order",
 			entityId: result.order.id,
 			actionType: "create",

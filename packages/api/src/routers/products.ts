@@ -4,6 +4,7 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
+import { requireOrganizationId } from "../lib/org-context";
 import { hasPermission, loadUserPermissions } from "../lib/permissions";
 
 // ── list ────────────────────────────────────────────────────────────────
@@ -11,19 +12,17 @@ const list = permissionProcedure("products.read")
 	.input(
 		z
 			.object({
-				organizationId: z.string().uuid().optional(),
 				departmentId: z.string().uuid().optional(),
 				search: z.string().optional(),
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
 		const input = rawInput ?? {};
+		const orgId = requireOrganizationId(context);
 		const conditions = [eq(schema.product.isActive, true)];
 
-		if (input.organizationId) {
-			conditions.push(eq(schema.product.organizationId, input.organizationId));
-		}
+		conditions.push(eq(schema.product.organizationId, orgId));
 		if (input.departmentId) {
 			conditions.push(
 				eq(schema.product.reportingCategoryId, input.departmentId),
@@ -71,7 +70,8 @@ const list = permissionProcedure("products.read")
 // ── getById ─────────────────────────────────────────────────────────────
 const getById = permissionProcedure("products.read")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const products = await db
 			.select({
 				id: schema.product.id,
@@ -95,7 +95,12 @@ const getById = permissionProcedure("products.read")
 				schema.reportingCategory,
 				eq(schema.product.reportingCategoryId, schema.reportingCategory.id),
 			)
-			.where(eq(schema.product.id, input.id));
+			.where(
+				and(
+					eq(schema.product.id, input.id),
+					eq(schema.product.organizationId, orgId),
+				),
+			);
 
 		if (products.length === 0) {
 			throw new ORPCError("NOT_FOUND", { message: "Product not found" });
@@ -205,7 +210,6 @@ const getById = permissionProcedure("products.read")
 const create = permissionProcedure("products.create")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
 			reportingCategoryId: z.string().uuid().nullable().optional(),
 			proteinCategoryId: z.string().uuid().nullable().optional(),
 			name: z.string().min(1),
@@ -217,11 +221,12 @@ const create = permissionProcedure("products.create")
 			sortOrder: z.number().int().optional().default(0),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const rows = await db
 			.insert(schema.product)
 			.values({
-				organizationId: input.organizationId,
+				organizationId: orgId,
 				reportingCategoryId: input.reportingCategoryId ?? null,
 				proteinCategoryId: input.proteinCategoryId ?? null,
 				name: input.name,
@@ -257,6 +262,7 @@ const update = permissionProcedure("products.update")
 	)
 	.handler(async ({ input, context }) => {
 		const { id, supervisorId, ...updates } = input;
+		const orgId = requireOrganizationId(context);
 
 		// Price/cost changes require prices.override permission
 		const isPriceChange =
@@ -302,7 +308,12 @@ const update = permissionProcedure("products.update")
 		await db
 			.update(schema.product)
 			.set(setValues)
-			.where(eq(schema.product.id, id));
+			.where(
+				and(
+					eq(schema.product.id, id),
+					eq(schema.product.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -310,7 +321,8 @@ const update = permissionProcedure("products.update")
 // ── getRecipe ──────────────────────────────────────────────────────────
 const getRecipe = permissionProcedure("products.read")
 	.input(z.object({ productId: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const ingredients = await db
 			.select({
 				id: schema.recipeIngredient.id,
@@ -325,7 +337,16 @@ const getRecipe = permissionProcedure("products.read")
 				schema.inventoryItem,
 				eq(schema.recipeIngredient.inventoryItemId, schema.inventoryItem.id),
 			)
-			.where(eq(schema.recipeIngredient.productId, input.productId))
+			.innerJoin(
+				schema.product,
+				eq(schema.recipeIngredient.productId, schema.product.id),
+			)
+			.where(
+				and(
+					eq(schema.recipeIngredient.productId, input.productId),
+					eq(schema.product.organizationId, orgId),
+				),
+			)
 			.orderBy(asc(schema.inventoryItem.name));
 		return ingredients;
 	});
@@ -344,7 +365,23 @@ const saveRecipe = permissionProcedure("products.update")
 			),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const scopedProduct = await db
+			.select({ id: schema.product.id })
+			.from(schema.product)
+			.where(
+				and(
+					eq(schema.product.id, input.productId),
+					eq(schema.product.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (scopedProduct.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Product is outside your organization scope",
+			});
+		}
 		// Delete existing
 		await db
 			.delete(schema.recipeIngredient)
@@ -366,11 +403,17 @@ const saveRecipe = permissionProcedure("products.update")
 // ── delete (soft-delete) ────────────────────────────────────────────────
 const remove = permissionProcedure("products.delete")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		await db
 			.update(schema.product)
 			.set({ isActive: false })
-			.where(eq(schema.product.id, input.id));
+			.where(
+				and(
+					eq(schema.product.id, input.id),
+					eq(schema.product.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -378,7 +421,23 @@ const remove = permissionProcedure("products.delete")
 // ── getBarcodes ─────────────────────────────────────────────────────────
 const getBarcodes = permissionProcedure("products.read")
 	.input(z.object({ productId: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const scopedProduct = await db
+			.select({ id: schema.product.id })
+			.from(schema.product)
+			.where(
+				and(
+					eq(schema.product.id, input.productId),
+					eq(schema.product.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (scopedProduct.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Product is outside your organization scope",
+			});
+		}
 		const barcodes = await db
 			.select()
 			.from(schema.productBarcode)
@@ -401,7 +460,23 @@ const addBarcode = permissionProcedure("products.update")
 			isPrimary: z.boolean().optional().default(false),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const scopedProduct = await db
+			.select({ id: schema.product.id })
+			.from(schema.product)
+			.where(
+				and(
+					eq(schema.product.id, input.productId),
+					eq(schema.product.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (scopedProduct.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Product is outside your organization scope",
+			});
+		}
 		const rows = await db
 			.insert(schema.productBarcode)
 			.values({
@@ -418,7 +493,27 @@ const addBarcode = permissionProcedure("products.update")
 // ── removeBarcode ───────────────────────────────────────────────────────
 const removeBarcode = permissionProcedure("products.update")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const scopedBarcode = await db
+			.select({ id: schema.productBarcode.id })
+			.from(schema.productBarcode)
+			.innerJoin(
+				schema.product,
+				eq(schema.productBarcode.productId, schema.product.id),
+			)
+			.where(
+				and(
+					eq(schema.productBarcode.id, input.id),
+					eq(schema.product.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (scopedBarcode.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Barcode is outside your organization scope",
+			});
+		}
 		await db
 			.delete(schema.productBarcode)
 			.where(eq(schema.productBarcode.id, input.id));

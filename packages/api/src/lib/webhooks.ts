@@ -1,10 +1,8 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { createHmac } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { decrypt } from "./crypto";
-
-const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 
 /**
  * Dispatches a webhook event to all active endpoints subscribed to this event.
@@ -20,13 +18,28 @@ export function dispatchWebhookEvent(
 
 async function dispatchAsync(event: string, payload: Record<string, unknown>) {
 	try {
+		const payloadOrgId =
+			typeof payload.organizationId === "string"
+				? (payload.organizationId as string)
+				: null;
+		const organizationId =
+			payloadOrgId ??
+			(
+				await db
+					.select({ id: schema.organization.id })
+					.from(schema.organization)
+					.orderBy(asc(schema.organization.createdAt))
+					.limit(1)
+			)[0]?.id;
+		if (!organizationId) return;
+
 		// Find all active endpoints for this organization that are subscribed to this event
 		const endpoints = await db
 			.select()
 			.from(schema.webhookEndpoint)
 			.where(
 				and(
-					eq(schema.webhookEndpoint.organizationId, DEFAULT_ORG_ID),
+					eq(schema.webhookEndpoint.organizationId, organizationId),
 					eq(schema.webhookEndpoint.isActive, true),
 				),
 			);
