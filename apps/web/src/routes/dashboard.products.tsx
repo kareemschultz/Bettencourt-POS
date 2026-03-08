@@ -47,7 +47,6 @@ import { useSupervisorOverride } from "@/hooks/use-supervisor-override";
 import { formatGYD } from "@/lib/types";
 import { orpc } from "@/utils/orpc";
 
-
 const emptyProduct = {
 	name: "",
 	sku: "",
@@ -200,10 +199,10 @@ export default function ProductsPage() {
 				isActive: form.isActive,
 				supervisorId,
 			});
-			} else {
-				createProduct.mutate({
-					name: form.name,
-					sku: form.sku || null,
+		} else {
+			createProduct.mutate({
+				name: form.name,
+				sku: form.sku || null,
 				price: form.price,
 				cost: form.cost || "0",
 				taxRate: form.taxRate || "0",
@@ -877,9 +876,14 @@ function RecipeTab({
 
 	if (recipeLoading) {
 		return (
-			<p className="py-4 text-center text-muted-foreground">
-				Loading recipe...
-			</p>
+			<div className="space-y-4 p-4">
+				<Skeleton className="h-8 w-48" />
+				<div className="space-y-2">
+					{Array.from({ length: 5 }).map((_, i) => (
+						<Skeleton key={i} className="h-12 w-full" />
+					))}
+				</div>
+			</div>
 		);
 	}
 

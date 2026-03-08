@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { ProductionTracker } from "@/components/production/production-tracker";
+import { Skeleton } from "@/components/ui/skeleton";
 import { authClient } from "@/lib/auth-client";
 import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
@@ -22,8 +23,10 @@ export default function ProductionPage() {
 
 	if (loadingProducts || loadingProd) {
 		return (
-			<div className="flex items-center justify-center py-20 text-muted-foreground">
-				Loading production tracker...
+			<div className="space-y-4 p-4 md:p-6">
+				<Skeleton className="h-8 w-48" />
+				<Skeleton className="h-64 w-full" />
+				<Skeleton className="h-64 w-full" />
 			</div>
 		);
 	}

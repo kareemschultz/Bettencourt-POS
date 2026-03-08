@@ -14,12 +14,6 @@ import {
 	useNavigate,
 	useOutletContext,
 } from "react-router";
-import { ErrorBoundary } from "@/components/error-boundary";
-import { authClient } from "@/lib/auth-client";
-import { hasRouteAccess } from "@/lib/route-access";
-import { orpc } from "@/utils/orpc";
-export { ErrorBoundary };
-
 import { PinLockScreen } from "@/components/auth/pin-lock-screen";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { CommandPalette } from "@/components/layout/command-palette";
@@ -38,6 +32,8 @@ import {
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { authClient } from "@/lib/auth-client";
+import { hasRouteAccess } from "@/lib/route-access";
 import type { AppUser } from "@/lib/types";
 import {
 	getRoleDefaultWorkspaceRoute,
@@ -46,6 +42,7 @@ import {
 	type SidebarRole,
 	type WorkspaceRoute,
 } from "@/lib/workspace-preferences";
+import { orpc } from "@/utils/orpc";
 
 // Derive a human-readable page title from pathname
 const PAGE_TITLES: Record<string, string> = {

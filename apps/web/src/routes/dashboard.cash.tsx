@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { CashControlPanel } from "@/components/cash/cash-control-panel";
+import { Skeleton } from "@/components/ui/skeleton";
 import { orpc } from "@/utils/orpc";
 import { useLocationContext } from "./dashboard";
 
@@ -12,8 +13,10 @@ export default function CashPage() {
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center py-20 text-muted-foreground">
-				Loading cash control...
+			<div className="space-y-4 p-4 md:p-6">
+				<Skeleton className="h-8 w-48" />
+				<Skeleton className="h-64 w-full" />
+				<Skeleton className="h-64 w-full" />
 			</div>
 		);
 	}

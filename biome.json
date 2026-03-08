@@ -54,7 +54,8 @@
 			},
 			"a11y": {
 				"noLabelWithoutControl": "warn",
-				"useButtonType": "warn"
+				"useButtonType": "warn",
+				"useSemanticElements": "warn"
 			},
 			"nursery": {
 				"useSortedClasses": {

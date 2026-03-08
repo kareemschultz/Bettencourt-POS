@@ -15,6 +15,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
@@ -114,8 +115,10 @@ export default function LaborDashboardPage() {
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center py-20 text-muted-foreground">
-				Loading labor dashboard...
+			<div className="space-y-4 p-4 md:p-6">
+				<Skeleton className="h-8 w-48" />
+				<Skeleton className="h-64 w-full" />
+				<Skeleton className="h-64 w-full" />
 			</div>
 		);
 	}

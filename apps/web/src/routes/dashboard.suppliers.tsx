@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { orpc } from "@/utils/orpc";
 
@@ -199,8 +200,13 @@ export default function SuppliersPage() {
 
 			{/* Supplier grid */}
 			{isLoading ? (
-				<div className="py-16 text-center text-muted-foreground">
-					Loading suppliers...
+				<div className="space-y-4">
+					<Skeleton className="h-8 w-48" />
+					<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+						{Array.from({ length: 6 }).map((_, i) => (
+							<Skeleton key={i} className="h-40 w-full" />
+						))}
+					</div>
 				</div>
 			) : filtered.length === 0 ? (
 				<div className="py-16 text-center text-muted-foreground">

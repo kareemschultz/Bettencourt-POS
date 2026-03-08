@@ -6,7 +6,6 @@ import {
 	Clock,
 	Edit2,
 	Eye,
-	Loader2,
 	Plus,
 	Send,
 	Trash2,
@@ -49,6 +48,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
 	Table,
@@ -287,15 +287,13 @@ export default function WebhooksPage() {
 						</TableHeader>
 						<TableBody>
 							{isLoading ? (
-								<TableRow>
-									<TableCell
-										colSpan={5}
-										className="py-8 text-center text-muted-foreground"
-									>
-										<Loader2 className="mx-auto mb-2 size-6 animate-spin" />
-										Loading webhooks...
-									</TableCell>
-								</TableRow>
+								Array.from({ length: 5 }).map((_, i) => (
+									<TableRow key={i}>
+										<TableCell colSpan={5}>
+											<Skeleton className="h-8 w-full" />
+										</TableCell>
+									</TableRow>
+								))
 							) : endpoints.length === 0 ? (
 								<TableRow>
 									<TableCell
@@ -620,15 +618,13 @@ function DeliveryLog({
 					</TableHeader>
 					<TableBody>
 						{isLoading ? (
-							<TableRow>
-								<TableCell
-									colSpan={5}
-									className="py-8 text-center text-muted-foreground"
-								>
-									<Loader2 className="mx-auto mb-2 size-5 animate-spin" />
-									Loading deliveries...
-								</TableCell>
-							</TableRow>
+							Array.from({ length: 5 }).map((_, i) => (
+								<TableRow key={i}>
+									<TableCell colSpan={5}>
+										<Skeleton className="h-8 w-full" />
+									</TableCell>
+								</TableRow>
+							))
 						) : deliveries.length === 0 ? (
 							<TableRow>
 								<TableCell

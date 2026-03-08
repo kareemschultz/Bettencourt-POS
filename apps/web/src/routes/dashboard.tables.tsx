@@ -5,7 +5,7 @@ import {
 	Clock,
 	LayoutGrid,
 	Loader2,
-	Map,
+	Map as MapIcon,
 	Pencil,
 	Plus,
 	Sparkles,
@@ -37,6 +37,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatGYD } from "@/lib/types";
 import { orpc } from "@/utils/orpc";
 
@@ -283,7 +284,7 @@ export default function TablesPage() {
 							className="h-7 px-2"
 							onClick={() => setViewMode("floor")}
 						>
-							<Map className="size-3.5" />
+							<MapIcon className="size-3.5" />
 						</Button>
 					</div>
 
@@ -300,8 +301,13 @@ export default function TablesPage() {
 
 			{/* Content */}
 			{isLoading ? (
-				<div className="flex items-center justify-center py-20 text-muted-foreground">
-					<Loader2 className="mr-2 size-5 animate-spin" /> Loading tables...
+				<div className="space-y-4">
+					<Skeleton className="h-8 w-48" />
+					<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+						{Array.from({ length: 5 }).map((_, i) => (
+							<Skeleton key={i} className="h-32 w-full" />
+						))}
+					</div>
 				</div>
 			) : tables.length === 0 ? (
 				<div className="flex flex-col items-center justify-center gap-3 py-20">
@@ -562,6 +568,7 @@ function FloorPlan({
 						table.shape === "rectangle" ? { w: 100, h: 60 } : { w: 80, h: 80 };
 
 					return (
+						// biome-ignore lint/a11y/useSemanticElements: SVG <g> cannot be replaced with <button>
 						<g
 							key={table.id}
 							className="cursor-pointer"
