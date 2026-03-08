@@ -11,6 +11,16 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -88,6 +98,10 @@ export default function SuppliersPage() {
 		}),
 	);
 
+	const [deleteConfirmSupplier, setDeleteConfirmSupplier] = useState<{
+		id: string;
+		name: string;
+	} | null>(null);
 	const deleteMut = useMutation(
 		orpc.settings.deleteSupplier.mutationOptions({
 			onSuccess: () => {
@@ -221,9 +235,7 @@ export default function SuppliersPage() {
 									type="button"
 									onClick={(e) => {
 										e.stopPropagation();
-										if (confirm(`Deactivate ${s.name}?`)) {
-											deleteMut.mutate({ id: s.id });
-										}
+										setDeleteConfirmSupplier({ id: s.id, name: s.name });
 									}}
 									className="rounded p-1 text-muted-foreground hover:text-destructive"
 								>
@@ -400,6 +412,38 @@ export default function SuppliersPage() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			{/* Deactivate Supplier Confirmation */}
+			<AlertDialog
+				open={!!deleteConfirmSupplier}
+				onOpenChange={(o) => {
+					if (!o) setDeleteConfirmSupplier(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							Deactivate {deleteConfirmSupplier?.name}?
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							This supplier will be marked inactive and hidden from active
+							lists.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={() =>
+								deleteConfirmSupplier &&
+								deleteMut.mutate({ id: deleteConfirmSupplier.id })
+							}
+						>
+							Deactivate
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

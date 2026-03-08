@@ -13,7 +13,7 @@ import {
 	Printer,
 	User,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
 	Bar,
 	BarChart,
@@ -74,6 +74,7 @@ export function ReportsDashboard({
 	paymentMethods,
 	cashierActivity,
 }: ReportsDashboardProps) {
+	const pageRef = useRef<HTMLDivElement>(null);
 	const [productSortMode, setProductSortMode] =
 		useState<SortMode>("department");
 	const [expandedCashier, setExpandedCashier] = useState<string | null>(null);
@@ -189,7 +190,7 @@ export function ReportsDashboard({
 	}
 
 	return (
-		<div className="flex flex-col gap-6">
+		<div ref={pageRef} className="flex flex-col gap-6">
 			{/* Header + Export Actions */}
 			<div className="flex flex-wrap items-center justify-between gap-3">
 				<h2 className="font-semibold text-foreground text-lg">Sales Reports</h2>
@@ -207,7 +208,36 @@ export function ReportsDashboard({
 						variant="outline"
 						size="sm"
 						className="gap-1.5 text-xs"
-						onClick={() => window.print()}
+						onClick={() => {
+							const el = pageRef.current;
+							if (!el) {
+								window.print();
+								return;
+							}
+							const win = window.open(
+								"",
+								"_blank",
+								"width=900,height=700,menubar=no,toolbar=no,scrollbars=yes",
+							);
+							if (!win) {
+								window.print();
+								return;
+							}
+							for (const link of document.querySelectorAll<HTMLLinkElement>(
+								'link[rel="stylesheet"]',
+							)) {
+								const newLink = win.document.createElement("link");
+								newLink.rel = "stylesheet";
+								newLink.href = link.href;
+								win.document.head.appendChild(newLink);
+							}
+							win.document.body.appendChild(win.document.importNode(el, true));
+							win.focus();
+							setTimeout(() => {
+								win.print();
+								win.close();
+							}, 600);
+						}}
 					>
 						<Printer className="size-3.5" />
 						Print Z-Report

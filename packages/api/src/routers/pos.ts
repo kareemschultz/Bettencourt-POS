@@ -280,13 +280,15 @@ const checkout = permissionProcedure("orders.create")
 					notes: z.string().nullable().optional(),
 				}),
 			),
-			payments: z.array(
-				z.object({
-					method: z.string(),
-					amount: z.number(),
-					reference: z.string().optional(),
-				}),
-			),
+			payments: z
+				.array(
+					z.object({
+						method: z.string(),
+						amount: z.number().positive("Payment amount must be positive"),
+						reference: z.string().optional(),
+					}),
+				)
+				.min(1, "At least one payment method is required"),
 			orderType: z.string().default("sale"),
 			locationId: z.string().uuid(),
 			registerId: z.string().uuid(),
@@ -339,6 +341,21 @@ const checkout = permissionProcedure("orders.create")
 		}
 		const total = subtotal + taxTotal - discountTotal;
 
+		// Validate payment sum covers order total
+		const paymentSum = payments.reduce((s, p) => s + p.amount, 0);
+		if (paymentSum < total - 0.01) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: `Payment total (${paymentSum.toFixed(2)}) is less than order total (${total.toFixed(2)})`,
+			});
+		}
+
+		// Ensure the order number sequence exists OUTSIDE the transaction.
+		// DDL inside an aborted Postgres transaction is silently ignored — the whole
+		// tx stays in error state. CREATE SEQUENCE is idempotent so this is safe to run on every checkout.
+		await db.execute(
+			sql`CREATE SEQUENCE IF NOT EXISTS order_number_seq START 1`,
+		);
+
 		// Use a transaction for atomicity
 		const result = await db.transaction(async (tx) => {
 			// Generate daily order number (upsert)
@@ -351,23 +368,12 @@ const checkout = permissionProcedure("orders.create")
 			);
 			const dailyNum = Number(dailyResult.rows[0]?.last_number);
 
-			// Generate unique order number via sequence (create if not exists, then use)
-			let orderNum: string;
-			try {
-				const seqResult = await tx.execute(
-					sql`SELECT nextval('order_number_seq') as num`,
-				);
-				orderNum = `ORD-${String(seqResult.rows[0]?.num).padStart(4, "0")}`;
-			} catch {
-				// If sequence doesn't exist, create it and use
-				await tx.execute(
-					sql`CREATE SEQUENCE IF NOT EXISTS order_number_seq START 1`,
-				);
-				const seqResult = await tx.execute(
-					sql`SELECT nextval('order_number_seq') as num`,
-				);
-				orderNum = `ORD-${String(seqResult.rows[0]?.num).padStart(4, "0")}`;
-			}
+			// Generate unique order number — sequence is guaranteed to exist
+			// (created outside the transaction to avoid aborted-tx state)
+			const seqResult = await tx.execute(
+				sql`SELECT nextval('order_number_seq') as num`,
+			);
+			const orderNum = `ORD-${String(seqResult.rows[0]?.num).padStart(4, "0")}`;
 
 			// Create order
 			const orderRows = await tx
@@ -441,6 +447,7 @@ const checkout = permissionProcedure("orders.create")
 							total: (comp.allocatedPrice * item.quantity).toFixed(2),
 							modifiersSnapshot: [],
 							notes: `Component of: ${item.productName}`,
+							isComponent: true,
 							voided: false,
 						});
 					}
@@ -448,15 +455,24 @@ const checkout = permissionProcedure("orders.create")
 			}
 
 			// Insert payments
+			// Allocate payment amounts sequentially against remaining balance
+			let remaining = total;
+			let totalCashAllocated = 0;
 			for (const pmt of payments) {
+				const allocated = Math.min(pmt.amount, remaining);
+				remaining -= allocated;
 				const tendered = pmt.method === "cash" ? pmt.amount : null;
 				const changeGiven =
 					pmt.method === "cash" && pmt.amount > total ? pmt.amount - total : 0;
 
+				if (pmt.method === "cash") {
+					totalCashAllocated += allocated;
+				}
+
 				await tx.insert(schema.payment).values({
 					orderId: createdOrder.id,
 					method: pmt.method,
-					amount: Math.min(pmt.amount, total).toFixed(2),
+					amount: allocated.toFixed(2),
 					tendered: tendered?.toFixed(2) ?? null,
 					changeGiven: changeGiven.toFixed(2),
 					reference: pmt.reference ?? null,
@@ -464,31 +480,14 @@ const checkout = permissionProcedure("orders.create")
 				});
 			}
 
-			// Update cash session if cash payment exists
-			const cashPayment = payments.find((p) => p.method === "cash");
-			if (cashPayment) {
+			// Update cash session — sum ALL cash payments, not just first
+			if (totalCashAllocated > 0) {
 				await tx.execute(
 					sql`UPDATE cash_session
-						SET expected_cash = COALESCE(expected_cash, opening_float) + ${Math.min(cashPayment.amount, total)}
+						SET expected_cash = COALESCE(expected_cash, opening_float) + ${totalCashAllocated}
 						WHERE register_id = ${registerId} AND status = 'open'`,
 				);
 			}
-
-			// Audit log
-			await createAuditLog({
-				userId: userId ?? null,
-				entityType: "order",
-				entityId: createdOrder.id,
-				actionType: "create",
-				afterData: {
-					order_number: createdOrder.orderNumber,
-					daily_number: dailyNum,
-					total: createdOrder.total,
-					items: items.length,
-					payment_methods: payments.map((p) => p.method),
-				},
-				locationId,
-			});
 
 			// Create kitchen ticket
 			const ticketRows = await tx
@@ -596,6 +595,22 @@ const checkout = permissionProcedure("orders.create")
 				createdBy: userId,
 			});
 		}
+
+		// Audit log — runs after transaction commits so it's not rolled back with failed orders
+		await createAuditLog({
+			userId: userId ?? null,
+			entityType: "order",
+			entityId: result.order.id,
+			actionType: "create",
+			afterData: {
+				order_number: result.order.orderNumber,
+				daily_number: result.order.dailyNumber,
+				total: result.order.total,
+				items: items.length,
+				payment_methods: payments.map((p) => p.method),
+			},
+			locationId,
+		});
 
 		// Emit kitchen event after transaction committed
 		emitKitchenEvent({

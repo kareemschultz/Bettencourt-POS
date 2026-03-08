@@ -8,7 +8,7 @@ import { permissionProcedure, protectedProcedure } from "../index";
 const DEFAULT_ORG_ID = "a0000000-0000-4000-8000-000000000001";
 
 // ── listLocations ────────────────────────────────────────────────────
-const listLocations = protectedProcedure
+const listLocations = permissionProcedure("settings.read")
 	.input(z.object({}).optional())
 	.handler(async () => {
 		const locations = await db

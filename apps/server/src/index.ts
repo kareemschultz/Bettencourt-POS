@@ -195,8 +195,12 @@ app.get("/health", (c) => {
 	return c.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// SSE endpoint for kitchen display real-time updates
-app.get("/api/kitchen/events", (c) => {
+// SSE endpoint for kitchen display real-time updates — requires auth
+app.get("/api/kitchen/events", async (c) => {
+	const session = await auth.api.getSession({ headers: c.req.raw.headers });
+	if (!session?.user) {
+		return c.json({ error: "Unauthorized" }, 401);
+	}
 	const stream = new ReadableStream({
 		start(controller) {
 			const encoder = new TextEncoder();

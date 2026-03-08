@@ -304,7 +304,42 @@ const refund = permissionProcedure("orders.refund")
 			});
 		}
 
-		const refundAmount = amount || Number(order.total);
+		const orderTotal = Number(order.total);
+		const requestedAmount = amount ?? orderTotal;
+
+		// Validate refund amount is positive and does not exceed order total
+		if (requestedAmount <= 0) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Refund amount must be greater than zero",
+			});
+		}
+		if (requestedAmount > orderTotal) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: `Refund amount (${requestedAmount.toFixed(2)}) exceeds order total (${orderTotal.toFixed(2)})`,
+			});
+		}
+
+		// Check cumulative refunds do not exceed order total
+		const priorRefunds = await db
+			.select({ amount: schema.payment.amount })
+			.from(schema.payment)
+			.where(
+				and(
+					eq(schema.payment.orderId, id),
+					eq(schema.payment.method, "refund"),
+				),
+			);
+		const totalRefunded = priorRefunds.reduce(
+			(s, p) => s + Math.abs(Number(p.amount)),
+			0,
+		);
+		if (totalRefunded + requestedAmount > orderTotal + 0.01) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: `Cannot refund ${requestedAmount.toFixed(2)}. Already refunded ${totalRefunded.toFixed(2)} of ${orderTotal.toFixed(2)} total`,
+			});
+		}
+
+		const refundAmount = requestedAmount;
 
 		// Update order status with void authorization tracking
 		await db

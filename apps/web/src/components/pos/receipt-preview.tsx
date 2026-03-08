@@ -1,4 +1,35 @@
 import { Printer, Split, X } from "lucide-react";
+
+// Prints the receipt in an isolated popup so only the receipt content is printed,
+// not the entire dashboard page.
+function printReceiptPopup(el: HTMLElement | null) {
+	if (!el) {
+		window.print();
+		return;
+	}
+	const win = window.open(
+		"",
+		"_blank",
+		"width=420,height=680,menubar=no,toolbar=no",
+	);
+	if (!win) {
+		window.print();
+		return;
+	}
+	win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Receipt</title>
+		<style>
+			* { margin: 0; padding: 0; box-sizing: border-box; }
+			body { font-family: monospace; font-size: 11px; background: #fff; color: #000; padding: 12px; }
+			@media print { body { padding: 0; } }
+		</style></head><body>${el.innerHTML}</body></html>`);
+	win.document.close();
+	win.focus();
+	setTimeout(() => {
+		win.print();
+		win.close();
+	}, 200);
+}
+
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -82,7 +113,10 @@ export function ReceiptPreview({
 					</DialogTitle>
 				</DialogHeader>
 
-				<div className="rounded-lg border border-border bg-background p-5 font-mono text-xs leading-relaxed">
+				<div
+					id="receipt-content"
+					className="rounded-lg border border-border bg-background p-5 font-mono text-xs leading-relaxed"
+				>
 					{/* Header */}
 					<div className="mb-3 text-center">
 						<p className="font-bold text-sm">{rc.businessName}</p>
@@ -290,7 +324,12 @@ export function ReceiptPreview({
 				</div>
 
 				<div className="flex gap-2">
-					<Button className="flex-1 gap-2" onClick={() => window.print()}>
+					<Button
+						className="flex-1 gap-2"
+						onClick={() =>
+							printReceiptPopup(document.getElementById("receipt-content"))
+						}
+					>
 						<Printer className="size-4" />
 						Print
 					</Button>

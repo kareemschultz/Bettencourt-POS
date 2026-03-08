@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { DollarSign, Download, Loader2, Printer } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +43,7 @@ function ChangeIndicator({
 }
 
 export default function PnlPage() {
+	const pageRef = useRef<HTMLDivElement>(null);
 	const today = todayGY();
 	const [startDate, setStartDate] = useState(firstOfMonth());
 	const [endDate, setEndDate] = useState(today);
@@ -57,7 +58,34 @@ export default function PnlPage() {
 	);
 
 	function handlePrint() {
-		window.print();
+		const el = pageRef.current;
+		if (!el) {
+			window.print();
+			return;
+		}
+		const win = window.open(
+			"",
+			"_blank",
+			"width=900,height=700,menubar=no,toolbar=no,scrollbars=yes",
+		);
+		if (!win) {
+			window.print();
+			return;
+		}
+		for (const link of document.querySelectorAll<HTMLLinkElement>(
+			'link[rel="stylesheet"]',
+		)) {
+			const newLink = win.document.createElement("link");
+			newLink.rel = "stylesheet";
+			newLink.href = link.href;
+			win.document.head.appendChild(newLink);
+		}
+		win.document.body.appendChild(win.document.importNode(el, true));
+		win.focus();
+		setTimeout(() => {
+			win.print();
+			win.close();
+		}, 600);
 	}
 
 	function exportCSV() {
@@ -89,7 +117,7 @@ export default function PnlPage() {
 	const prev = data?.previousPeriod;
 
 	return (
-		<div className="flex flex-col gap-6 p-4 md:p-6">
+		<div ref={pageRef} className="flex flex-col gap-6 p-4 md:p-6">
 			{/* Screen header */}
 			<div className="flex items-center justify-between print:hidden">
 				<div>

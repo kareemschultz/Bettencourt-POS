@@ -80,6 +80,7 @@ const getReport = permissionProcedure("reports.read")
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
 					AND oli.voided = false
+				AND oli.is_component = false
 				GROUP BY oli.reporting_category_snapshot
 				ORDER BY oli.reporting_category_snapshot ASC`,
 			);
@@ -99,6 +100,7 @@ const getReport = permissionProcedure("reports.read")
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
 					AND oli.voided = false
+				AND oli.is_component = false
 				GROUP BY oli.product_name_snapshot, oli.reporting_category_snapshot
 				ORDER BY oli.product_name_snapshot ASC`,
 			);
@@ -182,6 +184,7 @@ const getReport = permissionProcedure("reports.read")
 							AND o.created_at >= ${startDate}::timestamptz
 							AND o.created_at <= ${endDate}::timestamptz
 							AND oli.voided = false
+							AND oli.is_component = false
 						GROUP BY oli.product_name_snapshot, oli.reporting_category_snapshot
 						ORDER BY oli.product_name_snapshot ASC`,
 				),
@@ -194,6 +197,7 @@ const getReport = permissionProcedure("reports.read")
 							AND o.created_at >= ${startDate}::timestamptz
 							AND o.created_at <= ${endDate}::timestamptz
 							AND oli.voided = false
+							AND oli.is_component = false
 						GROUP BY oli.reporting_category_snapshot
 						ORDER BY oli.reporting_category_snapshot ASC`,
 				),
@@ -312,7 +316,8 @@ const getReport = permissionProcedure("reports.read")
 					COALESCE(SUM(o.total), 0)::numeric as revenue
 				FROM "order" o
 				WHERE o.status IN ('completed', 'closed')
-					AND o.created_at >= NOW() - INTERVAL '7 days'
+					AND o.created_at >= ${startDate}::timestamptz
+					AND o.created_at <= ${endDate}::timestamptz
 				GROUP BY DATE(o.created_at)
 				ORDER BY date ASC`,
 			);
@@ -419,6 +424,7 @@ const getEodReport = permissionProcedure("reports.read")
 					AND o.created_at >= ${dayStart}::timestamptz
 					AND o.created_at <= ${dayEnd}::timestamptz
 					AND oli.voided = false
+					AND oli.is_component = false
 				GROUP BY oli.product_name_snapshot
 				ORDER BY qty_sold DESC
 				LIMIT 10`,
@@ -436,6 +442,7 @@ const getEodReport = permissionProcedure("reports.read")
 					AND o.created_at >= ${dayStart}::timestamptz
 					AND o.created_at <= ${dayEnd}::timestamptz
 					AND oli.voided = false
+					AND oli.is_component = false
 				GROUP BY oli.reporting_category_snapshot
 				ORDER BY revenue DESC`,
 			),

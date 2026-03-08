@@ -28,7 +28,9 @@ export const productionLog = pgTable(
 		quantity: integer("quantity").notNull(),
 		notes: text("notes"),
 		logDate: date("log_date").notNull().default(sql`CURRENT_DATE`),
-		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 	},
 	(table) => [
 		index("idx_production_log_product").on(table.productId),

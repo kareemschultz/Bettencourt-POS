@@ -244,8 +244,15 @@ const getApplicable = permissionProcedure("discounts.apply")
 			// Check schedule
 			if (rule.scheduleType === "time_window") {
 				if (rule.startTime && rule.endTime) {
-					if (currentTime < rule.startTime || currentTime > rule.endTime)
-						return false;
+					const isOvernight = rule.startTime > rule.endTime;
+					if (isOvernight) {
+						// e.g., 22:00 – 02:00: active if time >= start OR time <= end
+						if (currentTime < rule.startTime && currentTime > rule.endTime)
+							return false;
+					} else {
+						if (currentTime < rule.startTime || currentTime > rule.endTime)
+							return false;
+					}
 				}
 				if (rule.daysOfWeek) {
 					const days = rule.daysOfWeek

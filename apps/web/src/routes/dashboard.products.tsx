@@ -32,6 +32,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
 	Table,
@@ -93,6 +94,7 @@ export default function ProductsPage() {
 				});
 				setDialogOpen(false);
 			},
+			onError: (err) => toast.error(err.message || "Failed to save product"),
 		}),
 	);
 
@@ -104,6 +106,7 @@ export default function ProductsPage() {
 				});
 				setDialogOpen(false);
 			},
+			onError: (err) => toast.error(err.message || "Failed to update product"),
 		}),
 	);
 
@@ -115,6 +118,7 @@ export default function ProductsPage() {
 				});
 				setDeleteTarget(null);
 			},
+			onError: (err) => toast.error(err.message || "Failed to delete product"),
 		}),
 	);
 
@@ -635,9 +639,9 @@ function ProductionTab({ productId }: { productId: string }) {
 
 	if (isLoading)
 		return (
-			<p className="py-4 text-center text-muted-foreground text-sm">
-				Loading...
-			</p>
+			<div className="px-8 py-4">
+				<Skeleton className="mx-auto h-4 w-1/2" />
+			</div>
 		);
 
 	const isDirty = localComponents !== null;

@@ -11,6 +11,16 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
 	TableBody,
@@ -95,6 +106,10 @@ export default function CustomersPage() {
 		}),
 	);
 
+	const [deleteConfirmCustomer, setDeleteConfirmCustomer] = useState<{
+		id: string;
+		name: string;
+	} | null>(null);
 	const deleteMut = useMutation(
 		orpc.customers.deleteCustomer.mutationOptions({
 			onSuccess: () => {
@@ -205,7 +220,7 @@ export default function CustomersPage() {
 												colSpan={6}
 												className="py-8 text-center text-muted-foreground"
 											>
-												Loading...
+												<Skeleton className="h-4 w-full" />
 											</TableCell>
 										</TableRow>
 									) : customers.length === 0 ? (
@@ -274,9 +289,10 @@ export default function CustomersPage() {
 															disabled={deleteMut.isPending}
 															onClick={(e) => {
 																e.stopPropagation();
-																if (confirm(`Delete ${c.name}?`)) {
-																	deleteMut.mutate({ id: c.id });
-																}
+																setDeleteConfirmCustomer({
+																	id: c.id,
+																	name: c.name,
+																});
 															}}
 														>
 															<Trash2 className="size-3.5" />
@@ -376,6 +392,37 @@ export default function CustomersPage() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			{/* Delete Customer Confirmation */}
+			<AlertDialog
+				open={!!deleteConfirmCustomer}
+				onOpenChange={(o) => {
+					if (!o) setDeleteConfirmCustomer(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							Delete {deleteConfirmCustomer?.name}?
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							This will permanently delete this customer and their data.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={() =>
+								deleteConfirmCustomer &&
+								deleteMut.mutate({ id: deleteConfirmCustomer.id })
+							}
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

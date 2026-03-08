@@ -71,8 +71,10 @@ export const order = pgTable(
 		index("idx_order_location").on(table.locationId),
 		index("idx_order_register").on(table.registerId),
 		index("idx_order_user").on(table.userId),
+		index("idx_order_customer").on(table.customerId),
 		index("idx_order_status").on(table.status),
 		index("idx_order_created").on(table.createdAt),
+		index("idx_order_org_created").on(table.organizationId, table.createdAt),
 	],
 );
 
@@ -100,6 +102,7 @@ export const orderLineItem = pgTable(
 		total: numeric("total", { precision: 10, scale: 2 }).notNull(),
 		modifiersSnapshot: jsonb("modifiers_snapshot").default([]),
 		notes: text("notes"),
+		isComponent: boolean("is_component").notNull().default(false),
 		voided: boolean("voided").notNull().default(false),
 		voidReason: text("void_reason"),
 	},

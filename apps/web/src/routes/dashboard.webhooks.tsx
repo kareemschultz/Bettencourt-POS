@@ -15,6 +15,16 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -107,6 +117,10 @@ export default function WebhooksPage() {
 		orpc.webhooks.listEndpoints.queryOptions({ input: {} }),
 	);
 
+	const [deleteConfirmWebhook, setDeleteConfirmWebhook] = useState<{
+		id: string;
+		name: string;
+	} | null>(null);
 	const createMut = useMutation(
 		orpc.webhooks.createEndpoint.mutationOptions({
 			onSuccess: () => {
@@ -365,11 +379,10 @@ export default function WebhooksPage() {
 													size="sm"
 													title="Delete"
 													onClick={() => {
-														if (
-															window.confirm(`Delete webhook "${ep.name}"?`)
-														) {
-															deleteMut.mutate({ id: ep.id });
-														}
+														setDeleteConfirmWebhook({
+															id: ep.id,
+															name: ep.name,
+														});
 													}}
 												>
 													<Trash2 className="size-3.5 text-destructive" />
@@ -518,6 +531,36 @@ export default function WebhooksPage() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+			{/* Delete Webhook Confirmation */}
+			<AlertDialog
+				open={!!deleteConfirmWebhook}
+				onOpenChange={(o) => {
+					if (!o) setDeleteConfirmWebhook(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							Delete "{deleteConfirmWebhook?.name}"?
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							This webhook endpoint will be permanently deleted.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={() =>
+								deleteConfirmWebhook &&
+								deleteMut.mutate({ id: deleteConfirmWebhook.id })
+							}
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

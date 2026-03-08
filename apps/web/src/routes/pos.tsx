@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { POSTerminal } from "@/components/pos/pos-terminal";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { authClient, signOut } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
 
@@ -40,7 +41,7 @@ export default function StandalonePosPage() {
 	if (isPending || loadingProfile) {
 		return (
 			<div className="flex h-svh items-center justify-center">
-				<div className="text-muted-foreground">Loading...</div>
+				<Skeleton className="h-8 w-48" />
 			</div>
 		);
 	}

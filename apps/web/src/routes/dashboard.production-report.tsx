@@ -1,13 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Printer } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
 
 export default function ProductionReportPage() {
+	const pageRef = useRef<HTMLDivElement>(null);
 	const [date, setDate] = useState(todayGY());
 	const [workflow, setWorkflow] = useState<"restaurant" | "bakery">(
 		"restaurant",
@@ -43,7 +45,7 @@ export default function ProductionReportPage() {
 	);
 
 	return (
-		<div className="space-y-6 p-4 md:p-6">
+		<div ref={pageRef} className="space-y-6 p-4 md:p-6">
 			{/* Print header — only visible in print */}
 			<div className="mb-6 hidden border-b pb-4 print:block">
 				<div className="flex items-start justify-between">
@@ -134,7 +136,36 @@ export default function ProductionReportPage() {
 						size="sm"
 						variant="outline"
 						className="gap-1"
-						onClick={() => window.print()}
+						onClick={() => {
+							const el = pageRef.current;
+							if (!el) {
+								window.print();
+								return;
+							}
+							const win = window.open(
+								"",
+								"_blank",
+								"width=900,height=700,menubar=no,toolbar=no,scrollbars=yes",
+							);
+							if (!win) {
+								window.print();
+								return;
+							}
+							for (const link of document.querySelectorAll<HTMLLinkElement>(
+								'link[rel="stylesheet"]',
+							)) {
+								const newLink = win.document.createElement("link");
+								newLink.rel = "stylesheet";
+								newLink.href = link.href;
+								win.document.head.appendChild(newLink);
+							}
+							win.document.body.appendChild(win.document.importNode(el, true));
+							win.focus();
+							setTimeout(() => {
+								win.print();
+								win.close();
+							}, 600);
+						}}
 					>
 						<Printer className="size-4" />
 						Print
@@ -180,7 +211,7 @@ export default function ProductionReportPage() {
 									colSpan={8}
 									className="p-8 text-center text-muted-foreground"
 								>
-									Loading...
+									<Skeleton className="h-4 w-full" />
 								</td>
 							</tr>
 						) : sortedRows.length === 0 ? (

@@ -30,6 +30,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
 	Table,
@@ -40,6 +41,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { formatGYD } from "@/lib/types";
+import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
 
 interface DiscountForm {
@@ -92,7 +94,7 @@ function getDiscountStatus(rule: {
 }): { label: string; variant: "default" | "secondary" | "destructive" } {
 	if (!rule.isActive) return { label: "Inactive", variant: "secondary" };
 	if (rule.scheduleType === "date_range" && rule.endDate) {
-		const now = new Date().toISOString().split("T")[0]!;
+		const now = todayGY();
 		if (now > rule.endDate) return { label: "Expired", variant: "destructive" };
 		if (rule.startDate && now < rule.startDate)
 			return { label: "Scheduled", variant: "secondary" };
@@ -266,7 +268,7 @@ export default function DiscountsPage() {
 										colSpan={8}
 										className="py-8 text-center text-muted-foreground"
 									>
-										Loading...
+										<Skeleton className="h-4 w-full" />
 									</TableCell>
 								</TableRow>
 							) : rules.length === 0 ? (

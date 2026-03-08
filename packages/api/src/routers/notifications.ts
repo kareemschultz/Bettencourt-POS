@@ -58,7 +58,7 @@ const NOTIFICATION_EVENTS = [
 ] as const;
 
 // ── getSettings ────────────────────────────────────────────────────────
-// Returns the notification provider configuration (Twilio credentials, etc.)
+// Returns notification settings with credentials masked — never sends full secrets to client
 const getSettings = permissionProcedure("settings.read")
 	.input(z.object({}).optional())
 	.handler(async () => {
@@ -68,7 +68,22 @@ const getSettings = permissionProcedure("settings.read")
 			.where(eq(schema.notificationSettings.organizationId, DEFAULT_ORG_ID))
 			.limit(1);
 
-		return rows[0] || null;
+		if (!rows[0]) return null;
+		const s = rows[0];
+		return {
+			id: s.id,
+			organizationId: s.organizationId,
+			provider: s.provider,
+			isActive: s.isActive,
+			dailyLimit: s.dailyLimit,
+			fromNumber: s.fromNumber,
+			whatsappNumber: s.whatsappNumber,
+			// Never expose full credentials — mask and return presence flag
+			hasCredentials: !!(s.accountSid && s.authToken),
+			accountSidMasked: s.accountSid
+				? `${s.accountSid.slice(0, 4)}${"*".repeat(Math.max(0, s.accountSid.length - 8))}${s.accountSid.slice(-4)}`
+				: null,
+		};
 	});
 
 // ── updateSettings ─────────────────────────────────────────────────────
@@ -343,18 +358,20 @@ const sendTest = permissionProcedure("settings.write")
 			})
 			.returning();
 
-		// TODO: Integrate with Twilio API
-		// For now, mark as sent to demonstrate the flow
+		// Twilio integration not yet implemented — mark as failed instead of faking success
 		await db
 			.update(schema.notificationLog)
-			.set({ status: "sent", externalId: `test_${log!.id}` })
+			.set({
+				status: "failed",
+				errorMessage:
+					"Twilio API integration not yet implemented. Configure and connect your Twilio account.",
+			})
 			.where(eq(schema.notificationLog.id, log!.id));
 
-		return {
-			success: true,
-			message: `Test ${input.channel.toUpperCase()} queued to ${input.phoneNumber}. Check your delivery log for status.`,
-			logId: log?.id,
-		};
+		throw new ORPCError("NOT_IMPLEMENTED", {
+			message:
+				"SMS/WhatsApp provider integration is not yet connected. Your credentials are saved but the Twilio API call is pending implementation.",
+		});
 	});
 
 export const notificationsRouter = {

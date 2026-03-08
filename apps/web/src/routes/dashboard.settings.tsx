@@ -1,23 +1,41 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	Building2,
+	Check,
 	ChevronDown,
 	ChevronRight,
 	FileText,
 	Layers,
 	Loader2,
+	Lock,
 	MapPin,
 	Monitor,
+	MoreHorizontal,
+	Pencil,
 	Percent,
 	Plus,
+	Power,
 	ReceiptText,
 	Settings,
+	Shield,
 	SlidersHorizontal,
+	ToggleLeft,
 	Trash2,
 	Users,
+	X,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +52,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -43,6 +68,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
 	Table,
 	TableBody,
@@ -53,6 +79,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
 
 export default function SettingsPage() {
@@ -108,6 +135,14 @@ export default function SettingsPage() {
 						<FileText className="size-3.5" />
 						<span className="hidden sm:inline">Documents</span>
 					</TabsTrigger>
+					<TabsTrigger value="roles" className="gap-1.5">
+						<Shield className="size-3.5" />
+						<span className="hidden sm:inline">Roles</span>
+					</TabsTrigger>
+					<TabsTrigger value="pos" className="gap-1.5">
+						<ToggleLeft className="size-3.5" />
+						<span className="hidden sm:inline">POS Behavior</span>
+					</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="organization" className="mt-4">
@@ -137,6 +172,12 @@ export default function SettingsPage() {
 				<TabsContent value="documents" className="mt-4">
 					<DocumentSettingsTab />
 				</TabsContent>
+				<TabsContent value="roles" className="mt-4">
+					<RolesTab />
+				</TabsContent>
+				<TabsContent value="pos" className="mt-4">
+					<PosSettingsTab />
+				</TabsContent>
 			</Tabs>
 		</div>
 	);
@@ -145,8 +186,29 @@ export default function SettingsPage() {
 // ── Organization Tab ───────────────────────────────────────────────────
 
 function OrganizationTab() {
+	const queryClient = useQueryClient();
 	const { data: org, isLoading } = useQuery(
 		orpc.settings.getOrganization.queryOptions({ input: {} }),
+	);
+	const [name, setName] = useState("");
+	const [initialized, setInitialized] = useState(false);
+
+	if (org && !initialized) {
+		setName(org.name ?? "");
+		setInitialized(true);
+	}
+
+	const updateOrg = useMutation(
+		orpc.settings.updateOrganization.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.settings.getOrganization.queryOptions({ input: {} })
+						.queryKey,
+				});
+				toast.success("Organization updated");
+			},
+			onError: (err) => toast.error(err.message || "Failed to update"),
+		}),
 	);
 
 	if (isLoading) return <LoadingCard />;
@@ -155,13 +217,19 @@ function OrganizationTab() {
 		<Card>
 			<CardHeader>
 				<CardTitle>Organization Details</CardTitle>
-				<CardDescription>Your business information.</CardDescription>
+				<CardDescription>
+					Your business name and core identifiers.
+				</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<div className="grid gap-4 sm:grid-cols-2">
 					<div className="flex flex-col gap-1.5">
-						<Label>Business Name</Label>
-						<Input defaultValue={org?.name ?? ""} readOnly />
+						<Label htmlFor="org-name">Business Name</Label>
+						<Input
+							id="org-name"
+							value={name}
+							onChange={(e) => setName(e.target.value)}
+						/>
 					</div>
 					<div className="flex flex-col gap-1.5">
 						<Label>Currency</Label>
@@ -169,90 +237,299 @@ function OrganizationTab() {
 					</div>
 					<div className="flex flex-col gap-1.5 sm:col-span-2">
 						<Label>Slug</Label>
-						<Input defaultValue={org?.slug ?? ""} readOnly />
+						<Input
+							defaultValue={org?.slug ?? ""}
+							readOnly
+							className="text-muted-foreground"
+						/>
+						<p className="text-muted-foreground text-xs">
+							Slug is permanent and cannot be changed.
+						</p>
 					</div>
 				</div>
-				<p className="mt-4 text-muted-foreground text-xs">
-					Organization details are managed through the admin panel.
-				</p>
 			</CardContent>
+			<div className="flex justify-end px-6 pb-6">
+				<Button
+					disabled={updateOrg.isPending || !name.trim()}
+					onClick={() => updateOrg.mutate({ id: org?.id ?? "", name })}
+				>
+					{updateOrg.isPending && (
+						<Loader2 className="mr-2 size-4 animate-spin" />
+					)}
+					Save Changes
+				</Button>
+			</div>
 		</Card>
 	);
 }
 
 // ── Locations Tab ──────────────────────────────────────────────────────
 
+type LocationRow = {
+	id: string;
+	name: string;
+	address: string | null;
+	phone: string | null;
+	timezone: string;
+	receiptHeader: string | null;
+	receiptFooter: string | null;
+	isActive: boolean;
+};
+
 function LocationsTab() {
+	const queryClient = useQueryClient();
 	const { data: locations = [], isLoading } = useQuery(
 		orpc.settings.getLocations.queryOptions({ input: {} }),
+	);
+	const [editing, setEditing] = useState<LocationRow | null>(null);
+
+	const updateLoc = useMutation(
+		orpc.settings.updateLocation.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.settings.getLocations.queryOptions({ input: {} })
+						.queryKey,
+				});
+				setEditing(null);
+				toast.success("Location updated");
+			},
+			onError: (err) => toast.error(err.message || "Failed to update location"),
+		}),
 	);
 
 	if (isLoading) return <LoadingCard />;
 
 	return (
-		<Card>
-			<CardHeader className="flex flex-row items-center justify-between">
-				<div>
-					<CardTitle>Locations</CardTitle>
-					<CardDescription>
-						{locations.length} active location
-						{locations.length !== 1 ? "s" : ""}
-					</CardDescription>
-				</div>
-			</CardHeader>
-			<CardContent>
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Name</TableHead>
-							<TableHead>Address</TableHead>
-							<TableHead>Timezone</TableHead>
-							<TableHead>Status</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{locations.length === 0 ? (
+		<>
+			<Card>
+				<CardHeader className="flex flex-row items-center justify-between">
+					<div>
+						<CardTitle>Locations</CardTitle>
+						<CardDescription>
+							{locations.length} location{locations.length !== 1 ? "s" : ""}
+						</CardDescription>
+					</div>
+				</CardHeader>
+				<CardContent>
+					<Table>
+						<TableHeader>
 							<TableRow>
-								<TableCell
-									colSpan={4}
-									className="py-8 text-center text-muted-foreground"
-								>
-									No locations configured.
-								</TableCell>
+								<TableHead>Name</TableHead>
+								<TableHead>Address</TableHead>
+								<TableHead>Phone</TableHead>
+								<TableHead>Timezone</TableHead>
+								<TableHead>Status</TableHead>
+								<TableHead />
 							</TableRow>
-						) : (
-							locations.map((loc) => (
-								<TableRow key={loc.id}>
-									<TableCell className="font-medium">{loc.name}</TableCell>
-									<TableCell className="text-muted-foreground">
-										{loc.address || "—"}
-									</TableCell>
-									<TableCell className="font-mono text-muted-foreground text-xs">
-										{loc.timezone}
-									</TableCell>
-									<TableCell>
-										<Badge variant={loc.isActive ? "default" : "secondary"}>
-											{loc.isActive ? "Active" : "Inactive"}
-										</Badge>
+						</TableHeader>
+						<TableBody>
+							{locations.length === 0 ? (
+								<TableRow>
+									<TableCell
+										colSpan={6}
+										className="py-8 text-center text-muted-foreground"
+									>
+										No locations configured.
 									</TableCell>
 								</TableRow>
-							))
-						)}
-					</TableBody>
-				</Table>
-			</CardContent>
-		</Card>
+							) : (
+								locations.map((loc) => (
+									<TableRow key={loc.id}>
+										<TableCell className="font-medium">{loc.name}</TableCell>
+										<TableCell className="text-muted-foreground text-sm">
+											{loc.address || "—"}
+										</TableCell>
+										<TableCell className="text-muted-foreground text-sm">
+											{loc.phone || "—"}
+										</TableCell>
+										<TableCell className="font-mono text-muted-foreground text-xs">
+											{loc.timezone}
+										</TableCell>
+										<TableCell>
+											<Badge variant={loc.isActive ? "default" : "secondary"}>
+												{loc.isActive ? "Active" : "Inactive"}
+											</Badge>
+										</TableCell>
+										<TableCell className="text-right">
+											<Button
+												variant="ghost"
+												size="sm"
+												className="gap-1.5"
+												onClick={() => setEditing(loc as LocationRow)}
+											>
+												<Pencil className="size-3.5" /> Edit
+											</Button>
+										</TableCell>
+									</TableRow>
+								))
+							)}
+						</TableBody>
+					</Table>
+				</CardContent>
+			</Card>
+
+			<Dialog
+				open={!!editing}
+				onOpenChange={(open) => !open && setEditing(null)}
+			>
+				<DialogContent className="max-w-lg">
+					<DialogHeader>
+						<DialogTitle>Edit Location — {editing?.name}</DialogTitle>
+					</DialogHeader>
+					{editing && (
+						<form
+							className="flex flex-col gap-4"
+							onSubmit={(e) => {
+								e.preventDefault();
+								updateLoc.mutate({
+									id: editing.id,
+									name: editing.name,
+									address: editing.address,
+									phone: editing.phone,
+									timezone: editing.timezone,
+									receiptHeader: editing.receiptHeader,
+									receiptFooter: editing.receiptFooter,
+									isActive: editing.isActive,
+								});
+							}}
+						>
+							<div className="grid gap-3 sm:grid-cols-2">
+								<div className="flex flex-col gap-1.5">
+									<Label>Name</Label>
+									<Input
+										value={editing.name}
+										onChange={(e) =>
+											setEditing((p) => p && { ...p, name: e.target.value })
+										}
+										required
+									/>
+								</div>
+								<div className="flex flex-col gap-1.5">
+									<Label>Phone</Label>
+									<Input
+										value={editing.phone ?? ""}
+										onChange={(e) =>
+											setEditing(
+												(p) => p && { ...p, phone: e.target.value || null },
+											)
+										}
+									/>
+								</div>
+								<div className="flex flex-col gap-1.5 sm:col-span-2">
+									<Label>Address</Label>
+									<Input
+										value={editing.address ?? ""}
+										onChange={(e) =>
+											setEditing(
+												(p) => p && { ...p, address: e.target.value || null },
+											)
+										}
+									/>
+								</div>
+								<div className="flex flex-col gap-1.5 sm:col-span-2">
+									<Label>Timezone</Label>
+									<Input
+										value={editing.timezone}
+										onChange={(e) =>
+											setEditing((p) => p && { ...p, timezone: e.target.value })
+										}
+										placeholder="America/Guyana"
+									/>
+								</div>
+								<div className="flex flex-col gap-1.5 sm:col-span-2">
+									<Label>Receipt Header</Label>
+									<Textarea
+										rows={2}
+										className="resize-none"
+										value={editing.receiptHeader ?? ""}
+										onChange={(e) =>
+											setEditing(
+												(p) =>
+													p && { ...p, receiptHeader: e.target.value || null },
+											)
+										}
+									/>
+								</div>
+								<div className="flex flex-col gap-1.5 sm:col-span-2">
+									<Label>Receipt Footer</Label>
+									<Textarea
+										rows={2}
+										className="resize-none"
+										value={editing.receiptFooter ?? ""}
+										onChange={(e) =>
+											setEditing(
+												(p) =>
+													p && { ...p, receiptFooter: e.target.value || null },
+											)
+										}
+									/>
+								</div>
+								<div className="flex items-center gap-2">
+									<Switch
+										checked={editing.isActive}
+										onCheckedChange={(v) =>
+											setEditing((p) => p && { ...p, isActive: v })
+										}
+									/>
+									<Label>Active</Label>
+								</div>
+							</div>
+							<DialogFooter>
+								<Button
+									type="button"
+									variant="outline"
+									onClick={() => setEditing(null)}
+								>
+									Cancel
+								</Button>
+								<Button type="submit" disabled={updateLoc.isPending}>
+									{updateLoc.isPending && (
+										<Loader2 className="mr-2 size-4 animate-spin" />
+									)}
+									Save
+								</Button>
+							</DialogFooter>
+						</form>
+					)}
+				</DialogContent>
+			</Dialog>
+		</>
 	);
 }
 
 // ── Registers Tab ──────────────────────────────────────────────────────
 
+type RegisterRow = {
+	id: string;
+	name: string;
+	locationId: string;
+	workflowMode: string | null;
+	isActive: boolean;
+	receiptHeaderOverride?: string | null;
+};
+
 function RegistersTab() {
+	const queryClient = useQueryClient();
 	const { data: registers = [], isLoading: loadingRegisters } = useQuery(
 		orpc.settings.getRegisters.queryOptions({ input: {} }),
 	);
 	const { data: locations = [] } = useQuery(
 		orpc.settings.getLocations.queryOptions({ input: {} }),
+	);
+	const [editing, setEditing] = useState<RegisterRow | null>(null);
+
+	const updateReg = useMutation(
+		orpc.settings.updateRegister.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.settings.getRegisters.queryOptions({ input: {} })
+						.queryKey,
+				});
+				setEditing(null);
+				toast.success("Register updated");
+			},
+			onError: (err) => toast.error(err.message || "Failed to update register"),
+		}),
 	);
 
 	if (loadingRegisters) return <LoadingCard />;
@@ -260,64 +537,189 @@ function RegistersTab() {
 	const locationMap = new Map(locations.map((l) => [l.id, l.name]));
 
 	return (
-		<Card>
-			<CardHeader className="flex flex-row items-center justify-between">
-				<div>
-					<CardTitle>Registers</CardTitle>
-					<CardDescription>
-						{registers.length} active register
-						{registers.length !== 1 ? "s" : ""}
-					</CardDescription>
-				</div>
-			</CardHeader>
-			<CardContent>
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Name</TableHead>
-							<TableHead>Location</TableHead>
-							<TableHead>Workflow</TableHead>
-							<TableHead>Status</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{registers.length === 0 ? (
+		<>
+			<Card>
+				<CardHeader className="flex flex-row items-center justify-between">
+					<div>
+						<CardTitle>Registers</CardTitle>
+						<CardDescription>
+							{registers.length} register{registers.length !== 1 ? "s" : ""}
+						</CardDescription>
+					</div>
+				</CardHeader>
+				<CardContent>
+					<Table>
+						<TableHeader>
 							<TableRow>
-								<TableCell
-									colSpan={4}
-									className="py-8 text-center text-muted-foreground"
-								>
-									No registers configured.
-								</TableCell>
+								<TableHead>Name</TableHead>
+								<TableHead>Location</TableHead>
+								<TableHead>Workflow</TableHead>
+								<TableHead>Status</TableHead>
+								<TableHead />
 							</TableRow>
-						) : (
-							registers.map((reg) => (
-								<TableRow key={reg.id}>
-									<TableCell className="font-medium">{reg.name}</TableCell>
-									<TableCell className="text-muted-foreground">
-										{locationMap.get(reg.locationId) ?? "Unknown"}
-									</TableCell>
-									<TableCell>
-										<Badge variant="outline" className="text-[10px]">
-											{reg.workflowMode ?? "standard"}
-										</Badge>
-									</TableCell>
-									<TableCell>
-										<Badge variant={reg.isActive ? "default" : "secondary"}>
-											{reg.isActive ? "Active" : "Inactive"}
-										</Badge>
+						</TableHeader>
+						<TableBody>
+							{registers.length === 0 ? (
+								<TableRow>
+									<TableCell
+										colSpan={5}
+										className="py-8 text-center text-muted-foreground"
+									>
+										No registers configured.
 									</TableCell>
 								</TableRow>
-							))
-						)}
-					</TableBody>
-				</Table>
-			</CardContent>
-		</Card>
+							) : (
+								registers.map((reg) => (
+									<TableRow key={reg.id}>
+										<TableCell className="font-medium">{reg.name}</TableCell>
+										<TableCell className="text-muted-foreground">
+											{locationMap.get(reg.locationId) ?? "Unknown"}
+										</TableCell>
+										<TableCell>
+											<Badge variant="outline" className="text-[10px]">
+												{reg.workflowMode ?? "standard"}
+											</Badge>
+										</TableCell>
+										<TableCell>
+											<Badge variant={reg.isActive ? "default" : "secondary"}>
+												{reg.isActive ? "Active" : "Inactive"}
+											</Badge>
+										</TableCell>
+										<TableCell className="text-right">
+											<Button
+												variant="ghost"
+												size="sm"
+												className="gap-1.5"
+												onClick={() => setEditing(reg as RegisterRow)}
+											>
+												<Pencil className="size-3.5" /> Edit
+											</Button>
+										</TableCell>
+									</TableRow>
+								))
+							)}
+						</TableBody>
+					</Table>
+				</CardContent>
+			</Card>
+
+			<Dialog
+				open={!!editing}
+				onOpenChange={(open) => !open && setEditing(null)}
+			>
+				<DialogContent className="max-w-lg">
+					<DialogHeader>
+						<DialogTitle>Edit Register — {editing?.name}</DialogTitle>
+					</DialogHeader>
+					{editing && (
+						<form
+							className="flex flex-col gap-4"
+							onSubmit={(e) => {
+								e.preventDefault();
+								updateReg.mutate({
+									id: editing.id,
+									name: editing.name,
+									workflowMode: editing.workflowMode ?? "standard",
+									receiptHeaderOverride: editing.receiptHeaderOverride ?? null,
+									isActive: editing.isActive,
+								});
+							}}
+						>
+							<div className="grid gap-3 sm:grid-cols-2">
+								<div className="flex flex-col gap-1.5 sm:col-span-2">
+									<Label>Register Name</Label>
+									<Input
+										value={editing.name}
+										onChange={(e) =>
+											setEditing((p) => p && { ...p, name: e.target.value })
+										}
+										required
+									/>
+								</div>
+								<div className="flex flex-col gap-1.5 sm:col-span-2">
+									<Label>Workflow Mode</Label>
+									<Select
+										value={editing.workflowMode ?? "standard"}
+										onValueChange={(v) =>
+											setEditing((p) => p && { ...p, workflowMode: v })
+										}
+									>
+										<SelectTrigger>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="standard">Standard</SelectItem>
+											<SelectItem value="quick_service">
+												Quick Service
+											</SelectItem>
+											<SelectItem value="table_service">
+												Table Service
+											</SelectItem>
+											<SelectItem value="bar">Bar</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="flex flex-col gap-1.5 sm:col-span-2">
+									<Label>Receipt Header Override</Label>
+									<Textarea
+										rows={2}
+										className="resize-none"
+										value={editing.receiptHeaderOverride ?? ""}
+										onChange={(e) =>
+											setEditing(
+												(p) =>
+													p && {
+														...p,
+														receiptHeaderOverride: e.target.value || null,
+													},
+											)
+										}
+										placeholder="Leave blank to use location default"
+									/>
+								</div>
+								<div className="flex items-center gap-2">
+									<Switch
+										checked={editing.isActive}
+										onCheckedChange={(v) =>
+											setEditing((p) => p && { ...p, isActive: v })
+										}
+									/>
+									<Label>Active</Label>
+								</div>
+							</div>
+							<DialogFooter>
+								<Button
+									type="button"
+									variant="outline"
+									onClick={() => setEditing(null)}
+								>
+									Cancel
+								</Button>
+								<Button type="submit" disabled={updateReg.isPending}>
+									{updateReg.isPending && (
+										<Loader2 className="mr-2 size-4 animate-spin" />
+									)}
+									Save
+								</Button>
+							</DialogFooter>
+						</form>
+					)}
+				</DialogContent>
+			</Dialog>
+		</>
 	);
 }
 
 // ── Users Tab ──────────────────────────────────────────────────────────
+
+type UserRow = {
+	id: string;
+	name: string;
+	email: string;
+	role: string | null;
+	createdAt: Date | string | null;
+	banned?: boolean | null;
+};
 
 function UsersTab() {
 	const queryClient = useQueryClient();
@@ -325,26 +727,44 @@ function UsersTab() {
 	const [newName, setNewName] = useState("");
 	const [newEmail, setNewEmail] = useState("");
 	const [newRole, setNewRole] = useState("user");
+	const [editingUser, setEditingUser] = useState<UserRow | null>(null);
+	const [selectedRoleId, setSelectedRoleId] = useState("");
+	const [deactivateTarget, setDeactivateTarget] = useState<UserRow | null>(
+		null,
+	);
 
 	const { data: users = [], isLoading } = useQuery(
 		orpc.settings.getUsers.queryOptions({ input: {} }),
 	);
+	const { data: roles = [] } = useQuery(
+		orpc.settings.getRoles.queryOptions({ input: {} }),
+	);
+
+	const usersKey = orpc.settings.getUsers.queryOptions({ input: {} }).queryKey;
 
 	const createUser = useMutation(
 		orpc.settings.createUser.mutationOptions({
 			onSuccess: () => {
-				queryClient.invalidateQueries({
-					queryKey: orpc.settings.getUsers.queryOptions({ input: {} }).queryKey,
-				});
+				queryClient.invalidateQueries({ queryKey: usersKey });
 				setShowCreate(false);
 				setNewName("");
 				setNewEmail("");
 				setNewRole("user");
 				toast.success("User created");
 			},
-			onError: (err) => {
-				toast.error(err.message || "Failed to create user");
+			onError: (err) => toast.error(err.message || "Failed to create user"),
+		}),
+	);
+
+	const updateUser = useMutation(
+		orpc.settings.updateUser.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: usersKey });
+				setEditingUser(null);
+				setDeactivateTarget(null);
+				toast.success("User updated");
 			},
+			onError: (err) => toast.error(err.message || "Failed to update user"),
 		}),
 	);
 
@@ -374,15 +794,17 @@ function UsersTab() {
 							<TableRow>
 								<TableHead>Name</TableHead>
 								<TableHead>Email</TableHead>
-								<TableHead>Role</TableHead>
+								<TableHead>System Role</TableHead>
+								<TableHead>Status</TableHead>
 								<TableHead>Created</TableHead>
+								<TableHead />
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{users.length === 0 ? (
 								<TableRow>
 									<TableCell
-										colSpan={4}
+										colSpan={6}
 										className="py-8 text-center text-muted-foreground"
 									>
 										No users found.
@@ -390,7 +812,10 @@ function UsersTab() {
 								</TableRow>
 							) : (
 								users.map((u) => (
-									<TableRow key={u.id}>
+									<TableRow
+										key={u.id}
+										className={(u as UserRow).banned ? "opacity-50" : ""}
+									>
 										<TableCell className="font-medium">{u.name}</TableCell>
 										<TableCell className="text-muted-foreground">
 											{u.email}
@@ -402,10 +827,60 @@ function UsersTab() {
 												{u.role ?? "user"}
 											</Badge>
 										</TableCell>
+										<TableCell>
+											{(u as UserRow).banned ? (
+												<Badge variant="destructive">Inactive</Badge>
+											) : (
+												<Badge
+													variant="secondary"
+													className="text-green-700 dark:text-green-400"
+												>
+													Active
+												</Badge>
+											)}
+										</TableCell>
 										<TableCell className="text-muted-foreground text-xs">
 											{u.createdAt
 												? new Date(u.createdAt).toLocaleDateString()
 												: "—"}
+										</TableCell>
+										<TableCell className="text-right">
+											<DropdownMenu>
+												<DropdownMenuTrigger className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground">
+													<MoreHorizontal className="size-4" />
+												</DropdownMenuTrigger>
+												<DropdownMenuContent align="end">
+													<DropdownMenuItem
+														onClick={() => {
+															setEditingUser(u as UserRow);
+															setSelectedRoleId("");
+														}}
+													>
+														<Shield className="mr-2 size-4" /> Change Role
+													</DropdownMenuItem>
+													<DropdownMenuSeparator />
+													{(u as UserRow).banned ? (
+														<DropdownMenuItem
+															onClick={() =>
+																updateUser.mutate({
+																	userId: u.id,
+																	banned: false,
+																})
+															}
+														>
+															<Power className="mr-2 size-4 text-green-600" />{" "}
+															Reactivate
+														</DropdownMenuItem>
+													) : (
+														<DropdownMenuItem
+															className="text-destructive focus:text-destructive"
+															onClick={() => setDeactivateTarget(u as UserRow)}
+														>
+															<X className="mr-2 size-4" /> Deactivate
+														</DropdownMenuItem>
+													)}
+												</DropdownMenuContent>
+											</DropdownMenu>
 										</TableCell>
 									</TableRow>
 								))
@@ -415,6 +890,7 @@ function UsersTab() {
 				</CardContent>
 			</Card>
 
+			{/* Create User Dialog */}
 			<Dialog open={showCreate} onOpenChange={setShowCreate}>
 				<DialogContent>
 					<DialogHeader>
@@ -451,16 +927,14 @@ function UsersTab() {
 							/>
 						</div>
 						<div className="flex flex-col gap-1.5">
-							<Label htmlFor="user-role">Role</Label>
+							<Label htmlFor="user-role">System Role</Label>
 							<Select value={newRole} onValueChange={setNewRole}>
 								<SelectTrigger id="user-role">
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="user">User</SelectItem>
-									<SelectItem value="cashier">Cashier</SelectItem>
 									<SelectItem value="admin">Admin</SelectItem>
-									<SelectItem value="executive">Executive</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
@@ -482,6 +956,86 @@ function UsersTab() {
 					</form>
 				</DialogContent>
 			</Dialog>
+
+			{/* Change Role Dialog */}
+			<Dialog
+				open={!!editingUser}
+				onOpenChange={(open) => !open && setEditingUser(null)}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Change Role — {editingUser?.name}</DialogTitle>
+					</DialogHeader>
+					<div className="flex flex-col gap-4">
+						<div className="flex flex-col gap-1.5">
+							<Label>Assign POS Role</Label>
+							<Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+								<SelectTrigger>
+									<SelectValue placeholder="Select a role..." />
+								</SelectTrigger>
+								<SelectContent>
+									{roles.map((r) => (
+										<SelectItem key={r.id} value={r.id}>
+											{r.name}
+											{r.isSystem ? " (System)" : ""}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<DialogFooter>
+							<Button variant="outline" onClick={() => setEditingUser(null)}>
+								Cancel
+							</Button>
+							<Button
+								disabled={!selectedRoleId || updateUser.isPending}
+								onClick={() =>
+									editingUser &&
+									updateUser.mutate({
+										userId: editingUser.id,
+										roleId: selectedRoleId,
+									})
+								}
+							>
+								{updateUser.isPending && (
+									<Loader2 className="mr-2 size-4 animate-spin" />
+								)}
+								Apply Role
+							</Button>
+						</DialogFooter>
+					</div>
+				</DialogContent>
+			</Dialog>
+
+			{/* Deactivate Confirmation */}
+			<AlertDialog
+				open={!!deactivateTarget}
+				onOpenChange={(open) => !open && setDeactivateTarget(null)}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							Deactivate {deactivateTarget?.name}?
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							This will prevent them from logging in. Their data is preserved
+							and they can be reactivated later.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={() =>
+								deactivateTarget &&
+								updateUser.mutate({ userId: deactivateTarget.id, banned: true })
+							}
+						>
+							Deactivate
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</>
 	);
 }
@@ -966,7 +1520,7 @@ function ReceiptConfigTab() {
 							</div>
 							<div className="flex justify-between">
 								<span>Date</span>
-								<span>{new Date().toLocaleDateString()}</span>
+								<span>{todayGY()}</span>
 							</div>
 							<div className="flex justify-between">
 								<span>Served by</span>
@@ -2130,6 +2684,488 @@ function DocumentSettingsTab() {
 						Save Document Settings
 					</Button>
 				</div>
+			</Card>
+		</div>
+	);
+}
+
+// ── Roles & Permissions Tab ────────────────────────────────────────────
+
+const ALL_MODULES = [
+	{ key: "orders", label: "Orders" },
+	{ key: "products", label: "Products" },
+	{ key: "customers", label: "Customers" },
+	{ key: "reports", label: "Reports" },
+	{ key: "settings", label: "Settings" },
+	{ key: "users", label: "Users" },
+	{ key: "modifiers", label: "Modifiers" },
+	{ key: "categories", label: "Categories" },
+	{ key: "suppliers", label: "Suppliers" },
+	{ key: "inventory", label: "Inventory" },
+	{ key: "invoices", label: "Invoices" },
+	{ key: "quotations", label: "Quotations" },
+	{ key: "expenses", label: "Expenses" },
+	{ key: "staff", label: "Staff" },
+];
+const ALL_ACTIONS = ["create", "read", "update", "delete"];
+
+type RoleRecord = {
+	id: string;
+	name: string;
+	permissions: unknown;
+	isSystem: boolean;
+	createdAt: Date | string;
+};
+
+function RolesTab() {
+	const queryClient = useQueryClient();
+	const { data: roles = [], isLoading } = useQuery(
+		orpc.settings.getRoles.queryOptions({ input: {} }),
+	);
+	const [editingRole, setEditingRole] = useState<RoleRecord | null>(null);
+	const [editPerms, setEditPerms] = useState<Record<string, string[]>>({});
+	const [editName, setEditName] = useState("");
+	const [showCreate, setShowCreate] = useState(false);
+	const [newRoleName, setNewRoleName] = useState("");
+	const [deleteTarget, setDeleteTarget] = useState<RoleRecord | null>(null);
+
+	const rolesKey = orpc.settings.getRoles.queryOptions({ input: {} }).queryKey;
+
+	const updateRoleMut = useMutation(
+		orpc.settings.updateRole.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: rolesKey });
+				setEditingRole(null);
+				toast.success("Role updated");
+			},
+			onError: (err) => toast.error(err.message || "Failed to update role"),
+		}),
+	);
+
+	const createRoleMut = useMutation(
+		orpc.settings.createRole.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: rolesKey });
+				setShowCreate(false);
+				setNewRoleName("");
+				toast.success("Role created");
+			},
+			onError: (err) => toast.error(err.message || "Failed to create role"),
+		}),
+	);
+
+	const deleteRoleMut = useMutation(
+		orpc.settings.deleteRole.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: rolesKey });
+				setDeleteTarget(null);
+				toast.success("Role deleted");
+			},
+			onError: (err) => toast.error(err.message || "Failed to delete role"),
+		}),
+	);
+
+	function openEdit(role: RoleRecord) {
+		setEditingRole(role);
+		setEditName(role.name);
+		setEditPerms((role.permissions as Record<string, string[]>) ?? {});
+	}
+
+	function togglePerm(module: string, action: string) {
+		setEditPerms((prev) => {
+			const current = prev[module] ?? [];
+			const next = current.includes(action)
+				? current.filter((a) => a !== action)
+				: [...current, action];
+			return { ...prev, [module]: next };
+		});
+	}
+
+	function toggleModule(module: string) {
+		setEditPerms((prev) => {
+			const current = prev[module] ?? [];
+			const next =
+				current.length === ALL_ACTIONS.length ? [] : [...ALL_ACTIONS];
+			return { ...prev, [module]: next };
+		});
+	}
+
+	if (isLoading) return <LoadingCard />;
+
+	return (
+		<>
+			<Card>
+				<CardHeader className="flex flex-row items-center justify-between">
+					<div>
+						<CardTitle>Roles & Permissions</CardTitle>
+						<CardDescription>
+							Define what each role can access across the POS.
+						</CardDescription>
+					</div>
+					<Button
+						size="sm"
+						className="gap-1.5"
+						onClick={() => setShowCreate(true)}
+					>
+						<Plus className="size-3.5" /> New Role
+					</Button>
+				</CardHeader>
+				<CardContent>
+					<div className="flex flex-col gap-3">
+						{roles.map((role) => (
+							<div
+								key={role.id}
+								className="flex items-center justify-between rounded-lg border border-border px-4 py-3"
+							>
+								<div className="flex items-center gap-3">
+									<Shield className="size-4 text-primary" />
+									<div>
+										<p className="font-medium text-sm">{role.name}</p>
+										<p className="text-muted-foreground text-xs">
+											{
+												Object.keys(
+													(role.permissions as Record<string, string[]>) ?? {},
+												).length
+											}{" "}
+											module
+											{Object.keys(
+												(role.permissions as Record<string, string[]>) ?? {},
+											).length !== 1
+												? "s"
+												: ""}{" "}
+											configured
+											{role.isSystem && " · System role"}
+										</p>
+									</div>
+								</div>
+								<div className="flex gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										className="gap-1.5"
+										onClick={() => openEdit(role as RoleRecord)}
+									>
+										<Pencil className="size-3.5" /> Edit Permissions
+									</Button>
+									{!role.isSystem && (
+										<Button
+											variant="ghost"
+											size="sm"
+											className="text-destructive hover:text-destructive"
+											onClick={() => setDeleteTarget(role as RoleRecord)}
+										>
+											<Trash2 className="size-3.5" />
+										</Button>
+									)}
+								</div>
+							</div>
+						))}
+					</div>
+				</CardContent>
+			</Card>
+
+			{/* Edit Permissions Dialog */}
+			<Dialog
+				open={!!editingRole}
+				onOpenChange={(open) => !open && setEditingRole(null)}
+			>
+				<DialogContent className="max-w-2xl">
+					<DialogHeader>
+						<DialogTitle>Edit Role Permissions</DialogTitle>
+					</DialogHeader>
+					{editingRole && (
+						<div className="flex flex-col gap-4">
+							<div className="flex flex-col gap-1.5">
+								<Label>Role Name</Label>
+								<Input
+									value={editName}
+									onChange={(e) => setEditName(e.target.value)}
+									disabled={editingRole.isSystem}
+								/>
+							</div>
+							<div className="overflow-x-auto">
+								<table className="w-full text-sm">
+									<thead>
+										<tr className="border-border border-b">
+											<th className="py-2 pr-4 text-left font-medium">
+												Module
+											</th>
+											{ALL_ACTIONS.map((a) => (
+												<th
+													key={a}
+													className="w-16 py-2 text-center font-medium capitalize"
+												>
+													{a}
+												</th>
+											))}
+											<th className="w-12 py-2 text-center text-muted-foreground text-xs">
+												All
+											</th>
+										</tr>
+									</thead>
+									<tbody>
+										{ALL_MODULES.map(({ key, label }) => {
+											const granted = editPerms[key] ?? [];
+											const allGranted = ALL_ACTIONS.every((a) =>
+												granted.includes(a),
+											);
+											return (
+												<tr
+													key={key}
+													className="border-border/50 border-b last:border-0"
+												>
+													<td className="py-2 pr-4 font-medium">{label}</td>
+													{ALL_ACTIONS.map((action) => (
+														<td key={action} className="py-2 text-center">
+															<button
+																type="button"
+																onClick={() => togglePerm(key, action)}
+																className={`inline-flex size-6 items-center justify-center rounded border transition-colors ${granted.includes(action) ? "border-primary bg-primary text-primary-foreground" : "border-border text-transparent hover:border-primary/50"}`}
+															>
+																<Check className="size-3.5" />
+															</button>
+														</td>
+													))}
+													<td className="py-2 text-center">
+														<button
+															type="button"
+															onClick={() => toggleModule(key)}
+															className={`inline-flex size-6 items-center justify-center rounded border transition-colors ${allGranted ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:border-primary/50"}`}
+														>
+															<Check className="size-3.5" />
+														</button>
+													</td>
+												</tr>
+											);
+										})}
+									</tbody>
+								</table>
+							</div>
+							<DialogFooter>
+								<Button variant="outline" onClick={() => setEditingRole(null)}>
+									Cancel
+								</Button>
+								<Button
+									disabled={updateRoleMut.isPending}
+									onClick={() =>
+										updateRoleMut.mutate({
+											id: editingRole.id,
+											name: editName,
+											permissions: editPerms,
+										})
+									}
+								>
+									{updateRoleMut.isPending && (
+										<Loader2 className="mr-2 size-4 animate-spin" />
+									)}
+									Save Permissions
+								</Button>
+							</DialogFooter>
+						</div>
+					)}
+				</DialogContent>
+			</Dialog>
+
+			{/* Create Role Dialog */}
+			<Dialog open={showCreate} onOpenChange={setShowCreate}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>New Role</DialogTitle>
+					</DialogHeader>
+					<div className="flex flex-col gap-4">
+						<div className="flex flex-col gap-1.5">
+							<Label>Role Name</Label>
+							<Input
+								value={newRoleName}
+								onChange={(e) => setNewRoleName(e.target.value)}
+								placeholder="e.g. Supervisor"
+							/>
+						</div>
+						<p className="text-muted-foreground text-xs">
+							You can set permissions after creating the role.
+						</p>
+						<DialogFooter>
+							<Button variant="outline" onClick={() => setShowCreate(false)}>
+								Cancel
+							</Button>
+							<Button
+								disabled={!newRoleName.trim() || createRoleMut.isPending}
+								onClick={() => createRoleMut.mutate({ name: newRoleName })}
+							>
+								{createRoleMut.isPending && (
+									<Loader2 className="mr-2 size-4 animate-spin" />
+								)}
+								Create
+							</Button>
+						</DialogFooter>
+					</div>
+				</DialogContent>
+			</Dialog>
+
+			{/* Delete Role Confirmation */}
+			<AlertDialog
+				open={!!deleteTarget}
+				onOpenChange={(open) => !open && setDeleteTarget(null)}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete "{deleteTarget?.name}"?</AlertDialogTitle>
+						<AlertDialogDescription>
+							This will remove the role and unassign any users. This cannot be
+							undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={() =>
+								deleteTarget && deleteRoleMut.mutate({ id: deleteTarget.id })
+							}
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</>
+	);
+}
+
+// ── POS Behavior Tab ───────────────────────────────────────────────────
+
+function PosSettingsTab() {
+	const queryClient = useQueryClient();
+	const { data: pos, isLoading } = useQuery(
+		orpc.settings.getPosSettings.queryOptions({ input: {} }),
+	);
+
+	const posKey = orpc.settings.getPosSettings.queryOptions({
+		input: {},
+	}).queryKey;
+
+	const updatePos = useMutation(
+		orpc.settings.updatePosSettings.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: posKey });
+				toast.success("POS settings saved");
+			},
+			onError: (err) => toast.error(err.message || "Failed to save"),
+		}),
+	);
+
+	if (isLoading) return <LoadingCard />;
+
+	const settings: Array<{
+		key: keyof NonNullable<typeof pos>;
+		label: string;
+		description: string;
+	}> = [
+		{
+			key: "autoPrintReceipt",
+			label: "Auto-print Receipt",
+			description:
+				"Automatically send receipt to printer after each order is completed.",
+		},
+		{
+			key: "requireCashSession",
+			label: "Require Cash Session",
+			description:
+				"Cashiers must open a cash drawer session before placing orders.",
+		},
+		{
+			key: "allowOpenPrice",
+			label: "Allow Open Price",
+			description: "Allow cashiers to manually enter a price for any product.",
+		},
+		{
+			key: "requireNoteOnVoid",
+			label: "Require Note on Void",
+			description:
+				"A reason must be provided when voiding an order or line item.",
+		},
+		{
+			key: "showTaxOnReceipt",
+			label: "Show Tax on Receipt",
+			description: "Display the tax breakdown on customer receipts.",
+		},
+		{
+			key: "enableTableManagement",
+			label: "Table Management",
+			description: "Enable the floor plan and table assignment features.",
+		},
+		{
+			key: "enableKds",
+			label: "Kitchen Display (KDS)",
+			description: "Send orders to the kitchen display system.",
+		},
+		{
+			key: "enableLoyalty",
+			label: "Loyalty Program",
+			description: "Enable customer loyalty points and rewards.",
+		},
+		{
+			key: "enableGiftCards",
+			label: "Gift Cards",
+			description: "Enable gift card purchase and redemption at POS.",
+		},
+	];
+
+	return (
+		<div className="flex flex-col gap-4">
+			<Card>
+				<CardHeader>
+					<CardTitle>POS Behavior</CardTitle>
+					<CardDescription>
+						Control how the point-of-sale behaves for your team. Changes take
+						effect immediately.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<div className="flex flex-col divide-y divide-border">
+						{settings.map(({ key, label, description }) => (
+							<div
+								key={key}
+								className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
+							>
+								<div>
+									<p className="font-medium text-sm">{label}</p>
+									<p className="text-muted-foreground text-xs">{description}</p>
+								</div>
+								<Switch
+									checked={!!(pos?.[key] as boolean)}
+									disabled={updatePos.isPending}
+									onCheckedChange={(val) => updatePos.mutate({ [key]: val })}
+								/>
+							</div>
+						))}
+					</div>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Default Order Type</CardTitle>
+					<CardDescription>
+						Which order type is pre-selected when opening a new order.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<Select
+						value={pos?.defaultOrderType ?? "dine_in"}
+						onValueChange={(v) => updatePos.mutate({ defaultOrderType: v })}
+					>
+						<SelectTrigger className="w-48">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="dine_in">Dine In</SelectItem>
+							<SelectItem value="takeout">Takeout</SelectItem>
+							<SelectItem value="delivery">Delivery</SelectItem>
+							<SelectItem value="bar">Bar</SelectItem>
+						</SelectContent>
+					</Select>
+				</CardContent>
 			</Card>
 		</div>
 	);

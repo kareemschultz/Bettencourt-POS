@@ -6,7 +6,7 @@ import {
 	TrendingDown,
 	TrendingUp,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +29,38 @@ import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
 
+function printPagePopup(el: HTMLElement | null) {
+	if (!el) {
+		window.print();
+		return;
+	}
+	const win = window.open(
+		"",
+		"_blank",
+		"width=900,height=700,menubar=no,toolbar=no,scrollbars=yes",
+	);
+	if (!win) {
+		window.print();
+		return;
+	}
+	for (const link of document.querySelectorAll<HTMLLinkElement>(
+		'link[rel="stylesheet"]',
+	)) {
+		const newLink = win.document.createElement("link");
+		newLink.rel = "stylesheet";
+		newLink.href = link.href;
+		win.document.head.appendChild(newLink);
+	}
+	win.document.body.appendChild(win.document.importNode(el, true));
+	win.focus();
+	setTimeout(() => {
+		win.print();
+		win.close();
+	}, 600);
+}
+
 export default function EodReportPage() {
+	const pageRef = useRef<HTMLDivElement>(null);
 	const [date, setDate] = useState(todayGY());
 
 	const { data: report, isLoading } = useQuery(
@@ -64,7 +95,7 @@ export default function EodReportPage() {
 	const netAfterExpenses = totalRevenue - totalExpenses;
 
 	return (
-		<div className="flex flex-col gap-6 p-4 md:p-6">
+		<div ref={pageRef} className="flex flex-col gap-6 p-4 md:p-6">
 			{/* Header — hidden in print */}
 			<div className="flex items-center justify-between print:hidden">
 				<div>
@@ -84,7 +115,10 @@ export default function EodReportPage() {
 						className="w-auto"
 						aria-label="Report date"
 					/>
-					<Button className="gap-2" onClick={() => window.print()}>
+					<Button
+						className="gap-2"
+						onClick={() => printPagePopup(pageRef.current)}
+					>
 						<Printer className="size-4" /> Print
 					</Button>
 				</div>

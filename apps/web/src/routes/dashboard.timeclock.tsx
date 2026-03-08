@@ -12,6 +12,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
 	TableBody,
@@ -182,7 +183,7 @@ export default function TimeclockPage() {
 					<Card>
 						<CardContent className="flex flex-col items-center gap-6 py-12">
 							{loadingShift ? (
-								<p className="text-muted-foreground">Loading...</p>
+								<Skeleton className="h-4 w-24" />
 							) : isClockedIn ? (
 								<>
 									<Badge className="bg-emerald-600 px-4 py-1 text-sm text-white">

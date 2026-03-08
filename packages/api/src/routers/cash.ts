@@ -1,5 +1,6 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
+import { ORPCError } from "@orpc/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
@@ -63,6 +64,25 @@ const openSession = permissionProcedure("shifts.create")
 		}),
 	)
 	.handler(async ({ input }) => {
+		// Guard: only one open session allowed per register at a time
+		const existingOpen = await db
+			.select({ id: schema.cashSession.id })
+			.from(schema.cashSession)
+			.where(
+				and(
+					eq(schema.cashSession.registerId, input.registerId),
+					eq(schema.cashSession.status, "open"),
+				),
+			)
+			.limit(1);
+
+		if (existingOpen.length > 0) {
+			throw new ORPCError("CONFLICT", {
+				message:
+					"A cash session is already open for this register. Close it before opening a new one.",
+			});
+		}
+
 		const rows = await db
 			.insert(schema.cashSession)
 			.values({
@@ -89,6 +109,21 @@ const closeSession = permissionProcedure("shifts.update")
 		}),
 	)
 	.handler(async ({ input }) => {
+		const existing = await db
+			.select({ id: schema.cashSession.id, status: schema.cashSession.status })
+			.from(schema.cashSession)
+			.where(eq(schema.cashSession.id, input.sessionId))
+			.limit(1);
+
+		if (existing.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Cash session not found" });
+		}
+		if (existing[0]!.status !== "open") {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Cash session is not open",
+			});
+		}
+
 		const variance = Number(input.actualCash) - Number(input.expectedCash);
 
 		await db

@@ -10,6 +10,16 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -206,6 +216,7 @@ export default function WasteTrackingPage() {
 	} | null>(null);
 
 	// Mutations
+	const [deleteWasteId, setDeleteWasteId] = useState<string | null>(null);
 	const logWasteMutation = useMutation(
 		orpc.inventory.logWaste.mutationOptions({
 			onSuccess: () => {
@@ -984,9 +995,7 @@ export default function WasteTrackingPage() {
 														className="size-7 text-destructive hover:text-destructive"
 														disabled={deleteWasteMutation.isPending}
 														onClick={() => {
-															if (confirm("Delete this waste entry?")) {
-																deleteWasteMutation.mutate({ id: entry.id });
-															}
+															setDeleteWasteId(entry.id);
 														}}
 													>
 														<Trash2 className="size-3.5" />
@@ -1146,6 +1155,35 @@ export default function WasteTrackingPage() {
 					</CardContent>
 				</Card>
 			)}
+
+			{/* Delete Waste Entry Confirmation */}
+			<AlertDialog
+				open={!!deleteWasteId}
+				onOpenChange={(o) => {
+					if (!o) setDeleteWasteId(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete this waste entry?</AlertDialogTitle>
+						<AlertDialogDescription>
+							This waste log entry will be permanently removed.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={() =>
+								deleteWasteId &&
+								deleteWasteMutation.mutate({ id: deleteWasteId })
+							}
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

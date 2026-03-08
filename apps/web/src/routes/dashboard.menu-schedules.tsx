@@ -9,6 +9,16 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +33,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
 	Table,
@@ -155,6 +166,9 @@ export default function MenuSchedulesPage() {
 	const listKey = orpc.menuSchedules.list.queryOptions({ input: {} })
 		.queryKey as readonly unknown[];
 
+	const [deleteConfirmSchedule, setDeleteConfirmSchedule] = useState<
+		string | null
+	>(null);
 	const createMut = useMutation(
 		orpc.menuSchedules.create.mutationOptions({
 			onSuccess: () => {
@@ -188,6 +202,8 @@ export default function MenuSchedulesPage() {
 				queryClient.invalidateQueries({ queryKey: listKey });
 				toast.success("Schedule deleted");
 			},
+			onError: (err: Error) =>
+				toast.error(err.message || "Failed to delete schedule"),
 		}),
 	);
 
@@ -196,6 +212,8 @@ export default function MenuSchedulesPage() {
 			onSuccess: () => {
 				queryClient.invalidateQueries({ queryKey: listKey });
 			},
+			onError: (err: Error) =>
+				toast.error(err.message || "Failed to toggle schedule"),
 		}),
 	);
 
@@ -368,7 +386,7 @@ export default function MenuSchedulesPage() {
 										colSpan={7}
 										className="py-8 text-center text-muted-foreground"
 									>
-										Loading...
+										<Skeleton className="h-4 w-full" />
 									</TableCell>
 								</TableRow>
 							) : schedules.length === 0 ? (
@@ -449,9 +467,7 @@ export default function MenuSchedulesPage() {
 														variant="ghost"
 														size="sm"
 														onClick={() => {
-															if (confirm("Delete this schedule?")) {
-																deleteMut.mutate({ id: schedule.id } as never);
-															}
+															setDeleteConfirmSchedule(schedule.id);
 														}}
 													>
 														<Trash2 className="size-3.5 text-destructive" />
@@ -669,6 +685,35 @@ export default function MenuSchedulesPage() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			{/* Delete Schedule Confirmation */}
+			<AlertDialog
+				open={!!deleteConfirmSchedule}
+				onOpenChange={(o) => {
+					if (!o) setDeleteConfirmSchedule(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete this schedule?</AlertDialogTitle>
+						<AlertDialogDescription>
+							This menu schedule will be permanently removed.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={() =>
+								deleteConfirmSchedule &&
+								deleteMut.mutate({ id: deleteConfirmSchedule } as never)
+							}
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

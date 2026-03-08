@@ -1,7 +1,7 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { ORPCError } from "@orpc/server";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 
@@ -46,34 +46,44 @@ const splitEqual = permissionProcedure("orders.create")
 		const lastPersonAmount =
 			Math.round((total - perPerson * (numberOfWays - 1)) * 100) / 100;
 
-		// Mark order as split
-		await db
-			.update(schema.order)
-			.set({ isSplit: true })
-			.where(eq(schema.order.id, orderId));
+		// Wrap in transaction for idempotency: remove prior pending splits, create new set
+		const inserted = await db.transaction(async (tx) => {
+			// Delete any prior pending split payments to prevent duplicates
+			await tx
+				.delete(schema.payment)
+				.where(
+					and(
+						eq(schema.payment.orderId, orderId),
+						eq(schema.payment.status, "pending"),
+					),
+				);
 
-		// Create split payment records
-		const paymentValues = [];
-		for (let i = 1; i <= numberOfWays; i++) {
-			const amount = i === numberOfWays ? lastPersonAmount : perPerson;
-			paymentValues.push({
-				orderId,
-				method: "pending" as const,
-				amount: amount.toFixed(2),
-				splitGroup: i,
-				status: "pending" as const,
-				reference: `Split ${i}/${numberOfWays}`,
-			});
-		}
+			// Mark order as split
+			await tx
+				.update(schema.order)
+				.set({ isSplit: true })
+				.where(eq(schema.order.id, orderId));
 
-		const inserted = await db
-			.insert(schema.payment)
-			.values(paymentValues)
-			.returning({
+			// Create split payment records
+			const paymentValues = [];
+			for (let i = 1; i <= numberOfWays; i++) {
+				const amount = i === numberOfWays ? lastPersonAmount : perPerson;
+				paymentValues.push({
+					orderId,
+					method: "pending" as const,
+					amount: amount.toFixed(2),
+					splitGroup: i,
+					status: "pending" as const,
+					reference: `Split ${i}/${numberOfWays}`,
+				});
+			}
+
+			return tx.insert(schema.payment).values(paymentValues).returning({
 				id: schema.payment.id,
 				splitGroup: schema.payment.splitGroup,
 				amount: schema.payment.amount,
 			});
+		});
 
 		return {
 			splits: inserted.map((p) => ({
@@ -158,36 +168,46 @@ const splitByItems = permissionProcedure("orders.create")
 			seen.add(itemId);
 		}
 
-		// Mark order as split
-		await db
-			.update(schema.order)
-			.set({ isSplit: true })
-			.where(eq(schema.order.id, orderId));
+		// Wrap in transaction for idempotency: remove prior pending splits, create new set
+		const inserted = await db.transaction(async (tx) => {
+			// Delete any prior pending split payments to prevent duplicates
+			await tx
+				.delete(schema.payment)
+				.where(
+					and(
+						eq(schema.payment.orderId, orderId),
+						eq(schema.payment.status, "pending"),
+					),
+				);
 
-		// Create payment records per split group
-		const paymentValues = splits.map((split, idx) => {
-			const groupTotal = split.items.reduce(
-				(sum, id) => sum + (itemMap.get(id) || 0),
-				0,
-			);
-			return {
-				orderId,
-				method: split.paymentMethod,
-				amount: groupTotal.toFixed(2),
-				splitGroup: idx + 1,
-				status: "pending" as const,
-				reference: `Check ${idx + 1} (${split.items.length} items)`,
-			};
-		});
+			// Mark order as split
+			await tx
+				.update(schema.order)
+				.set({ isSplit: true })
+				.where(eq(schema.order.id, orderId));
 
-		const inserted = await db
-			.insert(schema.payment)
-			.values(paymentValues)
-			.returning({
+			// Create payment records per split group
+			const paymentValues = splits.map((split, idx) => {
+				const groupTotal = split.items.reduce(
+					(sum, id) => sum + (itemMap.get(id) || 0),
+					0,
+				);
+				return {
+					orderId,
+					method: split.paymentMethod,
+					amount: groupTotal.toFixed(2),
+					splitGroup: idx + 1,
+					status: "pending" as const,
+					reference: `Check ${idx + 1} (${split.items.length} items)`,
+				};
+			});
+
+			return tx.insert(schema.payment).values(paymentValues).returning({
 				id: schema.payment.id,
 				splitGroup: schema.payment.splitGroup,
 				amount: schema.payment.amount,
 			});
+		});
 
 		return {
 			splits: inserted.map((p) => ({

@@ -251,3 +251,79 @@ Client feedback (Shakira, WhatsApp): pointed to combo items in the Check Off scr
 ### Commit
 
 `feat: print polish, check-off bug fixes, combo component splitting` (2026-03-07)
+
+---
+
+## Plan #7 — Comprehensive Codebase Audit & Bug Fix (2026-03-07)
+
+### Context
+
+Full 4-phase audit covering all critical, high, medium, and low priority issues found by static + runtime analysis of the entire codebase.
+
+### Phase 1 — Critical Fixes ✅
+
+| Task | Status | Details |
+|------|--------|---------|
+| 1A: modifiers.ts wrong WHERE | ✅ Done | `&&` → `and()` in `unlinkGroupFromProduct`; was deleting ALL modifier links for a group |
+| 1B: reconciliation.ts SQL injection | ✅ Done | `sql.raw()` with interpolated UUID → parameterized `sql` template literal |
+| 1C: checkout payment validation | ✅ Done | `payments.min(1)` in Zod schema; sum ≥ order total; reject zero/negative amounts |
+| 1D: payment clamping / split tender | ✅ Done | Sequential balance allocator; sum ALL cash rows for cash session (not just first) |
+| 1E: combo double-count in reports | ✅ Done | `isComponent` column on `order_line_item`; reports exclude component lines; KDS keeps them |
+| 1F: EOD print (full page) | ✅ Done | Popup-based printing with dedicated print stylesheet |
+| 1G: Production report print | ✅ Done | Same popup-based printing pattern |
+| 1H: P&L print | ✅ Done | Same popup-based printing pattern |
+| 1I: Reports dashboard print | ✅ Done | Same popup-based printing pattern |
+
+### Phase 2 — High Priority Fixes ✅
+
+| Task | Status | Details |
+|------|--------|---------|
+| 2A: Refund bounds validation | ✅ Done | Reject refund > order total; track cumulative refunded; idempotency guard |
+| 2B: Kitchen SSE auth gate | ✅ Done | `/api/kitchen/events` requires authenticated session; returns 401 otherwise |
+| 2C: Split-bill idempotency | ✅ Done | Delete prior pending payments in transaction before creating new set |
+| 2D: Dead code removal | ✅ Done | Deleted header, sign-in-form, sign-up-form, loader, mode-toggle, user-menu, hardware.ts |
+
+### Phase 3 — Medium Priority Fixes ✅
+
+| Task | Status | Details |
+|------|--------|---------|
+| 3A: Gift cards race condition | ✅ Done | Atomic UPDATE ... WHERE balance >= amount; reject if insufficient balance |
+| 3B: menu-schedules transaction | ✅ Done | Delete+insert wrapped in `db.transaction()` |
+| 3C: Discount overnight window | ✅ Done | `startTime > endTime` → OR condition for overnight schedules |
+| 3D: Audit log outside transaction | ✅ Done | `createAuditLog()` moved after `db.transaction()` commits |
+| 3E: Cash session lifecycle | ✅ Done | Guard: one open session per register; close validates `open` status |
+| 3F: Notification secrets masking | ✅ Done | `getSettings` returns `hasCredentials` + `accountSidMasked`; never full token |
+| 3G: Notification test stub fix | ✅ Done | Test send fails explicitly when provider not configured |
+| 3H: Missing onError handlers | ✅ Done | Added `toast.error()` to all silent mutations across kitchen, menu-schedules, products pages |
+| 3I: Replace `confirm()` with AlertDialog | ✅ Done | 9 delete actions converted: customers, suppliers, expenses (×2), waste, webhooks, menu-schedules |
+| 3J: Date handling (Guyana TZ) | ✅ Done | `todayGY()` used in discounts.tsx, settings.tsx |
+| 3K: deleteRole NOT_FOUND | ✅ Done | Fetch role first; throw NOT_FOUND if missing |
+| 3L: locations.ts permission check | ✅ Done | Changed to `permissionProcedure("settings.read")` |
+| 3M: Reports weekly trend date params | ✅ Done | Date range filter applied to weekly trend SQL |
+| 3N: online-order time parsing | ✅ Done | Guyana TZ-aware ISO 8601 string: `${date}T${time}:00-04:00` |
+| 3O: cash.tsx hardcoded location | ✅ Done | Uses `useLocationContext()` from dashboard.tsx |
+| 3P: notifications.tsx render state | ✅ Done | `setInitialized` moved into `useEffect` |
+| 3Q: PAGE_TITLES / ROUTE_MODULE_MAP | ✅ Done | Removed bogus `/dashboard/users`; added `/dashboard/production` |
+
+### Phase 4 — Low Priority Fixes ✅
+
+| Task | Status | Details |
+|------|--------|---------|
+| 4A: ORPCError in online-order.ts | ✅ Done | All `throw new Error()` replaced with `throw new ORPCError()` with explicit HTTP codes |
+| 4B: check-types pipeline | ✅ Done | `check-types` script added to `web` and `api` packages; turbo pipeline runs all 8 packages |
+| 4C: turbo.json outputs | ✅ Done | Added `web#build` override with `build/**` + `.react-router/**` outputs |
+| 4D: Biome linting excludes | ✅ Done | `.react-router` excluded from `files.includes` in biome.json |
+| 4E: Composite indexes | ✅ Done | `(organizationId, createdAt)` on orders and expenses; `(customerId)` index on orders |
+| 4F: Skeleton loaders | ✅ Done | 11 route files updated: discounts, locations, customers, menu-schedules, giftcards, audit, labels, timeclock, production-report, products, pos |
+| 4G: productionLog.createdAt notNull | ✅ Done | Added `.notNull()` to schema; applied via db:push |
+| 4H: order.tableId FK | ⏭ Skipped | No `dining_table` entity in schema; FK has no target |
+
+### TypeScript & Build
+
+- `bun run check-types`: 3/3 checked packages pass (api, server, web)
+- `bun run build`: clean build
+- `db:push`: all schema changes applied to DB
+
+### Commit
+
+`fix: comprehensive codebase audit — critical bugs, security, UX polish, schema fixes` (2026-03-07)

@@ -793,9 +793,299 @@ const updateDocumentSettings = permissionProcedure("settings.update")
 		return { success: true };
 	});
 
+// ── updateOrganization ────────────────────────────────────────────────
+const updateOrganization = permissionProcedure("settings.update")
+	.input(
+		z.object({
+			id: z.string().uuid(),
+			name: z.string().min(1).optional(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const updates: Record<string, unknown> = {};
+		if (input.name !== undefined) updates.name = input.name;
+		await db
+			.update(schema.organization)
+			.set(updates)
+			.where(eq(schema.organization.id, input.id));
+		return { success: true };
+	});
+
+// ── updateLocation ────────────────────────────────────────────────────
+const updateLocation = permissionProcedure("settings.update")
+	.input(
+		z.object({
+			id: z.string().uuid(),
+			name: z.string().min(1).optional(),
+			address: z.string().nullable().optional(),
+			phone: z.string().nullable().optional(),
+			timezone: z.string().optional(),
+			receiptHeader: z.string().nullable().optional(),
+			receiptFooter: z.string().nullable().optional(),
+			isActive: z.boolean().optional(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const { id, ...rest } = input;
+		const updates: Record<string, unknown> = {};
+		if (rest.name !== undefined) updates.name = rest.name;
+		if (rest.address !== undefined) updates.address = rest.address;
+		if (rest.phone !== undefined) updates.phone = rest.phone;
+		if (rest.timezone !== undefined) updates.timezone = rest.timezone;
+		if (rest.receiptHeader !== undefined)
+			updates.receiptHeader = rest.receiptHeader;
+		if (rest.receiptFooter !== undefined)
+			updates.receiptFooter = rest.receiptFooter;
+		if (rest.isActive !== undefined) updates.isActive = rest.isActive;
+		await db
+			.update(schema.location)
+			.set(updates)
+			.where(eq(schema.location.id, id));
+		return { success: true };
+	});
+
+// ── updateRegister ────────────────────────────────────────────────────
+const updateRegister = permissionProcedure("settings.update")
+	.input(
+		z.object({
+			id: z.string().uuid(),
+			name: z.string().min(1).optional(),
+			workflowMode: z.string().optional(),
+			receiptHeaderOverride: z.string().nullable().optional(),
+			isActive: z.boolean().optional(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const { id, ...rest } = input;
+		const updates: Record<string, unknown> = {};
+		if (rest.name !== undefined) updates.name = rest.name;
+		if (rest.workflowMode !== undefined)
+			updates.workflowMode = rest.workflowMode;
+		if (rest.receiptHeaderOverride !== undefined)
+			updates.receiptHeaderOverride = rest.receiptHeaderOverride;
+		if (rest.isActive !== undefined) updates.isActive = rest.isActive;
+		await db
+			.update(schema.register)
+			.set(updates)
+			.where(eq(schema.register.id, id));
+		return { success: true };
+	});
+
+// ── updateUser ────────────────────────────────────────────────────────
+const updateUser = permissionProcedure("users.update")
+	.input(
+		z.object({
+			userId: z.string(),
+			roleId: z.string().uuid().optional(),
+			banned: z.boolean().optional(),
+			name: z.string().min(1).optional(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		// Update user name / banned status
+		const userUpdates: Record<string, unknown> = {};
+		if (input.name !== undefined) userUpdates.name = input.name;
+		if (input.banned !== undefined) userUpdates.banned = input.banned;
+		if (Object.keys(userUpdates).length > 0) {
+			await db
+				.update(schema.user)
+				.set(userUpdates)
+				.where(eq(schema.user.id, input.userId));
+		}
+
+		// Change role: delete existing assignment then insert new one
+		if (input.roleId !== undefined) {
+			await db
+				.delete(schema.userRole)
+				.where(eq(schema.userRole.userId, input.userId));
+			await db.insert(schema.userRole).values({
+				userId: input.userId,
+				roleId: input.roleId,
+			});
+		}
+
+		return { success: true };
+	});
+
+// ── getRoles ──────────────────────────────────────────────────────────
+const getRoles = permissionProcedure("settings.read")
+	.input(z.object({}).optional())
+	.handler(async () => {
+		const roles = await db
+			.select({
+				id: schema.customRole.id,
+				name: schema.customRole.name,
+				permissions: schema.customRole.permissions,
+				isSystem: schema.customRole.isSystem,
+				createdAt: schema.customRole.createdAt,
+			})
+			.from(schema.customRole)
+			.orderBy(asc(schema.customRole.name));
+
+		return roles;
+	});
+
+// ── createRole ────────────────────────────────────────────────────────
+const createRole = permissionProcedure("settings.update")
+	.input(
+		z.object({
+			name: z.string().min(1),
+			permissions: z.record(z.string(), z.array(z.string())).default({}),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const rows = await db
+			.select({ id: schema.organization.id })
+			.from(schema.organization)
+			.limit(1);
+		const orgId = rows[0]?.id ?? DEFAULT_ORG_ID;
+
+		const inserted = await db
+			.insert(schema.customRole)
+			.values({
+				organizationId: orgId,
+				name: input.name,
+				permissions: input.permissions,
+				isSystem: false,
+			})
+			.returning({ id: schema.customRole.id });
+
+		return { id: inserted[0]?.id };
+	});
+
+// ── updateRole ────────────────────────────────────────────────────────
+const updateRole = permissionProcedure("settings.update")
+	.input(
+		z.object({
+			id: z.string().uuid(),
+			name: z.string().min(1).optional(),
+			permissions: z.record(z.string(), z.array(z.string())).optional(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const updates: Record<string, unknown> = {};
+		if (input.name !== undefined) updates.name = input.name;
+		if (input.permissions !== undefined)
+			updates.permissions = input.permissions;
+		await db
+			.update(schema.customRole)
+			.set(updates)
+			.where(eq(schema.customRole.id, input.id));
+		return { success: true };
+	});
+
+// ── deleteRole ────────────────────────────────────────────────────────
+const deleteRole = permissionProcedure("settings.update")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input }) => {
+		const rows = await db
+			.select({ isSystem: schema.customRole.isSystem })
+			.from(schema.customRole)
+			.where(eq(schema.customRole.id, input.id))
+			.limit(1);
+
+		if (rows.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Role not found" });
+		}
+
+		if (rows[0]!.isSystem) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Cannot delete a system role",
+			});
+		}
+
+		await db
+			.delete(schema.customRole)
+			.where(eq(schema.customRole.id, input.id));
+
+		return { success: true };
+	});
+
+// ── getPosSettings ────────────────────────────────────────────────────
+const getPosSettings = permissionProcedure("settings.read")
+	.input(z.object({}).optional())
+	.handler(async () => {
+		const rows = await db
+			.select({ settings: schema.organization.settings })
+			.from(schema.organization)
+			.limit(1);
+
+		const s = (rows[0]?.settings ?? {}) as Record<string, unknown>;
+		return {
+			autoPrintReceipt:
+				typeof s.autoPrintReceipt === "boolean" ? s.autoPrintReceipt : false,
+			defaultOrderType:
+				typeof s.defaultOrderType === "string" ? s.defaultOrderType : "dine_in",
+			requireCashSession:
+				typeof s.requireCashSession === "boolean"
+					? s.requireCashSession
+					: false,
+			allowOpenPrice:
+				typeof s.allowOpenPrice === "boolean" ? s.allowOpenPrice : false,
+			requireNoteOnVoid:
+				typeof s.requireNoteOnVoid === "boolean" ? s.requireNoteOnVoid : true,
+			showTaxOnReceipt:
+				typeof s.showTaxOnReceipt === "boolean" ? s.showTaxOnReceipt : true,
+			enableTableManagement:
+				typeof s.enableTableManagement === "boolean"
+					? s.enableTableManagement
+					: true,
+			enableKds: typeof s.enableKds === "boolean" ? s.enableKds : true,
+			enableLoyalty:
+				typeof s.enableLoyalty === "boolean" ? s.enableLoyalty : true,
+			enableGiftCards:
+				typeof s.enableGiftCards === "boolean" ? s.enableGiftCards : true,
+		};
+	});
+
+// ── updatePosSettings ─────────────────────────────────────────────────
+const updatePosSettings = permissionProcedure("settings.update")
+	.input(
+		z.object({
+			autoPrintReceipt: z.boolean().optional(),
+			defaultOrderType: z.string().optional(),
+			requireCashSession: z.boolean().optional(),
+			allowOpenPrice: z.boolean().optional(),
+			requireNoteOnVoid: z.boolean().optional(),
+			showTaxOnReceipt: z.boolean().optional(),
+			enableTableManagement: z.boolean().optional(),
+			enableKds: z.boolean().optional(),
+			enableLoyalty: z.boolean().optional(),
+			enableGiftCards: z.boolean().optional(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const rows = await db
+			.select({
+				id: schema.organization.id,
+				settings: schema.organization.settings,
+			})
+			.from(schema.organization)
+			.limit(1);
+
+		if (rows.length === 0)
+			throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
+
+		const org = rows[0]!;
+		const current = (org.settings ?? {}) as Record<string, unknown>;
+		const merged: Record<string, unknown> = { ...current };
+
+		for (const [k, v] of Object.entries(input)) {
+			if (v !== undefined) merged[k] = v;
+		}
+
+		await db
+			.update(schema.organization)
+			.set({ settings: merged })
+			.where(eq(schema.organization.id, org.id));
+
+		return { success: true };
+	});
+
 export const settingsRouter = {
 	getCurrentUser,
 	getOrganization,
+	updateOrganization,
 	getTaxRates,
 	createTaxRate,
 	updateTaxRate,
@@ -803,7 +1093,9 @@ export const settingsRouter = {
 	getReceiptConfig,
 	updateReceiptConfig,
 	getLocations,
+	updateLocation,
 	getRegisters,
+	updateRegister,
 	getSuppliers,
 	createSupplier,
 	updateSupplier,
@@ -812,6 +1104,13 @@ export const settingsRouter = {
 	updateTable,
 	getUsers,
 	createUser,
+	updateUser,
+	getRoles,
+	createRole,
+	updateRole,
+	deleteRole,
+	getPosSettings,
+	updatePosSettings,
 	verifyPin,
 	setPin,
 	verifySupervisor,

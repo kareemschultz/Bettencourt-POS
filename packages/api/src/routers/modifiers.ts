@@ -1,7 +1,7 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { ORPCError } from "@orpc/server";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 
@@ -250,8 +250,10 @@ const unlinkGroupFromProduct = permissionProcedure("modifiers.update")
 		await db
 			.delete(schema.productModifierGroup)
 			.where(
-				eq(schema.productModifierGroup.productId, input.productId) &&
+				and(
+					eq(schema.productModifierGroup.productId, input.productId),
 					eq(schema.productModifierGroup.modifierGroupId, input.groupId),
+				),
 			);
 
 		return { success: true };

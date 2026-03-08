@@ -1,5 +1,6 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
+import { ORPCError } from "@orpc/server";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { publicProcedure } from "../index";
@@ -103,7 +104,9 @@ const placeOrder = publicProcedure
 			orderType === "delivery" &&
 			(!deliveryAddress || deliveryAddress.trim() === "")
 		) {
-			throw new Error("Delivery address is required for delivery orders");
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Delivery address is required for delivery orders",
+			});
 		}
 
 		// Fetch all requested products to validate and get prices
@@ -129,10 +132,14 @@ const placeOrder = publicProcedure
 		for (const item of items) {
 			const product = productMap.get(item.productId);
 			if (!product) {
-				throw new Error(`Product not found: ${item.productId}`);
+				throw new ORPCError("NOT_FOUND", {
+					message: `Product not found: ${item.productId}`,
+				});
 			}
 			if (!product.isActive) {
-				throw new Error(`Product is no longer available: ${product.name}`);
+				throw new ORPCError("BAD_REQUEST", {
+					message: `Product is no longer available: ${product.name}`,
+				});
 			}
 		}
 
@@ -163,16 +170,25 @@ const placeOrder = publicProcedure
 		// Estimate ready time (default 30 minutes from now)
 		let estimatedReadyAt: Date | null = null;
 		if (estimatedPickupTime) {
-			// Parse HH:mm format and set to today
-			const [hours, minutes] = estimatedPickupTime.split(":").map(Number);
-			if (hours !== undefined && minutes !== undefined) {
-				estimatedReadyAt = new Date();
-				estimatedReadyAt.setHours(hours, minutes, 0, 0);
+			// Parse HH:mm as Guyana local time (UTC-4) to get correct UTC timestamp
+			// Get today's date in Guyana timezone (YYYY-MM-DD)
+			const gyDate = new Date().toLocaleDateString("en-CA", {
+				timeZone: "America/Guyana",
+			});
+			// Build ISO string with explicit Guyana UTC offset (-04:00)
+			const parsed = new Date(`${gyDate}T${estimatedPickupTime}:00-04:00`);
+			if (!Number.isNaN(parsed.getTime())) {
+				estimatedReadyAt = parsed;
 			}
 		}
 		if (!estimatedReadyAt) {
 			estimatedReadyAt = new Date(Date.now() + 30 * 60 * 1000);
 		}
+
+		// Ensure sequence exists before the transaction (DDL inside an aborted tx is ignored in Postgres)
+		await db.execute(
+			sql`CREATE SEQUENCE IF NOT EXISTS order_number_seq START 1`,
+		);
 
 		// Use a transaction for atomicity
 		const result = await db.transaction(async (tx) => {
@@ -186,22 +202,11 @@ const placeOrder = publicProcedure
 			);
 			void dailyResult.rows[0]?.last_number; // Counter incremented; value not needed
 
-			// Generate unique order number
-			let orderNum: string;
-			try {
-				const seqResult = await tx.execute(
-					sql`SELECT nextval('order_number_seq') as num`,
-				);
-				orderNum = `ONL-${String(seqResult.rows[0]?.num).padStart(4, "0")}`;
-			} catch {
-				await tx.execute(
-					sql`CREATE SEQUENCE IF NOT EXISTS order_number_seq START 1`,
-				);
-				const seqResult = await tx.execute(
-					sql`SELECT nextval('order_number_seq') as num`,
-				);
-				orderNum = `ONL-${String(seqResult.rows[0]?.num).padStart(4, "0")}`;
-			}
+			// Generate unique order number — sequence guaranteed to exist (created before tx)
+			const seqResult = await tx.execute(
+				sql`SELECT nextval('order_number_seq') as num`,
+			);
+			const orderNum = `ONL-${String(seqResult.rows[0]?.num).padStart(4, "0")}`;
 
 			// Create order
 			const orderRows = await tx
@@ -340,9 +345,10 @@ const getOrderStatus = publicProcedure
 			);
 
 		if (orders.length === 0) {
-			throw new Error(
-				"Order not found. Please check your order ID and phone number.",
-			);
+			throw new ORPCError("NOT_FOUND", {
+				message:
+					"Order not found. Please check your order ID and phone number.",
+			});
 		}
 
 		const order = orders[0]!;

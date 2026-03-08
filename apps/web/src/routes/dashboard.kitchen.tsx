@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle2, ChefHat, Clock, Wifi } from "lucide-react";
 import { useEffect } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -83,6 +84,7 @@ export default function KitchenPage() {
 						.queryKey,
 				});
 			},
+			onError: (err) => toast.error(err.message || "Failed to update status"),
 		}),
 	);
 

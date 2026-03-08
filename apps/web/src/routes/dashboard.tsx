@@ -60,7 +60,6 @@ const PAGE_TITLES: Record<string, string> = {
 	"/dashboard/waste": "Waste Log",
 	"/dashboard/audit": "Audit Log",
 	"/dashboard/analytics": "Analytics",
-	"/dashboard/users": "Users",
 	"/dashboard/locations": "Locations",
 	"/dashboard/notifications": "Notifications",
 	"/dashboard/webhooks": "Webhooks",
@@ -147,6 +146,7 @@ const ROUTE_MODULE_MAP: Record<string, string> = {
 	"/dashboard/customers": "orders",
 	"/dashboard/giftcards": "orders",
 	"/dashboard/products": "products",
+	"/dashboard/production": "orders",
 };
 
 function hasRouteAccess(

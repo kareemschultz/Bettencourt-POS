@@ -170,20 +170,22 @@ const assignProducts = permissionProcedure("settings.update")
 			throw new ORPCError("NOT_FOUND", { message: "Schedule not found" });
 		}
 
-		// Delete all existing assignments and re-insert
-		await db
-			.delete(schema.menuScheduleProduct)
-			.where(eq(schema.menuScheduleProduct.menuScheduleId, input.scheduleId));
+		// Delete all existing assignments and re-insert atomically
+		await db.transaction(async (tx) => {
+			await tx
+				.delete(schema.menuScheduleProduct)
+				.where(eq(schema.menuScheduleProduct.menuScheduleId, input.scheduleId));
 
-		if (input.products.length > 0) {
-			await db.insert(schema.menuScheduleProduct).values(
-				input.products.map((p) => ({
-					menuScheduleId: input.scheduleId,
-					productId: p.productId,
-					overridePrice: p.overridePrice?.toFixed(2) ?? null,
-				})),
-			);
-		}
+			if (input.products.length > 0) {
+				await tx.insert(schema.menuScheduleProduct).values(
+					input.products.map((p) => ({
+						menuScheduleId: input.scheduleId,
+						productId: p.productId,
+						overridePrice: p.overridePrice?.toFixed(2) ?? null,
+					})),
+				);
+			}
+		});
 
 		return { success: true };
 	});

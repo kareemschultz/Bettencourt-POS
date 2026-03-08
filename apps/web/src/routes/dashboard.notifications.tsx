@@ -18,7 +18,7 @@ import {
 	XCircle,
 	Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -800,15 +800,16 @@ function ProviderSettingsTab() {
 	const [initialized, setInitialized] = useState(false);
 
 	// Populate form when settings load
-	if (settings && !initialized) {
-		setAccountSid(settings.accountSid || "");
-		setAuthToken(settings.authToken || "");
-		setFromNumber(settings.fromNumber || "");
-		setWhatsappNumber(settings.whatsappNumber || "");
-		setIsActive(settings.isActive);
-		setDailyLimit(String(settings.dailyLimit));
-		setInitialized(true);
-	}
+	useEffect(() => {
+		if (settings && !initialized) {
+			// accountSid and authToken are not returned for security - leave as empty
+			setFromNumber(settings.fromNumber || "");
+			setWhatsappNumber(settings.whatsappNumber || "");
+			setIsActive(settings.isActive);
+			setDailyLimit(String(settings.dailyLimit));
+			setInitialized(true);
+		}
+	}, [settings, initialized]);
 
 	const updateMutation = useMutation(
 		orpc.notifications.updateSettings.mutationOptions({
@@ -822,11 +823,15 @@ function ProviderSettingsTab() {
 	const [testPhone, setTestPhone] = useState("");
 	const testMutation = useMutation(
 		orpc.notifications.sendTest.mutationOptions({
-			onSuccess: (data) => {
-				toast.success(data.message);
+			onSuccess: (data: { message?: string }) => {
+				toast.success(data.message || "Test notification sent");
 			},
-			onError: (err) => {
-				toast.error(err.message);
+			onError: (err: unknown) => {
+				const msg =
+					err instanceof Error
+						? err.message
+						: "Failed to send test notification";
+				toast.error(msg);
 			},
 		}),
 	);

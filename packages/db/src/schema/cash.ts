@@ -194,6 +194,7 @@ export const expense = pgTable(
 		index("idx_expense_org").on(table.organizationId),
 		index("idx_expense_created").on(table.createdAt),
 		index("idx_expense_supplier").on(table.supplierId),
+		index("idx_expense_org_created").on(table.organizationId, table.createdAt),
 	],
 );
 

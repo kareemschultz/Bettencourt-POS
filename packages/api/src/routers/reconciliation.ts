@@ -1,5 +1,6 @@
 import { db } from "@Bettencourt-POS/db";
-import { sql } from "drizzle-orm";
+import * as schema from "@Bettencourt-POS/db/schema";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 
@@ -119,20 +120,32 @@ const getDailyReconciliation = permissionProcedure("reports.read")
 				(p: Record<string, unknown>) => p.product_id as string,
 			);
 
-			const actualSalesResult = await db.execute(
-				sql`SELECT oli.product_id, COALESCE(SUM(oli.quantity), 0)::int as actual_sold
-				FROM order_line_item oli
-				JOIN "order" o ON o.id = oli.order_id
-				WHERE DATE(o.created_at) = ${date}
-					AND o.status = 'completed'
-					AND oli.product_id = ANY(${sql.raw(`ARRAY[${productIds.map((id) => `'${id}'`).join(",")}]::uuid[]`)})
-				GROUP BY oli.product_id`,
-			);
+			const actualSalesRows = await db
+				.select({
+					productId: schema.orderLineItem.productId,
+					actualSold:
+						sql<number>`COALESCE(SUM(${schema.orderLineItem.quantity}), 0)::int`.as(
+							"actual_sold",
+						),
+				})
+				.from(schema.orderLineItem)
+				.innerJoin(
+					schema.order,
+					eq(schema.orderLineItem.orderId, schema.order.id),
+				)
+				.where(
+					and(
+						sql`DATE(${schema.order.createdAt}) = ${date}`,
+						eq(schema.order.status, "completed"),
+						inArray(schema.orderLineItem.productId, productIds),
+					),
+				)
+				.groupBy(schema.orderLineItem.productId);
 
 			const salesMap = new Map(
-				actualSalesResult.rows.map((s: Record<string, unknown>) => [
-					s.product_id as string,
-					Number(s.actual_sold),
+				actualSalesRows.map((s) => [
+					s.productId as string,
+					Number(s.actualSold),
 				]),
 			);
 

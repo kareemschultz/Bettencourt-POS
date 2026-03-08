@@ -1,7 +1,7 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { ORPCError } from "@orpc/server";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 
@@ -179,12 +179,31 @@ const redeem = permissionProcedure("orders.create")
 
 		// Allow partial redemption — redeem up to available balance
 		const redeemAmount = Math.min(input.amount, currentBalance);
-		const newBalance = currentBalance - redeemAmount;
 
-		await db
+		// Atomic balance deduction: only succeeds if current_balance hasn't changed since read
+		const updated = await db
 			.update(schema.giftCard)
-			.set({ currentBalance: newBalance.toFixed(2) })
-			.where(eq(schema.giftCard.id, input.giftCardId));
+			.set({
+				currentBalance: sql`current_balance - ${redeemAmount.toFixed(2)}::numeric`,
+			})
+			.where(
+				and(
+					eq(schema.giftCard.id, input.giftCardId),
+					sql`current_balance >= ${redeemAmount.toFixed(2)}::numeric`,
+				),
+			)
+			.returning({
+				id: schema.giftCard.id,
+				currentBalance: schema.giftCard.currentBalance,
+			});
+
+		if (updated.length === 0) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Gift card balance was modified concurrently. Please retry.",
+			});
+		}
+
+		const newBalance = Number(updated[0]!.currentBalance);
 
 		await db.insert(schema.giftCardTransaction).values({
 			giftCardId: input.giftCardId,

@@ -10,6 +10,16 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -253,6 +263,11 @@ export default function ExpensesPage() {
 		});
 	}
 
+	const [deleteExpenseId, setDeleteExpenseId] = useState<string | null>(null);
+	const [deleteCategoryItem, setDeleteCategoryItem] = useState<{
+		id: string;
+		name: string;
+	} | null>(null);
 	const createExpense = useMutation(
 		orpc.cash.createExpense.mutationOptions({
 			onSuccess: () => {
@@ -704,9 +719,7 @@ export default function ExpensesPage() {
 													disabled={deleteExpense.isPending}
 													onClick={(ev) => {
 														ev.stopPropagation();
-														if (confirm("Delete this expense?")) {
-															deleteExpense.mutate({ expenseId: e.id });
-														}
+														setDeleteExpenseId(e.id);
 													}}
 												>
 													<Trash2 className="size-3.5" />
@@ -1042,9 +1055,7 @@ export default function ExpensesPage() {
 											className="size-7 text-destructive hover:text-destructive"
 											disabled={deleteCategoryMut.isPending}
 											onClick={() => {
-												if (confirm(`Delete category "${c.name}"?`)) {
-													deleteCategoryMut.mutate({ id: c.id });
-												}
+												setDeleteCategoryItem({ id: c.id, name: c.name });
 											}}
 										>
 											<Trash2 className="size-3.5" />
@@ -1056,6 +1067,66 @@ export default function ExpensesPage() {
 					</div>
 				</DialogContent>
 			</Dialog>
+
+			{/* Delete Expense Confirmation */}
+			<AlertDialog
+				open={!!deleteExpenseId}
+				onOpenChange={(o) => {
+					if (!o) setDeleteExpenseId(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete this expense?</AlertDialogTitle>
+						<AlertDialogDescription>
+							This action cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={() =>
+								deleteExpenseId &&
+								deleteExpense.mutate({ expenseId: deleteExpenseId })
+							}
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* Delete Category Confirmation */}
+			<AlertDialog
+				open={!!deleteCategoryItem}
+				onOpenChange={(o) => {
+					if (!o) setDeleteCategoryItem(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							Delete "{deleteCategoryItem?.name}"?
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							This expense category will be permanently removed.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={() =>
+								deleteCategoryItem &&
+								deleteCategoryMut.mutate({ id: deleteCategoryItem.id })
+							}
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

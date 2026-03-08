@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { CashControlPanel } from "@/components/cash/cash-control-panel";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
-
-const DEFAULT_LOCATION_ID = "b0000000-0000-4000-8000-000000000001";
+import { useLocationContext } from "./dashboard";
 
 export default function CashPage() {
 	const { data: session } = authClient.useSession();
+	const { locationId } = useLocationContext();
 
 	const { data: sessions, isLoading } = useQuery(
 		orpc.cash.getSessions.queryOptions({ input: {} }),
@@ -29,7 +29,7 @@ export default function CashPage() {
 				sessions={allSessions}
 				openSession={openSession}
 				userId={session?.user?.id || ""}
-				locationId={DEFAULT_LOCATION_ID}
+				locationId={locationId ?? "b0000000-0000-4000-8000-000000000001"}
 			/>
 		</div>
 	);

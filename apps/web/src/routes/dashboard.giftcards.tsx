@@ -35,6 +35,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
 	TableBody,
@@ -294,7 +295,7 @@ export default function GiftCardsPage() {
 										colSpan={7}
 										className="py-8 text-center text-muted-foreground"
 									>
-										Loading...
+										<Skeleton className="h-4 w-full" />
 									</TableCell>
 								</TableRow>
 							) : filteredCards.length === 0 ? (
