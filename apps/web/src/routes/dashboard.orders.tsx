@@ -5,6 +5,7 @@ import { OrdersTable } from "@/components/orders/orders-table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { authClient } from "@/lib/auth-client";
+import { downloadCsv } from "@/lib/csv-export";
 import { orpc } from "@/utils/orpc";
 
 type OrderRow = {
@@ -17,31 +18,6 @@ type OrderRow = {
 	customer_name?: string;
 	created_at: string;
 };
-
-function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
-	if (!rows.length) return;
-	const headers = Object.keys(rows[0]!);
-	const csv = [
-		headers.join(","),
-		...rows.map((r) =>
-			headers
-				.map((h) => {
-					const v = String(r[h] ?? "");
-					return v.includes(",") || v.includes('"')
-						? `"${v.replace(/"/g, '""')}"`
-						: v;
-				})
-				.join(","),
-		),
-	].join("\n");
-	const blob = new Blob([csv], { type: "text/csv" });
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = filename;
-	a.click();
-	URL.revokeObjectURL(url);
-}
 
 function printOrdersPdf(
 	orders: OrderRow[],

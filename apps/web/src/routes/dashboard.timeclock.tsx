@@ -22,33 +22,9 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { downloadCsv } from "@/lib/csv-export";
 import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
-
-function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
-	if (!rows.length) return;
-	const headers = Object.keys(rows[0]);
-	const csv = [
-		headers.join(","),
-		...rows.map((r) =>
-			headers
-				.map((h) => {
-					const v = String(r[h] ?? "");
-					return v.includes(",") || v.includes('"')
-						? `"${v.replace(/"/g, '""')}"`
-						: v;
-				})
-				.join(","),
-		),
-	].join("\n");
-	const blob = new Blob([csv], { type: "text/csv" });
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = filename;
-	a.click();
-	URL.revokeObjectURL(url);
-}
 
 function formatDuration(ms: number) {
 	const totalMins = Math.floor(ms / 60000);

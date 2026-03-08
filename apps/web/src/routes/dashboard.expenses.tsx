@@ -48,34 +48,10 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { authClient } from "@/lib/auth-client";
+import { downloadCsv } from "@/lib/csv-export";
 import { formatGYD } from "@/lib/types";
 import { escapeHtml, todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
-
-function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
-	if (!rows.length) return;
-	const headers = Object.keys(rows[0]);
-	const csv = [
-		headers.join(","),
-		...rows.map((r) =>
-			headers
-				.map((h) => {
-					const v = String(r[h] ?? "");
-					return v.includes(",") || v.includes('"')
-						? `"${v.replace(/"/g, '""')}"`
-						: v;
-				})
-				.join(","),
-		),
-	].join("\n");
-	const blob = new Blob([csv], { type: "text/csv" });
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = filename;
-	a.click();
-	URL.revokeObjectURL(url);
-}
 
 function downloadPdf(title: string, rows: ExpenseRow[], period: string) {
 	if (!rows.length) return;
@@ -130,7 +106,6 @@ function downloadPdf(title: string, rows: ExpenseRow[], period: string) {
 		w.document.close();
 	}
 }
-
 
 const SUPPLIER_COLORS = [
 	"bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",

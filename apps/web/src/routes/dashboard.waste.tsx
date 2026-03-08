@@ -45,35 +45,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { downloadCsv } from "@/lib/csv-export";
 import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
-
-function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
-	if (!rows.length) return;
-	const headers = Object.keys(rows[0]);
-	const csv = [
-		headers.join(","),
-		...rows.map((r) =>
-			headers
-				.map((h) => {
-					const v = String(r[h] ?? "");
-					return v.includes(",") || v.includes('"')
-						? `"${v.replace(/"/g, '""')}"`
-						: v;
-				})
-				.join(","),
-		),
-	].join("\n");
-	const blob = new Blob([csv], { type: "text/csv" });
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = filename;
-	a.click();
-	URL.revokeObjectURL(url);
-}
-
 
 const REASON_OPTIONS = [
 	{ value: "spoilage", label: "Spoilage" },
@@ -313,8 +289,10 @@ export default function WasteTrackingPage() {
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center py-20 text-muted-foreground">
-				Loading waste tracker...
+			<div className="space-y-4 p-4 md:p-6">
+				<Skeleton className="h-8 w-48" />
+				<Skeleton className="h-64 w-full" />
+				<Skeleton className="h-64 w-full" />
 			</div>
 		);
 	}
