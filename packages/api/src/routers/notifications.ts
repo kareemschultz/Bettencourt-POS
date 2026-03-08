@@ -130,8 +130,16 @@ const updateSettings = permissionProcedure("settings.update")
 			provider: z.enum(["twilio", "vonage"]).default("twilio"),
 			accountSid: z.string().optional(),
 			authToken: z.string().optional(),
-			fromNumber: z.string().optional(),
-			whatsappNumber: z.string().optional(),
+			fromNumber: z
+				.string()
+				.regex(/^\+[1-9]\d{1,14}$/, "Must be E.164 format (e.g. +15550001234)")
+				.optional()
+				.nullable(),
+			whatsappNumber: z
+				.string()
+				.regex(/^\+[1-9]\d{1,14}$/, "Must be E.164 format (e.g. +15550001234)")
+				.optional()
+				.nullable(),
 			isActive: z.boolean().default(false),
 			dailyLimit: z.number().int().min(0).max(10000).default(500),
 		}),
