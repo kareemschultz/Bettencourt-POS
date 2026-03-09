@@ -4,7 +4,10 @@ import {
 	ArrowLeft,
 	Building2,
 	Calendar,
+	ChevronDown,
+	ChevronUp,
 	Download,
+	FileText,
 	Mail,
 	MapPin,
 	Phone,
@@ -173,6 +176,43 @@ const emptyExpenseForm = {
 	notes: "",
 };
 
+// ── SortHeader component ──────────────────────────────────────────────────
+
+function SortHeader({
+	field,
+	label,
+	currentField,
+	currentDir,
+	onSort,
+	className,
+}: {
+	field: "date" | "amount";
+	label: string;
+	currentField: "date" | "amount";
+	currentDir: "desc" | "asc";
+	onSort: (field: "date" | "amount") => void;
+	className?: string;
+}) {
+	const active = currentField === field;
+	return (
+		<th
+			className={`cursor-pointer select-none ${className ?? ""}`}
+			onClick={() => onSort(field)}
+		>
+			<span className="flex items-center gap-1">
+				{label}
+				{active ? (
+					currentDir === "desc" ? (
+						<ChevronDown className="size-3" />
+					) : (
+						<ChevronUp className="size-3" />
+					)
+				) : null}
+			</span>
+		</th>
+	);
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────
 
 export default function SupplierDetailPage() {
@@ -194,6 +234,10 @@ export default function SupplierDetailPage() {
 
 	// Statement dialog
 	const [statementOpen, setStatementOpen] = useState(false);
+
+	// Sort controls for transaction table
+	const [sortField, setSortField] = useState<"date" | "amount">("date");
+	const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
 
 	// Keyboard shortcut: Escape → back to suppliers
 	useEffect(() => {
@@ -352,16 +396,28 @@ export default function SupplierDetailPage() {
 
 	// Filtered transactions
 	const filteredExpenses = useMemo(() => {
-		return expenses.filter((e) => {
-			const matchesSearch =
-				search === "" ||
-				e.description.toLowerCase().includes(search.toLowerCase()) ||
-				(e.reference_number ?? "").toLowerCase().includes(search.toLowerCase());
-			const matchesCategory =
-				categoryFilter === "" || e.category === categoryFilter;
-			return matchesSearch && matchesCategory;
-		});
-	}, [expenses, search, categoryFilter]);
+		return expenses
+			.filter((e) => {
+				const matchesSearch =
+					search === "" ||
+					e.description.toLowerCase().includes(search.toLowerCase()) ||
+					(e.reference_number ?? "")
+						.toLowerCase()
+						.includes(search.toLowerCase());
+				const matchesCategory =
+					categoryFilter === "" || e.category === categoryFilter;
+				return matchesSearch && matchesCategory;
+			})
+			.sort((a, b) => {
+				if (sortField === "date") {
+					const diff =
+						new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+					return sortDir === "desc" ? -diff : diff;
+				}
+				const diff = Number(a.amount) - Number(b.amount);
+				return sortDir === "desc" ? -diff : diff;
+			});
+	}, [expenses, search, categoryFilter, sortField, sortDir]);
 
 	const filteredTotal = filteredExpenses.reduce(
 		(sum, e) => sum + Number(e.amount),
@@ -391,6 +447,15 @@ export default function SupplierDetailPage() {
 	}, [summary]);
 
 	// ── Handlers ─────────────────────────────────────────────────────────
+
+	function handleSort(field: "date" | "amount") {
+		if (sortField === field) {
+			setSortDir((d) => (d === "desc" ? "asc" : "desc"));
+		} else {
+			setSortField(field);
+			setSortDir("desc");
+		}
+	}
 
 	function handleExportCsv() {
 		if (!supplier) return;
@@ -866,6 +931,15 @@ export default function SupplierDetailPage() {
 							<Button
 								variant="outline"
 								size="sm"
+								onClick={() => setStatementOpen(true)}
+								className="gap-1.5"
+							>
+								<FileText className="size-4" />
+								View Statement
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
 								onClick={handlePrint}
 								className="gap-1.5"
 							>
@@ -940,9 +1014,14 @@ export default function SupplierDetailPage() {
 							<table className="w-full text-sm">
 								<thead>
 									<tr className="border-b bg-muted/40">
-										<th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs">
-											Date
-										</th>
+										<SortHeader
+											field="date"
+											label="Date"
+											currentField={sortField}
+											currentDir={sortDir}
+											onSort={handleSort}
+											className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs"
+										/>
 										<th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs">
 											Description
 										</th>
@@ -958,9 +1037,14 @@ export default function SupplierDetailPage() {
 										<th className="px-4 py-2.5 text-left font-medium text-muted-foreground text-xs">
 											Authorized By
 										</th>
-										<th className="px-4 py-2.5 text-right font-medium text-muted-foreground text-xs">
-											Amount (GYD)
-										</th>
+										<SortHeader
+											field="amount"
+											label="Amount (GYD)"
+											currentField={sortField}
+											currentDir={sortDir}
+											onSort={handleSort}
+											className="px-4 py-2.5 text-right font-medium text-muted-foreground text-xs"
+										/>
 									</tr>
 								</thead>
 								<tbody className="divide-y">
