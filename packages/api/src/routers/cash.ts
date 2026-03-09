@@ -845,6 +845,50 @@ const getSupplierCategoryBreakdown = permissionProcedure("shifts.read")
 		}));
 	});
 
+// ── getSupplierCategoryByMonth ───────────────────────────────────────────
+const getSupplierCategoryByMonth = permissionProcedure("shifts.read")
+	.input(z.object({ supplierId: z.string().uuid() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const queryResult = await db.execute<{
+			month: string;
+			category: string;
+			total: string;
+		}>(sql`
+      SELECT
+        TO_CHAR(DATE_TRUNC('month', created_at AT TIME ZONE 'America/Guyana'), 'YYYY-MM') AS month,
+        category,
+        COALESCE(SUM(amount), 0)::text AS total
+      FROM expense
+      WHERE supplier_id     = ${input.supplierId}::uuid
+        AND organization_id = ${orgId}::uuid
+        AND created_at >= NOW() - INTERVAL '12 months'
+      GROUP BY
+        DATE_TRUNC('month', created_at AT TIME ZONE 'America/Guyana'),
+        category
+      ORDER BY month ASC, SUM(amount) DESC
+    `);
+		const gyNow = new Date().toLocaleDateString("en-CA", {
+			timeZone: "America/Guyana",
+		});
+		const [gyYear, gyMonth] = gyNow.split("-").map(Number) as [number, number];
+		const months: { month: string; label: string }[] = [];
+		for (let i = 11; i >= 0; i--) {
+			const totalMonths = gyYear * 12 + (gyMonth - 1) - i;
+			const year = Math.floor(totalMonths / 12);
+			const month = (totalMonths % 12) + 1;
+			const key = `${year}-${String(month).padStart(2, "0")}`;
+			months.push({
+				month: key,
+				label: new Date(year, month - 1, 1).toLocaleString("en-GY", {
+					month: "short",
+					year: "2-digit",
+				}),
+			});
+		}
+		return { months, rows: queryResult.rows };
+	});
+
 // ── getExpenseCategoryByMonth ────────────────────────────────────────────
 const getExpenseCategoryByMonth = permissionProcedure("shifts.read").handler(
 	async ({ context }) => {
@@ -1068,6 +1112,7 @@ export const cashRouter = {
 	getSupplierSpendSummary,
 	getSupplierMonthlySpend,
 	getSupplierCategoryBreakdown,
+	getSupplierCategoryByMonth,
 	// 7.7 No-Sale Drawer Tracking
 	logNoSale,
 	getNoSaleReport,

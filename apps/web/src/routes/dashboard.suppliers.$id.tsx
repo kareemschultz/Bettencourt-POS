@@ -23,6 +23,7 @@ import {
 	Bar,
 	BarChart,
 	CartesianGrid,
+	Legend,
 	ResponsiveContainer,
 	Tooltip,
 	XAxis,
@@ -301,6 +302,14 @@ export default function SupplierDetailPage() {
 	// Expense categories for the add form
 	const { data: categories = [] } = useQuery(
 		orpc.cash.getExpenseCategories.queryOptions(),
+	);
+
+	// Category × month breakdown for this vendor
+	const { data: catByMonthRaw } = useQuery(
+		orpc.cash.getSupplierCategoryByMonth.queryOptions({
+			input: { supplierId: supplierId ?? "" },
+			enabled: !!supplierId,
+		}),
 	);
 
 	// ── Mutations ─────────────────────────────────────────────────────────
@@ -914,6 +923,96 @@ export default function SupplierDetailPage() {
 					</CardContent>
 				</Card>
 			</div>
+
+			{/* Chart C: Spend by category per month (12-month stacked bar) */}
+			{(() => {
+				if (!catByMonthRaw) return null;
+				const cats = [
+					...new Set(catByMonthRaw.rows.map((r) => r.category)),
+				].sort();
+				if (cats.length === 0) return null;
+				const catColors = [
+					"var(--chart-1)",
+					"var(--chart-2)",
+					"var(--chart-3)",
+					"var(--chart-4)",
+					"var(--chart-5)",
+					"hsl(271 91% 65%)",
+					"hsl(32 95% 55%)",
+					"hsl(160 60% 45%)",
+				];
+				const pivoted = catByMonthRaw.months.map(({ month, label }) => {
+					const entry: Record<string, string | number> = { month, label };
+					for (const cat of cats) {
+						const found = catByMonthRaw.rows.find(
+							(r) => r.month === month && r.category === cat,
+						);
+						entry[cat] = found ? Number(found.total) : 0;
+					}
+					return entry;
+				});
+				if (!pivoted.some((d) => cats.some((c) => (d[c] as number) > 0)))
+					return null;
+				return (
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-base">
+								Spend by Category — Last 12 Months
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<ResponsiveContainer width="100%" height={260}>
+								<BarChart
+									data={pivoted}
+									margin={{ top: 4, right: 8, left: 8, bottom: 4 }}
+								>
+									<CartesianGrid
+										strokeDasharray="3 3"
+										vertical={false}
+										className="stroke-border"
+									/>
+									<XAxis
+										dataKey="label"
+										tick={{ fontSize: 11 }}
+										axisLine={false}
+										tickLine={false}
+									/>
+									<YAxis
+										tick={{ fontSize: 11 }}
+										axisLine={false}
+										tickLine={false}
+										tickFormatter={(v: number) =>
+											v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
+										}
+									/>
+									<Tooltip
+										formatter={(v, name) => [formatGYD(Number(v ?? 0)), name]}
+										contentStyle={{
+											fontSize: 12,
+											borderRadius: 8,
+											border: "1px solid hsl(var(--border))",
+											background: "hsl(var(--card))",
+											color: "hsl(var(--foreground))",
+										}}
+									/>
+									<Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+									{cats.map((cat, i) => (
+										<Bar
+											key={cat}
+											dataKey={cat}
+											stackId="a"
+											fill={catColors[i % catColors.length]}
+											radius={
+												i === cats.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]
+											}
+										/>
+									))}
+								</BarChart>
+							</ResponsiveContainer>
+						</CardContent>
+					</Card>
+				);
+			})()}
 
 			{/* Transaction table */}
 			<Card>

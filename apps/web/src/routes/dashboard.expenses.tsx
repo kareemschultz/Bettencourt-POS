@@ -8,7 +8,7 @@ import {
 	Settings2,
 	Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import {
 	Bar,
