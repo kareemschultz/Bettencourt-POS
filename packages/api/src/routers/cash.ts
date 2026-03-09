@@ -666,6 +666,177 @@ const getExpenseReport = permissionProcedure("shifts.read")
 		};
 	});
 
+// ── getSupplierSpendSummary ──────────────────────────────────────────────
+const getSupplierSpendSummary = permissionProcedure("shifts.read")
+	.input(
+		z.object({
+			supplierId: z.string().uuid(),
+			startDate: z.string().optional(),
+			endDate: z.string().optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const { supplierId, startDate, endDate } = input;
+
+		const periodResult = await db.execute<{
+			total: string;
+			count: string;
+			avg: string;
+			largest: string;
+			largest_desc: string | null;
+		}>(sql`
+      SELECT
+        COALESCE(SUM(amount), 0)::text AS total,
+        COUNT(*)::text                 AS count,
+        COALESCE(AVG(amount), 0)::text AS avg,
+        COALESCE(MAX(amount), 0)::text AS largest,
+        (SELECT description FROM expense
+           WHERE supplier_id     = ${supplierId}::uuid
+             AND organization_id = ${orgId}::uuid
+             ${startDate ? sql`AND created_at >= ${startDate}::timestamptz` : sql``}
+             ${endDate ? sql`AND created_at <= ${endDate}::timestamptz` : sql``}
+           ORDER BY amount DESC LIMIT 1) AS largest_desc
+      FROM expense
+      WHERE supplier_id     = ${supplierId}::uuid
+        AND organization_id = ${orgId}::uuid
+        ${startDate ? sql`AND created_at >= ${startDate}::timestamptz` : sql``}
+        ${endDate ? sql`AND created_at <= ${endDate}::timestamptz` : sql``}
+    `);
+		const period = periodResult.rows[0];
+
+		const allTimeResult = await db.execute<{
+			total: string;
+			count: string;
+		}>(sql`
+      SELECT COALESCE(SUM(amount), 0)::text AS total, COUNT(*)::text AS count
+      FROM expense
+      WHERE supplier_id = ${supplierId}::uuid AND organization_id = ${orgId}::uuid
+    `);
+		const allTime = allTimeResult.rows[0];
+
+		const lastResult = await db.execute<{ last_date: string | null }>(sql`
+      SELECT MAX(created_at)::text AS last_date
+      FROM expense
+      WHERE supplier_id = ${supplierId}::uuid AND organization_id = ${orgId}::uuid
+    `);
+		const last = lastResult.rows[0];
+
+		let prevTotal = "0";
+		if (startDate && endDate) {
+			const start = new Date(startDate);
+			const end = new Date(endDate);
+			const days = Math.round((end.getTime() - start.getTime()) / 86_400_000);
+			const prevEnd = new Date(start.getTime() - 1);
+			const prevStart = new Date(prevEnd.getTime() - days * 86_400_000);
+			const prevResult = await db.execute<{ total: string }>(sql`
+        SELECT COALESCE(SUM(amount), 0)::text AS total
+        FROM expense
+        WHERE supplier_id     = ${supplierId}::uuid
+          AND organization_id = ${orgId}::uuid
+          AND created_at >= ${prevStart.toISOString()}::timestamptz
+          AND created_at <= ${prevEnd.toISOString()}::timestamptz
+      `);
+			prevTotal = prevResult.rows[0]?.total ?? "0";
+		}
+
+		return {
+			periodTotal: period?.total ?? "0",
+			periodCount: Number(period?.count ?? 0),
+			periodAvg: period?.avg ?? "0",
+			periodLargest: period?.largest ?? "0",
+			periodLargestDesc: period?.largest_desc ?? null,
+			allTimeTotal: allTime?.total ?? "0",
+			allTimeCount: Number(allTime?.count ?? 0),
+			lastPurchaseDate: last?.last_date ?? null,
+			previousPeriodTotal: prevTotal,
+		};
+	});
+
+// ── getSupplierMonthlySpend ──────────────────────────────────────────────
+const getSupplierMonthlySpend = permissionProcedure("shifts.read")
+	.input(z.object({ supplierId: z.string().uuid() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const queryResult = await db.execute<{
+			month: string;
+			total: string;
+			count: string;
+		}>(sql`
+      SELECT
+        TO_CHAR(DATE_TRUNC('month', created_at AT TIME ZONE 'America/Guyana'), 'YYYY-MM') AS month,
+        COALESCE(SUM(amount), 0)::text AS total,
+        COUNT(*)::text                 AS count
+      FROM expense
+      WHERE supplier_id     = ${input.supplierId}::uuid
+        AND organization_id = ${orgId}::uuid
+        AND created_at >= NOW() - INTERVAL '12 months'
+      GROUP BY DATE_TRUNC('month', created_at AT TIME ZONE 'America/Guyana')
+      ORDER BY month ASC
+    `);
+		const map = new Map(queryResult.rows.map((r) => [r.month, r]));
+		const result: {
+			month: string;
+			label: string;
+			total: number;
+			count: number;
+		}[] = [];
+		for (let i = 11; i >= 0; i--) {
+			const d = new Date();
+			d.setMonth(d.getMonth() - i);
+			const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+			const label = d.toLocaleString("en-GY", {
+				month: "short",
+				year: "2-digit",
+			});
+			const row = map.get(key);
+			result.push({
+				month: key,
+				label,
+				total: Number(row?.total ?? 0),
+				count: Number(row?.count ?? 0),
+			});
+		}
+		return result;
+	});
+
+// ── getSupplierCategoryBreakdown ─────────────────────────────────────────
+const getSupplierCategoryBreakdown = permissionProcedure("shifts.read")
+	.input(
+		z.object({
+			supplierId: z.string().uuid(),
+			startDate: z.string().optional(),
+			endDate: z.string().optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const { supplierId, startDate, endDate } = input;
+		const queryResult = await db.execute<{
+			category: string;
+			total: string;
+		}>(sql`
+      SELECT
+        category,
+        COALESCE(SUM(amount), 0)::text AS total
+      FROM expense
+      WHERE supplier_id     = ${supplierId}::uuid
+        AND organization_id = ${orgId}::uuid
+        ${startDate ? sql`AND created_at >= ${startDate}::timestamptz` : sql``}
+        ${endDate ? sql`AND created_at <= ${endDate}::timestamptz` : sql``}
+      GROUP BY category
+      ORDER BY SUM(amount) DESC
+    `);
+		const rows = queryResult.rows;
+		const grandTotal = rows.reduce((s, r) => s + Number(r.total), 0);
+		return rows.map((r) => ({
+			category: r.category,
+			total: Number(r.total),
+			pct:
+				grandTotal > 0 ? Math.round((Number(r.total) / grandTotal) * 100) : 0,
+		}));
+	});
+
 // ── 7.4 getExpenseCategories ────────────────────────────────────────────
 const getExpenseCategories = permissionProcedure("shifts.read").handler(
 	async ({ context }) => {
@@ -840,6 +1011,10 @@ export const cashRouter = {
 	createExpenseCategory,
 	deleteExpenseCategory,
 	deleteExpense,
+	// Vendor Ledger
+	getSupplierSpendSummary,
+	getSupplierMonthlySpend,
+	getSupplierCategoryBreakdown,
 	// 7.7 No-Sale Drawer Tracking
 	logNoSale,
 	getNoSaleReport,
