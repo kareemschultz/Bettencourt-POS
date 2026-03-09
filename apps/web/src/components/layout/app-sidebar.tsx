@@ -594,13 +594,20 @@ export function AppSidebar({ user }: AppSidebarProps) {
 				</div>
 			</SidebarHeader>
 			<SidebarContent>
-				{renderNavGroup("Main", mainNavItems)}
-				{renderNavGroup("Operations", operationsNavItems)}
-				{renderNavGroup("Inventory", inventoryNavItems)}
-				{renderNavGroup("Customers", customerNavItems)}
-				{renderNavGroup("Finance", financeAndBillingNavItems)}
-				{renderNavGroup("Insights", insightsNavItems)}
-				{renderNavGroup("System", systemNavItems)}
+				{user.role === "accountant" ? (
+					// Finance-only view: accountants see only the Finance section
+					renderNavGroup("Finance", financeAndBillingNavItems)
+				) : (
+					<>
+						{renderNavGroup("Main", mainNavItems)}
+						{renderNavGroup("Operations", operationsNavItems)}
+						{renderNavGroup("Inventory", inventoryNavItems)}
+						{renderNavGroup("Customers", customerNavItems)}
+						{renderNavGroup("Finance", financeAndBillingNavItems)}
+						{renderNavGroup("Insights", insightsNavItems)}
+						{renderNavGroup("System", systemNavItems)}
+					</>
+				)}
 			</SidebarContent>
 			<SidebarFooter>
 				<SidebarMenu>
