@@ -634,6 +634,45 @@ Click a supplier's name or the edit icon to update their details (phone, address
 - **Expenses** — supplier cards appear at the top of the Expenses page for one-click filtering
 - **Stock Alerts** — if an item has a preferred supplier set, you can auto-generate a PO directly from the alert
 
+### Vendor Detail Page
+
+Click any supplier card to open the **Vendor Detail page** for that vendor. You can also reach it by clicking the vendor name badge in the Expenses table.
+
+#### What you'll see
+
+**Summary Cards** — Six cards at the top update automatically when you change the time period:
+- **Period Spend** — Total amount paid to this vendor in the selected period
+- **vs. Previous Period** — Whether spend went up (↑) or down (↓) compared to the prior equivalent window
+- **All-Time Spend** — Total amount paid since the first transaction
+- **Avg Transaction** — Average expense amount for the period
+- **Last Purchase** — When you last purchased from this vendor
+- **Largest Expense** — The single largest purchase in the selected period
+
+**Period Filter** — Select from: Today, This Week, This Month (default), Last Month, This Quarter, Last Quarter, This Year, or All Time.
+
+**Charts**
+- *Monthly Spend Trend* — Bar chart showing the last 12 months of spend
+- *Spend by Category* — Horizontal bar chart showing which categories this vendor appears in for the selected period
+
+**Transaction Table** — Full list of expenses for this vendor in the selected period.
+- Use the **search box** to filter by description or reference number
+- Use the **Category filter** to narrow by expense category
+- Click the **Date** or **Amount** column headers to sort
+- A ⚠️ warning icon appears next to possible duplicate transactions (same amount within 7 days)
+- The footer shows the total count and sum for the filtered results
+
+#### Actions
+
+| Button | What it does |
+|---|---|
+| **Edit Vendor** | Go back to Suppliers list to edit this vendor |
+| **+ Add Expense** | Open a form to record a new expense for this vendor (vendor pre-filled) |
+| **View Statement** | Preview a vendor statement in a popup modal |
+| **Print Statement** | Generate and download a PDF vendor statement |
+| **Export CSV** | Download the filtered transactions as a CSV file |
+
+> **Tip:** Press `Esc` to return to the Suppliers list.
+
 ---
 
 ## 13. Labels

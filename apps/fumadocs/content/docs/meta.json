@@ -9,6 +9,7 @@
 		"cash",
 		"inventory",
 		"expenses",
+		"suppliers",
 		"reports",
 		"customers",
 		"commerce",
