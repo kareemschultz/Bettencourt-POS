@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	Building2,
+	ChevronRight,
 	Mail,
 	MapPin,
+	Pencil,
 	Phone,
 	Plus,
 	Search,
@@ -10,6 +12,7 @@ import {
 	User,
 } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router";
 import { toast } from "sonner";
 import {
 	AlertDialog,
@@ -217,11 +220,10 @@ export default function SuppliersPage() {
 			) : (
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{filtered.map((s) => (
-						<button
+						<Link
 							key={s.id}
-							type="button"
-							className="w-full cursor-pointer space-y-3 rounded-lg border bg-card p-4 text-left transition-shadow hover:shadow-sm"
-							onClick={() => openEdit(s)}
+							to={`/dashboard/suppliers/${s.id}`}
+							className="group block space-y-3 rounded-lg border bg-card p-4 transition-shadow hover:shadow-sm"
 						>
 							<div className="flex items-start justify-between gap-2">
 								<div className="flex min-w-0 items-center gap-2">
@@ -237,16 +239,33 @@ export default function SuppliersPage() {
 										)}
 									</div>
 								</div>
-								<button
-									type="button"
-									onClick={(e) => {
-										e.stopPropagation();
-										setDeleteConfirmSupplier({ id: s.id, name: s.name });
-									}}
-									className="rounded p-1 text-muted-foreground hover:text-destructive"
-								>
-									<Trash2 className="size-3.5" />
-								</button>
+								<div className="flex shrink-0 items-center gap-0.5">
+									<button
+										type="button"
+										onClick={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											openEdit(s);
+										}}
+										className="rounded p-1 text-muted-foreground hover:text-foreground"
+										title="Edit supplier"
+									>
+										<Pencil className="size-3.5" />
+									</button>
+									<button
+										type="button"
+										onClick={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											setDeleteConfirmSupplier({ id: s.id, name: s.name });
+										}}
+										className="rounded p-1 text-muted-foreground hover:text-destructive"
+										title="Remove supplier"
+									>
+										<Trash2 className="size-3.5" />
+									</button>
+									<ChevronRight className="size-4 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5" />
+								</div>
 							</div>
 
 							{/* Categories */}
@@ -297,7 +316,7 @@ export default function SuppliersPage() {
 									{s.itemsSupplied}
 								</p>
 							)}
-						</button>
+						</Link>
 					))}
 				</div>
 			)}
