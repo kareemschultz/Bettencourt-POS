@@ -781,11 +781,19 @@ const getSupplierMonthlySpend = permissionProcedure("shifts.read")
 			total: string;
 			count: number;
 		}[] = [];
+		// Derive current year/month in Guyana time so keys match the SQL grouping
+		const gyNow = new Date().toLocaleDateString("en-CA", {
+			timeZone: "America/Guyana",
+		}); // "YYYY-MM-DD"
+		const [gyYear, gyMonth] = gyNow.split("-").map(Number) as [number, number];
 		for (let i = 11; i >= 0; i--) {
-			const d = new Date();
-			d.setMonth(d.getMonth() - i);
-			const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-			const label = d.toLocaleString("en-GY", {
+			// Safe month arithmetic that avoids JS setMonth() day-overflow
+			const totalMonths = gyYear * 12 + (gyMonth - 1) - i;
+			const year = Math.floor(totalMonths / 12);
+			const month = (totalMonths % 12) + 1;
+			const key = `${year}-${String(month).padStart(2, "0")}`;
+			const labelDate = new Date(year, month - 1, 1);
+			const label = labelDate.toLocaleString("en-GY", {
 				month: "short",
 				year: "2-digit",
 			});
