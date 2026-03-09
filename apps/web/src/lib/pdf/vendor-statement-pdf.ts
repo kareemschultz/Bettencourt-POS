@@ -124,6 +124,7 @@ function buildStatementHtml(
       <td><span class="category-badge">${escHtml(t.category)}</span></td>
       <td class="mono">${t.referenceNumber ? escHtml(t.referenceNumber) : '<span class="muted">—</span>'}</td>
       <td>${escHtml(humanPaymentMethod(t.paymentMethod))}</td>
+      <td>${t.authorizedBy ? escHtml(t.authorizedBy) : '<span class="muted">—</span>'}</td>
       <td class="right mono">${fmtGYD(Number(t.amount))}</td>
     </tr>`,
 		)
@@ -257,14 +258,15 @@ function buildStatementHtml(
       <tr>
         <th style="width:90px">Date</th>
         <th>Description</th>
-        <th style="width:130px">Category</th>
-        <th style="width:110px">Ref #</th>
-        <th style="width:110px">Method</th>
-        <th class="right" style="width:120px">Amount</th>
+        <th style="width:120px">Category</th>
+        <th style="width:100px">Ref #</th>
+        <th style="width:100px">Method</th>
+        <th style="width:100px">Authorized By</th>
+        <th class="right" style="width:110px">Amount (GYD)</th>
       </tr>
     </thead>
     <tbody>
-      ${transactions.length > 0 ? transactionRows : `<tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8;font-style:italic">No transactions in this period</td></tr>`}
+      ${transactions.length > 0 ? transactionRows : `<tr><td colspan="7" style="text-align:center;padding:24px;color:#94a3b8;font-style:italic">No transactions in this period</td></tr>`}
     </tbody>
   </table>
 

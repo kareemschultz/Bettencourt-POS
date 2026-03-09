@@ -17,7 +17,7 @@ export const ROUTE_MODULE_MAP: Record<string, string> = {
 	"/dashboard/waste": "inventory",
 	"/dashboard/variance": "inventory",
 	"/dashboard/suppliers": "inventory",
-	"/dashboard/suppliers/:id": "settings",
+	"/dashboard/suppliers/:id": "inventory",
 	"/dashboard/settings": "settings",
 	"/dashboard/locations": "settings",
 	"/dashboard/webhooks": "settings",
