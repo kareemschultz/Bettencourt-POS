@@ -10,6 +10,16 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
+import {
+	Bar,
+	BarChart,
+	CartesianGrid,
+	Legend,
+	Tooltip as RechartsTooltip,
+	ResponsiveContainer,
+	XAxis,
+	YAxis,
+} from "recharts";
 import { toast } from "sonner";
 import {
 	AlertDialog,
@@ -231,6 +241,10 @@ export default function ExpensesPage() {
 		orpc.cash.getExpenseCategories.queryOptions(),
 	);
 
+	const { data: categoryByMonth } = useQuery(
+		orpc.cash.getExpenseCategoryByMonth.queryOptions({ input: {} }),
+	);
+
 	function invalidateExpenses() {
 		if (!orgId) return;
 		queryClient.invalidateQueries({
@@ -334,6 +348,41 @@ export default function ExpensesPage() {
 		.sort((a, b) => b.total - a.total);
 
 	const totalToday = filtered.reduce((sum, e) => sum + Number(e.amount), 0);
+
+	// Pivot category-by-month data for stacked bar chart
+	const CHART_CATEGORIES = [
+		"Food Cost",
+		"Beverages",
+		"Utilities",
+		"Supplies",
+		"Maintenance",
+		"Labor",
+		"Marketing",
+		"Vehicle Maintenance",
+	];
+	const CHART_COLORS = [
+		"var(--chart-1)",
+		"var(--chart-2)",
+		"var(--chart-3)",
+		"var(--chart-4)",
+		"var(--chart-5)",
+		"hsl(271 91% 65%)",
+		"hsl(32 95% 55%)",
+		"hsl(160 60% 45%)",
+	];
+	const chartData = (categoryByMonth?.months ?? []).map(({ month, label }) => {
+		const row: Record<string, string | number> = { month, label };
+		for (const cat of CHART_CATEGORIES) {
+			const found = categoryByMonth?.rows.find(
+				(r) => r.month === month && r.category === cat,
+			);
+			row[cat] = found ? Number(found.total) : 0;
+		}
+		return row;
+	});
+	const activeChartCategories = CHART_CATEGORIES.filter((cat) =>
+		chartData.some((d) => (d[cat] as number) > 0),
+	);
 
 	function openAdd() {
 		setEditingId(null);
@@ -544,7 +593,7 @@ export default function ExpensesPage() {
 					<CardContent className="flex flex-col gap-1 p-4">
 						<p className="text-muted-foreground text-xs">All Expenses</p>
 						<p className="font-bold text-foreground text-xl">
-							{formatGYD(expenses.reduce((s, e) => s + Number(e.amount), 0))}
+							{formatGYD(Number(reportData?.grandTotal ?? 0))}
 						</p>
 						<p className="text-muted-foreground text-xs">
 							{expenses.length} entries
@@ -589,9 +638,14 @@ export default function ExpensesPage() {
 			{/* Category Breakdown */}
 			{categoryBreakdown.length > 0 && (
 				<div>
-					<p className="mb-2 font-medium text-foreground text-sm">
-						Spending by Category
-					</p>
+					<div className="mb-2 flex items-baseline gap-2">
+						<p className="font-medium text-foreground text-sm">
+							Spending by Category
+						</p>
+						<span className="text-muted-foreground text-xs">
+							for selected period — click to filter table
+						</span>
+					</div>
 					<div className="flex flex-wrap gap-2">
 						{categoryBreakdown.map((cat) => (
 							<button
@@ -613,6 +667,80 @@ export default function ExpensesPage() {
 							</button>
 						))}
 					</div>
+				</div>
+			)}
+
+			{/* Category by Month Chart */}
+			{activeChartCategories.length > 0 && (
+				<div className="rounded-lg border border-border p-4">
+					<div className="mb-4 flex items-baseline gap-2">
+						<p className="font-medium text-foreground text-sm">
+							Spending by Category — Last 12 Months
+						</p>
+						<span className="text-muted-foreground text-xs">
+							(full-year view — independent of date filter above)
+						</span>
+					</div>
+					<ResponsiveContainer width="100%" height={280}>
+						<BarChart
+							data={chartData}
+							margin={{ top: 4, right: 8, left: 8, bottom: 4 }}
+						>
+							<CartesianGrid
+								strokeDasharray="3 3"
+								vertical={false}
+								className="stroke-border"
+							/>
+							<XAxis
+								dataKey="label"
+								tick={{ fontSize: 11 }}
+								axisLine={false}
+								tickLine={false}
+							/>
+							<YAxis
+								tick={{ fontSize: 11 }}
+								axisLine={false}
+								tickLine={false}
+								tickFormatter={(v: number) =>
+									v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
+								}
+							/>
+							<RechartsTooltip
+								formatter={(
+									value: number | undefined,
+									name: string | undefined,
+								) => [
+									new Intl.NumberFormat("en-GY", {
+										style: "currency",
+										currency: "GYD",
+										maximumFractionDigits: 0,
+									}).format(value ?? 0),
+									name ?? "",
+								]}
+								contentStyle={{
+									fontSize: 12,
+									borderRadius: 8,
+									border: "1px solid hsl(var(--border))",
+									background: "hsl(var(--card))",
+									color: "hsl(var(--foreground))",
+								}}
+							/>
+							<Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+							{activeChartCategories.map((cat, i) => (
+								<Bar
+									key={cat}
+									dataKey={cat}
+									stackId="a"
+									fill={CHART_COLORS[i % CHART_COLORS.length]}
+									radius={
+										i === activeChartCategories.length - 1
+											? [4, 4, 0, 0]
+											: [0, 0, 0, 0]
+									}
+								/>
+							))}
+						</BarChart>
+					</ResponsiveContainer>
 				</div>
 			)}
 
@@ -728,6 +856,19 @@ export default function ExpensesPage() {
 						)}
 					</TableBody>
 				</Table>
+				{filtered.length > 0 && (
+					<div className="flex items-center justify-between border-border border-t px-4 py-3 text-sm">
+						<span className="text-muted-foreground">
+							{filtered.length} expense{filtered.length !== 1 ? "s" : ""}
+							{(supplierFilter !== "all" || categoryFilter !== "all") && (
+								<span className="ml-1 text-xs">(filtered)</span>
+							)}
+						</span>
+						<span className="font-semibold">
+							Total: {formatGYD(totalToday)}
+						</span>
+					</div>
+				)}
 			</div>
 
 			{/* Add / Edit Expense Dialog */}
