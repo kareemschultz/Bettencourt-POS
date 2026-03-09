@@ -778,7 +778,7 @@ const getSupplierMonthlySpend = permissionProcedure("shifts.read")
 		const result: {
 			month: string;
 			label: string;
-			total: number;
+			total: string;
 			count: number;
 		}[] = [];
 		for (let i = 11; i >= 0; i--) {
@@ -793,7 +793,7 @@ const getSupplierMonthlySpend = permissionProcedure("shifts.read")
 			result.push({
 				month: key,
 				label,
-				total: Number(row?.total ?? 0),
+				total: row?.total ?? "0",
 				count: Number(row?.count ?? 0),
 			});
 		}
@@ -831,7 +831,7 @@ const getSupplierCategoryBreakdown = permissionProcedure("shifts.read")
 		const grandTotal = rows.reduce((s, r) => s + Number(r.total), 0);
 		return rows.map((r) => ({
 			category: r.category,
-			total: Number(r.total),
+			total: r.total,
 			pct:
 				grandTotal > 0 ? Math.round((Number(r.total) / grandTotal) * 100) : 0,
 		}));
