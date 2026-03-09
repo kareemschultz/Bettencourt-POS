@@ -434,7 +434,7 @@ const generateNext = permissionProcedure("invoices.create")
 					createdBy: userId,
 				})
 				.returning({ id: schema.invoice.id });
-			generatedId = invoiceRows[0]?.id;
+			generatedId = invoiceRows[0]!.id;
 		} else if (template.templateType === "expense") {
 			const expenseRows = await db
 				.insert(schema.expense)
@@ -453,7 +453,7 @@ const generateNext = permissionProcedure("invoices.create")
 					createdBy: userId,
 				})
 				.returning({ id: schema.expense.id });
-			generatedId = expenseRows[0]?.id;
+			generatedId = expenseRows[0]!.id;
 		} else {
 			// vendor_bill
 			const billNumber = await nextVendorBillNumber(orgId);
@@ -476,7 +476,7 @@ const generateNext = permissionProcedure("invoices.create")
 					createdBy: userId,
 				})
 				.returning({ id: schema.vendorBill.id });
-			generatedId = billRows[0]?.id;
+			generatedId = billRows[0]!.id;
 		}
 
 		// Advance nextRunDate
