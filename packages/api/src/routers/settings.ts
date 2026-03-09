@@ -5,8 +5,8 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure, protectedProcedure } from "../index";
-import { hasPermission, loadUserPermissions } from "../lib/permissions";
 import { requireOrganizationId } from "../lib/org-context";
+import { hasPermission, loadUserPermissions } from "../lib/permissions";
 
 // ── Rate limiter for supervisor PIN attempts ───────────────────────────
 // Key: requestingUserId, Value: { count, resetAt }
@@ -154,6 +154,26 @@ const getSuppliers = permissionProcedure("settings.read")
 			.orderBy(asc(schema.supplier.name));
 
 		return suppliers;
+	});
+
+// ── getSupplierById ─────────────────────────────────────────────────────
+const getSupplierById = permissionProcedure("settings.read")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const [supplier] = await db
+			.select()
+			.from(schema.supplier)
+			.where(
+				and(
+					eq(schema.supplier.id, input.id),
+					eq(schema.supplier.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (!supplier)
+			throw new ORPCError("NOT_FOUND", { message: "Vendor not found" });
+		return supplier;
 	});
 
 // ── createSupplier ──────────────────────────────────────────────────────
@@ -1207,6 +1227,7 @@ export const settingsRouter = {
 	getRegisters,
 	updateRegister,
 	getSuppliers,
+	getSupplierById,
 	createSupplier,
 	updateSupplier,
 	deleteSupplier,
