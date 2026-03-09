@@ -1553,7 +1553,79 @@ Go to **System → Webhooks** and add a new endpoint with the URL provided by yo
 
 ---
 
-## 41. Getting Help
+## 41. Finance Module (Bettencourt Finance)
+
+The **Finance** section of the sidebar gives you a complete accounting and billing system — comparable to QuickBooks or Peachtree — built right into the POS.
+
+### Finance Dashboard (`/dashboard/finance`)
+Your one-page financial overview. Shows:
+- **Total Receivable** — total owed by all customers
+- **Total Payable** — total owed to all suppliers
+- **Overdue AR / AP** — overdue invoices and bills with totals
+- **Net Cash Flow (30 days)** — money in minus money out
+- **Revenue this month** — invoice payments received
+
+Plus revenue vs expenses charts and quick-view of recent invoices and vendor bills.
+
+### Invoices (`/dashboard/invoices`)
+Create invoices for catering jobs, corporate lunches, events, or any sale on credit.
+
+**To record a payment on an invoice:**
+1. Find the invoice → click ••• → **Record Payment**
+2. Choose: Cash, Cheque, Bank Transfer, or Mobile Money
+3. Enter the amount and date
+4. The invoice status updates automatically (Partial → Paid)
+
+Each invoice shows a **Payment History** with every payment ever made — nothing is deleted.
+
+**To create a credit note** from an invoice: click **Create Credit Note** on any paid or partial invoice.
+
+### Credit Notes (`/dashboard/credit-notes`)
+Use credit notes to reduce a customer's balance — for price corrections, errors, or loyalty adjustments.
+
+1. Create credit note → link to original invoice → add adjustment item
+2. **Issue** it (changes status from Draft → Issued)
+3. **Apply to Invoice** — select the customer's invoice and enter the amount to offset
+
+### Vendor Bills (`/dashboard/vendor-bills`)
+Track what the restaurant owes to suppliers (Family Food, Albadar, WJ Enterprise, etc.).
+
+1. Create a bill when you receive goods → add line items
+2. Record payments as you pay the supplier
+3. Overdue bills (past due date) show a red badge automatically
+
+### Recurring Templates (`/dashboard/recurring`)
+Set up automatic monthly invoices (e.g., Banks DIH monthly cafeteria) or recurring expenses (rent).
+
+- **Generate Next** creates the document and advances the schedule
+- **Pause** stops generation without deleting the template
+
+### Aging Report (`/dashboard/aging`)
+Shows how long invoices and vendor bills have been outstanding — grouped into Current, 1–30, 31–60, 61–90, and 90+ day buckets. Export to CSV for your accountant.
+
+### Customer Statements (`/dashboard/customer-statements`)
+Select a customer and a date range to see their full account history — every invoice, payment, and credit note with a running balance. Print or export to PDF.
+
+### Tax Summary (`/dashboard/tax-summary`)
+Compares VAT collected on sales vs VAT paid on purchases. Shows the net tax liability for any period. Useful for preparing VAT returns.
+
+### Budgets (`/dashboard/budgets`)
+Set monthly spending targets per category (Food Cost, Utilities, Rent, etc.).
+
+- Progress bars show how much of each budget has been used
+- Red = over budget, Amber = approaching limit, Green = safe
+- The **Budget vs Actual** view shows exact variances in GYD
+
+### Daily Expense Summary
+On the **Expenses** page, switch to **Daily Summary** view to see expenses exactly like the handwritten "Expense Summary Form" — grouped by funding source (Renatta, CEO, Pastry Section, Miss Bonita, QuickServe).
+
+Click **Print Daily Summary** to generate a printable form with signature lines (Prepared By / Checked By / Authorized By).
+
+**To assign a funding source to an expense:** when adding or editing an expense, select who provided the cash from the **Funding Source** dropdown. Click **Manage Sources** to add new sources.
+
+---
+
+## 42. Getting Help
 
 For technical support or system questions:
 

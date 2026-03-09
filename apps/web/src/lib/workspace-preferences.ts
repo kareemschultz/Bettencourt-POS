@@ -14,7 +14,8 @@ export type WorkspaceRoute =
 	| "/dashboard/inventory"
 	| "/dashboard/reports"
 	| "/dashboard/cash"
-	| "/dashboard/invoices";
+	| "/dashboard/invoices"
+	| "/dashboard/finance";
 
 export const WORKSPACE_ROUTE_STORAGE_KEY =
 	"bettencourt-default-workspace-route";
@@ -31,6 +32,7 @@ export const WORKSPACE_ROUTE_OPTIONS: Array<{
 	{ value: "/dashboard/reports", label: "Reports" },
 	{ value: "/dashboard/cash", label: "Cash Control" },
 	{ value: "/dashboard/invoices", label: "Invoices" },
+	{ value: "/dashboard/finance", label: "Finance Dashboard" },
 ];
 
 const VALID_WORKSPACE_ROUTES = new Set(
@@ -43,7 +45,7 @@ const ROLE_DEFAULT_WORKSPACE: Record<SidebarRole, WorkspaceRoute> = {
 	cashier: "/dashboard/pos",
 	checkoff: "/dashboard/kitchen",
 	warehouse: "/dashboard/inventory",
-	accountant: "/dashboard/reports",
+	accountant: "/dashboard/finance",
 };
 
 export function roleNameToSidebarRole(roleName: string): SidebarRole {

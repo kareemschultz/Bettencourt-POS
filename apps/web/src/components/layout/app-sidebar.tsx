@@ -21,11 +21,11 @@ import {
 	LayoutDashboard,
 	LogOut,
 	MapPin,
-	Package,
 	Percent,
 	PieChart,
 	Receipt,
 	ReceiptText,
+	RefreshCw,
 	Salad,
 	Scale,
 	Search,
@@ -33,6 +33,7 @@ import {
 	Shield,
 	Star,
 	Tag,
+	Target,
 	Trash2,
 	TrendingUp,
 	Truck,
@@ -209,18 +210,46 @@ const inventoryNavItems = [
 
 const financeNavItems = [
 	{
-		title: "Quotations",
-		url: "/dashboard/quotations",
-		icon: FileText,
-		module: "quotations",
-		roles: ["executive", "admin"],
+		title: "Finance Dashboard",
+		url: "/dashboard/finance",
+		icon: TrendingUp,
+		module: "reports",
+		roles: ["executive", "admin", "accountant"],
 	},
 	{
 		title: "Invoices",
 		url: "/dashboard/invoices",
 		icon: Receipt,
 		module: "invoices",
-		roles: ["executive", "admin"],
+		roles: ["executive", "admin", "accountant"],
+	},
+	{
+		title: "Quotations",
+		url: "/dashboard/quotations",
+		icon: FileText,
+		module: "quotations",
+		roles: ["executive", "admin", "accountant"],
+	},
+	{
+		title: "Credit Notes",
+		url: "/dashboard/credit-notes",
+		icon: FileText,
+		module: "invoices",
+		roles: ["executive", "admin", "accountant"],
+	},
+	{
+		title: "Vendor Bills",
+		url: "/dashboard/vendor-bills",
+		icon: Truck,
+		module: "invoices",
+		roles: ["executive", "admin", "accountant"],
+	},
+	{
+		title: "Recurring",
+		url: "/dashboard/recurring",
+		icon: RefreshCw,
+		module: "invoices",
+		roles: ["executive", "admin", "accountant"],
 	},
 ];
 
@@ -250,11 +279,39 @@ const customerNavItems = [
 
 const cashNavItems = [
 	{
-		title: "Discounts",
-		url: "/dashboard/discounts",
-		icon: Percent,
+		title: "Expenses",
+		url: "/dashboard/expenses",
+		icon: ReceiptText,
 		module: "settings",
-		roles: ["executive", "admin"],
+		roles: ["executive", "admin", "accountant"],
+	},
+	{
+		title: "Aging Report",
+		url: "/dashboard/aging",
+		icon: Clock,
+		module: "reports",
+		roles: ["executive", "admin", "accountant"],
+	},
+	{
+		title: "Customer Statements",
+		url: "/dashboard/customer-statements",
+		icon: Users,
+		module: "reports",
+		roles: ["executive", "admin", "accountant"],
+	},
+	{
+		title: "Tax Summary",
+		url: "/dashboard/tax-summary",
+		icon: Calculator,
+		module: "reports",
+		roles: ["executive", "admin", "accountant"],
+	},
+	{
+		title: "Budgets",
+		url: "/dashboard/budgets",
+		icon: Target,
+		module: "reports",
+		roles: ["executive", "admin", "accountant"],
 	},
 	{
 		title: "Cash Control",
@@ -264,6 +321,13 @@ const cashNavItems = [
 		roles: ["executive", "admin", "cashier"],
 	},
 	{
+		title: "Discounts",
+		url: "/dashboard/discounts",
+		icon: Percent,
+		module: "settings",
+		roles: ["executive", "admin"],
+	},
+	{
 		title: "Cash Reconciliation",
 		url: "/dashboard/reconciliation",
 		icon: Scale,
@@ -271,7 +335,7 @@ const cashNavItems = [
 		roles: ["executive", "admin"],
 	},
 	{
-		title: "Daily Sales Journal",
+		title: "Sales Journal",
 		url: "/dashboard/journal",
 		icon: BookOpen,
 		module: "reports",
@@ -282,13 +346,6 @@ const cashNavItems = [
 		url: "/dashboard/pnl",
 		icon: Receipt,
 		module: "reports",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Expenses",
-		url: "/dashboard/expenses",
-		icon: ReceiptText,
-		module: "settings",
 		roles: ["executive", "admin"],
 	},
 ];
@@ -325,7 +382,7 @@ const insightsNavItems = [
 		roles: ["executive", "admin"],
 	},
 	{
-		title: "Profitability",
+		title: "Product Profitability",
 		url: "/dashboard/profitability",
 		icon: PieChart,
 		module: "reports",
@@ -384,6 +441,7 @@ const ACCOUNTANT_MODULES = new Set([
 	"dashboard",
 	"reports",
 	"invoices",
+	"quotations",
 	"settings",
 	"shifts",
 	"orders",
@@ -540,7 +598,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
 				{renderNavGroup("Operations", operationsNavItems)}
 				{renderNavGroup("Inventory", inventoryNavItems)}
 				{renderNavGroup("Customers", customerNavItems)}
-				{renderNavGroup("Finance & Billing", financeAndBillingNavItems)}
+				{renderNavGroup("Finance", financeAndBillingNavItems)}
 				{renderNavGroup("Insights", insightsNavItems)}
 				{renderNavGroup("System", systemNavItems)}
 			</SidebarContent>

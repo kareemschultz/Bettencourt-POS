@@ -192,6 +192,11 @@ export const expense = pgTable(
 		organizationId: uuid("organization_id")
 			.notNull()
 			.references(() => organization.id, { onDelete: "cascade" }),
+		// Task 1.7: who/where the cash came from (Renatta, CEO, Pastry Section, etc.)
+		fundingSourceId: uuid("funding_source_id").references(
+			() => fundingSource.id,
+			{ onDelete: "set null" },
+		),
 	},
 	(table) => [
 		index("idx_expense_session").on(table.cashSessionId),
@@ -199,7 +204,46 @@ export const expense = pgTable(
 		index("idx_expense_created").on(table.createdAt),
 		index("idx_expense_supplier").on(table.supplierId),
 		index("idx_expense_org_created").on(table.organizationId, table.createdAt),
+		index("idx_expense_funding_source").on(table.fundingSourceId),
 	],
+);
+
+// ── Funding Source (Task 1.7) ──────────────────────────────────────────
+// Tracks who/where money comes from for each expense payment.
+// Matches Shakira's paper form: Renatta, CEO, CFO, Pastry Section, etc.
+
+export const fundingSource = pgTable(
+	"funding_source",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		organizationId: uuid("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		isActive: boolean("is_active").notNull().default(true),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [
+		index("idx_funding_source_org").on(table.organizationId),
+		unique("funding_source_org_name").on(table.organizationId, table.name),
+	],
+);
+
+export const fundingSourceRelations = relations(
+	fundingSource,
+	({ one, many }) => ({
+		organization: one(organization, {
+			fields: [fundingSource.organizationId],
+			references: [organization.id],
+		}),
+		expenses: many(expense),
+	}),
 );
 
 // ── Expense Category ──────────────────────────────────────────────────
@@ -347,6 +391,10 @@ export const expenseRelations = relations(expense, ({ one }) => ({
 	supplier: one(supplier, {
 		fields: [expense.supplierId],
 		references: [supplier.id],
+	}),
+	fundingSource: one(fundingSource, {
+		fields: [expense.fundingSourceId],
+		references: [fundingSource.id],
 	}),
 }));
 

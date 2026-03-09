@@ -3,8 +3,10 @@ import type { RouterClient } from "@orpc/server";
 import { protectedProcedure, publicProcedure } from "../index";
 import { analyticsRouter } from "./analytics";
 import { auditRouter } from "./audit";
+import { budgetsRouter } from "./budgets";
 import { cashRouter } from "./cash";
 import { categoriesRouter } from "./categories";
+import { creditNotesRouter } from "./credit-notes";
 import { customersRouter } from "./customers";
 import { dashboardRouter } from "./dashboard";
 import { discountsRouter } from "./discounts";
@@ -26,11 +28,13 @@ import { productionRouter } from "./production";
 import { productsRouter } from "./products";
 import { quotationsRouter } from "./quotations";
 import { reconciliationRouter } from "./reconciliation";
+import { recurringRouter } from "./recurring";
 import { reportsRouter } from "./reports";
 import { settingsRouter } from "./settings";
 import { splitBillRouter } from "./split-bill";
 import { tablesRouter } from "./tables";
 import { timeclockRouter } from "./timeclock";
+import { vendorBillsRouter } from "./vendor-bills";
 import { webhooksRouter } from "./webhooks";
 
 export const appRouter = {
@@ -74,6 +78,10 @@ export const appRouter = {
 	notifications: notificationsRouter,
 	quotations: quotationsRouter,
 	invoices: invoicesRouter,
+	creditNotes: creditNotesRouter,
+	vendorBills: vendorBillsRouter,
+	recurring: recurringRouter,
+	budgets: budgetsRouter,
 };
 export type AppRouter = typeof appRouter;
 export type AppRouterClient = RouterClient<typeof appRouter>;
