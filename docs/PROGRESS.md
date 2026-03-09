@@ -2,7 +2,7 @@
 
 This document tracks all plan phases and the current state of the system. Update it whenever significant work is completed.
 
-**Last updated:** 2026-03-07
+**Last updated:** 2026-03-09
 
 ---
 
@@ -510,3 +510,32 @@ Branch: `plan10/final-audit`
 - `bun run check-types`: pass
 - `bun run test`: pass
 - `bun run build`: pass
+
+---
+
+## Plan #12 — Bettencourt Finance Comprehensive Financial Module (2026-03-09)
+
+**Status:** COMPLETE — committed, Docker rebuilt, pushed to GitHub (commit 25eda8a)
+
+### What was built
+Full accounting and billing suite integrated into the existing POS:
+
+**Schema:** `invoicePayment`, `creditNote`, `vendorBill`, `vendorBillPayment`, `recurringTemplate`, `budget`, `fundingSource`, `financeAuditEvent`
+
+**API:** credit-notes, vendor-bills, recurring, budgets routers (new); invoices + cash routers enhanced with payment ledger, finance dashboard, aging, statements, tax summary, daily expense summary
+
+**Frontend (8 new pages + 2 enhanced):** Finance Dashboard, Credit Notes, Vendor Bills, Recurring, Aging Report, Customer Statements, Tax Summary, Budgets; enhanced Invoices + Expenses (funding sources + daily summary view)
+
+**PDFs:** customer-statement-pdf.ts, daily-expense-summary-pdf.ts (Shakira's expense form), invoice-pdf.ts enhanced
+
+**Navigation:** Sidebar, route-access, command palette, PAGE_TITLES, workspace-preferences updated
+
+**Seed:** Real funding sources (Renatta, CEO, Pastry Section, Miss Bonita, QuickServe, General Cash), vendor bills, invoice payments, credit notes, recurring templates, budget
+
+**Docs:** finance.mdx + USER-MANUAL.md Section 41
+
+### Verification
+- `bun run check-types` (web + api): pass
+- `bun run build` (web + server): pass
+- Docker rebuilt and deployed: pass
+- Pushed to GitHub: commit 25eda8a
