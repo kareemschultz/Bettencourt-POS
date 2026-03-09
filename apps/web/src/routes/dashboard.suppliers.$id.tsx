@@ -529,13 +529,6 @@ export default function SupplierDetailPage() {
 
 	// ── Loading state ─────────────────────────────────────────────────────
 
-	const isPageLoading =
-		loadingSupplier ||
-		loadingSummary ||
-		loadingMonthly ||
-		loadingCategory ||
-		loadingExpenses;
-
 	if (loadingSupplier) {
 		return (
 			<div className="space-y-6 p-4 md:p-6">
@@ -701,7 +694,7 @@ export default function SupplierDetailPage() {
 			</div>
 
 			{/* KPI cards */}
-			{isPageLoading || !summary ? (
+			{!summary ? (
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{["kpi1", "kpi2", "kpi3", "kpi4", "kpi5", "kpi6"].map((k) => (
 						<Skeleton key={k} className="h-24 rounded-lg" />
