@@ -61,6 +61,7 @@ const PAGE_TITLES: Record<string, string> = {
 	"/dashboard/giftcards": "Gift Cards",
 	"/dashboard/expenses": "Expenses",
 	"/dashboard/suppliers": "Suppliers",
+	"/dashboard/suppliers/:id": "Supplier Detail",
 	"/dashboard/invoices": "Invoices",
 	"/dashboard/quotations": "Quotations",
 	"/dashboard/tables": "Tables",
