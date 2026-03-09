@@ -9,6 +9,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router";
 import { toast } from "sonner";
 import {
 	AlertDialog,
@@ -661,7 +662,19 @@ export default function ExpensesPage() {
 											})}
 										</TableCell>
 										<TableCell>
-											{e.supplier_name ? (
+											{e.supplier_id ? (
+												<Link
+													to={`/dashboard/suppliers/${e.supplier_id}`}
+													onClick={(ev) => ev.stopPropagation()}
+												>
+													<Badge
+														variant="secondary"
+														className={`text-xs hover:opacity-80 ${color ?? ""}`}
+													>
+														{e.supplier_name}
+													</Badge>
+												</Link>
+											) : e.supplier_name ? (
 												<Badge
 													variant="secondary"
 													className={`text-xs ${color ?? ""}`}
