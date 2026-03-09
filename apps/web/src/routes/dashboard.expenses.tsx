@@ -1,14 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+	CalendarDays,
 	Download,
+	List,
 	Pencil,
 	Plus,
 	Printer,
 	ReceiptText,
 	Settings2,
 	Trash2,
+	Wallet,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router";
 import {
 	Bar,
@@ -50,6 +53,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
 	TableBody,
@@ -60,6 +64,7 @@ import {
 } from "@/components/ui/table";
 import { authClient } from "@/lib/auth-client";
 import { downloadCsv } from "@/lib/csv-export";
+import { printDailyExpenseSummary } from "@/lib/pdf/daily-expense-summary-pdf";
 import { formatGYD } from "@/lib/types";
 import { escapeHtml, todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
@@ -145,6 +150,7 @@ const emptyForm = {
 	paymentMethod: "",
 	referenceNumber: "",
 	notes: "",
+	fundingSourceId: "",
 };
 
 type ExpenseRow = {
@@ -161,6 +167,7 @@ type ExpenseRow = {
 	reference_number: string | null;
 	notes: string | null;
 	receipt_photo_url: string | null;
+	funding_source_id: string | null;
 };
 
 export default function ExpensesPage() {
@@ -210,6 +217,25 @@ export default function ExpensesPage() {
 	const [viewingExpense, setViewingExpense] = useState<ExpenseRow | null>(null);
 	const [categoryFilter, setCategoryFilter] = useState("all");
 
+	// Funding source state
+	const [fundingSourceFilter, setFundingSourceFilter] = useState("all");
+	const [manageFundingSourcesOpen, setManageFundingSourcesOpen] =
+		useState(false);
+	const [newFundingSourceName, setNewFundingSourceName] = useState("");
+	const [editingFundingSource, setEditingFundingSource] = useState<{
+		id: string;
+		name: string;
+		isActive: boolean;
+	} | null>(null);
+	const [deleteFundingSourceItem, setDeleteFundingSourceItem] = useState<{
+		id: string;
+		name: string;
+	} | null>(null);
+
+	// Daily summary state
+	const [viewMode, setViewMode] = useState<"table" | "daily">("table");
+	const [summaryDate, setSummaryDate] = useState(today);
+
 	const { data: expensesRaw = [] } = useQuery(
 		orpc.cash.getExpenses.queryOptions({
 			input: {
@@ -243,6 +269,16 @@ export default function ExpensesPage() {
 
 	const { data: categoryByMonth } = useQuery(
 		orpc.cash.getExpenseCategoryByMonth.queryOptions({ input: {} }),
+	);
+
+	const { data: fundingSources = [], isLoading: fundingSourcesLoading } =
+		useQuery(orpc.cash.listFundingSources.queryOptions());
+
+	const { data: dailySummary, isLoading: dailySummaryLoading } = useQuery(
+		orpc.cash.getDailyExpenseSummary.queryOptions({
+			input: { date: summaryDate },
+			enabled: viewMode === "daily" && !!orgId,
+		}),
 	);
 
 	function invalidateExpenses() {
@@ -324,6 +360,48 @@ export default function ExpensesPage() {
 		}),
 	);
 
+	function invalidateFundingSources() {
+		queryClient.invalidateQueries({
+			queryKey: orpc.cash.listFundingSources.queryOptions().queryKey,
+		});
+	}
+
+	const createFundingSourceMut = useMutation(
+		orpc.cash.createFundingSource.mutationOptions({
+			onSuccess: () => {
+				invalidateFundingSources();
+				setNewFundingSourceName("");
+				toast.success("Funding source added");
+			},
+			onError: (err) =>
+				toast.error(err.message || "Failed to add funding source"),
+		}),
+	);
+
+	const updateFundingSourceMut = useMutation(
+		orpc.cash.updateFundingSource.mutationOptions({
+			onSuccess: () => {
+				invalidateFundingSources();
+				setEditingFundingSource(null);
+				toast.success("Funding source updated");
+			},
+			onError: (err) =>
+				toast.error(err.message || "Failed to update funding source"),
+		}),
+	);
+
+	const deleteFundingSourceMut = useMutation(
+		orpc.cash.deleteFundingSource.mutationOptions({
+			onSuccess: () => {
+				invalidateFundingSources();
+				setDeleteFundingSourceItem(null);
+				toast.success("Funding source deleted");
+			},
+			onError: (err) =>
+				toast.error(err.message || "Failed to delete funding source"),
+		}),
+	);
+
 	// Build stable supplier → color map
 	const supplierColorMap = new Map<string, string>();
 	suppliers.forEach((s, i) => {
@@ -335,7 +413,12 @@ export default function ExpensesPage() {
 
 	const filtered = expenses
 		.filter((e) => supplierFilter === "all" || e.supplier_id === supplierFilter)
-		.filter((e) => categoryFilter === "all" || e.category === categoryFilter);
+		.filter((e) => categoryFilter === "all" || e.category === categoryFilter)
+		.filter(
+			(e) =>
+				fundingSourceFilter === "all" ||
+				e.funding_source_id === fundingSourceFilter,
+		);
 
 	// Category breakdown (client-side from loaded expenses)
 	const categoryBreakdown = Object.entries(
@@ -400,6 +483,7 @@ export default function ExpensesPage() {
 			paymentMethod: e.payment_method ?? "",
 			referenceNumber: e.reference_number ?? "",
 			notes: e.notes ?? "",
+			fundingSourceId: e.funding_source_id ?? "",
 		});
 		setDialogOpen(true);
 	}
@@ -423,6 +507,7 @@ export default function ExpensesPage() {
 				paymentMethod: form.paymentMethod || null,
 				referenceNumber: form.referenceNumber || null,
 				notes: form.notes || null,
+				fundingSourceId: form.fundingSourceId || null,
 			});
 		} else {
 			createExpense.mutate({
@@ -434,6 +519,7 @@ export default function ExpensesPage() {
 				referenceNumber: form.referenceNumber || null,
 				notes: form.notes || null,
 				organizationId: orgId,
+				fundingSourceId: form.fundingSourceId || undefined,
 			});
 		}
 	}
@@ -451,6 +537,36 @@ export default function ExpensesPage() {
 					</p>
 				</div>
 				<div className="flex items-center gap-2">
+					{/* View Mode Toggle */}
+					<div className="flex rounded-md border border-border">
+						<Button
+							size="sm"
+							variant={viewMode === "table" ? "secondary" : "ghost"}
+							className="gap-1 rounded-r-none border-0"
+							onClick={() => setViewMode("table")}
+						>
+							<List className="size-4" />
+							Table
+						</Button>
+						<Button
+							size="sm"
+							variant={viewMode === "daily" ? "secondary" : "ghost"}
+							className="gap-1 rounded-l-none border-0 border-l"
+							onClick={() => setViewMode("daily")}
+						>
+							<CalendarDays className="size-4" />
+							Daily Summary
+						</Button>
+					</div>
+					<Button
+						size="sm"
+						variant="outline"
+						className="gap-1"
+						onClick={() => setManageFundingSourcesOpen(true)}
+					>
+						<Wallet className="size-4" />
+						Funding Sources
+					</Button>
 					<Button
 						size="sm"
 						variant="outline"
@@ -507,369 +623,534 @@ export default function ExpensesPage() {
 				</div>
 			</div>
 
-			{/* Filters */}
-			<div className="flex flex-wrap items-end gap-3">
-				<div className="flex flex-col gap-1">
-					<Label className="text-muted-foreground text-xs">From</Label>
-					<Input
-						type="date"
-						value={startDate}
-						onChange={(e) => setStartDate(e.target.value)}
-						className="h-8 w-36 text-sm"
-					/>
-				</div>
-				<div className="flex flex-col gap-1">
-					<Label className="text-muted-foreground text-xs">To</Label>
-					<Input
-						type="date"
-						value={endDate}
-						onChange={(e) => setEndDate(e.target.value)}
-						className="h-8 w-36 text-sm"
-					/>
-				</div>
-				<div className="flex flex-col gap-1">
-					<Label className="text-muted-foreground text-xs">Quick range</Label>
-					<div className="flex gap-1">
-						{(["today", "week", "month", "lastmonth"] as const).map((p) => (
-							<Button
-								key={p}
-								size="sm"
-								variant="outline"
-								className="h-8 px-2 text-xs"
-								onClick={() => datePreset(p)}
-							>
-								{
-									{
-										today: "Today",
-										week: "This Week",
-										month: "This Month",
-										lastmonth: "Last Month",
-									}[p]
-								}
-							</Button>
-						))}
+			{/* Filters — only shown in table mode */}
+			{viewMode === "daily" && (
+				<div className="flex flex-wrap items-end gap-3">
+					<div className="flex flex-col gap-1">
+						<Label className="text-muted-foreground text-xs">Date</Label>
+						<Input
+							type="date"
+							value={summaryDate}
+							onChange={(e) => setSummaryDate(e.target.value)}
+							className="h-8 w-40 text-sm"
+						/>
 					</div>
-				</div>
-				<div className="flex flex-col gap-1">
-					<Label className="text-muted-foreground text-xs">Supplier</Label>
-					<Select value={supplierFilter} onValueChange={setSupplierFilter}>
-						<SelectTrigger className="h-8 w-44 text-sm">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All suppliers</SelectItem>
-							{suppliers.map((s) => (
-								<SelectItem key={s.id} value={s.id}>
-									{s.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-				<div className="flex flex-col gap-1">
-					<Label className="text-muted-foreground text-xs">Category</Label>
-					<Select value={categoryFilter} onValueChange={setCategoryFilter}>
-						<SelectTrigger className="h-8 w-44 text-sm">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All categories</SelectItem>
-							{categories.map((c) => (
-								<SelectItem key={c.id} value={c.name}>
-									{c.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-			</div>
-
-			{/* Summary cards — click to filter the detail table below */}
-			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-				<Card
-					className={`cursor-pointer transition-colors hover:border-primary/50 hover:bg-primary/5 ${supplierFilter === "all" ? "ring-2 ring-primary" : ""}`}
-					onClick={() => setSupplierFilter("all")}
-				>
-					<CardContent className="flex flex-col gap-1 p-4">
-						<p className="text-muted-foreground text-xs">All Expenses</p>
-						<p className="font-bold text-foreground text-xl">
-							{formatGYD(Number(reportData?.grandTotal ?? 0))}
-						</p>
-						<p className="text-muted-foreground text-xs">
-							{expenses.length} entries
-						</p>
-					</CardContent>
-				</Card>
-				{(
-					(reportData?.bySupplier as Array<{
-						supplier_name: string;
-						total: string;
-						count: number;
-					}>) ?? []
-				)
-					.slice(0, 3)
-					.map((row, i) => {
-						const supplierId = supplierNameToIdMap.get(row.supplier_name);
-						const isActive = !!supplierId && supplierFilter === supplierId;
-						return (
-							<Card
-								key={i}
-								className={`cursor-pointer transition-colors hover:border-primary/50 hover:bg-primary/5 ${isActive ? "ring-2 ring-primary" : ""}`}
-								onClick={() => {
-									if (supplierId) setSupplierFilter(supplierId);
-								}}
-							>
-								<CardContent className="flex flex-col gap-1 p-4">
-									<p className="text-muted-foreground text-xs">
-										{row.supplier_name}
-									</p>
-									<p className="font-bold text-foreground text-lg">
-										{formatGYD(Number(row.total))}
-									</p>
-									<p className="text-muted-foreground text-xs">
-										{row.count} expenses — click to view
-									</p>
-								</CardContent>
-							</Card>
-						);
-					})}
-			</div>
-
-			{/* Category Breakdown */}
-			{categoryBreakdown.length > 0 && (
-				<div>
-					<div className="mb-2 flex items-baseline gap-2">
-						<p className="font-medium text-foreground text-sm">
-							Spending by Category
-						</p>
-						<span className="text-muted-foreground text-xs">
-							for selected period — click to filter table
-						</span>
-					</div>
-					<div className="flex flex-wrap gap-2">
-						{categoryBreakdown.map((cat) => (
-							<button
-								key={cat.name}
-								type="button"
-								onClick={() =>
-									setCategoryFilter(
-										categoryFilter === cat.name ? "all" : cat.name,
-									)
-								}
-								className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors hover:border-primary/50 hover:bg-primary/5 ${categoryFilter === cat.name ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border"}`}
-							>
-								<span className="font-medium text-foreground">
-									{formatGYD(cat.total)}
-								</span>
-								<span className="text-muted-foreground text-xs">
-									{cat.name}
-								</span>
-							</button>
-						))}
-					</div>
+					<Button
+						size="sm"
+						variant="outline"
+						className="gap-1"
+						disabled={dailySummaryLoading || !dailySummary}
+						onClick={() => {
+							if (!dailySummary) return;
+							printDailyExpenseSummary({
+								date: summaryDate,
+								grandTotal: dailySummary.grandTotal,
+								groups: dailySummary.groups,
+								preparedBy:
+									session?.user?.name ?? userProfile?.name ?? undefined,
+							});
+						}}
+					>
+						<Printer className="size-4" />
+						Print Daily Summary
+					</Button>
 				</div>
 			)}
-
-			{/* Category by Month Chart */}
-			{activeChartCategories.length > 0 && (
-				<div className="rounded-lg border border-border p-4">
-					<div className="mb-4 flex items-baseline gap-2">
-						<p className="font-medium text-foreground text-sm">
-							Spending by Category — Last 12 Months
-						</p>
-						<span className="text-muted-foreground text-xs">
-							(full-year view — independent of date filter above)
-						</span>
+			{viewMode === "table" && (
+				<div className="flex flex-wrap items-end gap-3">
+					<div className="flex flex-col gap-1">
+						<Label className="text-muted-foreground text-xs">From</Label>
+						<Input
+							type="date"
+							value={startDate}
+							onChange={(e) => setStartDate(e.target.value)}
+							className="h-8 w-36 text-sm"
+						/>
 					</div>
-					<ResponsiveContainer width="100%" height={280}>
-						<BarChart
-							data={chartData}
-							margin={{ top: 4, right: 8, left: 8, bottom: 4 }}
-						>
-							<CartesianGrid
-								strokeDasharray="3 3"
-								vertical={false}
-								className="stroke-border"
-							/>
-							<XAxis
-								dataKey="label"
-								tick={{ fontSize: 11 }}
-								axisLine={false}
-								tickLine={false}
-							/>
-							<YAxis
-								tick={{ fontSize: 11 }}
-								axisLine={false}
-								tickLine={false}
-								tickFormatter={(v: number) =>
-									v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
-								}
-							/>
-							<RechartsTooltip
-								formatter={(
-									value: number | undefined,
-									name: string | undefined,
-								) => [
-									new Intl.NumberFormat("en-GY", {
-										style: "currency",
-										currency: "GYD",
-										maximumFractionDigits: 0,
-									}).format(value ?? 0),
-									name ?? "",
-								]}
-								contentStyle={{
-									fontSize: 12,
-									borderRadius: 8,
-									border: "1px solid hsl(var(--border))",
-									background: "hsl(var(--card))",
-									color: "hsl(var(--foreground))",
-								}}
-							/>
-							<Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-							{activeChartCategories.map((cat, i) => (
-								<Bar
-									key={cat}
-									dataKey={cat}
-									stackId="a"
-									fill={CHART_COLORS[i % CHART_COLORS.length]}
-									radius={
-										i === activeChartCategories.length - 1
-											? [4, 4, 0, 0]
-											: [0, 0, 0, 0]
-									}
-								/>
-							))}
-						</BarChart>
-					</ResponsiveContainer>
-				</div>
-			)}
-
-			{/* Table */}
-			<div className="rounded-lg border border-border">
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead className="text-xs">Date</TableHead>
-							<TableHead className="text-xs">Supplier</TableHead>
-							<TableHead className="text-xs">Category</TableHead>
-							<TableHead className="text-xs">Description</TableHead>
-							<TableHead className="text-right text-xs">Amount</TableHead>
-							<TableHead className="text-xs">Authorized By</TableHead>
-							<TableHead className="w-20 text-xs" />
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{filtered.length === 0 ? (
-							<TableRow>
-								<TableCell
-									colSpan={7}
-									className="py-10 text-center text-muted-foreground text-sm"
+					<div className="flex flex-col gap-1">
+						<Label className="text-muted-foreground text-xs">To</Label>
+						<Input
+							type="date"
+							value={endDate}
+							onChange={(e) => setEndDate(e.target.value)}
+							className="h-8 w-36 text-sm"
+						/>
+					</div>
+					<div className="flex flex-col gap-1">
+						<Label className="text-muted-foreground text-xs">Quick range</Label>
+						<div className="flex gap-1">
+							{(["today", "week", "month", "lastmonth"] as const).map((p) => (
+								<Button
+									key={p}
+									size="sm"
+									variant="outline"
+									className="h-8 px-2 text-xs"
+									onClick={() => datePreset(p)}
 								>
-									<ReceiptText className="mx-auto mb-2 size-8 opacity-30" />
-									No expenses recorded
-								</TableCell>
-							</TableRow>
-						) : (
-							filtered.map((e) => {
-								const color = e.supplier_id
-									? supplierColorMap.get(e.supplier_id)
-									: undefined;
+									{
+										{
+											today: "Today",
+											week: "This Week",
+											month: "This Month",
+											lastmonth: "Last Month",
+										}[p]
+									}
+								</Button>
+							))}
+						</div>
+					</div>
+					<div className="flex flex-col gap-1">
+						<Label className="text-muted-foreground text-xs">Supplier</Label>
+						<Select value={supplierFilter} onValueChange={setSupplierFilter}>
+							<SelectTrigger className="h-8 w-44 text-sm">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">All suppliers</SelectItem>
+								{suppliers.map((s) => (
+									<SelectItem key={s.id} value={s.id}>
+										{s.name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="flex flex-col gap-1">
+						<Label className="text-muted-foreground text-xs">Category</Label>
+						<Select value={categoryFilter} onValueChange={setCategoryFilter}>
+							<SelectTrigger className="h-8 w-44 text-sm">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">All categories</SelectItem>
+								{categories.map((c) => (
+									<SelectItem key={c.id} value={c.name}>
+										{c.name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="flex flex-col gap-1">
+						<Label className="text-muted-foreground text-xs">
+							Funding Source
+						</Label>
+						<Select
+							value={fundingSourceFilter}
+							onValueChange={setFundingSourceFilter}
+						>
+							<SelectTrigger className="h-8 w-44 text-sm">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">All sources</SelectItem>
+								{fundingSources.map((fs) => (
+									<SelectItem key={fs.id} value={fs.id}>
+										{fs.name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+				</div>
+			)}
+
+			{viewMode === "table" && (
+				<>
+					{/* Summary cards — click to filter the detail table below */}
+					<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+						<Card
+							className={`cursor-pointer transition-colors hover:border-primary/50 hover:bg-primary/5 ${supplierFilter === "all" ? "ring-2 ring-primary" : ""}`}
+							onClick={() => setSupplierFilter("all")}
+						>
+							<CardContent className="flex flex-col gap-1 p-4">
+								<p className="text-muted-foreground text-xs">All Expenses</p>
+								<p className="font-bold text-foreground text-xl">
+									{formatGYD(Number(reportData?.grandTotal ?? 0))}
+								</p>
+								<p className="text-muted-foreground text-xs">
+									{expenses.length} entries
+								</p>
+							</CardContent>
+						</Card>
+						{(
+							(reportData?.bySupplier as Array<{
+								supplier_name: string;
+								total: string;
+								count: number;
+							}>) ?? []
+						)
+							.slice(0, 3)
+							.map((row, i) => {
+								const supplierId = supplierNameToIdMap.get(row.supplier_name);
+								const isActive = !!supplierId && supplierFilter === supplierId;
 								return (
-									<TableRow
-										key={e.id}
-										className={`cursor-pointer transition-colors hover:bg-muted/60 ${color ? `${color.split(" ")[0]}/5` : ""}`}
-										onClick={() => setViewingExpense(e)}
+									<Card
+										key={i}
+										className={`cursor-pointer transition-colors hover:border-primary/50 hover:bg-primary/5 ${isActive ? "ring-2 ring-primary" : ""}`}
+										onClick={() => {
+											if (supplierId) setSupplierFilter(supplierId);
+										}}
 									>
-										<TableCell className="whitespace-nowrap text-muted-foreground text-xs">
-											{new Date(e.created_at).toLocaleString("en-GY", {
-												month: "short",
-												day: "numeric",
-												hour: "2-digit",
-												minute: "2-digit",
-												hour12: false,
-											})}
-										</TableCell>
-										<TableCell>
-											{e.supplier_id ? (
-												<Link
-													to={`/dashboard/suppliers/${e.supplier_id}`}
-													onClick={(ev) => ev.stopPropagation()}
-												>
-													<Badge
-														variant="secondary"
-														className={`text-xs hover:opacity-80 ${color ?? ""}`}
-													>
-														{e.supplier_name}
-													</Badge>
-												</Link>
-											) : e.supplier_name ? (
-												<Badge
-													variant="secondary"
-													className={`text-xs ${color ?? ""}`}
-												>
-													{e.supplier_name}
-												</Badge>
-											) : (
-												<span className="text-muted-foreground text-xs">—</span>
-											)}
-										</TableCell>
-										<TableCell className="text-xs">{e.category}</TableCell>
-										<TableCell className="max-w-48 truncate text-xs">
-											{e.description}
-										</TableCell>
-										<TableCell className="text-right font-semibold text-sm">
-											{formatGYD(Number(e.amount))}
-										</TableCell>
-										<TableCell className="text-muted-foreground text-xs">
-											{e.authorized_by_name ?? "—"}
-										</TableCell>
-										<TableCell>
-											<div className="flex items-center justify-end gap-1">
-												<Button
-													size="icon"
-													variant="ghost"
-													className="size-7"
-													onClick={(ev) => {
-														ev.stopPropagation();
-														openEdit(e);
-													}}
-												>
-													<Pencil className="size-3.5" />
-												</Button>
-												<Button
-													size="icon"
-													variant="ghost"
-													className="size-7 text-destructive hover:text-destructive"
-													disabled={deleteExpense.isPending}
-													onClick={(ev) => {
-														ev.stopPropagation();
-														setDeleteExpenseId(e.id);
-													}}
-												>
-													<Trash2 className="size-3.5" />
-												</Button>
-											</div>
+										<CardContent className="flex flex-col gap-1 p-4">
+											<p className="text-muted-foreground text-xs">
+												{row.supplier_name}
+											</p>
+											<p className="font-bold text-foreground text-lg">
+												{formatGYD(Number(row.total))}
+											</p>
+											<p className="text-muted-foreground text-xs">
+												{row.count} expenses — click to view
+											</p>
+										</CardContent>
+									</Card>
+								);
+							})}
+					</div>
+
+					{/* Category Breakdown */}
+					{categoryBreakdown.length > 0 && (
+						<div>
+							<div className="mb-2 flex items-baseline gap-2">
+								<p className="font-medium text-foreground text-sm">
+									Spending by Category
+								</p>
+								<span className="text-muted-foreground text-xs">
+									for selected period — click to filter table
+								</span>
+							</div>
+							<div className="flex flex-wrap gap-2">
+								{categoryBreakdown.map((cat) => (
+									<button
+										key={cat.name}
+										type="button"
+										onClick={() =>
+											setCategoryFilter(
+												categoryFilter === cat.name ? "all" : cat.name,
+											)
+										}
+										className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors hover:border-primary/50 hover:bg-primary/5 ${categoryFilter === cat.name ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border"}`}
+									>
+										<span className="font-medium text-foreground">
+											{formatGYD(cat.total)}
+										</span>
+										<span className="text-muted-foreground text-xs">
+											{cat.name}
+										</span>
+									</button>
+								))}
+							</div>
+						</div>
+					)}
+
+					{/* Category by Month Chart */}
+					{activeChartCategories.length > 0 && (
+						<div className="rounded-lg border border-border p-4">
+							<div className="mb-4 flex items-baseline gap-2">
+								<p className="font-medium text-foreground text-sm">
+									Spending by Category — Last 12 Months
+								</p>
+								<span className="text-muted-foreground text-xs">
+									(full-year view — independent of date filter above)
+								</span>
+							</div>
+							<ResponsiveContainer width="100%" height={280}>
+								<BarChart
+									data={chartData}
+									margin={{ top: 4, right: 8, left: 8, bottom: 4 }}
+								>
+									<CartesianGrid
+										strokeDasharray="3 3"
+										vertical={false}
+										className="stroke-border"
+									/>
+									<XAxis
+										dataKey="label"
+										tick={{ fontSize: 11 }}
+										axisLine={false}
+										tickLine={false}
+									/>
+									<YAxis
+										tick={{ fontSize: 11 }}
+										axisLine={false}
+										tickLine={false}
+										tickFormatter={(v: number) =>
+											v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
+										}
+									/>
+									<RechartsTooltip
+										formatter={(
+											value: number | undefined,
+											name: string | undefined,
+										) => [
+											new Intl.NumberFormat("en-GY", {
+												style: "currency",
+												currency: "GYD",
+												maximumFractionDigits: 0,
+											}).format(value ?? 0),
+											name ?? "",
+										]}
+										contentStyle={{
+											fontSize: 12,
+											borderRadius: 8,
+											border: "1px solid hsl(var(--border))",
+											background: "hsl(var(--card))",
+											color: "hsl(var(--foreground))",
+										}}
+									/>
+									<Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+									{activeChartCategories.map((cat, i) => (
+										<Bar
+											key={cat}
+											dataKey={cat}
+											stackId="a"
+											fill={CHART_COLORS[i % CHART_COLORS.length]}
+											radius={
+												i === activeChartCategories.length - 1
+													? [4, 4, 0, 0]
+													: [0, 0, 0, 0]
+											}
+										/>
+									))}
+								</BarChart>
+							</ResponsiveContainer>
+						</div>
+					)}
+
+					{/* Table */}
+					<div className="rounded-lg border border-border">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead className="text-xs">Date</TableHead>
+									<TableHead className="text-xs">Supplier</TableHead>
+									<TableHead className="text-xs">Category</TableHead>
+									<TableHead className="text-xs">Description</TableHead>
+									<TableHead className="text-right text-xs">Amount</TableHead>
+									<TableHead className="text-xs">Authorized By</TableHead>
+									<TableHead className="w-20 text-xs" />
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{filtered.length === 0 ? (
+									<TableRow>
+										<TableCell
+											colSpan={7}
+											className="py-10 text-center text-muted-foreground text-sm"
+										>
+											<ReceiptText className="mx-auto mb-2 size-8 opacity-30" />
+											No expenses recorded
 										</TableCell>
 									</TableRow>
-								);
-							})
+								) : (
+									filtered.map((e) => {
+										const color = e.supplier_id
+											? supplierColorMap.get(e.supplier_id)
+											: undefined;
+										return (
+											<TableRow
+												key={e.id}
+												className={`cursor-pointer transition-colors hover:bg-muted/60 ${color ? `${color.split(" ")[0]}/5` : ""}`}
+												onClick={() => setViewingExpense(e)}
+											>
+												<TableCell className="whitespace-nowrap text-muted-foreground text-xs">
+													{new Date(e.created_at).toLocaleString("en-GY", {
+														month: "short",
+														day: "numeric",
+														hour: "2-digit",
+														minute: "2-digit",
+														hour12: false,
+													})}
+												</TableCell>
+												<TableCell>
+													{e.supplier_id ? (
+														<Link
+															to={`/dashboard/suppliers/${e.supplier_id}`}
+															onClick={(ev) => ev.stopPropagation()}
+														>
+															<Badge
+																variant="secondary"
+																className={`text-xs hover:opacity-80 ${color ?? ""}`}
+															>
+																{e.supplier_name}
+															</Badge>
+														</Link>
+													) : e.supplier_name ? (
+														<Badge
+															variant="secondary"
+															className={`text-xs ${color ?? ""}`}
+														>
+															{e.supplier_name}
+														</Badge>
+													) : (
+														<span className="text-muted-foreground text-xs">
+															—
+														</span>
+													)}
+												</TableCell>
+												<TableCell className="text-xs">{e.category}</TableCell>
+												<TableCell className="max-w-48 truncate text-xs">
+													{e.description}
+												</TableCell>
+												<TableCell className="text-right font-semibold text-sm">
+													{formatGYD(Number(e.amount))}
+												</TableCell>
+												<TableCell className="text-muted-foreground text-xs">
+													{e.authorized_by_name ?? "—"}
+												</TableCell>
+												<TableCell>
+													<div className="flex items-center justify-end gap-1">
+														<Button
+															size="icon"
+															variant="ghost"
+															className="size-7"
+															onClick={(ev) => {
+																ev.stopPropagation();
+																openEdit(e);
+															}}
+														>
+															<Pencil className="size-3.5" />
+														</Button>
+														<Button
+															size="icon"
+															variant="ghost"
+															className="size-7 text-destructive hover:text-destructive"
+															disabled={deleteExpense.isPending}
+															onClick={(ev) => {
+																ev.stopPropagation();
+																setDeleteExpenseId(e.id);
+															}}
+														>
+															<Trash2 className="size-3.5" />
+														</Button>
+													</div>
+												</TableCell>
+											</TableRow>
+										);
+									})
+								)}
+							</TableBody>
+						</Table>
+						{filtered.length > 0 && (
+							<div className="flex items-center justify-between border-border border-t px-4 py-3 text-sm">
+								<span className="text-muted-foreground">
+									{filtered.length} expense{filtered.length !== 1 ? "s" : ""}
+									{(supplierFilter !== "all" ||
+										categoryFilter !== "all" ||
+										fundingSourceFilter !== "all") && (
+										<span className="ml-1 text-xs">(filtered)</span>
+									)}
+								</span>
+								<span className="font-semibold">
+									Total: {formatGYD(totalToday)}
+								</span>
+							</div>
 						)}
-					</TableBody>
-				</Table>
-				{filtered.length > 0 && (
-					<div className="flex items-center justify-between border-border border-t px-4 py-3 text-sm">
-						<span className="text-muted-foreground">
-							{filtered.length} expense{filtered.length !== 1 ? "s" : ""}
-							{(supplierFilter !== "all" || categoryFilter !== "all") && (
-								<span className="ml-1 text-xs">(filtered)</span>
-							)}
-						</span>
-						<span className="font-semibold">
-							Total: {formatGYD(totalToday)}
-						</span>
 					</div>
-				)}
-			</div>
+				</>
+			)}
+
+			{/* Daily Summary View */}
+			{viewMode === "daily" && (
+				<div className="flex flex-col gap-4">
+					{dailySummaryLoading ? (
+						<div className="flex flex-col gap-4">
+							<Skeleton className="h-20 w-full rounded-lg" />
+							<Skeleton className="h-32 w-full rounded-lg" />
+							<Skeleton className="h-32 w-full rounded-lg" />
+						</div>
+					) : !dailySummary || dailySummary.groups.length === 0 ? (
+						<div className="flex flex-col items-center justify-center rounded-lg border border-border py-16 text-center">
+							<ReceiptText className="mx-auto mb-3 size-10 opacity-30" />
+							<p className="font-medium text-foreground text-sm">
+								No expenses on{" "}
+								{new Date(`${summaryDate}T12:00:00`).toLocaleDateString(
+									"en-GY",
+									{
+										weekday: "long",
+										month: "long",
+										day: "numeric",
+									},
+								)}
+							</p>
+							<p className="mt-1 text-muted-foreground text-xs">
+								Add expenses using the "Add Expense" button above
+							</p>
+						</div>
+					) : (
+						<>
+							{dailySummary.groups.map((group) => (
+								<div
+									key={group.fundingSourceId ?? "general"}
+									className="overflow-hidden rounded-lg border border-border"
+								>
+									{/* Group header */}
+									<div className="flex items-center justify-between bg-muted/50 px-4 py-3">
+										<div className="flex items-center gap-2">
+											<Wallet className="size-4 text-muted-foreground" />
+											<span className="font-semibold text-foreground text-sm uppercase tracking-wide">
+												{group.fundingSource}
+											</span>
+											<span className="text-muted-foreground text-xs">
+												{group.items.length} item
+												{group.items.length !== 1 ? "s" : ""}
+											</span>
+										</div>
+										<span className="font-bold text-foreground text-sm">
+											{formatGYD(Number(group.subtotal))}
+										</span>
+									</div>
+									{/* Group items table */}
+									<Table>
+										<TableHeader>
+											<TableRow>
+												<TableHead className="text-xs">Vendor</TableHead>
+												<TableHead className="text-xs">Category</TableHead>
+												<TableHead className="text-xs">Description</TableHead>
+												<TableHead className="text-right text-xs">
+													Amount
+												</TableHead>
+											</TableRow>
+										</TableHeader>
+										<TableBody>
+											{group.items.map((item) => (
+												<TableRow key={item.expenseId}>
+													<TableCell className="text-xs">
+														{item.vendor || "—"}
+													</TableCell>
+													<TableCell>
+														<Badge
+															variant="secondary"
+															className="bg-sky-100 text-sky-800 text-xs dark:bg-sky-900/30 dark:text-sky-300"
+														>
+															{item.category}
+														</Badge>
+													</TableCell>
+													<TableCell className="max-w-48 truncate text-xs">
+														{item.description}
+													</TableCell>
+													<TableCell className="text-right font-semibold text-sm">
+														{formatGYD(Number(item.amount))}
+													</TableCell>
+												</TableRow>
+											))}
+										</TableBody>
+									</Table>
+								</div>
+							))}
+							{/* Grand total */}
+							<div className="flex items-center justify-between rounded-lg bg-foreground px-4 py-3 text-background">
+								<span className="font-bold text-sm uppercase tracking-widest">
+									Grand Total
+								</span>
+								<span className="font-bold text-xl">
+									{formatGYD(Number(dailySummary.grandTotal))}
+								</span>
+							</div>
+						</>
+					)}
+				</div>
+			)}
 
 			{/* Add / Edit Expense Dialog */}
 			<Dialog
@@ -917,6 +1198,39 @@ export default function ExpensesPage() {
 									{suppliers.map((s) => (
 										<SelectItem key={s.id} value={s.id}>
 											{s.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<div className="flex items-center justify-between">
+								<Label>Funding Source</Label>
+								<button
+									type="button"
+									className="text-muted-foreground text-xs underline-offset-2 hover:text-foreground hover:underline"
+									onClick={() => setManageFundingSourcesOpen(true)}
+								>
+									Manage Sources
+								</button>
+							</div>
+							<Select
+								value={form.fundingSourceId || "none"}
+								onValueChange={(v) =>
+									setForm((f) => ({
+										...f,
+										fundingSourceId: v === "none" ? "" : v,
+									}))
+								}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="Select funding source (optional)" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="none">General Cash</SelectItem>
+									{fundingSources.map((fs) => (
+										<SelectItem key={fs.id} value={fs.id}>
+											{fs.name}
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -1257,6 +1571,193 @@ export default function ExpensesPage() {
 							onClick={() =>
 								deleteCategoryItem &&
 								deleteCategoryMut.mutate({ id: deleteCategoryItem.id })
+							}
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* Manage Funding Sources Dialog */}
+			<Dialog
+				open={manageFundingSourcesOpen}
+				onOpenChange={(open) => {
+					setManageFundingSourcesOpen(open);
+					if (!open) {
+						setEditingFundingSource(null);
+						setNewFundingSourceName("");
+					}
+				}}
+			>
+				<DialogContent className="sm:max-w-sm">
+					<DialogHeader>
+						<DialogTitle>Manage Funding Sources</DialogTitle>
+					</DialogHeader>
+					<div className="flex flex-col gap-4 py-2">
+						{/* Add new funding source */}
+						{editingFundingSource ? (
+							<div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+								<p className="font-medium text-sm">Edit Funding Source</p>
+								<Input
+									placeholder="Name"
+									value={editingFundingSource.name}
+									onChange={(e) =>
+										setEditingFundingSource((prev) =>
+											prev ? { ...prev, name: e.target.value } : null,
+										)
+									}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" && editingFundingSource.name.trim()) {
+											updateFundingSourceMut.mutate({
+												id: editingFundingSource.id,
+												name: editingFundingSource.name.trim(),
+												isActive: editingFundingSource.isActive,
+											});
+										}
+									}}
+								/>
+								<div className="flex gap-2">
+									<Button
+										size="sm"
+										className="flex-1"
+										disabled={
+											!editingFundingSource.name.trim() ||
+											updateFundingSourceMut.isPending
+										}
+										onClick={() => {
+											updateFundingSourceMut.mutate({
+												id: editingFundingSource.id,
+												name: editingFundingSource.name.trim(),
+												isActive: editingFundingSource.isActive,
+											});
+										}}
+									>
+										Save
+									</Button>
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={() => setEditingFundingSource(null)}
+									>
+										Cancel
+									</Button>
+								</div>
+							</div>
+						) : (
+							<div className="flex gap-2">
+								<Input
+									placeholder="New funding source (e.g. Renatta, CEO)"
+									value={newFundingSourceName}
+									onChange={(e) => setNewFundingSourceName(e.target.value)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" && newFundingSourceName.trim()) {
+											createFundingSourceMut.mutate({
+												name: newFundingSourceName.trim(),
+											});
+										}
+									}}
+								/>
+								<Button
+									onClick={() => {
+										if (!newFundingSourceName.trim()) return;
+										createFundingSourceMut.mutate({
+											name: newFundingSourceName.trim(),
+										});
+									}}
+									disabled={
+										!newFundingSourceName.trim() ||
+										createFundingSourceMut.isPending
+									}
+								>
+									<Plus className="size-4" />
+									Add
+								</Button>
+							</div>
+						)}
+						{/* List of funding sources */}
+						<div className="flex max-h-64 flex-col gap-1 overflow-y-auto">
+							{fundingSourcesLoading ? (
+								<>
+									<Skeleton className="h-10 w-full rounded-md" />
+									<Skeleton className="h-10 w-full rounded-md" />
+									<Skeleton className="h-10 w-full rounded-md" />
+								</>
+							) : fundingSources.length === 0 ? (
+								<p className="py-4 text-center text-muted-foreground text-sm">
+									No funding sources yet. Add one above.
+								</p>
+							) : (
+								fundingSources.map((fs) => (
+									<div
+										key={fs.id}
+										className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-muted"
+									>
+										<span className="text-sm">{fs.name}</span>
+										<div className="flex items-center gap-1">
+											<Button
+												size="icon"
+												variant="ghost"
+												className="size-7"
+												onClick={() =>
+													setEditingFundingSource({
+														id: fs.id,
+														name: fs.name,
+														isActive: fs.isActive,
+													})
+												}
+											>
+												<Pencil className="size-3.5" />
+											</Button>
+											<Button
+												size="icon"
+												variant="ghost"
+												className="size-7 text-destructive hover:text-destructive"
+												disabled={deleteFundingSourceMut.isPending}
+												onClick={() => {
+													setDeleteFundingSourceItem({
+														id: fs.id,
+														name: fs.name,
+													});
+												}}
+											>
+												<Trash2 className="size-3.5" />
+											</Button>
+										</div>
+									</div>
+								))
+							)}
+						</div>
+					</div>
+				</DialogContent>
+			</Dialog>
+
+			{/* Delete Funding Source Confirmation */}
+			<AlertDialog
+				open={!!deleteFundingSourceItem}
+				onOpenChange={(o) => {
+					if (!o) setDeleteFundingSourceItem(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							Delete "{deleteFundingSourceItem?.name}"?
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							This funding source will be removed. Existing expenses linked to
+							it will not be affected.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={() =>
+								deleteFundingSourceItem &&
+								deleteFundingSourceMut.mutate({
+									id: deleteFundingSourceItem.id,
+								})
 							}
 						>
 							Delete

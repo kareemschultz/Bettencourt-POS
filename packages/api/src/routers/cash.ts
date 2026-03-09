@@ -1,7 +1,17 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { ORPCError } from "@orpc/server";
-import { and, desc, eq, sql } from "drizzle-orm";
+import {
+	and,
+	asc,
+	desc,
+	eq,
+	gte,
+	isNotNull,
+	isNull,
+	lte,
+	sql,
+} from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 import { requireOrganizationId } from "../lib/org-context";
@@ -148,7 +158,7 @@ const closeSession = permissionProcedure("shifts.update")
 		if (existing.length === 0) {
 			throw new ORPCError("NOT_FOUND", { message: "Cash session not found" });
 		}
-		if (existing[0]!.status !== "open") {
+		if (existing[0]?.status !== "open") {
 			throw new ORPCError("BAD_REQUEST", {
 				message: "Cash session is not open",
 			});
@@ -566,6 +576,7 @@ const createExpense = permissionProcedure("shifts.create")
 			notes: z.string().nullable().optional(),
 			organizationId: z.string().uuid().optional(),
 			supplierId: z.string().uuid().nullable().optional(),
+			fundingSourceId: z.string().uuid().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -586,6 +597,7 @@ const createExpense = permissionProcedure("shifts.create")
 				createdBy: actorId,
 				organizationId: orgId,
 				supplierId: input.supplierId ?? null,
+				fundingSourceId: input.fundingSourceId ?? null,
 			})
 			.returning({ id: schema.expense.id });
 
@@ -988,6 +1000,7 @@ const updateExpense = permissionProcedure("shifts.update")
 			paymentMethod: z.string().nullable().optional(),
 			referenceNumber: z.string().nullable().optional(),
 			notes: z.string().nullable().optional(),
+			fundingSourceId: z.string().uuid().nullable().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -1002,6 +1015,7 @@ const updateExpense = permissionProcedure("shifts.update")
 				paymentMethod: input.paymentMethod ?? null,
 				referenceNumber: input.referenceNumber ?? null,
 				notes: input.notes ?? null,
+				fundingSourceId: input.fundingSourceId ?? null,
 			})
 			.where(
 				and(
@@ -1083,6 +1097,438 @@ const getNoSaleReport = permissionProcedure("shifts.read")
 		return result.rows;
 	});
 
+// ── listFundingSources ──────────────────────────────────────────────────
+const listFundingSources = permissionProcedure("shifts.read").handler(
+	async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+		return db
+			.select()
+			.from(schema.fundingSource)
+			.where(
+				and(
+					eq(schema.fundingSource.organizationId, orgId),
+					eq(schema.fundingSource.isActive, true),
+				),
+			)
+			.orderBy(asc(schema.fundingSource.name));
+	},
+);
+
+// ── createFundingSource ─────────────────────────────────────────────────
+const createFundingSource = permissionProcedure("shifts.create")
+	.input(z.object({ name: z.string().min(1).trim() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const existing = await db
+			.select({ id: schema.fundingSource.id })
+			.from(schema.fundingSource)
+			.where(
+				and(
+					eq(schema.fundingSource.organizationId, orgId),
+					eq(schema.fundingSource.name, input.name),
+				),
+			)
+			.limit(1);
+		if (existing.length > 0) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Funding source already exists",
+			});
+		}
+		const [row] = await db
+			.insert(schema.fundingSource)
+			.values({ name: input.name, organizationId: orgId })
+			.returning();
+		return row!;
+	});
+
+// ── updateFundingSource ─────────────────────────────────────────────────
+const updateFundingSource = permissionProcedure("shifts.update")
+	.input(
+		z.object({
+			id: z.string().uuid(),
+			name: z.string().min(1).trim().optional(),
+			isActive: z.boolean().optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const existing = await db
+			.select({ id: schema.fundingSource.id })
+			.from(schema.fundingSource)
+			.where(
+				and(
+					eq(schema.fundingSource.id, input.id),
+					eq(schema.fundingSource.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (existing.length === 0) {
+			throw new ORPCError("NOT_FOUND", {
+				message: "Funding source not found",
+			});
+		}
+		const updateData: Record<string, unknown> = {};
+		if (input.name !== undefined) updateData.name = input.name;
+		if (input.isActive !== undefined) updateData.isActive = input.isActive;
+		const [row] = await db
+			.update(schema.fundingSource)
+			.set(updateData)
+			.where(eq(schema.fundingSource.id, input.id))
+			.returning();
+		return row!;
+	});
+
+// ── deleteFundingSource ─────────────────────────────────────────────────
+const deleteFundingSource = permissionProcedure("shifts.delete")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const existing = await db
+			.select({ id: schema.fundingSource.id })
+			.from(schema.fundingSource)
+			.where(
+				and(
+					eq(schema.fundingSource.id, input.id),
+					eq(schema.fundingSource.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (existing.length === 0) {
+			throw new ORPCError("NOT_FOUND", {
+				message: "Funding source not found",
+			});
+		}
+		await db
+			.delete(schema.fundingSource)
+			.where(eq(schema.fundingSource.id, input.id));
+		return { success: true };
+	});
+
+// ── getExpensesByFundingSource ──────────────────────────────────────────
+const getExpensesByFundingSource = permissionProcedure("shifts.read")
+	.input(
+		z.object({
+			startDate: z.string(),
+			endDate: z.string(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const start = new Date(`${input.startDate}T00:00:00-04:00`);
+		const end = new Date(`${input.endDate}T23:59:59-04:00`);
+
+		// Fetch all expenses with a funding source
+		const withSource = await db
+			.select({
+				id: schema.expense.id,
+				amount: schema.expense.amount,
+				category: schema.expense.category,
+				description: schema.expense.description,
+				createdAt: schema.expense.createdAt,
+				fundingSourceId: schema.expense.fundingSourceId,
+				supplierId: schema.expense.supplierId,
+				supplierName: schema.supplier.name,
+			})
+			.from(schema.expense)
+			.leftJoin(
+				schema.supplier,
+				eq(schema.expense.supplierId, schema.supplier.id),
+			)
+			.where(
+				and(
+					eq(schema.expense.organizationId, orgId),
+					isNotNull(schema.expense.fundingSourceId),
+					gte(schema.expense.createdAt, start),
+					lte(schema.expense.createdAt, end),
+				),
+			)
+			.orderBy(
+				asc(schema.expense.fundingSourceId),
+				asc(schema.expense.createdAt),
+			);
+
+		// Fetch expenses with no funding source (General Cash)
+		const withoutSource = await db
+			.select({
+				id: schema.expense.id,
+				amount: schema.expense.amount,
+				category: schema.expense.category,
+				description: schema.expense.description,
+				createdAt: schema.expense.createdAt,
+				fundingSourceId: schema.expense.fundingSourceId,
+				supplierId: schema.expense.supplierId,
+				supplierName: schema.supplier.name,
+			})
+			.from(schema.expense)
+			.leftJoin(
+				schema.supplier,
+				eq(schema.expense.supplierId, schema.supplier.id),
+			)
+			.where(
+				and(
+					eq(schema.expense.organizationId, orgId),
+					isNull(schema.expense.fundingSourceId),
+					gte(schema.expense.createdAt, start),
+					lte(schema.expense.createdAt, end),
+				),
+			)
+			.orderBy(asc(schema.expense.createdAt));
+
+		// Fetch all funding sources for the org
+		const fundingSources = await db
+			.select({ id: schema.fundingSource.id, name: schema.fundingSource.name })
+			.from(schema.fundingSource)
+			.where(eq(schema.fundingSource.organizationId, orgId));
+
+		const sourceMap = new Map<string, string>(
+			fundingSources.map((fs) => [String(fs.id), String(fs.name)]),
+		);
+
+		// Group by funding source id
+		const groupMap = new Map<
+			string | null,
+			{
+				fundingSourceId: string | null;
+				fundingSource: string;
+				subtotal: number;
+				items: {
+					expenseId: string;
+					vendor: string;
+					category: string;
+					amount: string;
+					description: string;
+					createdAt: string;
+				}[];
+			}
+		>();
+
+		for (const row of withSource) {
+			const fsId = String(row.fundingSourceId!);
+			const fsName: string = sourceMap.get(fsId) ?? "Unknown";
+			if (!groupMap.has(fsId)) {
+				groupMap.set(fsId, {
+					fundingSourceId: fsId,
+					fundingSource: fsName,
+					subtotal: 0,
+					items: [],
+				});
+			}
+			const group = groupMap.get(fsId)!;
+			group.subtotal += Number(row.amount);
+			group.items.push({
+				expenseId: String(row.id),
+				vendor: String(row.supplierName ?? row.description),
+				category: String(row.category),
+				amount: String(row.amount),
+				description: String(row.description),
+				createdAt: (row.createdAt as Date).toISOString(),
+			});
+		}
+
+		if (withoutSource.length > 0) {
+			const generalGroup = {
+				fundingSourceId: null as string | null,
+				fundingSource: "General Cash",
+				subtotal: 0,
+				items: [] as {
+					expenseId: string;
+					vendor: string;
+					category: string;
+					amount: string;
+					description: string;
+					createdAt: string;
+				}[],
+			};
+			for (const row of withoutSource) {
+				generalGroup.subtotal += Number(row.amount);
+				generalGroup.items.push({
+					expenseId: String(row.id),
+					vendor: String(row.supplierName ?? row.description),
+					category: String(row.category),
+					amount: String(row.amount),
+					description: String(row.description),
+					createdAt: (row.createdAt as Date).toISOString(),
+				});
+			}
+			groupMap.set(null, generalGroup);
+		}
+
+		const groups = Array.from(groupMap.values()).map((g) => ({
+			...g,
+			subtotal: g.subtotal.toFixed(2),
+		}));
+
+		const grandTotal = groups
+			.reduce((sum, g) => sum + Number(g.subtotal), 0)
+			.toFixed(2);
+
+		return {
+			date: `${input.startDate} to ${input.endDate}`,
+			grandTotal,
+			groups,
+		};
+	});
+
+// ── getDailyExpenseSummary ──────────────────────────────────────────────
+const getDailyExpenseSummary = permissionProcedure("shifts.read")
+	.input(z.object({ date: z.string() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const d = new Date(`${input.date}T00:00:00-04:00`);
+		const startOfDay = d;
+		const endOfDay = new Date(d.getTime() + 24 * 60 * 60 * 1000);
+
+		// Fetch all expenses with a funding source for the day
+		const withSource = await db
+			.select({
+				id: schema.expense.id,
+				amount: schema.expense.amount,
+				category: schema.expense.category,
+				description: schema.expense.description,
+				createdAt: schema.expense.createdAt,
+				fundingSourceId: schema.expense.fundingSourceId,
+				supplierId: schema.expense.supplierId,
+				supplierName: schema.supplier.name,
+			})
+			.from(schema.expense)
+			.leftJoin(
+				schema.supplier,
+				eq(schema.expense.supplierId, schema.supplier.id),
+			)
+			.where(
+				and(
+					eq(schema.expense.organizationId, orgId),
+					isNotNull(schema.expense.fundingSourceId),
+					gte(schema.expense.createdAt, startOfDay),
+					lte(schema.expense.createdAt, endOfDay),
+				),
+			)
+			.orderBy(
+				asc(schema.expense.fundingSourceId),
+				asc(schema.expense.createdAt),
+			);
+
+		// Fetch expenses with no funding source (General Cash) for the day
+		const withoutSource = await db
+			.select({
+				id: schema.expense.id,
+				amount: schema.expense.amount,
+				category: schema.expense.category,
+				description: schema.expense.description,
+				createdAt: schema.expense.createdAt,
+				fundingSourceId: schema.expense.fundingSourceId,
+				supplierId: schema.expense.supplierId,
+				supplierName: schema.supplier.name,
+			})
+			.from(schema.expense)
+			.leftJoin(
+				schema.supplier,
+				eq(schema.expense.supplierId, schema.supplier.id),
+			)
+			.where(
+				and(
+					eq(schema.expense.organizationId, orgId),
+					isNull(schema.expense.fundingSourceId),
+					gte(schema.expense.createdAt, startOfDay),
+					lte(schema.expense.createdAt, endOfDay),
+				),
+			)
+			.orderBy(asc(schema.expense.createdAt));
+
+		// Fetch all funding sources for the org
+		const fundingSources = await db
+			.select({ id: schema.fundingSource.id, name: schema.fundingSource.name })
+			.from(schema.fundingSource)
+			.where(eq(schema.fundingSource.organizationId, orgId));
+
+		const sourceMap = new Map<string, string>(
+			fundingSources.map((fs) => [String(fs.id), String(fs.name)]),
+		);
+
+		const groupMap = new Map<
+			string | null,
+			{
+				fundingSourceId: string | null;
+				fundingSource: string;
+				subtotal: number;
+				items: {
+					expenseId: string;
+					vendor: string;
+					category: string;
+					amount: string;
+					description: string;
+					createdAt: string;
+				}[];
+			}
+		>();
+
+		for (const row of withSource) {
+			const fsId = String(row.fundingSourceId!);
+			const fsName: string = sourceMap.get(fsId) ?? "Unknown";
+			if (!groupMap.has(fsId)) {
+				groupMap.set(fsId, {
+					fundingSourceId: fsId,
+					fundingSource: fsName,
+					subtotal: 0,
+					items: [],
+				});
+			}
+			const group = groupMap.get(fsId)!;
+			group.subtotal += Number(row.amount);
+			group.items.push({
+				expenseId: String(row.id),
+				vendor: String(row.supplierName ?? row.description),
+				category: String(row.category),
+				amount: String(row.amount),
+				description: String(row.description),
+				createdAt: (row.createdAt as Date).toISOString(),
+			});
+		}
+
+		if (withoutSource.length > 0) {
+			const generalGroup = {
+				fundingSourceId: null as string | null,
+				fundingSource: "General Cash",
+				subtotal: 0,
+				items: [] as {
+					expenseId: string;
+					vendor: string;
+					category: string;
+					amount: string;
+					description: string;
+					createdAt: string;
+				}[],
+			};
+			for (const row of withoutSource) {
+				generalGroup.subtotal += Number(row.amount);
+				generalGroup.items.push({
+					expenseId: String(row.id),
+					vendor: String(row.supplierName ?? row.description),
+					category: String(row.category),
+					amount: String(row.amount),
+					description: String(row.description),
+					createdAt: (row.createdAt as Date).toISOString(),
+				});
+			}
+			groupMap.set(null, generalGroup);
+		}
+
+		const groups = Array.from(groupMap.values()).map((g) => ({
+			...g,
+			subtotal: g.subtotal.toFixed(2),
+		}));
+
+		const grandTotal = groups
+			.reduce((sum, g) => sum + Number(g.subtotal), 0)
+			.toFixed(2);
+
+		return {
+			date: input.date,
+			grandTotal,
+			groups,
+		};
+	});
+
 export const cashRouter = {
 	getSessions,
 	openSession,
@@ -1116,4 +1562,11 @@ export const cashRouter = {
 	// 7.7 No-Sale Drawer Tracking
 	logNoSale,
 	getNoSaleReport,
+	// Funding Sources
+	listFundingSources,
+	createFundingSource,
+	updateFundingSource,
+	deleteFundingSource,
+	getExpensesByFundingSource,
+	getDailyExpenseSummary,
 };

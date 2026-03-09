@@ -62,7 +62,15 @@ const PAGE_TITLES: Record<string, string> = {
 	"/dashboard/expenses": "Expenses",
 	"/dashboard/suppliers": "Suppliers",
 	"/dashboard/suppliers/:id": "Supplier Detail",
+	"/dashboard/finance": "Finance Dashboard",
 	"/dashboard/invoices": "Invoices",
+	"/dashboard/credit-notes": "Credit Notes",
+	"/dashboard/vendor-bills": "Vendor Bills",
+	"/dashboard/recurring": "Recurring",
+	"/dashboard/aging": "Aging Report",
+	"/dashboard/customer-statements": "Customer Statements",
+	"/dashboard/tax-summary": "Tax Summary",
+	"/dashboard/budgets": "Budgets",
 	"/dashboard/quotations": "Quotations",
 	"/dashboard/tables": "Tables",
 	"/dashboard/waste": "Waste & Shrinkage",
@@ -72,7 +80,7 @@ const PAGE_TITLES: Record<string, string> = {
 	"/dashboard/notifications": "Notifications",
 	"/dashboard/webhooks": "Webhooks",
 	"/dashboard/discounts": "Discounts",
-	"/dashboard/profitability": "Profitability",
+	"/dashboard/profitability": "Product Profitability",
 	"/dashboard/products": "Products",
 	"/dashboard/stock-alerts": "Stock Alerts",
 	"/dashboard/variance": "Stock Variance",
@@ -80,7 +88,7 @@ const PAGE_TITLES: Record<string, string> = {
 	"/dashboard/production-report": "Production Report",
 	"/dashboard/pnl": "Profit & Loss",
 	"/dashboard/eod": "End of Day",
-	"/dashboard/journal": "Journal",
+	"/dashboard/journal": "Sales Journal",
 	"/dashboard/menu-schedules": "Menu Calendar",
 	"/dashboard/currency": "Currency",
 	"/dashboard/reconciliation": "Cash Reconciliation",
@@ -92,7 +100,7 @@ function getPageTitle(pathname: string): string {
 	if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
 	// Match by prefix (e.g. /dashboard/orders/123 → Orders)
 	for (const [path, title] of Object.entries(PAGE_TITLES)) {
-		if (pathname.startsWith(path + "/")) return title;
+		if (pathname.startsWith(`${path}/`)) return title;
 	}
 	return "Dashboard";
 }

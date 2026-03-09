@@ -1,0 +1,288 @@
+---
+title: Finance
+description: Comprehensive financial management for Bettencourt's Food Inc. — invoices, vendor bills, credit notes, recurring templates, aging reports, budgets, and more.
+---
+
+**Navigate to:** Dashboard → Finance section (sidebar)
+
+Bettencourt Finance is a full accounting and billing suite built into the POS. It covers everything from customer invoices and vendor bills to aging reports, budgets, and Shakira's daily expense summary form.
+
+---
+
+## Finance Dashboard
+
+**Route:** `/dashboard/finance`
+
+The Finance Dashboard gives a real-time overview of your financial position:
+
+| Card | What it shows |
+|------|--------------|
+| **Total Receivable** | Sum of all unpaid customer invoice balances |
+| **Total Payable** | Sum of all outstanding vendor bill balances |
+| **Overdue AR** | Count + total of overdue customer invoices |
+| **Overdue AP** | Count + total of overdue vendor bills |
+| **Net Cash Flow (30d)** | Payments received minus vendor payments and expenses in the last 30 days |
+| **Revenue MTD** | Invoice payments received this calendar month |
+
+Below the KPI strip you'll find:
+- **Revenue vs Expenses** stacked bar chart (last 12 months)
+- **5 most recent invoices** quick-view table
+- **5 most recent vendor bills** quick-view table
+
+---
+
+## Invoices
+
+**Route:** `/dashboard/invoices`
+
+Create and manage customer invoices for catering, corporate lunches, events, and ongoing accounts.
+
+### Creating an Invoice
+1. Click **New Invoice**
+2. Enter customer name (or select from the customer list)
+3. Add line items (description, quantity, unit price)
+4. Set due date and payment terms
+5. Click **Save as Draft** or **Send** to issue it immediately
+
+### Recording a Payment
+1. Find the invoice in the table
+2. Click the **•••** menu → **Record Payment**
+3. Enter amount, payment method (Cash / Cheque / Bank Transfer / Mobile Money), optional reference number, and date paid
+4. Click **Record** — the invoice status updates automatically
+
+### Payment Methods Supported
+- **Cash** — direct cash payment
+- **Cheque** — enter cheque number and expected deposit date
+- **Bank Transfer** — enter reference/transaction number
+- **Mobile Money** — for digital payment apps
+
+### Payment History
+Each invoice has a collapsible **Payment History** section showing every payment recorded, including reversals. This is the complete ledger for that invoice.
+
+### Creating a Credit Note from an Invoice
+On any paid or partially-paid invoice, click **Create Credit Note** to open the credit note form pre-filled with the customer's details.
+
+### Invoice Status Flow
+```
+draft → sent → partial → paid
+                       ↘ overdue (if past due date)
+         ↘ voided (any stage)
+```
+
+---
+
+## Credit Notes
+
+**Route:** `/dashboard/credit-notes`
+
+Credit notes reduce a customer's outstanding balance — used for price corrections, loyalty discounts, or returned goods.
+
+### Creating a Credit Note
+1. Click **New Credit Note**
+2. Select the original invoice (optional but recommended)
+3. Add line items describing the adjustment
+4. Click **Save** (creates in Draft status)
+
+### Issuing a Credit Note
+A credit note must be **Issued** before it can be applied. Click **Issue** in the action menu.
+
+### Applying to an Invoice
+1. On an issued credit note, click **Apply to Invoice**
+2. Select the target invoice
+3. Enter the amount to apply (can be partial)
+4. Click **Apply** — the invoice balance reduces accordingly
+
+### Credit Note Status Flow
+```
+draft → issued → applied (fully used)
+      ↘ voided
+```
+
+---
+
+## Vendor Bills
+
+**Route:** `/dashboard/vendor-bills`
+
+Vendor bills track what Bettencourt's owes to suppliers like Family Food International, Albadar Grocery, WJ Enterprise, etc.
+
+### Creating a Vendor Bill
+1. Click **New Vendor Bill**
+2. Select supplier from the dropdown
+3. Add line items (e.g., "Chicken 50 lbs", "Rice 100 lbs")
+4. Set issued date and due date
+5. Click **Save**
+
+### Recording a Payment on a Bill
+1. Click **•••** → **Record Payment**
+2. Enter amount, method, and reference
+3. Bill status updates to **Partially Paid** or **Paid** automatically
+
+### Overdue Bills
+Bills past their due date automatically show a red **Overdue** badge. The **Overdue AP** KPI on the Finance Dashboard always reflects the current overdue total.
+
+### Vendor Bill Status Flow
+```
+draft → received → partial → paid
+                           ↘ overdue
+              ↘ voided
+```
+
+### Payment History
+Each vendor bill has a full payment history ledger. Payments are never deleted — a reversal creates a negative entry.
+
+---
+
+## Recurring Templates
+
+**Route:** `/dashboard/recurring`
+
+Recurring templates auto-generate invoices, expenses, or vendor bills on a schedule.
+
+### Creating a Template
+1. Click **New Template**
+2. Choose type: **Invoice**, **Expense**, or **Vendor Bill**
+3. Fill in the template data (customer/supplier, line items, amounts)
+4. Set frequency: Weekly / Bi-weekly / Monthly / Quarterly / Annually
+5. Set the next run date
+
+### Generating the Next Document
+Click **Generate Next** on any active template. This creates the actual document from the template data and advances the next run date.
+
+### Pause / Resume
+Templates can be **paused** (no generation) and **resumed** at any time. The next run date is preserved when paused.
+
+---
+
+## Aging Report
+
+**Route:** `/dashboard/aging`
+
+The Aging Report shows how long invoices and vendor bills have been outstanding.
+
+### Receivables Tab (Customers)
+Unpaid customer invoices grouped by how overdue they are:
+
+| Bucket | Description |
+|--------|-------------|
+| Current | Not yet due |
+| 1–30 days | Up to one month overdue |
+| 31–60 days | 1–2 months overdue |
+| 61–90 days | 2–3 months overdue |
+| 90+ days | More than 3 months overdue |
+
+### Payables Tab (Suppliers)
+Same aging breakdown but for vendor bills — shows what Bettencourt's owes and for how long.
+
+Use the **Export CSV** button to download the aging report for accountant review.
+
+---
+
+## Customer Statements
+
+**Route:** `/dashboard/customer-statements`
+
+A customer statement shows every invoice, payment, and credit note for a specific customer in a date range, with a running balance.
+
+### Generating a Statement
+1. Select a customer from the dropdown
+2. Set the date range (Start Date → End Date)
+3. The statement loads automatically
+
+### Statement Columns
+| Column | Description |
+|--------|-------------|
+| Date | Transaction date |
+| Description | Invoice #, Payment, Credit Note # |
+| Reference | Invoice number or payment reference |
+| Debit | Amount owed (invoice issued) |
+| Credit | Amount paid or credit applied |
+| Balance | Running outstanding balance |
+
+### Printing a Statement
+Click **Print Statement** to open a print-ready PDF version — same format as the vendor statement PDF.
+
+---
+
+## Tax Summary
+
+**Route:** `/dashboard/tax-summary`
+
+The Tax Summary compares VAT collected on sales invoices vs VAT paid on purchases (vendor bills + expenses).
+
+### KPI Cards
+- **Tax Collected** — VAT from paid invoices in the selected period
+- **Tax Paid** — VAT from vendor bills and expenses
+- **Net Tax Liability** — Collected minus Paid (what needs to be remitted)
+
+### Period Selector
+Switch between Monthly, Quarterly, and Annual views. The bar chart shows month-by-month breakdown.
+
+---
+
+## Budgets
+
+**Route:** `/dashboard/budgets`
+
+Budgets let you set spending targets per category and track actual vs budgeted amounts.
+
+### Creating a Budget
+1. Click **New Budget**
+2. Name it (e.g., "March 2026 Operating Budget")
+3. Set period: Monthly, Quarterly, or Annual
+4. Set start and end dates
+5. Add categories with:
+   - **Category name** (Food Cost, Utilities, Rent, etc.)
+   - **Budgeted amount** (GYD)
+   - **Alert threshold** (% — e.g., 85 means alert when 85% used)
+
+### Budget vs Actual View
+Click a budget to see the full comparison:
+- **Progress bars** (green = safe, amber = approaching limit, red = over budget)
+- **Grouped bar chart** — budgeted vs actual per category
+- **Variance table** — exact difference in GYD and percentage
+
+---
+
+## Expenses & Funding Sources
+
+**Route:** `/dashboard/expenses`
+
+The expense page has been enhanced with **Funding Sources** — who provided the cash for each expense.
+
+### Funding Sources
+Shakira's team uses multiple cash sources:
+- **General Cash** — main operating cash
+- **Renatta** — cash from Renatta
+- **CEO** — cash from CEO
+- **Pastry Section** — pastry department fund
+- **Miss Bonita** — cash from Miss Bonita
+- **QuickServe** — QuickServe location cash
+
+When recording an expense, select the appropriate **Funding Source** from the dropdown. This is optional but required for the Daily Summary report.
+
+### Managing Funding Sources
+Click **Manage Sources** in the expense form to add, rename, or deactivate funding sources.
+
+### Daily Summary View
+Switch to **Daily Summary** mode (toggle at top of page) to see Shakira's expense form layout:
+- Select a date using the date picker
+- Expenses appear **grouped by funding source**
+- Each section shows vendor, category, description, and amount
+- Section subtotal per funding source
+- Grand total at the bottom
+
+### Printing the Daily Summary
+Click **Print Daily Summary** to generate a printable form matching Shakira's handwritten "Bettencourt's Diner Expense Summary Form" — with signature lines for Prepared By / Checked By / Authorized By.
+
+---
+
+## Roles & Permissions
+
+| Role | Finance Dashboard | Invoices / Bills / Credits | Aging / Statements / Tax | Budgets |
+|------|------------------|---------------------------|-------------------------|---------|
+| **Executive / Admin** | Full access | Full CRUD | Full read + export | Full CRUD |
+| **Accountant** | Full access | Create, read, update | Full read + export | Read only |
+| **Cashier / Warehouse** | No access | No access | No access | No access |
+
+Accountants land on the Finance Dashboard by default when they log in.

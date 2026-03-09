@@ -9121,6 +9121,7 @@ async function seed() {
 					name: "Refund Processed (SMS)",
 					description: "Sent to customers when their refund has been processed",
 					channel: "sms",
+					// biome-ignore lint/suspicious/noTemplateCurlyInString: handlebars template, not JS template literal
 					messageTemplate:
 						"Hi {{customerName}}, your refund of ${{refundAmount}} GYD for order #{{orderNumber}} has been processed. - Bettencourt's",
 					isActive: true,
@@ -10421,6 +10422,539 @@ async function seed() {
 				barcode: "4890008102198",
 				format: "EAN13",
 				isPrimary: true,
+			},
+		])
+		.onConflictDoNothing();
+
+	// ── Finance Seed Data (Plan #12) ──────────────────────────────────────
+	// Uses Shakira's real-world data: funding sources, real suppliers, real invoices.
+
+	// ── Funding Sources ───────────────────────────────────────────────────
+	console.log("  -> Funding Sources");
+	const FS = (n: number) =>
+		`f5000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.fundingSource)
+		.values([
+			{
+				id: FS(1),
+				organizationId: ORG_ID,
+				name: "General Cash",
+				isActive: true,
+			},
+			{
+				id: FS(2),
+				organizationId: ORG_ID,
+				name: "Renatta",
+				isActive: true,
+			},
+			{
+				id: FS(3),
+				organizationId: ORG_ID,
+				name: "CEO",
+				isActive: true,
+			},
+			{
+				id: FS(4),
+				organizationId: ORG_ID,
+				name: "Pastry Section",
+				isActive: true,
+			},
+			{
+				id: FS(5),
+				organizationId: ORG_ID,
+				name: "Miss Bonita",
+				isActive: true,
+			},
+			{
+				id: FS(6),
+				organizationId: ORG_ID,
+				name: "QuickServe",
+				isActive: true,
+			},
+		])
+		.onConflictDoNothing();
+
+	// Update some existing expenses with funding source IDs to demonstrate grouping
+	await db
+		.update(schema.expense)
+		.set({ fundingSourceId: FS(1) })
+		.where(eq(schema.expense.id, EXPEN(1)));
+	await db
+		.update(schema.expense)
+		.set({ fundingSourceId: FS(1) })
+		.where(eq(schema.expense.id, EXPEN(2)));
+	await db
+		.update(schema.expense)
+		.set({ fundingSourceId: FS(5) })
+		.where(eq(schema.expense.id, EXPEN(3)));
+	await db
+		.update(schema.expense)
+		.set({ fundingSourceId: FS(3) })
+		.where(eq(schema.expense.id, EXPEN(6)));
+	await db
+		.update(schema.expense)
+		.set({ fundingSourceId: FS(4) })
+		.where(eq(schema.expense.id, EXPEN(8)));
+
+	// ── Invoice Payment Records (backfill for existing paid invoices) ─────
+	console.log("  -> Invoice Payment Records");
+	const INVPAY = (n: number) =>
+		`f7000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.invoicePayment)
+		.values([
+			// INV-0001 — Anita Ramsaroop — fully paid
+			{
+				id: INVPAY(1),
+				organizationId: ORG_ID,
+				invoiceId: INV(1),
+				amount: "37500",
+				paymentMethod: "cash",
+				datePaid: daysAgo(18, 10),
+				isReversal: false,
+				createdBy: USER.admin,
+				createdAt: daysAgo(18, 10),
+			},
+			// INV-0002 — Ministry of Education — fully paid (bank transfer)
+			{
+				id: INVPAY(2),
+				organizationId: ORG_ID,
+				invoiceId: INV(2),
+				amount: "78000",
+				paymentMethod: "bank_transfer",
+				referenceNumber: "MOE-2026-0214",
+				datePaid: daysAgo(14, 14),
+				isReversal: false,
+				createdBy: USER.admin,
+				createdAt: daysAgo(14, 14),
+			},
+			// INV-0003 — Priya Singh — partial payment
+			{
+				id: INVPAY(3),
+				organizationId: ORG_ID,
+				invoiceId: INV(3),
+				amount: "30000",
+				paymentMethod: "cash",
+				datePaid: daysAgo(8, 11),
+				isReversal: false,
+				createdBy: USER.admin,
+				createdAt: daysAgo(8, 11),
+			},
+			// INV-0007 — University of Guyana — fully paid (cheque)
+			{
+				id: INVPAY(4),
+				organizationId: ORG_ID,
+				invoiceId: INV(7),
+				amount: "336000",
+				paymentMethod: "cheque",
+				chequeNumber: "UG-CHQ-4471",
+				chequeDepositDate: daysAgo(29, 10),
+				datePaid: daysAgo(30, 14),
+				isReversal: false,
+				createdBy: USER.admin,
+				createdAt: daysAgo(30, 14),
+			},
+			// INV-0008 — Digicel Guyana — two partial payments
+			{
+				id: INVPAY(5),
+				organizationId: ORG_ID,
+				invoiceId: INV(8),
+				amount: "80000",
+				paymentMethod: "bank_transfer",
+				referenceNumber: "DIG-PAY-001",
+				datePaid: daysAgo(20, 9),
+				isReversal: false,
+				createdBy: USER.admin,
+				createdAt: daysAgo(20, 9),
+			},
+			{
+				id: INVPAY(6),
+				organizationId: ORG_ID,
+				invoiceId: INV(8),
+				amount: "30000",
+				paymentMethod: "cash",
+				datePaid: daysAgo(10, 11),
+				isReversal: false,
+				createdBy: USER.admin,
+				createdAt: daysAgo(10, 11),
+			},
+		])
+		.onConflictDoNothing();
+
+	// ── Vendor Bills ──────────────────────────────────────────────────────
+	// Uses real vendors from Shakira's vendor list (actual DB IDs from vendor seeding).
+	const REAL_SUPP = {
+		familyFood: "cc000000-0000-4000-8000-000000001028", // Family Food International
+		albadar: "cc000000-0000-4000-8000-000000001033", // Albadar Grocery
+		wjEnterprise: "cc000000-0000-4000-8000-000000001024", // WJ Enterprise
+	} as const;
+	console.log("  -> Vendor Bills");
+	const VB = (n: number) =>
+		`f8000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db.execute(
+		sql`INSERT INTO vendor_bill_counter (organization_id, last_number) VALUES (${ORG_ID}, 3) ON CONFLICT (organization_id) DO UPDATE SET last_number = GREATEST(vendor_bill_counter.last_number, 3)`,
+	);
+	await db
+		.insert(schema.vendorBill)
+		.values([
+			{
+				id: VB(1),
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				billNumber: "VB-0001",
+				supplierId: REAL_SUPP.familyFood,
+				supplierName: "Family Food International",
+				items: JSON.stringify([
+					{
+						description: "Chicken (bulk) - 50 lbs",
+						quantity: 50,
+						unitPrice: 1200,
+						total: 60000,
+					},
+					{
+						description: "Rice - 100 lbs",
+						quantity: 100,
+						unitPrice: 220,
+						total: 22000,
+					},
+				]),
+				subtotal: "82000",
+				taxTotal: "0",
+				total: "82000",
+				amountPaid: "82000",
+				status: "paid",
+				issuedDate: daysAgo(15, 9),
+				dueDate: daysAgo(8, 12),
+				datePaid: daysAgo(10, 14),
+				paymentMethod: "cash",
+				notes: "Weekly stock delivery — paid in full",
+				createdBy: USER.admin,
+				createdAt: daysAgo(15, 9),
+			},
+			{
+				id: VB(2),
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				billNumber: "VB-0002",
+				supplierId: REAL_SUPP.albadar,
+				supplierName: "Albadar Grocery",
+				items: JSON.stringify([
+					{
+						description: "Cooking Oil - 20L drums x4",
+						quantity: 4,
+						unitPrice: 18000,
+						total: 72000,
+					},
+					{
+						description: "Flour - 50 lbs bags x5",
+						quantity: 5,
+						unitPrice: 4800,
+						total: 24000,
+					},
+					{
+						description: "Sugar - 50 lbs bags x3",
+						quantity: 3,
+						unitPrice: 4200,
+						total: 12600,
+					},
+				]),
+				subtotal: "108600",
+				taxTotal: "0",
+				total: "108600",
+				amountPaid: "50000",
+				status: "partially_paid",
+				issuedDate: daysAgo(10, 9),
+				dueDate: daysAgo(-5, 12),
+				createdBy: USER.admin,
+				createdAt: daysAgo(10, 9),
+			},
+			{
+				id: VB(3),
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				billNumber: "VB-0003",
+				supplierId: REAL_SUPP.wjEnterprise,
+				supplierName: "WJ Enterprise",
+				items: JSON.stringify([
+					{
+						description: "Disposable containers - 500 pcs",
+						quantity: 500,
+						unitPrice: 45,
+						total: 22500,
+					},
+					{
+						description: "Aluminum foil trays - 200 pcs",
+						quantity: 200,
+						unitPrice: 65,
+						total: 13000,
+					},
+				]),
+				subtotal: "35500",
+				taxTotal: "0",
+				total: "35500",
+				amountPaid: "0",
+				status: "overdue",
+				issuedDate: daysAgo(30, 9),
+				dueDate: daysAgo(15, 12),
+				createdBy: USER.admin,
+				createdAt: daysAgo(30, 9),
+			},
+		])
+		.onConflictDoNothing();
+
+	// Vendor Bill Payment records
+	const VBPAY = (n: number) =>
+		`f9000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.vendorBillPayment)
+		.values([
+			// VB-0001 full payment
+			{
+				id: VBPAY(1),
+				organizationId: ORG_ID,
+				vendorBillId: VB(1),
+				amount: "82000",
+				paymentMethod: "cash",
+				datePaid: daysAgo(10, 14),
+				isReversal: false,
+				createdBy: USER.admin,
+				createdAt: daysAgo(10, 14),
+			},
+			// VB-0002 partial payment
+			{
+				id: VBPAY(2),
+				organizationId: ORG_ID,
+				vendorBillId: VB(2),
+				amount: "50000",
+				paymentMethod: "cash",
+				datePaid: daysAgo(5, 10),
+				isReversal: false,
+				createdBy: USER.admin,
+				createdAt: daysAgo(5, 10),
+			},
+		])
+		.onConflictDoNothing();
+
+	// ── Credit Notes ──────────────────────────────────────────────────────
+	console.log("  -> Credit Notes");
+	const CN = (n: number) =>
+		`fb000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db.execute(
+		sql`INSERT INTO credit_note_counter (organization_id, last_number) VALUES (${ORG_ID}, 2) ON CONFLICT (organization_id) DO UPDATE SET last_number = GREATEST(credit_note_counter.last_number, 2)`,
+	);
+	await db
+		.insert(schema.creditNote)
+		.values([
+			{
+				id: CN(1),
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				creditNoteNumber: "CN-0001",
+				invoiceId: INV(3), // Against Priya's birthday catering invoice
+				customerId: CUST(1),
+				customerName: "Priya Singh",
+				items: JSON.stringify([
+					{
+						description: "Overcharge correction — Sponge Cake",
+						quantity: 1,
+						unitPrice: 2000,
+						total: 2000,
+					},
+				]),
+				subtotal: "2000",
+				taxTotal: "0",
+				total: "2000",
+				status: "issued",
+				reason: "Price adjustment — cake was charged at wrong rate",
+				amountApplied: "0",
+				createdBy: USER.admin,
+				createdAt: daysAgo(7, 10),
+			},
+			{
+				id: CN(2),
+				organizationId: ORG_ID,
+				locationId: LOC_ID,
+				creditNoteNumber: "CN-0002",
+				invoiceId: INV(1), // Against Anita's office lunch invoice
+				customerId: CUST(3),
+				customerName: "Anita Ramsaroop",
+				items: JSON.stringify([
+					{
+						description: "Service discount — repeat client",
+						quantity: 1,
+						unitPrice: 3750,
+						total: 3750,
+					},
+				]),
+				subtotal: "3750",
+				taxTotal: "0",
+				total: "3750",
+				status: "applied",
+				reason: "Loyalty discount applied retroactively",
+				amountApplied: "3750",
+				createdBy: USER.admin,
+				createdAt: daysAgo(19, 11),
+			},
+		])
+		.onConflictDoNothing();
+
+	// ── Recurring Templates ───────────────────────────────────────────────
+	console.log("  -> Recurring Templates");
+	const REC = (n: number) =>
+		`fc000000-1000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.recurringTemplate)
+		.values([
+			{
+				id: REC(1),
+				organizationId: ORG_ID,
+				name: "Monthly Cafeteria — Banks DIH",
+				templateType: "invoice",
+				frequency: "monthly",
+				nextRunDate: daysAgo(-30, 9), // 30 days from now
+				isActive: true,
+				templateData: JSON.stringify({
+					customerName: "Banks DIH Limited",
+					customerAddress: "Thirst Park, Georgetown",
+					items: [
+						{
+							description: "Monthly Cafeteria Service",
+							quantity: 1,
+							unitPrice: 280000,
+							total: 280000,
+						},
+					],
+					subtotal: "280000",
+					taxTotal: "0",
+					total: "280000",
+				}),
+				totalGenerated: 1,
+				lastGeneratedAt: daysAgo(40, 9),
+				createdBy: USER.admin,
+				createdAt: daysAgo(70, 9),
+			},
+			{
+				id: REC(2),
+				organizationId: ORG_ID,
+				name: "Monthly Rent — Main Street",
+				templateType: "expense",
+				frequency: "monthly",
+				nextRunDate: daysAgo(-1, 9), // Due tomorrow
+				isActive: true,
+				templateData: JSON.stringify({
+					category: "Rent",
+					description: "Monthly rent — Main Street premises",
+					amount: "120000",
+				}),
+				totalGenerated: 3,
+				lastGeneratedAt: daysAgo(32, 9),
+				createdBy: USER.admin,
+				createdAt: daysAgo(100, 9),
+			},
+		])
+		.onConflictDoNothing();
+
+	// ── Budget ────────────────────────────────────────────────────────────
+	console.log("  -> Monthly Budget");
+	const BUD = (n: number) =>
+		`fd000000-1000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.budget)
+		.values([
+			{
+				id: BUD(1),
+				organizationId: ORG_ID,
+				name: "March 2026 Operating Budget",
+				period: "monthly",
+				startDate: new Date("2026-03-01"),
+				endDate: new Date("2026-03-31"),
+				status: "active",
+				categories: JSON.stringify([
+					{ category: "Food Cost", budgeted: "250000", alertThreshold: 85 },
+					{ category: "Beverages", budgeted: "40000", alertThreshold: 80 },
+					{ category: "Utilities", budgeted: "30000", alertThreshold: 90 },
+					{ category: "Supplies", budgeted: "20000", alertThreshold: 80 },
+					{ category: "Maintenance", budgeted: "15000", alertThreshold: 75 },
+					{ category: "Rent", budgeted: "120000", alertThreshold: 100 },
+				]),
+				createdBy: USER.admin,
+				createdAt: daysAgo(9, 8),
+			},
+		])
+		.onConflictDoNothing();
+
+	// ── Finance Audit Events ──────────────────────────────────────────────
+	console.log("  -> Finance Audit Events");
+	const FAE = (n: number) =>
+		`fe000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+	await db
+		.insert(schema.financeAuditEvent)
+		.values([
+			{
+				id: FAE(1),
+				organizationId: ORG_ID,
+				entityType: "invoice",
+				entityId: INV(1),
+				action: "payment_recorded",
+				afterState: { amount: "37500", method: "cash" },
+				performedBy: USER.admin,
+				performedAt: daysAgo(18, 10),
+			},
+			{
+				id: FAE(2),
+				organizationId: ORG_ID,
+				entityType: "invoice",
+				entityId: INV(2),
+				action: "payment_recorded",
+				afterState: {
+					amount: "78000",
+					method: "bank_transfer",
+					ref: "MOE-2026-0214",
+				},
+				performedBy: USER.admin,
+				performedAt: daysAgo(14, 14),
+			},
+			{
+				id: FAE(3),
+				organizationId: ORG_ID,
+				entityType: "credit_note",
+				entityId: CN(1),
+				action: "created",
+				afterState: { creditNoteNumber: "CN-0001", total: "2000" },
+				performedBy: USER.admin,
+				performedAt: daysAgo(7, 10),
+			},
+			{
+				id: FAE(4),
+				organizationId: ORG_ID,
+				entityType: "credit_note",
+				entityId: CN(1),
+				action: "status_changed",
+				beforeState: { status: "draft" },
+				afterState: { status: "issued" },
+				performedBy: USER.admin,
+				performedAt: daysAgo(7, 11),
+			},
+			{
+				id: FAE(5),
+				organizationId: ORG_ID,
+				entityType: "vendor_bill",
+				entityId: VB(1),
+				action: "payment_recorded",
+				afterState: { amount: "82000", method: "cash" },
+				performedBy: USER.admin,
+				performedAt: daysAgo(10, 14),
+			},
+			{
+				id: FAE(6),
+				organizationId: ORG_ID,
+				entityType: "vendor_bill",
+				entityId: VB(2),
+				action: "payment_recorded",
+				afterState: { amount: "50000", method: "cash" },
+				performedBy: USER.admin,
+				performedAt: daysAgo(5, 10),
 			},
 		])
 		.onConflictDoNothing();

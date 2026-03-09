@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+	Bell,
+	ChevronDown,
+	ChevronRight,
 	Copy,
 	CreditCard,
 	Edit2,
+	FileMinus,
 	Plus,
 	Printer,
 	Receipt,
@@ -12,10 +16,16 @@ import {
 	X,
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
 	Dialog,
 	DialogContent,
@@ -93,6 +103,8 @@ function statusBadgeClass(status: string): string {
 			return "bg-secondary text-secondary-foreground";
 		case "sent":
 			return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
+		case "overdue":
+			return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
 		case "outstanding":
 			return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300";
 		case "paid":
@@ -133,9 +145,26 @@ type InvoiceRow = {
 	preparedBy?: string | null;
 };
 
+interface RecordPaymentForm {
+	amount: string;
+	paymentMethod: string;
+	referenceNumber: string;
+	datePaid: string;
+	notes: string;
+}
+
+const emptyRecordPaymentForm: RecordPaymentForm = {
+	amount: "",
+	paymentMethod: "cash",
+	referenceNumber: "",
+	datePaid: todayGY(),
+	notes: "",
+};
+
 export default function InvoicesPage() {
 	const { data: session } = authClient.useSession();
 	const queryClient = useQueryClient();
+	const navigate = useNavigate();
 
 	const [search, setSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState("");
@@ -150,6 +179,14 @@ export default function InvoicesPage() {
 		datePaid: todayGY(),
 		chequeDepositDate: "",
 	});
+	const [recordPaymentDialogOpen, setRecordPaymentDialogOpen] = useState(false);
+	const [recordPaymentInvoiceId, setRecordPaymentInvoiceId] = useState<
+		string | null
+	>(null);
+	const [recordPaymentForm, setRecordPaymentForm] = useState<RecordPaymentForm>(
+		emptyRecordPaymentForm,
+	);
+	const [historyOpenId, setHistoryOpenId] = useState<string | null>(null);
 
 	const { data: userProfile } = useQuery(
 		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
@@ -257,6 +294,21 @@ export default function InvoicesPage() {
 		}),
 	);
 
+	const recordPaymentMut = useMutation(
+		orpc.invoices.recordPayment.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.invoices.list.queryOptions({ input: {} }).queryKey,
+				});
+				setRecordPaymentDialogOpen(false);
+				setRecordPaymentInvoiceId(null);
+				setRecordPaymentForm(emptyRecordPaymentForm);
+				toast.success("Payment recorded");
+			},
+			onError: (e) => toast.error(e.message || "Failed to record payment"),
+		}),
+	);
+
 	const duplicateMut = useMutation(
 		orpc.invoices.duplicate.mutationOptions({
 			onSuccess: (newInv) => {
@@ -269,6 +321,53 @@ export default function InvoicesPage() {
 			onError: () => toast.error("Failed to duplicate"),
 		}),
 	);
+
+	const { data: paymentHistoryRaw, isLoading: loadingHistory } = useQuery({
+		...orpc.invoices.getPaymentHistory.queryOptions({
+			input: {
+				invoiceId: historyOpenId ?? "00000000-0000-0000-0000-000000000000",
+			},
+		}),
+		enabled: !!historyOpenId,
+	});
+	const paymentHistory = Array.isArray(paymentHistoryRaw)
+		? paymentHistoryRaw
+		: [];
+
+	function openRecordPayment(inv: InvoiceRow, e: React.MouseEvent) {
+		e.stopPropagation();
+		setRecordPaymentInvoiceId(inv.id);
+		const remaining = Number(inv.total) - Number(inv.amountPaid);
+		setRecordPaymentForm({
+			...emptyRecordPaymentForm,
+			amount: remaining > 0 ? String(remaining) : "",
+		});
+		setRecordPaymentDialogOpen(true);
+	}
+
+	function handleRecordPayment() {
+		if (!recordPaymentInvoiceId || !recordPaymentForm.amount) return;
+		recordPaymentMut.mutate({
+			invoiceId: recordPaymentInvoiceId,
+			amount: Number(recordPaymentForm.amount),
+			paymentMethod: recordPaymentForm.paymentMethod,
+			referenceNumber: recordPaymentForm.referenceNumber || undefined,
+			datePaid: recordPaymentForm.datePaid,
+			notes: recordPaymentForm.notes || undefined,
+		});
+	}
+
+	function handleSendReminder(inv: InvoiceRow) {
+		const balance = Number(inv.total) - Number(inv.amountPaid);
+		const isOverdue =
+			inv.dueDate &&
+			new Date(inv.dueDate) < new Date() &&
+			!["paid", "cancelled"].includes(inv.status);
+		const text = `Dear ${inv.customerName}, your invoice ${inv.invoiceNumber} for GYD ${balance.toLocaleString("en-GY", { maximumFractionDigits: 0 })} is ${isOverdue ? "overdue" : "due"}. Please contact Bettencourt's Diner to arrange payment.`;
+		navigator.clipboard.writeText(text).then(() => {
+			toast.success("Reminder text copied to clipboard");
+		});
+	}
 
 	function openCreate() {
 		setEditingId(null);
@@ -419,11 +518,9 @@ export default function InvoicesPage() {
 			{/* Aging Summary Cards */}
 			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4 print:hidden">
 				{loadingSummary ? (
-					<>
-						{[0, 1, 2, 3].map((i) => (
-							<Skeleton key={i} className="h-20 rounded-lg" />
-						))}
-					</>
+					[0, 1, 2, 3].map((i) => (
+						<Skeleton key={i} className="h-20 rounded-lg" />
+					))
 				) : (
 					<>
 						<Card className="p-4">
@@ -502,6 +599,34 @@ export default function InvoicesPage() {
 						<SelectItem value="cancelled">Cancelled</SelectItem>
 					</SelectContent>
 				</Select>
+			</div>
+
+			{/* Status filter chips */}
+			<div className="flex flex-wrap gap-2 print:hidden">
+				{[
+					{ value: "", label: "All" },
+					{ value: "draft", label: "Draft" },
+					{ value: "sent", label: "Sent" },
+					{ value: "overdue", label: "Overdue" },
+					{ value: "outstanding", label: "Outstanding" },
+					{ value: "partial", label: "Partial" },
+					{ value: "paid", label: "Paid" },
+				].map((chip) => (
+					<button
+						key={chip.value}
+						type="button"
+						onClick={() => setStatusFilter(chip.value)}
+						className={`rounded-full border px-3 py-1 font-medium text-xs transition-colors ${
+							statusFilter === chip.value
+								? chip.value === "overdue"
+									? "border-red-600 bg-red-600 text-white"
+									: "border-primary bg-primary text-primary-foreground"
+								: "border-border bg-background text-muted-foreground hover:border-primary hover:text-foreground"
+						}`}
+					>
+						{chip.label}
+					</button>
+				))}
 			</div>
 
 			{/* Grid: table + detail */}
@@ -600,6 +725,7 @@ export default function InvoicesPage() {
 															variant="ghost"
 															size="icon"
 															className="size-7"
+															title="Edit invoice"
 															onClick={(e) => {
 																e.stopPropagation();
 																openEdit(inv);
@@ -608,11 +734,36 @@ export default function InvoicesPage() {
 															<Edit2 className="size-3" />
 														</Button>
 													)}
+													{canUpdate &&
+														!["paid", "cancelled"].includes(inv.status) && (
+															<Button
+																variant="ghost"
+																size="icon"
+																className="size-7 text-emerald-600"
+																title="Record payment"
+																onClick={(e) => openRecordPayment(inv, e)}
+															>
+																<CreditCard className="size-3" />
+															</Button>
+														)}
+													<Button
+														variant="ghost"
+														size="icon"
+														className="size-7 text-muted-foreground"
+														title="Copy reminder to clipboard"
+														onClick={(e) => {
+															e.stopPropagation();
+															handleSendReminder(inv);
+														}}
+													>
+														<Bell className="size-3" />
+													</Button>
 													{canDelete && inv.status !== "cancelled" && (
 														<Button
 															variant="ghost"
 															size="icon"
 															className="size-7 text-destructive"
+															title="Cancel invoice"
 															onClick={(e) => {
 																e.stopPropagation();
 																deleteMut.mutate({ id: inv.id });
@@ -792,6 +943,33 @@ export default function InvoicesPage() {
 												Duplicate
 											</Button>
 										)}
+										{canCreate &&
+											["paid", "outstanding", "overpaid"].includes(
+												selectedInvoice.status,
+											) && (
+												<Button
+													size="sm"
+													variant="outline"
+													className="w-full gap-1"
+													onClick={() =>
+														navigate(
+															`/dashboard/credit-notes?invoiceId=${selectedInvoice.id}&customerName=${encodeURIComponent(selectedInvoice.customerName)}`,
+														)
+													}
+												>
+													<FileMinus className="size-3" />
+													Create Credit Note
+												</Button>
+											)}
+										<Button
+											size="sm"
+											variant="outline"
+											className="w-full gap-1"
+											onClick={() => handleSendReminder(selectedInvoice)}
+										>
+											<Bell className="size-3" />
+											Send Reminder
+										</Button>
 									</div>
 								</CardContent>
 							</Card>
@@ -893,6 +1071,105 @@ export default function InvoicesPage() {
 										</CardContent>
 									</Card>
 								)}
+
+							{/* Payment History */}
+							<Card className="no-print">
+								<Collapsible
+									open={historyOpenId === selectedInvoice.id}
+									onOpenChange={(open) => {
+										setHistoryOpenId(open ? selectedInvoice.id : null);
+									}}
+								>
+									<CollapsibleTrigger asChild>
+										<button
+											type="button"
+											className="flex w-full items-center justify-between p-3 font-medium text-sm hover:bg-muted/50"
+										>
+											<span className="flex items-center gap-2">
+												<CreditCard className="size-4" />
+												Payment History
+											</span>
+											{historyOpenId === selectedInvoice.id ? (
+												<ChevronDown className="size-4 text-muted-foreground" />
+											) : (
+												<ChevronRight className="size-4 text-muted-foreground" />
+											)}
+										</button>
+									</CollapsibleTrigger>
+									<CollapsibleContent>
+										<div className="px-3 pb-3">
+											{loadingHistory ? (
+												<Skeleton className="h-20 rounded" />
+											) : paymentHistory.length === 0 ? (
+												<p className="py-4 text-center text-muted-foreground text-xs">
+													No payments recorded
+												</p>
+											) : (
+												<Table>
+													<TableHeader>
+														<TableRow>
+															<TableHead className="text-xs">Date</TableHead>
+															<TableHead className="text-right text-xs">
+																Amount
+															</TableHead>
+															<TableHead className="text-xs">Method</TableHead>
+															<TableHead className="text-xs">
+																Reference
+															</TableHead>
+															<TableHead className="text-xs">
+																Reversal
+															</TableHead>
+														</TableRow>
+													</TableHeader>
+													<TableBody>
+														{(
+															paymentHistory as unknown as Array<{
+																id: string;
+																datePaid: Date | string;
+																amount: string;
+																paymentMethod: string;
+																referenceNumber: string | null;
+																isReversal: boolean;
+															}>
+														).map((pmt) => (
+															<TableRow
+																key={pmt.id}
+																className={pmt.isReversal ? "opacity-60" : ""}
+															>
+																<TableCell className="text-xs">
+																	{new Date(pmt.datePaid).toLocaleDateString(
+																		"en-GY",
+																	)}
+																</TableCell>
+																<TableCell
+																	className={`text-right font-mono text-xs ${pmt.isReversal ? "text-destructive" : ""}`}
+																>
+																	{formatGYD(Number(pmt.amount))}
+																</TableCell>
+																<TableCell className="text-xs capitalize">
+																	{pmt.paymentMethod.replace(/_/g, " ")}
+																</TableCell>
+																<TableCell className="text-muted-foreground text-xs">
+																	{pmt.referenceNumber ?? "\u2014"}
+																</TableCell>
+																<TableCell className="text-xs">
+																	{pmt.isReversal ? (
+																		<Badge className="bg-red-100 text-[9px] text-red-800">
+																			Reversed
+																		</Badge>
+																	) : (
+																		"\u2014"
+																	)}
+																</TableCell>
+															</TableRow>
+														))}
+													</TableBody>
+												</Table>
+											)}
+										</div>
+									</CollapsibleContent>
+								</Collapsible>
+							</Card>
 						</>
 					) : (
 						<Card>
@@ -1184,6 +1461,115 @@ export default function InvoicesPage() {
 								: editingId
 									? "Update"
 									: "Create"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Record Payment Dialog */}
+			<Dialog
+				open={recordPaymentDialogOpen}
+				onOpenChange={(open) => {
+					if (!open) {
+						setRecordPaymentDialogOpen(false);
+						setRecordPaymentInvoiceId(null);
+					}
+				}}
+			>
+				<DialogContent className="max-w-md">
+					<DialogHeader>
+						<DialogTitle>Record Payment</DialogTitle>
+					</DialogHeader>
+					<div className="flex flex-col gap-4 py-2">
+						<div className="flex flex-col gap-1.5">
+							<Label>Amount (GYD) *</Label>
+							<Input
+								type="number"
+								min="0"
+								step="0.01"
+								placeholder="0.00"
+								value={recordPaymentForm.amount}
+								onChange={(e) =>
+									setRecordPaymentForm((f) => ({
+										...f,
+										amount: e.target.value,
+									}))
+								}
+							/>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label>Payment Method *</Label>
+							<Select
+								value={recordPaymentForm.paymentMethod}
+								onValueChange={(v) =>
+									setRecordPaymentForm((f) => ({ ...f, paymentMethod: v }))
+								}
+							>
+								<SelectTrigger>
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="cash">Cash</SelectItem>
+									<SelectItem value="cheque">Cheque</SelectItem>
+									<SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+									<SelectItem value="mobile_money">Mobile Money</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label>Reference Number</Label>
+							<Input
+								placeholder="Optional"
+								value={recordPaymentForm.referenceNumber}
+								onChange={(e) =>
+									setRecordPaymentForm((f) => ({
+										...f,
+										referenceNumber: e.target.value,
+									}))
+								}
+							/>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label>Date Paid *</Label>
+							<Input
+								type="date"
+								value={recordPaymentForm.datePaid}
+								onChange={(e) =>
+									setRecordPaymentForm((f) => ({
+										...f,
+										datePaid: e.target.value,
+									}))
+								}
+							/>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label>Notes</Label>
+							<Textarea
+								placeholder="Optional notes..."
+								value={recordPaymentForm.notes}
+								onChange={(e) =>
+									setRecordPaymentForm((f) => ({ ...f, notes: e.target.value }))
+								}
+								className="h-16 resize-none"
+							/>
+						</div>
+					</div>
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => setRecordPaymentDialogOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							onClick={handleRecordPayment}
+							disabled={
+								!recordPaymentForm.amount ||
+								!recordPaymentForm.datePaid ||
+								recordPaymentMut.isPending
+							}
+						>
+							{recordPaymentMut.isPending ? "Saving..." : "Record Payment"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

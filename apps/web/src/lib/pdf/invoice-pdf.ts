@@ -2,6 +2,15 @@
 // Generates a professional Blob URL HTML document for invoice printing.
 // Opens in a new tab — does NOT use window.print() on the current page.
 
+export type InvoicePaymentEntry = {
+	datePaid: string;
+	amount: string | number;
+	paymentMethod: string;
+	referenceNumber?: string | null;
+	chequeNumber?: string | null;
+	isReversal?: boolean;
+};
+
 export type InvoicePdfRow = {
 	invoiceNumber: string;
 	customerName: string;
@@ -23,6 +32,7 @@ export type InvoicePdfRow = {
 	taxRate?: string | null;
 	notes?: string | null;
 	preparedBy?: string | null;
+	payments?: InvoicePaymentEntry[];
 };
 
 export type DocSettings = {
@@ -134,6 +144,45 @@ function buildInvoiceHtml(
 		)
 		.join("");
 
+	const METHOD_LABEL: Record<string, string> = {
+		cash: "Cash",
+		cheque: "Cheque",
+		bank_transfer: "Bank Transfer",
+		mobile_money: "Mobile Money",
+		credit_note: "Credit Note",
+	};
+
+	const paymentHistoryBlock =
+		invoice.payments && invoice.payments.length > 0
+			? `
+  <div class="history-section">
+    <div class="history-title">Payment History</div>
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Method</th>
+          <th>Reference</th>
+          <th class="right">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${invoice.payments
+					.map(
+						(p) => `
+        <tr>
+          <td${p.isReversal ? ' class="reversal"' : ""}>${new Date(p.datePaid).toLocaleDateString("en-GY")}${p.isReversal ? " (Reversal)" : ""}</td>
+          <td>${escHtml(METHOD_LABEL[p.paymentMethod] ?? p.paymentMethod)}${p.chequeNumber ? ` #${escHtml(p.chequeNumber)}` : ""}</td>
+          <td>${p.referenceNumber ? escHtml(p.referenceNumber) : "—"}</td>
+          <td class="right${p.isReversal ? " reversal" : ""}">${p.isReversal ? "-" : ""}${fmtGYD(Math.abs(Number(p.amount)))}</td>
+        </tr>`,
+					)
+					.join("")}
+      </tbody>
+    </table>
+  </div>`
+			: "";
+
 	const paymentBlock =
 		settings.bankName || settings.paymentInstructions
 			? `
@@ -205,6 +254,15 @@ function buildInvoiceHtml(
   .payment-section { padding: 18px 36px; background: #f8fafc; border-top: 1px solid #e2e8f0; }
   .payment-title { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: #475569; text-transform: uppercase; margin-bottom: 10px; }
   .payment-detail { font-size: 11px; color: #334155; margin-top: 3px; }
+
+  .history-section { padding: 16px 36px; border-top: 1px solid #e2e8f0; }
+  .history-title { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: #475569; text-transform: uppercase; margin-bottom: 10px; }
+  .history-table { width: 100%; border-collapse: collapse; }
+  .history-table th { padding: 6px 10px; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #64748b; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; text-align: left; }
+  .history-table th.right { text-align: right; }
+  .history-table td { padding: 7px 10px; font-size: 11px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+  .history-table td.right { text-align: right; font-family: 'Courier New', monospace; }
+  .history-table td.reversal { color: #dc2626; font-style: italic; }
 
   .notes-section { padding: 16px 36px; font-size: 12px; color: #475569; border-top: 1px solid #e2e8f0; line-height: 1.6; }
   .notes-section strong { color: #1e293b; }
@@ -278,6 +336,8 @@ function buildInvoiceHtml(
       </div>
     </div>
   </div>
+
+  ${paymentHistoryBlock}
 
   ${paymentBlock}
 

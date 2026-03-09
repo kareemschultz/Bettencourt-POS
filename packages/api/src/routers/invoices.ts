@@ -1,9 +1,11 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { ORPCError } from "@orpc/server";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, not, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
+import { logFinanceEvent } from "../lib/finance-audit";
+import { computeInvoiceStatus } from "../lib/finance-status";
 import {
 	requireOrganizationId,
 	resolveDefaultLocationId,
@@ -305,7 +307,7 @@ const markPaid = permissionProcedure("invoices.update")
 			throw new ORPCError("NOT_FOUND", { message: "Invoice not found" });
 		}
 
-		const total = Number(rows[0]!.total);
+		const total = Number(rows[0]?.total);
 		const paid = Number(input.amountPaid);
 
 		let status: string;
@@ -427,6 +429,826 @@ const markSent = permissionProcedure("invoices.update")
 		return { success: true };
 	});
 
+// ── recordPayment ──────────────────────────────────────────────────────
+
+const recordPayment = permissionProcedure("invoices.update")
+	.input(
+		z.object({
+			invoiceId: z.string().uuid(),
+			amount: z.number(),
+			paymentMethod: z.string(),
+			referenceNumber: z.string().optional(),
+			chequeNumber: z.string().optional(),
+			chequeDepositDate: z.string().optional(),
+			datePaid: z.string(),
+			notes: z.string().optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const userId = context.session.user.id;
+
+		// Verify invoice belongs to org
+		const invoiceRows = await db
+			.select()
+			.from(schema.invoice)
+			.where(
+				and(
+					eq(schema.invoice.id, input.invoiceId),
+					eq(schema.invoice.organizationId, orgId),
+				),
+			)
+			.limit(1);
+
+		if (invoiceRows.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Invoice not found" });
+		}
+
+		const invoice = invoiceRows[0]!;
+		const beforeState = invoice.status;
+
+		// Insert payment record
+		await db.insert(schema.invoicePayment).values({
+			organizationId: orgId,
+			invoiceId: input.invoiceId,
+			amount: String(input.amount),
+			paymentMethod: input.paymentMethod,
+			referenceNumber: input.referenceNumber ?? null,
+			chequeNumber: input.chequeNumber ?? null,
+			chequeDepositDate: input.chequeDepositDate
+				? new Date(input.chequeDepositDate)
+				: null,
+			datePaid: new Date(input.datePaid),
+			notes: input.notes ?? null,
+			isReversal: false,
+			createdBy: userId,
+		});
+
+		// Recalculate total amount paid (sum all non-reversal payments)
+		const sumRows = await db
+			.select({
+				sum: sql<string>`COALESCE(SUM(amount), 0)`,
+			})
+			.from(schema.invoicePayment)
+			.where(
+				and(
+					eq(schema.invoicePayment.invoiceId, input.invoiceId),
+					eq(schema.invoicePayment.isReversal, false),
+				),
+			);
+
+		const newAmountPaid = sumRows[0]?.sum ?? "0";
+
+		// Compute new status
+		const newStatus = computeInvoiceStatus(
+			Number(invoice.total),
+			Number(newAmountPaid),
+			invoice.dueDate,
+			invoice.status,
+		);
+
+		// Update invoice
+		const updatedRows = await db
+			.update(schema.invoice)
+			.set({
+				amountPaid: newAmountPaid,
+				status: newStatus,
+				datePaid:
+					newStatus === "paid" ? new Date(input.datePaid) : invoice.datePaid,
+			})
+			.where(eq(schema.invoice.id, input.invoiceId))
+			.returning();
+
+		// Log audit event
+		await logFinanceEvent(db, {
+			organizationId: orgId,
+			entityType: "invoice",
+			entityId: input.invoiceId,
+			action: "payment_recorded",
+			beforeState: beforeState,
+			afterState: newStatus,
+			performedBy: userId,
+			notes: input.notes,
+		});
+
+		return updatedRows[0]!;
+	});
+
+// ── getPaymentHistory ──────────────────────────────────────────────────
+
+const getPaymentHistory = permissionProcedure("invoices.read")
+	.input(z.object({ invoiceId: z.string().uuid() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+
+		// Verify invoice belongs to org
+		const invoiceRows = await db
+			.select({ id: schema.invoice.id })
+			.from(schema.invoice)
+			.where(
+				and(
+					eq(schema.invoice.id, input.invoiceId),
+					eq(schema.invoice.organizationId, orgId),
+				),
+			)
+			.limit(1);
+
+		if (invoiceRows.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Invoice not found" });
+		}
+
+		const payments = await db
+			.select()
+			.from(schema.invoicePayment)
+			.where(eq(schema.invoicePayment.invoiceId, input.invoiceId))
+			.orderBy(desc(schema.invoicePayment.createdAt));
+
+		return payments;
+	});
+
+// ── reversePayment ─────────────────────────────────────────────────────
+
+const reversePayment = permissionProcedure("invoices.update")
+	.input(
+		z.object({
+			paymentId: z.string().uuid(),
+			notes: z.string().optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const userId = context.session.user.id;
+
+		// Fetch original payment
+		const paymentRows = await db
+			.select()
+			.from(schema.invoicePayment)
+			.where(eq(schema.invoicePayment.id, input.paymentId))
+			.limit(1);
+
+		if (paymentRows.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Payment not found" });
+		}
+
+		const originalPayment = paymentRows[0]!;
+
+		// Verify the invoice belongs to the org
+		const invoiceRows = await db
+			.select()
+			.from(schema.invoice)
+			.where(
+				and(
+					eq(schema.invoice.id, originalPayment.invoiceId),
+					eq(schema.invoice.organizationId, orgId),
+				),
+			)
+			.limit(1);
+
+		if (invoiceRows.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Invoice not found" });
+		}
+
+		const invoice = invoiceRows[0]!;
+
+		// Cannot reverse a reversal
+		if (originalPayment.isReversal) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Cannot reverse a reversal payment",
+			});
+		}
+
+		// Insert reversal record
+		await db.insert(schema.invoicePayment).values({
+			organizationId: orgId,
+			invoiceId: originalPayment.invoiceId,
+			amount: String(-Math.abs(Number(originalPayment.amount))),
+			paymentMethod: originalPayment.paymentMethod,
+			referenceNumber: originalPayment.referenceNumber,
+			chequeNumber: originalPayment.chequeNumber,
+			chequeDepositDate: originalPayment.chequeDepositDate,
+			datePaid: originalPayment.datePaid,
+			notes: input.notes ?? null,
+			isReversal: true,
+			createdBy: userId,
+		});
+
+		// Recalculate total amount paid (sum all non-reversal payments)
+		const sumRows = await db
+			.select({
+				sum: sql<string>`COALESCE(SUM(amount), 0)`,
+			})
+			.from(schema.invoicePayment)
+			.where(
+				and(
+					eq(schema.invoicePayment.invoiceId, originalPayment.invoiceId),
+					eq(schema.invoicePayment.isReversal, false),
+				),
+			);
+
+		const newAmountPaid = sumRows[0]?.sum ?? "0";
+
+		// Recompute status
+		const newStatus = computeInvoiceStatus(
+			Number(invoice.total),
+			Number(newAmountPaid),
+			invoice.dueDate,
+			invoice.status,
+		);
+
+		// Update invoice
+		const updatedRows = await db
+			.update(schema.invoice)
+			.set({
+				amountPaid: newAmountPaid,
+				status: newStatus,
+			})
+			.where(eq(schema.invoice.id, originalPayment.invoiceId))
+			.returning();
+
+		// Log audit event
+		await logFinanceEvent(db, {
+			organizationId: orgId,
+			entityType: "invoice",
+			entityId: originalPayment.invoiceId,
+			action: "reversed",
+			beforeState: invoice.status,
+			afterState: newStatus,
+			performedBy: userId,
+			notes: input.notes,
+		});
+
+		return updatedRows[0]!;
+	});
+
+// ── getFinanceDashboard ────────────────────────────────────────────────
+
+const getFinanceDashboard = permissionProcedure("reports.read")
+	.input(z.object({}).optional())
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+
+		const [
+			receivableResult,
+			payableResult,
+			overdueInvoicesResult,
+			overdueVendorBillsResult,
+			cashFlowResult,
+			revenueByMonthResult,
+			expenseByMonthResult,
+			topCustomersResult,
+			topSuppliersResult,
+		] = await Promise.all([
+			// totalReceivable
+			db.execute(sql`
+				SELECT COALESCE(SUM(total::numeric - amount_paid::numeric), 0)::text AS total
+				FROM invoice
+				WHERE organization_id = ${orgId}
+				  AND status NOT IN ('paid', 'voided')
+			`),
+			// totalPayable
+			db.execute(sql`
+				SELECT COALESCE(SUM(total::numeric - amount_paid::numeric), 0)::text AS total
+				FROM vendor_bill
+				WHERE organization_id = ${orgId}
+				  AND status NOT IN ('paid', 'voided')
+			`),
+			// overdueInvoices
+			db.execute(sql`
+				SELECT COUNT(*)::int AS count,
+				       COALESCE(SUM(total::numeric - amount_paid::numeric), 0)::text AS total
+				FROM invoice
+				WHERE organization_id = ${orgId}
+				  AND status = 'overdue'
+			`),
+			// overdueVendorBills
+			db.execute(sql`
+				SELECT COUNT(*)::int AS count,
+				       COALESCE(SUM(total::numeric - amount_paid::numeric), 0)::text AS total
+				FROM vendor_bill
+				WHERE organization_id = ${orgId}
+				  AND status = 'overdue'
+			`),
+			// cashFlow30Days
+			db.execute(sql`
+				SELECT
+					COALESCE((
+						SELECT SUM(ip.amount::numeric)
+						FROM invoice_payment ip
+						JOIN invoice i ON i.id = ip.invoice_id
+						WHERE i.organization_id = ${orgId}
+						  AND ip.date_paid >= NOW() - INTERVAL '30 days'
+						  AND ip.is_reversal = false
+					), 0)
+					-
+					COALESCE((
+						SELECT SUM(vbp.amount::numeric)
+						FROM vendor_bill_payment vbp
+						JOIN vendor_bill vb ON vb.id = vbp.vendor_bill_id
+						WHERE vb.organization_id = ${orgId}
+						  AND vbp.date_paid >= NOW() - INTERVAL '30 days'
+						  AND vbp.is_reversal = false
+					), 0)
+					-
+					COALESCE((
+						SELECT SUM(e.amount::numeric)
+						FROM expense e
+						WHERE e.organization_id = ${orgId}
+						  AND e.created_at >= NOW() - INTERVAL '30 days'
+					), 0)
+				AS net_cash_flow
+			`),
+			// revenueByMonth (last 12 months)
+			db.execute(sql`
+				SELECT
+					TO_CHAR(DATE_TRUNC('month', ip.date_paid), 'YYYY-MM') AS month,
+					COALESCE(SUM(ip.amount::numeric), 0)::text AS total
+				FROM invoice_payment ip
+				JOIN invoice i ON i.id = ip.invoice_id
+				WHERE i.organization_id = ${orgId}
+				  AND ip.date_paid >= DATE_TRUNC('month', NOW()) - INTERVAL '11 months'
+				  AND ip.is_reversal = false
+				GROUP BY DATE_TRUNC('month', ip.date_paid)
+				ORDER BY DATE_TRUNC('month', ip.date_paid) ASC
+			`),
+			// expenseByMonth (last 12 months)
+			db.execute(sql`
+				SELECT
+					TO_CHAR(DATE_TRUNC('month', e.created_at), 'YYYY-MM') AS month,
+					COALESCE(SUM(e.amount::numeric), 0)::text AS total
+				FROM expense e
+				WHERE e.organization_id = ${orgId}
+				  AND e.created_at >= DATE_TRUNC('month', NOW()) - INTERVAL '11 months'
+				GROUP BY DATE_TRUNC('month', e.created_at)
+				ORDER BY DATE_TRUNC('month', e.created_at) ASC
+			`),
+			// topCustomersByRevenue
+			db.execute(sql`
+				SELECT
+					i.customer_name AS "customerName",
+					i.customer_id AS "customerId",
+					COALESCE(SUM(ip.amount::numeric), 0)::text AS total
+				FROM invoice_payment ip
+				JOIN invoice i ON i.id = ip.invoice_id
+				WHERE i.organization_id = ${orgId}
+				  AND ip.is_reversal = false
+				GROUP BY i.customer_name, i.customer_id
+				ORDER BY SUM(ip.amount::numeric) DESC
+				LIMIT 5
+			`),
+			// topSuppliersBySpend
+			db.execute(sql`
+				SELECT
+					vb.supplier_name AS "supplierName",
+					vb.supplier_id AS "supplierId",
+					COALESCE(SUM(vbp.amount::numeric), 0)::text AS total
+				FROM vendor_bill_payment vbp
+				JOIN vendor_bill vb ON vb.id = vbp.vendor_bill_id
+				WHERE vb.organization_id = ${orgId}
+				  AND vbp.is_reversal = false
+				GROUP BY vb.supplier_name, vb.supplier_id
+				ORDER BY SUM(vbp.amount::numeric) DESC
+				LIMIT 5
+			`),
+		]);
+
+		return {
+			totalReceivable:
+				(receivableResult.rows[0] as Record<string, unknown>)?.total ?? "0",
+			totalPayable:
+				(payableResult.rows[0] as Record<string, unknown>)?.total ?? "0",
+			overdueInvoices: {
+				count:
+					((overdueInvoicesResult.rows[0] as Record<string, unknown>)
+						?.count as number) ?? 0,
+				total:
+					(overdueInvoicesResult.rows[0] as Record<string, unknown>)?.total ??
+					"0",
+			},
+			overdueVendorBills: {
+				count:
+					((overdueVendorBillsResult.rows[0] as Record<string, unknown>)
+						?.count as number) ?? 0,
+				total:
+					(overdueVendorBillsResult.rows[0] as Record<string, unknown>)
+						?.total ?? "0",
+			},
+			cashFlow30Days:
+				(cashFlowResult.rows[0] as Record<string, unknown>)?.net_cash_flow ??
+				"0",
+			revenueByMonth: revenueByMonthResult.rows as Array<{
+				month: string;
+				total: string;
+			}>,
+			expenseByMonth: expenseByMonthResult.rows as Array<{
+				month: string;
+				total: string;
+			}>,
+			topCustomersByRevenue: topCustomersResult.rows as Array<{
+				customerName: string;
+				customerId: string | null;
+				total: string;
+			}>,
+			topSuppliersBySpend: topSuppliersResult.rows as Array<{
+				supplierName: string;
+				supplierId: string | null;
+				total: string;
+			}>,
+		};
+	});
+
+// ── getReceivableAging ─────────────────────────────────────────────────
+
+const getReceivableAging = permissionProcedure("reports.read")
+	.input(z.object({}).optional())
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+
+		const invoices = await db
+			.select()
+			.from(schema.invoice)
+			.where(
+				and(
+					eq(schema.invoice.organizationId, orgId),
+					not(inArray(schema.invoice.status, ["paid", "voided", "draft"])),
+				),
+			);
+
+		const now = new Date();
+
+		// Group by customer
+		const customerMap = new Map<
+			string,
+			{
+				customerName: string;
+				customerId: string | null;
+				current: number;
+				days30: number;
+				days60: number;
+				days90: number;
+				days90plus: number;
+			}
+		>();
+
+		for (const inv of invoices) {
+			const key = inv.customerId ?? `name:${inv.customerName}`;
+			if (!customerMap.has(key)) {
+				customerMap.set(key, {
+					customerName: inv.customerName,
+					customerId: inv.customerId,
+					current: 0,
+					days30: 0,
+					days60: 0,
+					days90: 0,
+					days90plus: 0,
+				});
+			}
+			const entry = customerMap.get(key)!;
+			const balance = Number(inv.total) - Number(inv.amountPaid);
+			if (balance <= 0) continue;
+
+			const dueDate = inv.dueDate;
+			if (!dueDate || now <= dueDate) {
+				// Not yet overdue — current bucket
+				entry.current += balance;
+			} else {
+				const daysPastDue = Math.floor(
+					(now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24),
+				);
+				if (daysPastDue <= 30) {
+					entry.days30 += balance;
+				} else if (daysPastDue <= 60) {
+					entry.days60 += balance;
+				} else if (daysPastDue <= 90) {
+					entry.days90 += balance;
+				} else {
+					entry.days90plus += balance;
+				}
+			}
+		}
+
+		return Array.from(customerMap.values()).map((e) => ({
+			customerName: e.customerName,
+			customerId: e.customerId,
+			current: e.current.toFixed(2),
+			days30: e.days30.toFixed(2),
+			days60: e.days60.toFixed(2),
+			days90: e.days90.toFixed(2),
+			days90plus: e.days90plus.toFixed(2),
+			total: (
+				e.current +
+				e.days30 +
+				e.days60 +
+				e.days90 +
+				e.days90plus
+			).toFixed(2),
+		}));
+	});
+
+// ── getPayableAging ────────────────────────────────────────────────────
+
+const getPayableAging = permissionProcedure("reports.read")
+	.input(z.object({}).optional())
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+
+		const bills = await db
+			.select()
+			.from(schema.vendorBill)
+			.where(
+				and(
+					eq(schema.vendorBill.organizationId, orgId),
+					not(inArray(schema.vendorBill.status, ["paid", "voided", "draft"])),
+				),
+			);
+
+		const now = new Date();
+
+		// Group by supplier
+		const supplierMap = new Map<
+			string,
+			{
+				supplierName: string;
+				supplierId: string | null;
+				current: number;
+				days30: number;
+				days60: number;
+				days90: number;
+				days90plus: number;
+			}
+		>();
+
+		for (const bill of bills) {
+			const key = bill.supplierId ?? `name:${bill.supplierName}`;
+			if (!supplierMap.has(key)) {
+				supplierMap.set(key, {
+					supplierName: bill.supplierName,
+					supplierId: bill.supplierId,
+					current: 0,
+					days30: 0,
+					days60: 0,
+					days90: 0,
+					days90plus: 0,
+				});
+			}
+			const entry = supplierMap.get(key)!;
+			const balance = Number(bill.total) - Number(bill.amountPaid);
+			if (balance <= 0) continue;
+
+			const dueDate = bill.dueDate;
+			if (!dueDate || now <= dueDate) {
+				entry.current += balance;
+			} else {
+				const daysPastDue = Math.floor(
+					(now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24),
+				);
+				if (daysPastDue <= 30) {
+					entry.days30 += balance;
+				} else if (daysPastDue <= 60) {
+					entry.days60 += balance;
+				} else if (daysPastDue <= 90) {
+					entry.days90 += balance;
+				} else {
+					entry.days90plus += balance;
+				}
+			}
+		}
+
+		return Array.from(supplierMap.values()).map((e) => ({
+			supplierName: e.supplierName,
+			supplierId: e.supplierId,
+			current: e.current.toFixed(2),
+			days30: e.days30.toFixed(2),
+			days60: e.days60.toFixed(2),
+			days90: e.days90.toFixed(2),
+			days90plus: e.days90plus.toFixed(2),
+			total: (
+				e.current +
+				e.days30 +
+				e.days60 +
+				e.days90 +
+				e.days90plus
+			).toFixed(2),
+		}));
+	});
+
+// ── getCustomerStatement ───────────────────────────────────────────────
+
+const getCustomerStatement = permissionProcedure("reports.read")
+	.input(
+		z.object({
+			customerId: z.string(),
+			startDate: z.string(),
+			endDate: z.string(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const start = new Date(input.startDate);
+		const end = new Date(input.endDate);
+		// Include full end day
+		end.setHours(23, 59, 59, 999);
+
+		// Fetch invoices for this customer in date range
+		const invoices = await db
+			.select()
+			.from(schema.invoice)
+			.where(
+				and(
+					eq(schema.invoice.organizationId, orgId),
+					eq(schema.invoice.customerId, input.customerId),
+					sql`COALESCE(issued_date, created_at) >= ${start}`,
+					sql`COALESCE(issued_date, created_at) <= ${end}`,
+				),
+			)
+			.orderBy(sql`COALESCE(issued_date, created_at) ASC`);
+
+		if (invoices.length === 0) {
+			return [];
+		}
+
+		const invoiceIds = invoices.map((i) => i.id);
+
+		// Fetch payments for those invoices in date range
+		const payments = await db
+			.select()
+			.from(schema.invoicePayment)
+			.where(
+				and(
+					inArray(schema.invoicePayment.invoiceId, invoiceIds),
+					sql`date_paid >= ${start}`,
+					sql`date_paid <= ${end}`,
+				),
+			)
+			.orderBy(schema.invoicePayment.datePaid);
+
+		// Build chronological statement entries
+		type StatementEntry = {
+			date: string;
+			description: string;
+			reference: string;
+			debit: string;
+			credit: string;
+			sortKey: number;
+		};
+
+		const entries: StatementEntry[] = [];
+
+		for (const inv of invoices) {
+			const date = inv.issuedDate ?? inv.createdAt;
+			entries.push({
+				date: date.toISOString().split("T")[0]!,
+				description: `Invoice #${inv.invoiceNumber}`,
+				reference: inv.invoiceNumber,
+				debit: inv.total,
+				credit: "0.00",
+				sortKey: date.getTime(),
+			});
+		}
+
+		for (const pmt of payments) {
+			entries.push({
+				date: pmt.datePaid.toISOString().split("T")[0]!,
+				description: `Payment - ${pmt.paymentMethod}${pmt.referenceNumber ? ` (${pmt.referenceNumber})` : ""}`,
+				reference: pmt.referenceNumber ?? pmt.id,
+				debit: "0.00",
+				credit: pmt.amount,
+				sortKey: pmt.datePaid.getTime(),
+			});
+		}
+
+		// Sort chronologically
+		entries.sort((a, b) => a.sortKey - b.sortKey);
+
+		// Build running balance
+		let balance = 0;
+		return entries.map((entry) => {
+			balance += Number(entry.debit) - Number(entry.credit);
+			return {
+				date: entry.date,
+				description: entry.description,
+				reference: entry.reference,
+				debit: entry.debit,
+				credit: entry.credit,
+				balance: balance.toFixed(2),
+			};
+		});
+	});
+
+// ── getCustomerBalanceSummary ──────────────────────────────────────────
+
+const getCustomerBalanceSummary = permissionProcedure("reports.read")
+	.input(z.object({}).optional())
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+
+		const result = await db.execute(sql`
+			SELECT
+				customer_id AS "customerId",
+				customer_name AS "customerName",
+				COALESCE(SUM(total::numeric - amount_paid::numeric), 0)::text AS "totalOutstanding"
+			FROM invoice
+			WHERE organization_id = ${orgId}
+			  AND status NOT IN ('paid', 'voided', 'cancelled')
+			GROUP BY customer_id, customer_name
+			HAVING SUM(total::numeric - amount_paid::numeric) > 0
+			ORDER BY SUM(total::numeric - amount_paid::numeric) DESC
+			LIMIT 50
+		`);
+
+		return result.rows as Array<{
+			customerId: string | null;
+			customerName: string;
+			totalOutstanding: string;
+		}>;
+	});
+
+// ── getTaxSummary ──────────────────────────────────────────────────────
+
+const getTaxSummary = permissionProcedure("reports.read")
+	.input(
+		z.object({
+			startDate: z.string(),
+			endDate: z.string(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const start = new Date(input.startDate);
+		const end = new Date(input.endDate);
+		end.setHours(23, 59, 59, 999);
+
+		const [
+			collectedResult,
+			paidBillsResult,
+			paidExpensesResult,
+			byMonthResult,
+		] = await Promise.all([
+			// Tax collected: paid invoices in period
+			db.execute(sql`
+					SELECT COALESCE(SUM(tax_total::numeric), 0)::text AS total
+					FROM invoice
+					WHERE organization_id = ${orgId}
+					  AND status = 'paid'
+					  AND date_paid >= ${start}
+					  AND date_paid <= ${end}
+				`),
+			// Tax paid via vendor bills: paid bills in period
+			db.execute(sql`
+					SELECT COALESCE(SUM(tax_total::numeric), 0)::text AS total
+					FROM vendor_bill
+					WHERE organization_id = ${orgId}
+					  AND status = 'paid'
+					  AND date_paid >= ${start}
+					  AND date_paid <= ${end}
+				`),
+			// Tax expenses: approximate via expenses categorized as 'tax'
+			db.execute(sql`
+					SELECT COALESCE(SUM(amount::numeric), 0)::text AS total
+					FROM expense
+					WHERE organization_id = ${orgId}
+					  AND category = 'tax'
+					  AND created_at >= ${start}
+					  AND created_at <= ${end}
+				`),
+			// By month breakdown
+			db.execute(sql`
+					SELECT
+						TO_CHAR(DATE_TRUNC('month', date_paid), 'YYYY-MM') AS month,
+						COALESCE(SUM(tax_total::numeric), 0)::text AS collected,
+						0::text AS paid
+					FROM invoice
+					WHERE organization_id = ${orgId}
+					  AND status = 'paid'
+					  AND date_paid >= ${start}
+					  AND date_paid <= ${end}
+					GROUP BY DATE_TRUNC('month', date_paid)
+					ORDER BY DATE_TRUNC('month', date_paid) ASC
+				`),
+		]);
+
+		const collected = Number(
+			(collectedResult.rows[0] as Record<string, unknown>)?.total ?? "0",
+		);
+		const paidBills = Number(
+			(paidBillsResult.rows[0] as Record<string, unknown>)?.total ?? "0",
+		);
+		const paidExpenses = Number(
+			(paidExpensesResult.rows[0] as Record<string, unknown>)?.total ?? "0",
+		);
+		const paid = paidBills + paidExpenses;
+
+		return {
+			collected: collected.toFixed(2),
+			paid: paid.toFixed(2),
+			net: (collected - paid).toFixed(2),
+			byMonth: byMonthResult.rows as Array<{
+				month: string;
+				collected: string;
+				paid: string;
+			}>,
+		};
+	});
+
 // ── router export ──────────────────────────────────────────────────────
 
 export const invoicesRouter = {
@@ -439,4 +1261,13 @@ export const invoicesRouter = {
 	markSent,
 	duplicate,
 	getSummary,
+	recordPayment,
+	getPaymentHistory,
+	reversePayment,
+	getFinanceDashboard,
+	getReceivableAging,
+	getPayableAging,
+	getCustomerStatement,
+	getCustomerBalanceSummary,
+	getTaxSummary,
 };
