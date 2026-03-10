@@ -10,12 +10,6 @@ import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { env } from "@Bettencourt-POS/env/server";
 import { createHash } from "node:crypto";
-import {
-	clearPinFailures,
-	getClientIp,
-	getPinLockoutRemainingSeconds,
-	recordPinFailure,
-} from "./pin-rate-limit";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
@@ -28,6 +22,14 @@ import { serveStatic } from "hono/bun";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { startBackupScheduler } from "./backup-engine";
+import {
+	clearPinFailures,
+	getClientIp,
+	getPinLockoutRemainingSeconds,
+	recordPinFailure,
+} from "./pin-rate-limit";
+import { backupsRouter } from "./routes/backups";
 
 const app = new Hono();
 
@@ -161,6 +163,8 @@ app.post("/api/auth/demo-login", async (c) => {
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
+app.route("/api/backups", backupsRouter);
+
 export const apiHandler = new OpenAPIHandler(appRouter, {
 	plugins: [
 		new OpenAPIReferencePlugin({
@@ -278,6 +282,9 @@ if (process.env.NODE_ENV === "production") {
 		return c.text("Bettencourt POS API — Development");
 	});
 }
+
+// Start backup scheduler (daily at midnight Guyana time)
+startBackupScheduler();
 
 // Graceful shutdown
 process.on("SIGTERM", () => {

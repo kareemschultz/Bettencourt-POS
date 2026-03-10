@@ -22,11 +22,15 @@
 		"dotenv": "catalog:",
 		"drizzle-orm": "^0.45.1",
 		"hono": "catalog:",
+		"node-cron": "^4.2.1",
+		"nodemailer": "^8.0.2",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@Bettencourt-POS/config": "workspace:*",
 		"@types/bun": "catalog:",
+		"@types/node-cron": "^3.0.11",
+		"@types/nodemailer": "^7.0.11",
 		"tsdown": "^0.16.5",
 		"typescript": "^5"
 	}

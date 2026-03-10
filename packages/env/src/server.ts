@@ -13,6 +13,12 @@ export const env = createEnv({
 		NODE_ENV: z
 			.enum(["development", "production", "test"])
 			.default("development"),
+		SMTP_HOST: z.string().optional(),
+		SMTP_PORT: z.coerce.number().optional().default(587),
+		SMTP_USER: z.string().optional(),
+		SMTP_PASS: z.string().optional(),
+		SMTP_FROM: z.string().optional().default("noreply@bettencourt-pos.com"),
+		SMTP_ALERT_TO: z.string().optional(),
 	},
 	runtimeEnv: process.env,
 	emptyStringAsUndefined: true,
