@@ -1031,15 +1031,16 @@ Create professional price quotations for catering, events, or corporate orders. 
 
 1. Click **New Quotation**
 2. Enter customer name, phone, address, and **Valid Until** date
-3. Add line items (description, quantity, unit price — totals auto-calculate)
-4. In the **Tax & Discount** box, set:
+3. (Optional) open **Agency / Organization** and set a **Department**
+4. Add line items (description, quantity, unit price — totals auto-calculate)
+5. In the **Tax & Discount** box, set:
    - Tax Rate (%) and Tax Mode (whole invoice or per-line)
    - Discount type (percent or fixed GYD amount) and value
-5. Enter **Terms & Conditions** (appears on the PDF)
-6. Add **Notes** and your name in **Prepared By**
-7. Click **Create**
+6. Enter **Terms & Conditions** (appears on the PDF)
+7. Add **Notes** and your name in **Prepared By**
+8. Click **Create**
 
-### Detail Panel Actions (click any quotation row)
+### More Actions Menu (click ••• on any quotation row)
 
 | Button | What it does |
 |--------|-------------|
@@ -1080,10 +1081,13 @@ Four cards show at a glance:
 1. Click **New Invoice**
 2. Enter customer details (name, phone, address)
 3. Set **Issued Date** and **Due Date**
-4. Add line items
-5. Set Tax Rate, Discount, and **Payment Terms** (Due on Receipt / Net 15 / Net 30 / Net 60)
-6. Enter your name in **Prepared By** (optional)
-7. Click **Create**
+4. (Optional) set a custom invoice number and open **Agency / Organization**
+5. Add line items
+6. Set Tax Rate, Discount, **Payment Terms** (Due on Receipt / Net 15 / Net 30 / Net 60), and **Department**
+7. Enter your name in **Prepared By** (optional)
+8. Click **Create**
+
+You can edit the invoice number later while editing the invoice.
 
 ### Recording a Payment
 
@@ -1094,7 +1098,7 @@ Four cards show at a glance:
    - Date Paid and Cheque Deposit Date
 3. Click **Record Payment**
 
-### Detail Panel Actions
+### More Actions Menu
 
 | Button | What it does |
 |--------|-------------|
@@ -1571,28 +1575,34 @@ Plus revenue vs expenses charts and quick-view of recent invoices and vendor bil
 Create invoices for catering jobs, corporate lunches, events, or any sale on credit.
 
 **To record a payment on an invoice:**
-1. Find the invoice → click ••• → **Record Payment**
+1. Find the invoice → click the green payment icon
 2. Choose: Cash, Cheque, Bank Transfer, or Mobile Money
 3. Enter the amount and date
 4. The invoice status updates automatically (Partial → Paid)
 
 Each invoice shows a **Payment History** with every payment ever made — nothing is deleted.
+Use the **More Actions (•••)** menu for Mark Sent, Duplicate, Print / Save PDF, reminder copy, and delete.
+Invoices also support **Department**, **Agency / Organization** details, and editable invoice numbers.
 
 **To create a credit note** from an invoice: click **Create Credit Note** on any paid or partial invoice.
 
 ### Credit Notes (`/dashboard/credit-notes`)
 Use credit notes to reduce a customer's balance — for price corrections, errors, or loyalty adjustments.
 
-1. Create credit note → link to original invoice → add adjustment item
-2. **Issue** it (changes status from Draft → Issued)
-3. **Apply to Invoice** — select the customer's invoice and enter the amount to offset
+1. Create credit note → use the searchable invoice combobox to link to original invoice
+2. Set department (optional) and add adjustment item(s)
+3. **Issue** it (changes status from Draft → Issued)
+4. **Apply to Invoice** — select the customer's invoice and enter the amount to offset
+
+Credit notes also include **Print / Save PDF** in the **More Actions (•••)** menu.
 
 ### Vendor Bills (`/dashboard/vendor-bills`)
 Track what the restaurant owes to suppliers (Family Food, Albadar, WJ Enterprise, etc.).
 
-1. Create a bill when you receive goods → add line items
-2. Record payments as you pay the supplier
-3. Overdue bills (past due date) show a red badge automatically
+1. Create a bill when you receive goods → add line items and department (optional)
+2. Record payments as you pay the supplier using the **Pay** button
+3. Use **More Actions (•••)** for edit, PDF, and delete options
+4. Overdue bills (past due date) show a red badge automatically
 
 ### Recurring Templates (`/dashboard/recurring`)
 Set up automatic monthly invoices (e.g., Banks DIH monthly cafeteria) or recurring expenses (rent).
@@ -1615,6 +1625,7 @@ Set monthly spending targets per category (Food Cost, Utilities, Rent, etc.).
 - Progress bars show how much of each budget has been used
 - Red = over budget, Amber = approaching limit, Green = safe
 - The **Budget vs Actual** view shows exact variances in GYD
+- Each budget card has a **More Actions (•••)** menu for edit/delete
 
 ### Daily Expense Summary
 On the **Expenses** page, switch to **Daily Summary** view to see expenses exactly like the handwritten "Expense Summary Form" — grouped by funding source (Renatta, CEO, Pastry Section, Miss Bonita, QuickServe).

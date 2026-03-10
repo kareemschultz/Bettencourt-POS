@@ -3,7 +3,10 @@ import {
 	ChevronDown,
 	ChevronRight,
 	CreditCard,
+	Edit2,
+	FileDown,
 	FileWarning,
+	MoreHorizontal,
 	Plus,
 	Trash2,
 	X,
@@ -30,6 +33,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -49,8 +59,11 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { statusBadgeClass } from "@/lib/status-colors";
 import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
+import { openVendorBillPdf } from "@/lib/pdf/vendor-bill-pdf";
+import { SupplierCombobox } from "@/components/ui/supplier-combobox";
 import { orpc } from "@/utils/orpc";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -75,6 +88,7 @@ interface VendorBillRow {
 	dueDate: string | null;
 	notes: string | null;
 	items: unknown;
+	department?: string | null;
 }
 
 interface PaymentHistoryRow {
@@ -88,12 +102,14 @@ interface PaymentHistoryRow {
 
 interface BillForm {
 	supplierName: string;
+	supplierId: string;
 	billNumberRef: string;
 	issuedDate: string;
 	dueDate: string;
 	items: LineItem[];
 	applyTax: boolean;
 	notes: string;
+	department: string;
 }
 
 interface PaymentForm {
@@ -106,12 +122,14 @@ interface PaymentForm {
 
 const emptyBillForm: BillForm = {
 	supplierName: "",
+	supplierId: "",
 	billNumberRef: "",
 	issuedDate: "",
 	dueDate: "",
 	items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
 	applyTax: false,
 	notes: "",
+	department: "",
 };
 
 const emptyPaymentForm: PaymentForm = {
@@ -138,29 +156,6 @@ const STATUS_FILTERS = [
 	"Overdue",
 	"Voided",
 ] as const;
-
-// ── Status badge ─────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: string }) {
-	const cls: Record<string, string> = {
-		draft: "bg-secondary text-secondary-foreground",
-		received:
-			"bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-		partially_paid:
-			"bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
-		paid: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
-		overdue: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-		voided:
-			"bg-slate-100 text-slate-600 dark:bg-slate-800/40 dark:text-slate-400",
-	};
-	return (
-		<Badge
-			className={`text-[10px] ${cls[status] ?? "bg-secondary text-secondary-foreground"}`}
-		>
-			{status.replace("_", " ")}
-		</Badge>
-	);
-}
 
 // ── Payment History sub-row ──────────────────────────────────────────────────
 
@@ -216,6 +211,9 @@ export default function VendorBillsPage() {
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [form, setForm] = useState<BillForm>(emptyBillForm);
 
+	// Edit support
+	const [editingId, setEditingId] = useState<string | null>(null);
+
 	// Payment dialog
 	const [payBill, setPayBill] = useState<VendorBillRow | null>(null);
 	const [paymentForm, setPaymentForm] = useState<PaymentForm>(emptyPaymentForm);
@@ -243,6 +241,13 @@ export default function VendorBillsPage() {
 	const vendorBills =
 		(raw as unknown as { items: VendorBillRow[]; total: number }).items ?? [];
 
+	const { data: paidThisMonthData } = useQuery(
+		orpc.vendorBills.getPaidThisMonth.queryOptions({ input: undefined }),
+	);
+	const paidThisMonth = Number(
+		(paidThisMonthData as { total?: string } | undefined)?.total ?? 0,
+	);
+
 	// ── Mutations ────────────────────────────────────────────────────────────
 
 	function invalidate() {
@@ -260,6 +265,19 @@ export default function VendorBillsPage() {
 				toast.success("Vendor bill created");
 			},
 			onError: (e) => toast.error(e.message || "Failed to create vendor bill"),
+		}),
+	);
+
+	const updateMut = useMutation(
+		orpc.vendorBills.update.mutationOptions({
+			onSuccess: () => {
+				invalidate();
+				setDialogOpen(false);
+				setEditingId(null);
+				setForm(emptyBillForm);
+				toast.success("Vendor bill updated");
+			},
+			onError: (e) => toast.error(e.message || "Failed to update vendor bill"),
 		}),
 	);
 
@@ -335,18 +353,38 @@ export default function VendorBillsPage() {
 	// ── Save handler ─────────────────────────────────────────────────────────
 
 	function handleSave() {
-		createMut.mutate({
-			supplierName: form.supplierName,
-			issuedDate: form.issuedDate || undefined,
-			dueDate: form.dueDate || undefined,
-			items: form.items,
-			subtotal: String(formSubtotal),
-			taxTotal: String(formTax),
-			total: String(formTotal),
-			notes: form.billNumberRef
-				? `Ref: ${form.billNumberRef}${form.notes ? ` — ${form.notes}` : ""}`
-				: form.notes || undefined,
-		});
+		if (editingId) {
+			updateMut.mutate({
+				id: editingId,
+				supplierName: form.supplierName,
+				supplierId: form.supplierId || undefined,
+				issuedDate: form.issuedDate || undefined,
+				dueDate: form.dueDate || undefined,
+				items: form.items,
+				subtotal: String(formSubtotal),
+				taxTotal: String(formTax),
+				total: String(formTotal),
+				notes: form.billNumberRef
+					? `Ref: ${form.billNumberRef}${form.notes ? ` — ${form.notes}` : ""}`
+					: form.notes || undefined,
+				department: form.department || undefined,
+			});
+		} else {
+			createMut.mutate({
+				supplierName: form.supplierName,
+				supplierId: form.supplierId || undefined,
+				issuedDate: form.issuedDate || undefined,
+				dueDate: form.dueDate || undefined,
+				items: form.items,
+				subtotal: String(formSubtotal),
+				taxTotal: String(formTax),
+				total: String(formTotal),
+				notes: form.billNumberRef
+					? `Ref: ${form.billNumberRef}${form.notes ? ` — ${form.notes}` : ""}`
+					: form.notes || undefined,
+				department: form.department || undefined,
+			});
+		}
 	}
 
 	// ── Pay handler ──────────────────────────────────────────────────────────
@@ -377,7 +415,6 @@ export default function VendorBillsPage() {
 				!["paid", "voided"].includes(b.status),
 		)
 		.reduce((s, b) => s + (Number(b.total) - Number(b.amountPaid)), 0);
-	const paidThisMonth = 0; // Requires server-side aggregation not in current list
 
 	// ── Toggle row expansion ─────────────────────────────────────────────────
 
@@ -408,6 +445,7 @@ export default function VendorBillsPage() {
 				<Button
 					onClick={() => {
 						setForm(emptyBillForm);
+						setEditingId(null);
 						setDialogOpen(true);
 					}}
 					className="gap-2"
@@ -536,6 +574,7 @@ export default function VendorBillsPage() {
 													variant="ghost"
 													size="icon"
 													className="size-6"
+													type="button"
 													onClick={() => toggleExpand(bill.id)}
 												>
 													{isExpanded ? (
@@ -576,16 +615,21 @@ export default function VendorBillsPage() {
 													: "—"}
 											</TableCell>
 											<TableCell>
-												<StatusBadge status={bill.status} />
+												<Badge
+													className={`text-[10px] ${statusBadgeClass(bill.status)}`}
+												>
+													{bill.status.replace("_", " ")}
+												</Badge>
 											</TableCell>
 											<TableCell>
-												<div className="flex gap-1">
+												<div className="flex items-center gap-1">
 													{!["paid", "voided"].includes(bill.status) &&
 														balance > 0 && (
 															<Button
 																variant="outline"
 																size="sm"
 																className="h-7 gap-1 px-2 text-xs"
+																type="button"
 																onClick={() => {
 																	setPayBill(bill);
 																	setPaymentForm({
@@ -598,16 +642,67 @@ export default function VendorBillsPage() {
 																Pay
 															</Button>
 														)}
-													{bill.status !== "voided" && (
-														<Button
-															variant="ghost"
-															size="icon"
-															className="size-7 text-destructive"
-															onClick={() => setVoidId(bill.id)}
+													<DropdownMenu>
+														<DropdownMenuTrigger
+															className="inline-flex size-7 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+															type="button"
 														>
-															<Trash2 className="size-3" />
-														</Button>
-													)}
+															<MoreHorizontal className="size-4" />
+														</DropdownMenuTrigger>
+														<DropdownMenuContent align="end" className="w-44">
+															{!["paid", "voided"].includes(bill.status) && (
+																<DropdownMenuItem
+																	onClick={() => {
+																		setForm({
+																			supplierName: bill.supplierName,
+																			supplierId: "",
+																			billNumberRef: "",
+																			issuedDate: bill.issuedDate
+																				? new Date(bill.issuedDate)
+																						.toISOString()
+																						.split("T")[0]!
+																				: "",
+																			dueDate: bill.dueDate
+																				? new Date(bill.dueDate)
+																						.toISOString()
+																						.split("T")[0]!
+																				: "",
+																			items: (bill.items as LineItem[]) ?? [],
+																			applyTax: Number(bill.taxTotal) > 0,
+																			notes: bill.notes ?? "",
+																			department:
+																				(
+																					bill as VendorBillRow & {
+																						department?: string;
+																					}
+																				).department ?? "",
+																		});
+																		setEditingId(bill.id);
+																		setDialogOpen(true);
+																	}}
+																>
+																	<Edit2 className="mr-2 size-3.5" />
+																	Edit
+																</DropdownMenuItem>
+															)}
+															<DropdownMenuItem
+																onClick={() => openVendorBillPdf(bill)}
+															>
+																<FileDown className="mr-2 size-3.5" />
+																Print / Save PDF
+															</DropdownMenuItem>
+															<DropdownMenuSeparator />
+															{bill.status !== "voided" && (
+																<DropdownMenuItem
+																	className="text-destructive focus:text-destructive"
+																	onClick={() => setVoidId(bill.id)}
+																>
+																	<Trash2 className="mr-2 size-3.5" />
+																	Void Bill
+																</DropdownMenuItem>
+															)}
+														</DropdownMenuContent>
+													</DropdownMenu>
 												</div>
 											</TableCell>
 										</TableRow>
@@ -637,16 +732,22 @@ export default function VendorBillsPage() {
 				</Table>
 			</Card>
 
-			{/* Create Vendor Bill Dialog */}
+			{/* Create / Edit Vendor Bill Dialog */}
 			<Dialog
 				open={dialogOpen}
 				onOpenChange={(open) => {
-					if (!open) setDialogOpen(false);
+					if (!open) {
+						setDialogOpen(false);
+						setEditingId(null);
+						setForm(emptyBillForm);
+					}
 				}}
 			>
 				<DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle>New Vendor Bill</DialogTitle>
+						<DialogTitle>
+							{editingId ? "Edit Vendor Bill" : "New Vendor Bill"}
+						</DialogTitle>
 					</DialogHeader>
 					<div className="flex flex-col gap-4 py-2">
 						<div className="grid grid-cols-2 gap-3">
@@ -687,6 +788,16 @@ export default function VendorBillsPage() {
 									value={form.dueDate}
 									onChange={(e) =>
 										setForm((f) => ({ ...f, dueDate: e.target.value }))
+									}
+								/>
+							</div>
+							<div className="col-span-2 flex flex-col gap-1.5">
+								<Label>Department (optional)</Label>
+								<Input
+									placeholder="e.g. Kitchen, Front of House, Admin"
+									value={form.department}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, department: e.target.value }))
 									}
 								/>
 							</div>
@@ -752,6 +863,7 @@ export default function VendorBillsPage() {
 														variant="ghost"
 														size="icon"
 														className="size-7"
+														type="button"
 														onClick={() => removeItem(i)}
 													>
 														<X className="size-3" />
@@ -766,6 +878,7 @@ export default function VendorBillsPage() {
 								variant="outline"
 								size="sm"
 								className="gap-1 self-start"
+								type="button"
 								onClick={addItem}
 							>
 								<Plus className="size-3" />
@@ -819,14 +932,31 @@ export default function VendorBillsPage() {
 						</div>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" onClick={() => setDialogOpen(false)}>
+						<Button
+							variant="outline"
+							type="button"
+							onClick={() => {
+								setDialogOpen(false);
+								setEditingId(null);
+								setForm(emptyBillForm);
+							}}
+						>
 							Cancel
 						</Button>
 						<Button
+							type="button"
 							onClick={handleSave}
-							disabled={!form.supplierName || createMut.isPending}
+							disabled={
+								!form.supplierName ||
+								createMut.isPending ||
+								updateMut.isPending
+							}
 						>
-							{createMut.isPending ? "Saving..." : "Create Bill"}
+							{createMut.isPending || updateMut.isPending
+								? "Saving..."
+								: editingId
+									? "Update Bill"
+									: "Create Bill"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
@@ -944,6 +1074,7 @@ export default function VendorBillsPage() {
 					<DialogFooter>
 						<Button
 							variant="outline"
+							type="button"
 							onClick={() => {
 								setPayBill(null);
 								setPaymentForm(emptyPaymentForm);
@@ -952,6 +1083,7 @@ export default function VendorBillsPage() {
 							Cancel
 						</Button>
 						<Button
+							type="button"
 							onClick={handleRecordPayment}
 							disabled={!paymentForm.amount || recordPaymentMut.isPending}
 						>

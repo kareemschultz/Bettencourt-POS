@@ -141,6 +141,7 @@ const create = permissionProcedure("invoices.create")
 			taxTotal: z.string().optional(),
 			total: z.string(),
 			notes: z.string().optional(),
+			department: z.string().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -164,6 +165,7 @@ const create = permissionProcedure("invoices.create")
 				status: "draft",
 				reason: input.reason ?? "",
 				amountApplied: "0",
+				department: input.department ?? null,
 				createdBy,
 			})
 			.returning();
@@ -197,6 +199,7 @@ const update = permissionProcedure("invoices.update")
 			taxTotal: z.string().optional(),
 			total: z.string().optional(),
 			notes: z.string().optional(),
+			department: z.string().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -236,6 +239,7 @@ const update = permissionProcedure("invoices.update")
 		if (input.taxTotal !== undefined) updates.taxTotal = input.taxTotal;
 		if (input.total !== undefined) updates.total = input.total;
 		if (input.notes !== undefined) updates.notes = input.notes;
+		if (input.department !== undefined) updates.department = input.department;
 
 		const rows = await db
 			.update(schema.creditNote)

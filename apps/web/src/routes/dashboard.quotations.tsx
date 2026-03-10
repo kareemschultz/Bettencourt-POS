@@ -5,6 +5,7 @@ import {
 	Edit2,
 	FileText,
 	GitBranch,
+	MoreHorizontal,
 	Plus,
 	Printer,
 	Search,
@@ -24,6 +25,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -44,8 +52,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { authClient } from "@/lib/auth-client";
 import { openQuotationPdf } from "@/lib/pdf/quotation-pdf";
+import { statusBadgeClass } from "@/lib/status-colors";
 import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
+import { CustomerCombobox, type CustomerHit } from "@/components/ui/customer-combobox";
 import { orpc } from "@/utils/orpc";
 
 interface LineItem {
@@ -59,6 +69,7 @@ interface QuotationForm {
 	customerName: string;
 	customerAddress: string;
 	customerPhone: string;
+	customerId: string;
 	validUntil: string;
 	notes: string;
 	items: LineItem[];
@@ -68,12 +79,14 @@ interface QuotationForm {
 	taxRate: string;
 	termsAndConditions: string;
 	preparedBy: string;
+	department: string;
 }
 
 const emptyForm: QuotationForm = {
 	customerName: "",
 	customerAddress: "",
 	customerPhone: "",
+	customerId: "",
 	validUntil: "",
 	notes: "",
 	items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
@@ -83,26 +96,10 @@ const emptyForm: QuotationForm = {
 	taxRate: "16.5",
 	termsAndConditions: "",
 	preparedBy: "",
+	department: "",
 };
 
-function statusBadgeClass(status: string): string {
-	switch (status) {
-		case "draft":
-			return "bg-secondary text-secondary-foreground";
-		case "sent":
-			return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
-		case "accepted":
-			return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300";
-		case "rejected":
-			return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
-		case "expired":
-			return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300";
-		case "converted":
-			return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300";
-		default:
-			return "bg-secondary text-secondary-foreground";
-	}
-}
+const QUOT_STATUS_FILTERS = ["All", "Draft", "Sent", "Accepted", "Rejected", "Converted", "Expired"] as const;
 
 type QuotationRow = {
 	id: string;
@@ -110,6 +107,7 @@ type QuotationRow = {
 	customerName: string;
 	customerAddress: string | null;
 	customerPhone: string | null;
+	customerId: string | null;
 	items: unknown;
 	subtotal: string;
 	taxTotal: string;
@@ -125,6 +123,7 @@ type QuotationRow = {
 	termsAndConditions: string | null;
 	preparedBy: string | null;
 	parentQuotationId: string | null;
+	department?: string | null;
 };
 
 export default function QuotationsPage() {
@@ -280,6 +279,7 @@ export default function QuotationsPage() {
 			customerName: q.customerName,
 			customerAddress: q.customerAddress ?? "",
 			customerPhone: q.customerPhone ?? "",
+			customerId: "",
 			validUntil: q.validUntil ? (q.validUntil.split("T")[0] ?? "") : "",
 			notes: q.notes ?? "",
 			items: Array.isArray(q.items)
@@ -291,6 +291,7 @@ export default function QuotationsPage() {
 			taxRate: q.taxRate ?? "16.5",
 			termsAndConditions: q.termsAndConditions ?? "",
 			preparedBy: q.preparedBy ?? "",
+			department: q.department ?? "",
 		});
 		setDialogOpen(true);
 	}
@@ -341,6 +342,7 @@ export default function QuotationsPage() {
 			customerName: form.customerName,
 			customerAddress: form.customerAddress || undefined,
 			customerPhone: form.customerPhone || undefined,
+			customerId: form.customerId || undefined,
 			validUntil: form.validUntil || undefined,
 			notes: form.notes || undefined,
 			items: form.items,
@@ -353,6 +355,7 @@ export default function QuotationsPage() {
 			taxRate: form.taxRate,
 			termsAndConditions: form.termsAndConditions || undefined,
 			preparedBy: form.preparedBy || undefined,
+			department: form.department || undefined,
 		};
 
 		if (editingId) {
@@ -393,7 +396,7 @@ export default function QuotationsPage() {
 				)}
 			</div>
 
-			{/* Filters */}
+			{/* Search bar */}
 			<div className="flex flex-wrap gap-3">
 				<div className="relative min-w-48 flex-1">
 					<Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -404,23 +407,28 @@ export default function QuotationsPage() {
 						className="pl-9"
 					/>
 				</div>
-				<Select
-					value={statusFilter || "all"}
-					onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}
-				>
-					<SelectTrigger className="w-40">
-						<SelectValue placeholder="All statuses" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">All statuses</SelectItem>
-						<SelectItem value="draft">Draft</SelectItem>
-						<SelectItem value="sent">Sent</SelectItem>
-						<SelectItem value="accepted">Accepted</SelectItem>
-						<SelectItem value="rejected">Rejected</SelectItem>
-						<SelectItem value="expired">Expired</SelectItem>
-						<SelectItem value="converted">Converted</SelectItem>
-					</SelectContent>
-				</Select>
+			</div>
+
+			{/* Status filter chips */}
+			<div className="flex flex-wrap gap-2">
+				{QUOT_STATUS_FILTERS.map((s) => {
+					const value = s === "All" ? "" : s.toLowerCase();
+					const active = statusFilter === value;
+					return (
+						<button
+							key={s}
+							type="button"
+							onClick={() => setStatusFilter(value)}
+							className={`rounded-full border px-3 py-1 text-xs transition-colors hover:border-primary/60 hover:bg-primary/5 ${
+								active
+									? "border-primary bg-primary/10 font-medium text-primary"
+									: "border-border text-muted-foreground"
+							}`}
+						>
+							{s}
+						</button>
+					);
+				})}
 			</div>
 
 			{/* Grid: table + detail */}
@@ -484,50 +492,83 @@ export default function QuotationsPage() {
 													: "—"}
 											</TableCell>
 											<TableCell>
-												<div className="flex gap-1">
+												<div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
 													{canUpdate && (
 														<Button
 															variant="ghost"
 															size="icon"
 															className="size-7"
-															onClick={(e) => {
-																e.stopPropagation();
-																openEdit(q);
-															}}
+															type="button"
+															onClick={() => openEdit(q)}
 														>
 															<Edit2 className="size-3" />
 														</Button>
 													)}
-													{canConvert &&
-														["sent", "accepted"].includes(q.status) && (
-															<Button
-																variant="ghost"
-																size="icon"
-																className="size-7 text-blue-600"
-																onClick={(e) => {
-																	e.stopPropagation();
+													<DropdownMenu>
+														<DropdownMenuTrigger
+															className="inline-flex size-7 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+															type="button"
+														>
+															<MoreHorizontal className="size-4" />
+														</DropdownMenuTrigger>
+														<DropdownMenuContent align="end" className="w-48">
+															{q.status === "draft" && canUpdate && (
+																<DropdownMenuItem onClick={() => markSentMut.mutate({ id: q.id })}>
+																	<Send className="mr-2 size-3.5" />
+																	Mark Sent
+																</DropdownMenuItem>
+															)}
+															{canCreate && (
+																<DropdownMenuItem onClick={() =>
+																	duplicateMut.mutate({
+																		id: q.id,
+																		createdBy: session?.user?.id ?? "",
+																	})
+																}>
+																	<Copy className="mr-2 size-3.5" />
+																	Duplicate
+																</DropdownMenuItem>
+															)}
+															<DropdownMenuItem onClick={() => openQuotationPdf(q, docSettings ?? {})}>
+																<Printer className="mr-2 size-3.5" />
+																Print / Save PDF
+															</DropdownMenuItem>
+															{canConvert && ["sent", "accepted"].includes(q.status) && (
+																<DropdownMenuItem onClick={() =>
 																	convertMut.mutate({
 																		id: q.id,
 																		createdBy: session?.user?.id ?? "",
-																	});
-																}}
-															>
-																<ArrowRightLeft className="size-3" />
-															</Button>
-														)}
-													{canDelete && q.status !== "cancelled" && (
-														<Button
-															variant="ghost"
-															size="icon"
-															className="size-7 text-destructive"
-															onClick={(e) => {
-																e.stopPropagation();
-																deleteMut.mutate({ id: q.id });
-															}}
-														>
-															<Trash2 className="size-3" />
-														</Button>
-													)}
+																	})
+																}>
+																	<ArrowRightLeft className="mr-2 size-3.5" />
+																	Convert to Invoice
+																</DropdownMenuItem>
+															)}
+															{canCreate && q.status !== "draft" && (
+																<DropdownMenuItem onClick={() =>
+																	reviseMut.mutate({
+																		id: q.id,
+																		createdBy: session?.user?.id ?? "",
+																	})
+																}>
+																	<GitBranch className="mr-2 size-3.5" />
+																	Revise
+																</DropdownMenuItem>
+															)}
+															{canDelete && q.status !== "cancelled" && (
+																<>
+																	<DropdownMenuSeparator />
+																	<DropdownMenuItem
+																		className="text-destructive focus:text-destructive"
+																		onClick={() => deleteMut.mutate({ id: q.id })}
+																	>
+																		<Trash2 className="mr-2 size-3.5" />
+																		Cancel
+																	</DropdownMenuItem>
+																</>
+															)}
+														</DropdownMenuContent>
+													</DropdownMenu>
 												</div>
 											</TableCell>
 										</TableRow>
@@ -554,6 +595,7 @@ export default function QuotationsPage() {
 										<Button
 											variant="outline"
 											size="sm"
+											type="button"
 											onClick={() =>
 												openQuotationPdf(selectedQuotation, docSettings ?? {})
 											}
@@ -648,6 +690,7 @@ export default function QuotationsPage() {
 										<Button
 											size="sm"
 											variant="outline"
+											type="button"
 											className="gap-1"
 											onClick={() => openEdit(selectedQuotation)}
 										>
@@ -659,6 +702,7 @@ export default function QuotationsPage() {
 										<Button
 											size="sm"
 											variant="outline"
+											type="button"
 											className="gap-1"
 											onClick={() =>
 												markSentMut.mutate({ id: selectedQuotation.id })
@@ -673,6 +717,7 @@ export default function QuotationsPage() {
 										<Button
 											size="sm"
 											variant="outline"
+											type="button"
 											className="gap-1"
 											onClick={() =>
 												duplicateMut.mutate({
@@ -690,6 +735,7 @@ export default function QuotationsPage() {
 										<Button
 											size="sm"
 											variant="outline"
+											type="button"
 											className="gap-1"
 											onClick={() =>
 												reviseMut.mutate({
@@ -707,6 +753,7 @@ export default function QuotationsPage() {
 										["sent", "accepted"].includes(selectedQuotation.status) && (
 											<Button
 												size="sm"
+												type="button"
 												className="gap-1"
 												onClick={() =>
 													convertMut.mutate({
@@ -795,6 +842,16 @@ export default function QuotationsPage() {
 							</div>
 						</div>
 
+						{/* Department */}
+						<div className="flex flex-col gap-1.5">
+							<Label>Department (optional)</Label>
+							<Input
+								placeholder="e.g. Kitchen, Catering, Admin"
+								value={form.department}
+								onChange={(e) => setForm(f => ({ ...f, department: e.target.value }))}
+							/>
+						</div>
+
 						{/* Line Items */}
 						<div className="flex flex-col gap-2">
 							<Label>Line Items</Label>
@@ -855,6 +912,7 @@ export default function QuotationsPage() {
 														variant="ghost"
 														size="icon"
 														className="size-7"
+														type="button"
 														onClick={() => removeItem(i)}
 													>
 														<X className="size-3" />
@@ -868,6 +926,7 @@ export default function QuotationsPage() {
 							<Button
 								variant="outline"
 								size="sm"
+								type="button"
 								className="gap-1 self-start"
 								onClick={addItem}
 							>
@@ -1007,7 +1066,7 @@ export default function QuotationsPage() {
 						</div>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" onClick={() => setDialogOpen(false)}>
+						<Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
 							Cancel
 						</Button>
 						<Button

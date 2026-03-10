@@ -3,6 +3,7 @@ import {
 	ChevronDown,
 	ChevronUp,
 	Edit2,
+	MoreHorizontal,
 	Plus,
 	Trash2,
 	TrendingUp,
@@ -29,7 +30,6 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -164,6 +171,10 @@ export default function BudgetsPage() {
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [form, setForm] = useState<BudgetForm>(emptyForm);
 	const [expandedId, setExpandedId] = useState<string | null>(null);
+	const [deleteTarget, setDeleteTarget] = useState<{
+		id: string;
+		name: string;
+	} | null>(null);
 
 	// ── Queries ──────────────────────────────────────────────────────────────
 
@@ -414,51 +425,40 @@ export default function BudgetsPage() {
 												<ChevronDown className="size-4 text-muted-foreground" />
 											)}
 										</button>
-										<div className="flex gap-1">
-											<Button
-												variant="ghost"
-												size="icon"
-												className="size-8"
-												onClick={(e) => {
-													e.stopPropagation();
-													openEdit(budget);
-												}}
+										<DropdownMenu>
+											<DropdownMenuTrigger
+												className="inline-flex size-8 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+												type="button"
+												onClick={(e) => e.stopPropagation()}
 											>
-												<Edit2 className="size-3.5" />
-											</Button>
-											<AlertDialog>
-												<AlertDialogTrigger asChild>
-													<Button
-														variant="ghost"
-														size="icon"
-														className="size-8 text-destructive hover:text-destructive"
-														onClick={(e) => e.stopPropagation()}
-													>
-														<Trash2 className="size-3.5" />
-													</Button>
-												</AlertDialogTrigger>
-												<AlertDialogContent>
-													<AlertDialogHeader>
-														<AlertDialogTitle>Delete budget?</AlertDialogTitle>
-														<AlertDialogDescription>
-															This will permanently delete "{budget.name}". This
-															action cannot be undone.
-														</AlertDialogDescription>
-													</AlertDialogHeader>
-													<AlertDialogFooter>
-														<AlertDialogCancel>Cancel</AlertDialogCancel>
-														<AlertDialogAction
-															className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-															onClick={() =>
-																deleteMut.mutate({ id: budget.id })
-															}
-														>
-															Delete
-														</AlertDialogAction>
-													</AlertDialogFooter>
-												</AlertDialogContent>
-											</AlertDialog>
-										</div>
+												<MoreHorizontal className="size-4" />
+											</DropdownMenuTrigger>
+											<DropdownMenuContent align="end" className="w-44">
+												<DropdownMenuItem
+													onClick={(e) => {
+														e.stopPropagation();
+														openEdit(budget);
+													}}
+												>
+													<Edit2 className="mr-2 size-3.5" />
+													Edit Budget
+												</DropdownMenuItem>
+												<DropdownMenuSeparator />
+												<DropdownMenuItem
+													className="text-destructive focus:text-destructive"
+													onClick={(e) => {
+														e.stopPropagation();
+														setDeleteTarget({
+															id: budget.id,
+															name: budget.name,
+														});
+													}}
+												>
+													<Trash2 className="mr-2 size-3.5" />
+													Delete Budget
+												</DropdownMenuItem>
+											</DropdownMenuContent>
+										</DropdownMenu>
 									</CardTitle>
 								</CardHeader>
 
@@ -845,6 +845,35 @@ export default function BudgetsPage() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			<AlertDialog
+				open={!!deleteTarget}
+				onOpenChange={(open) => {
+					if (!open) setDeleteTarget(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete budget?</AlertDialogTitle>
+						<AlertDialogDescription>
+							{`This will permanently delete "${deleteTarget?.name ?? "this budget"}". This action cannot be undone.`}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={() => {
+								if (!deleteTarget) return;
+								deleteMut.mutate({ id: deleteTarget.id });
+								setDeleteTarget(null);
+							}}
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

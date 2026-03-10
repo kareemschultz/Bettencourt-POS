@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	CalendarDays,
+	Check,
+	ChevronsUpDown,
 	Download,
 	Layers,
 	List,
+	MoreHorizontal,
 	Pencil,
 	Plus,
 	Printer,
@@ -48,6 +51,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandItem,
+	CommandList,
+} from "@/components/ui/command";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
+import {
 	Select,
 	SelectContent,
 	SelectItem,
@@ -63,6 +78,13 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
 import { downloadCsv } from "@/lib/csv-export";
 import { printDailyExpenseSummary } from "@/lib/pdf/daily-expense-summary-pdf";
@@ -197,6 +219,7 @@ const emptyForm = {
 	referenceNumber: "",
 	notes: "",
 	fundingSourceId: "",
+	department: "",
 };
 
 type ExpenseRow = {
@@ -343,6 +366,8 @@ export default function ExpensesPage() {
 	}
 
 	const [deleteExpenseId, setDeleteExpenseId] = useState<string | null>(null);
+	const [supplierSearch, setSupplierSearch] = useState("");
+	const [supplierPopoverOpen, setSupplierPopoverOpen] = useState(false);
 	const [deleteCategoryItem, setDeleteCategoryItem] = useState<{
 		id: string;
 		name: string;
@@ -588,6 +613,7 @@ export default function ExpensesPage() {
 			referenceNumber: e.reference_number ?? "",
 			notes: e.notes ?? "",
 			fundingSourceId: e.funding_source_id ?? "",
+			department: "",
 		});
 		setDialogOpen(true);
 	}
@@ -1114,6 +1140,7 @@ export default function ExpensesPage() {
 																	size="icon"
 																	variant="ghost"
 																	className="size-7"
+																	type="button"
 																	onClick={(ev) => {
 																		ev.stopPropagation();
 																		openEdit(e);
@@ -1121,18 +1148,28 @@ export default function ExpensesPage() {
 																>
 																	<Pencil className="size-3.5" />
 																</Button>
-																<Button
-																	size="icon"
-																	variant="ghost"
-																	className="size-7 text-destructive hover:text-destructive"
-																	disabled={deleteExpense.isPending}
-																	onClick={(ev) => {
-																		ev.stopPropagation();
-																		setDeleteExpenseId(e.id);
-																	}}
-																>
-																	<Trash2 className="size-3.5" />
-																</Button>
+																<DropdownMenu>
+																	<DropdownMenuTrigger
+																		className="inline-flex size-7 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+																		type="button"
+																		onClick={(ev) => ev.stopPropagation()}
+																	>
+																		<MoreHorizontal className="size-4" />
+																	</DropdownMenuTrigger>
+																	<DropdownMenuContent align="end" className="w-40">
+																		<DropdownMenuSeparator />
+																		<DropdownMenuItem
+																			className="text-destructive focus:text-destructive"
+																			onClick={(ev) => {
+																				ev.stopPropagation();
+																				setDeleteExpenseId(e.id);
+																			}}
+																		>
+																			<Trash2 className="mr-2 size-3.5" />
+																			Delete
+																		</DropdownMenuItem>
+																	</DropdownMenuContent>
+																</DropdownMenu>
 															</div>
 														</TableCell>
 													</TableRow>
@@ -1255,6 +1292,7 @@ export default function ExpensesPage() {
 																size="icon"
 																variant="ghost"
 																className="size-7"
+																type="button"
 																onClick={(ev) => {
 																	ev.stopPropagation();
 																	openEdit(e);
@@ -1262,18 +1300,28 @@ export default function ExpensesPage() {
 															>
 																<Pencil className="size-3.5" />
 															</Button>
-															<Button
-																size="icon"
-																variant="ghost"
-																className="size-7 text-destructive hover:text-destructive"
-																disabled={deleteExpense.isPending}
-																onClick={(ev) => {
-																	ev.stopPropagation();
-																	setDeleteExpenseId(e.id);
-																}}
-															>
-																<Trash2 className="size-3.5" />
-															</Button>
+															<DropdownMenu>
+																<DropdownMenuTrigger
+																	className="inline-flex size-7 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+																	type="button"
+																	onClick={(ev) => ev.stopPropagation()}
+																>
+																	<MoreHorizontal className="size-4" />
+																</DropdownMenuTrigger>
+																<DropdownMenuContent align="end" className="w-40">
+																	<DropdownMenuSeparator />
+																	<DropdownMenuItem
+																		className="text-destructive focus:text-destructive"
+																		onClick={(ev) => {
+																			ev.stopPropagation();
+																			setDeleteExpenseId(e.id);
+																		}}
+																	>
+																		<Trash2 className="mr-2 size-3.5" />
+																		Delete
+																	</DropdownMenuItem>
+																</DropdownMenuContent>
+															</DropdownMenu>
 														</div>
 													</TableCell>
 												</TableRow>
@@ -1510,24 +1558,68 @@ export default function ExpensesPage() {
 						</div>
 						<div className="flex flex-col gap-1.5">
 							<Label>Supplier</Label>
-							<Select
-								value={form.supplierId || "none"}
-								onValueChange={(v) =>
-									setForm((f) => ({ ...f, supplierId: v === "none" ? "" : v }))
-								}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Select supplier (optional)" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="none">No supplier</SelectItem>
-									{suppliers.map((s) => (
-										<SelectItem key={s.id} value={s.id}>
-											{s.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+							<Popover open={supplierPopoverOpen} onOpenChange={setSupplierPopoverOpen}>
+								<PopoverTrigger asChild>
+									<Button
+										variant="outline"
+										role="combobox"
+										className="w-full justify-between font-normal"
+									>
+										<span className={form.supplierId ? "" : "text-muted-foreground"}>
+											{form.supplierId
+												? (suppliers.find((s) => s.id === form.supplierId)?.name ?? "Unknown")
+												: "Select supplier (optional)"}
+										</span>
+										<ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+									<Command>
+										<div className="flex items-center border-b border-border px-3">
+											<input
+												placeholder="Search suppliers…"
+												value={supplierSearch}
+												onChange={(e) => setSupplierSearch(e.target.value)}
+												className="h-9 w-full border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+												autoFocus
+											/>
+										</div>
+										<CommandList>
+											<CommandEmpty>No supplier found.</CommandEmpty>
+											<CommandGroup>
+												<CommandItem
+													value="none"
+													onSelect={() => {
+														setForm((f) => ({ ...f, supplierId: "" }));
+														setSupplierSearch("");
+														setSupplierPopoverOpen(false);
+													}}
+												>
+													<Check className={`mr-2 size-3.5 ${!form.supplierId ? "opacity-100" : "opacity-0"}`} />
+													No supplier
+												</CommandItem>
+												{suppliers
+													.filter((s) => s.name.toLowerCase().includes(supplierSearch.toLowerCase()))
+													.slice(0, 15)
+													.map((s) => (
+														<CommandItem
+															key={s.id}
+															value={s.name}
+															onSelect={() => {
+																setForm((f) => ({ ...f, supplierId: s.id }));
+																setSupplierSearch("");
+																setSupplierPopoverOpen(false);
+															}}
+														>
+															<Check className={`mr-2 size-3.5 ${form.supplierId === s.id ? "opacity-100" : "opacity-0"}`} />
+															{s.name}
+														</CommandItem>
+													))}
+												</CommandGroup>
+											</CommandList>
+									</Command>
+								</PopoverContent>
+							</Popover>
 						</div>
 						<div className="flex flex-col gap-1.5">
 							<div className="flex items-center justify-between">
@@ -1639,6 +1731,14 @@ export default function ExpensesPage() {
 								onChange={(e) =>
 									setForm((f) => ({ ...f, notes: e.target.value }))
 								}
+							/>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label>Department (optional)</Label>
+							<Input
+								placeholder="e.g. Kitchen, Front of House, Admin"
+								value={form.department}
+								onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
 							/>
 						</div>
 					</div>

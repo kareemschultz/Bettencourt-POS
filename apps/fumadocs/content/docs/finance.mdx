@@ -40,15 +40,24 @@ Create and manage customer invoices for catering, corporate lunches, events, and
 ### Creating an Invoice
 1. Click **New Invoice**
 2. Enter customer name (or select from the customer list)
-3. Add line items (description, quantity, unit price)
-4. Set due date and payment terms
-5. Click **Save as Draft** or **Send** to issue it immediately
+3. (Optional) open **Agency / Organization** details and set **Department**
+4. Add line items (description, quantity, unit price)
+5. Set due date and payment terms
+6. (Optional) set a custom invoice number
+7. Click **Save as Draft** or **Send** to issue it immediately
 
 ### Recording a Payment
 1. Find the invoice in the table
-2. Click the **•••** menu → **Record Payment**
+2. Click the green payment button on the row (card icon)
 3. Enter amount, payment method (Cash / Cheque / Bank Transfer / Mobile Money), optional reference number, and date paid
 4. Click **Record** — the invoice status updates automatically
+
+### More Actions Menu (•••)
+- Mark Sent (for drafts)
+- Duplicate Invoice
+- Print / Save PDF
+- Copy Reminder
+- Delete (permission-gated)
 
 ### Payment Methods Supported
 - **Cash** — direct cash payment
@@ -79,9 +88,10 @@ Credit notes reduce a customer's outstanding balance — used for price correcti
 
 ### Creating a Credit Note
 1. Click **New Credit Note**
-2. Select the original invoice (optional but recommended)
-3. Add line items describing the adjustment
-4. Click **Save** (creates in Draft status)
+2. Use the searchable **Invoice combobox** to select the original invoice (optional but recommended)
+3. Set **Department** (optional)
+4. Add line items describing the adjustment
+5. Click **Save** (creates in Draft status)
 
 ### Issuing a Credit Note
 A credit note must be **Issued** before it can be applied. Click **Issue** in the action menu.
@@ -91,6 +101,11 @@ A credit note must be **Issued** before it can be applied. Click **Issue** in th
 2. Select the target invoice
 3. Enter the amount to apply (can be partial)
 4. Click **Apply** — the invoice balance reduces accordingly
+
+### More Actions Menu (•••)
+- Issue Credit Note (draft only)
+- Print / Save PDF
+- Delete / Void (status + permission dependent)
 
 ### Credit Note Status Flow
 ```
@@ -110,13 +125,18 @@ Vendor bills track what Bettencourt's owes to suppliers like Family Food Interna
 1. Click **New Vendor Bill**
 2. Select supplier from the dropdown
 3. Add line items (e.g., "Chicken 50 lbs", "Rice 100 lbs")
-4. Set issued date and due date
+4. Set issued date, due date, and **Department** (optional)
 5. Click **Save**
 
 ### Recording a Payment on a Bill
-1. Click **•••** → **Record Payment**
+1. Click **Pay** on the bill row (when balance is due)
 2. Enter amount, method, and reference
 3. Bill status updates to **Partially Paid** or **Paid** automatically
+
+### More Actions Menu (•••)
+- Edit Vendor Bill
+- Print / Save PDF
+- Delete Vendor Bill (permission-gated)
 
 ### Overdue Bills
 Bills past their due date automatically show a red **Overdue** badge. The **Overdue AP** KPI on the Finance Dashboard always reflects the current overdue total.

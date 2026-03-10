@@ -156,6 +156,7 @@ const create = permissionProcedure("invoices.create")
 			notes: z.string().optional(),
 			paymentMethod: z.string().optional(),
 			paymentReference: z.string().optional(),
+			department: z.string().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -182,6 +183,7 @@ const create = permissionProcedure("invoices.create")
 				notes: input.notes ?? null,
 				paymentMethod: input.paymentMethod ?? null,
 				paymentReference: input.paymentReference ?? null,
+				department: input.department ?? null,
 				createdBy,
 			})
 			.returning();
@@ -218,6 +220,7 @@ const update = permissionProcedure("invoices.update")
 			paymentMethod: z.string().optional(),
 			paymentReference: z.string().optional(),
 			status: z.string().optional(),
+			department: z.string().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -258,6 +261,7 @@ const update = permissionProcedure("invoices.update")
 		if (input.paymentReference !== undefined)
 			updates.paymentReference = input.paymentReference;
 		if (input.status !== undefined) updates.status = input.status;
+		if (input.department !== undefined) updates.department = input.department;
 
 		const rows = await db
 			.update(schema.vendorBill)
@@ -620,6 +624,39 @@ const getOverdueSummary = permissionProcedure("reports.read")
 		};
 	});
 
+// ── getPaidThisMonth ───────────────────────────────────────────────────
+
+const getPaidThisMonth = permissionProcedure("invoices.read")
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+		// Get start of current month in Guyana timezone
+		const now = new Date();
+		const gyStr = now.toLocaleDateString("en-CA", {
+			timeZone: "America/Guyana",
+		});
+		const [year, month] = gyStr.split("-").map(Number);
+		// biome-ignore lint/style/noNonNullAssertion: always defined
+		const startOfMonth = new Date(year!, month! - 1, 1);
+		// biome-ignore lint/style/noNonNullAssertion: always defined
+		const startOfNextMonth = new Date(year!, month!, 1);
+
+		const result = await db
+			.select({
+				total: sum(schema.vendorBillPayment.amount),
+			})
+			.from(schema.vendorBillPayment)
+			.where(
+				and(
+					eq(schema.vendorBillPayment.organizationId, orgId),
+					gte(schema.vendorBillPayment.datePaid, startOfMonth),
+					lt(schema.vendorBillPayment.datePaid, startOfNextMonth),
+					eq(schema.vendorBillPayment.isReversal, false),
+				),
+			);
+
+		return { total: result[0]?.total ?? "0" };
+	});
+
 // ── router export ──────────────────────────────────────────────────────
 
 export const vendorBillsRouter = {
@@ -632,4 +669,5 @@ export const vendorBillsRouter = {
 	void: voidBill,
 	getPaymentHistory,
 	getOverdueSummary,
+	getPaidThisMonth,
 };

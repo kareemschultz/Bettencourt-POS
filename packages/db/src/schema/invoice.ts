@@ -85,6 +85,7 @@ export const invoice = pgTable(
 			.default("16.5"),
 		paymentTerms: text("payment_terms").notNull().default("due_on_receipt"),
 		preparedBy: text("prepared_by"),
+		department: text("department"),
 		createdBy: text("created_by")
 			.notNull()
 			.references(() => user.id),
@@ -156,6 +157,7 @@ export const quotation = pgTable(
 			{ onDelete: "set null" },
 		),
 		preparedBy: text("prepared_by"),
+		department: text("department"),
 		createdBy: text("created_by")
 			.notNull()
 			.references(() => user.id),
@@ -399,6 +401,7 @@ export const creditNote = pgTable(
 		amountApplied: numeric("amount_applied", { precision: 12, scale: 2 })
 			.notNull()
 			.default("0"),
+		department: text("department"),
 		createdBy: text("created_by")
 			.notNull()
 			.references(() => user.id),
@@ -535,6 +538,7 @@ export const vendorBill = pgTable(
 		paymentMethod: text("payment_method"),
 		paymentReference: text("payment_reference"),
 		notes: text("notes"),
+		department: text("department"),
 		createdBy: text("created_by")
 			.notNull()
 			.references(() => user.id),

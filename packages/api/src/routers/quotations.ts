@@ -149,6 +149,7 @@ const create = permissionProcedure("quotations.create")
 			termsAndConditions: z.string().optional(),
 			parentQuotationId: z.string().uuid().optional(),
 			preparedBy: z.string().optional(),
+			department: z.string().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -185,6 +186,7 @@ const create = permissionProcedure("quotations.create")
 				termsAndConditions: input.termsAndConditions ?? null,
 				parentQuotationId: input.parentQuotationId ?? null,
 				preparedBy: input.preparedBy ?? null,
+				department: input.department ?? null,
 			})
 			.returning();
 
@@ -217,6 +219,7 @@ const update = permissionProcedure("quotations.update")
 			taxRate: z.string().optional(),
 			termsAndConditions: z.string().optional(),
 			preparedBy: z.string().optional(),
+			department: z.string().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -264,6 +267,7 @@ const update = permissionProcedure("quotations.update")
 		if (input.termsAndConditions !== undefined)
 			updates.termsAndConditions = input.termsAndConditions;
 		if (input.preparedBy !== undefined) updates.preparedBy = input.preparedBy;
+		if (input.department !== undefined) updates.department = input.department;
 
 		await db
 			.update(schema.quotation)

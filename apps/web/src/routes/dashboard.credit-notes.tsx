@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Plus, Trash2, X } from "lucide-react";
+import { ChevronsUpDown, FileDown, FileText, MoreHorizontal, Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -16,14 +16,34 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from "@/components/ui/command";
+import {
 	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
@@ -34,7 +54,10 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { openCreditNotePdf } from "@/lib/pdf/credit-note-pdf";
+import { statusBadgeClass } from "@/lib/status-colors";
 import { formatGYD } from "@/lib/types";
+import { CustomerCombobox, type CustomerHit } from "@/components/ui/customer-combobox";
 import { orpc } from "@/utils/orpc";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -59,55 +82,44 @@ interface CreditNoteRow {
 	appliedAmount: string;
 	status: string;
 	createdAt: string;
+	department?: string | null;
 }
 
 interface CNForm {
 	customerName: string;
+	customerId: string;
 	originalInvoiceNumber: string;
 	reason: string;
 	items: LineItem[];
 	applyTax: boolean;
+	department: string;
 }
 
 const emptyCNForm: CNForm = {
 	customerName: "",
+	customerId: "",
 	originalInvoiceNumber: "",
 	reason: "",
 	items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
 	applyTax: false,
+	department: "",
 };
 
-// ── Status badge ─────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: string }) {
-	const cls: Record<string, string> = {
-		draft: "bg-secondary text-secondary-foreground",
-		issued: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-		applied:
-			"bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
-		voided: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-	};
-	return (
-		<Badge
-			className={`text-[10px] ${cls[status] ?? "bg-secondary text-secondary-foreground"}`}
-		>
-			{status}
-		</Badge>
-	);
-}
-
 const TAX_RATE = 16.5;
-const STATUS_FILTERS = ["All", "Draft", "Issued", "Applied", "Voided"] as const;
+const CN_STATUS_FILTERS = ["All", "Draft", "Issued", "Applied", "Voided"] as const;
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CreditNotesPage() {
 	const queryClient = useQueryClient();
 
-	const [statusFilter, setStatusFilter] = useState<string>("All");
+	const [statusFilter, setStatusFilter] = useState<string>("");
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [form, setForm] = useState<CNForm>(emptyCNForm);
+
+	// Invoice combobox state
+	const [invoiceComboOpen, setInvoiceComboOpen] = useState(false);
 
 	// Apply-to-Invoice dialog state
 	const [applyDialogCN, setApplyDialogCN] = useState<CreditNoteRow | null>(
@@ -124,7 +136,7 @@ export default function CreditNotesPage() {
 	const { data: raw = { creditNotes: [], total: 0 }, isLoading } = useQuery(
 		orpc.creditNotes.list.queryOptions({
 			input: {
-				status: statusFilter !== "All" ? statusFilter.toLowerCase() : undefined,
+				status: statusFilter !== "" ? statusFilter : undefined,
 				limit: 100,
 				offset: 0,
 			},
@@ -132,6 +144,13 @@ export default function CreditNotesPage() {
 	);
 	const creditNotes =
 		(raw as unknown as { items: CreditNoteRow[]; total: number }).items ?? [];
+
+	const { data: invoiceListRaw = { invoices: [] } } = useQuery(
+		orpc.invoices.list.queryOptions({
+			input: { limit: 100, offset: 0 },
+		}),
+	);
+	const invoiceOptions = (invoiceListRaw as unknown as { invoices: Array<{ id: string; invoiceNumber: string; customerName: string; total: string; amountPaid: string }> }).invoices ?? [];
 
 	// ── Mutations ────────────────────────────────────────────────────────────
 
@@ -231,6 +250,7 @@ export default function CreditNotesPage() {
 	function handleSave() {
 		createMut.mutate({
 			customerName: form.customerName,
+			customerId: form.customerId || undefined,
 			reason: form.reason || undefined,
 			notes: form.originalInvoiceNumber
 				? `Ref: ${form.originalInvoiceNumber}`
@@ -239,6 +259,7 @@ export default function CreditNotesPage() {
 			subtotal: String(formSubtotal),
 			taxTotal: String(formTax),
 			total: String(formTotal),
+			department: form.department || undefined,
 		});
 	}
 
@@ -334,20 +355,24 @@ export default function CreditNotesPage() {
 
 			{/* Status filter chips */}
 			<div className="flex flex-wrap gap-2">
-				{STATUS_FILTERS.map((s) => (
-					<button
-						key={s}
-						type="button"
-						onClick={() => setStatusFilter(s)}
-						className={`rounded-full border px-3 py-1 text-xs transition-colors hover:border-primary/60 hover:bg-primary/5 ${
-							statusFilter === s
-								? "border-primary bg-primary/10 font-medium text-primary"
-								: "border-border text-muted-foreground"
-						}`}
-					>
-						{s}
-					</button>
-				))}
+				{CN_STATUS_FILTERS.map((s) => {
+					const value = s === "All" ? "" : s.toLowerCase();
+					const active = statusFilter === value;
+					return (
+						<button
+							key={s}
+							type="button"
+							onClick={() => setStatusFilter(value)}
+							className={`rounded-full border px-3 py-1 text-xs transition-colors hover:border-primary/60 hover:bg-primary/5 ${
+								active
+									? "border-primary bg-primary/10 font-medium text-primary"
+									: "border-border text-muted-foreground"
+							}`}
+						>
+							{s}
+						</button>
+					);
+				})}
 			</div>
 
 			{/* Table */}
@@ -409,24 +434,17 @@ export default function CreditNotesPage() {
 												: "—"}
 										</TableCell>
 										<TableCell>
-											<StatusBadge status={cn.status} />
+											<Badge
+												className={`text-[10px] ${statusBadgeClass(cn.status)}`}
+											>
+												{cn.status}
+											</Badge>
 										</TableCell>
 										<TableCell className="text-muted-foreground text-xs">
 											{new Date(cn.createdAt).toLocaleDateString("en-GY")}
 										</TableCell>
 										<TableCell>
 											<div className="flex gap-1">
-												{cn.status === "draft" && (
-													<Button
-														variant="outline"
-														size="sm"
-														className="h-7 px-2 text-xs"
-														disabled={issueMut.isPending}
-														onClick={() => issueMut.mutate({ id: cn.id })}
-													>
-														Issue
-													</Button>
-												)}
 												{cn.status === "issued" && balance > 0 && (
 													<Button
 														variant="outline"
@@ -437,16 +455,34 @@ export default function CreditNotesPage() {
 														Apply
 													</Button>
 												)}
-												{cn.status !== "voided" && (
-													<Button
-														variant="ghost"
-														size="icon"
-														className="size-7 text-destructive"
-														onClick={() => setVoidId(cn.id)}
+												<DropdownMenu>
+													<DropdownMenuTrigger
+														className="inline-flex size-7 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+														type="button"
 													>
-														<Trash2 className="size-3" />
-													</Button>
-												)}
+														<MoreHorizontal className="size-4" />
+													</DropdownMenuTrigger>
+													<DropdownMenuContent align="end" className="w-44">
+														{cn.status === "draft" && (
+															<DropdownMenuItem onClick={() => issueMut.mutate({ id: cn.id })}>
+																Issue
+															</DropdownMenuItem>
+														)}
+														<DropdownMenuItem onClick={() => openCreditNotePdf(cn)}>
+															<FileDown className="mr-2 size-3.5" />
+															Print / Save PDF
+														</DropdownMenuItem>
+														<DropdownMenuSeparator />
+														{cn.status !== "voided" && (
+															<DropdownMenuItem
+																className="text-destructive focus:text-destructive"
+																onClick={() => setVoidId(cn.id)}
+															>
+																Void
+															</DropdownMenuItem>
+														)}
+													</DropdownMenuContent>
+												</DropdownMenu>
 											</div>
 										</TableCell>
 									</TableRow>
@@ -486,17 +522,52 @@ export default function CreditNotesPage() {
 								/>
 							</div>
 							<div className="col-span-2 flex flex-col gap-1.5">
-								<Label>Original Invoice Number</Label>
-								<Input
-									placeholder="e.g. INV-0042 (optional)"
-									value={form.originalInvoiceNumber}
-									onChange={(e) =>
-										setForm((f) => ({
-											...f,
-											originalInvoiceNumber: e.target.value,
-										}))
-									}
-								/>
+								<Label>Original Invoice (optional)</Label>
+								<Popover open={invoiceComboOpen} onOpenChange={setInvoiceComboOpen}>
+									<PopoverTrigger asChild>
+										<Button
+											variant="outline"
+											type="button"
+											className="w-full justify-between font-normal text-sm"
+										>
+											{form.originalInvoiceNumber
+												? invoiceOptions.find(i => i.invoiceNumber === form.originalInvoiceNumber)
+													? `${form.originalInvoiceNumber} — ${invoiceOptions.find(i => i.invoiceNumber === form.originalInvoiceNumber)!.customerName}`
+													: form.originalInvoiceNumber
+												: "Select invoice..."}
+											<ChevronsUpDown className="ml-2 size-3.5 text-muted-foreground" />
+										</Button>
+									</PopoverTrigger>
+									<PopoverContent className="w-80 p-0">
+										<Command>
+											<CommandInput placeholder="Search invoices..." />
+											<CommandList>
+												<CommandEmpty>No invoices found.</CommandEmpty>
+												<CommandGroup>
+													{invoiceOptions.map((inv) => (
+														<CommandItem
+															key={inv.id}
+															value={`${inv.invoiceNumber} ${inv.customerName}`}
+															onSelect={() => {
+																setForm(f => ({
+																	...f,
+																	originalInvoiceNumber: inv.invoiceNumber,
+																	customerName: f.customerName || inv.customerName,
+																}));
+																setInvoiceComboOpen(false);
+															}}
+														>
+															<div className="flex flex-col">
+																<span className="font-mono font-semibold text-xs">{inv.invoiceNumber}</span>
+																<span className="text-muted-foreground text-xs">{inv.customerName}</span>
+															</div>
+														</CommandItem>
+													))}
+												</CommandGroup>
+											</CommandList>
+										</Command>
+									</PopoverContent>
+								</Popover>
 							</div>
 							<div className="col-span-2 flex flex-col gap-1.5">
 								<Label>Reason</Label>
@@ -571,6 +642,7 @@ export default function CreditNotesPage() {
 														variant="ghost"
 														size="icon"
 														className="size-7"
+														type="button"
 														onClick={() => removeItem(i)}
 													>
 														<X className="size-3" />
@@ -584,6 +656,7 @@ export default function CreditNotesPage() {
 							<Button
 								variant="outline"
 								size="sm"
+								type="button"
 								className="gap-1 self-start"
 								onClick={addItem}
 							>
@@ -607,6 +680,16 @@ export default function CreditNotesPage() {
 							</label>
 						</div>
 
+						{/* Department */}
+						<div className="flex flex-col gap-1.5">
+							<Label>Department (optional)</Label>
+							<Input
+								placeholder="e.g. Kitchen, Front of House, Admin"
+								value={form.department}
+								onChange={(e) => setForm(f => ({ ...f, department: e.target.value }))}
+							/>
+						</div>
+
 						{/* Totals */}
 						<div className="flex flex-col gap-1 border-t pt-2 text-sm">
 							<div className="flex justify-between text-muted-foreground">
@@ -626,7 +709,7 @@ export default function CreditNotesPage() {
 						</div>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" onClick={() => setDialogOpen(false)}>
+						<Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
 							Cancel
 						</Button>
 						<Button
@@ -714,6 +797,7 @@ export default function CreditNotesPage() {
 					<DialogFooter>
 						<Button
 							variant="outline"
+							type="button"
 							onClick={() => {
 								setApplyDialogCN(null);
 								setApplyInvoiceNumber("");

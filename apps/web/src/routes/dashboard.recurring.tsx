@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Edit2, Play, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Edit2, MoreHorizontal, Play, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -14,6 +14,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Dialog,
@@ -374,27 +381,31 @@ export default function RecurringPage() {
 							<CardHeader className="pb-2">
 								<CardTitle className="flex items-start justify-between gap-2 text-base">
 									<span className="leading-tight">{t.name}</span>
-									<div className="flex shrink-0 gap-1">
-										<Button
-											variant="ghost"
-											size="icon"
-											className="size-7"
-											onClick={() => openEdit(t)}
+									<DropdownMenu>
+										<DropdownMenuTrigger
+											className="inline-flex size-7 shrink-0 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+											type="button"
 										>
-											<Edit2 className="size-3" />
-										</Button>
-										<Button
-											variant="ghost"
-											size="icon"
-											className="size-7 text-destructive"
-											onClick={() => {
-												setDeleteId(t.id);
-												setDeleteName(t.name);
-											}}
-										>
-											<Trash2 className="size-3" />
-										</Button>
-									</div>
+											<MoreHorizontal className="size-4" />
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end" className="w-40">
+											<DropdownMenuItem onClick={() => openEdit(t)}>
+												<Edit2 className="mr-2 size-3.5" />
+												Edit Template
+											</DropdownMenuItem>
+											<DropdownMenuSeparator />
+											<DropdownMenuItem
+												className="text-destructive focus:text-destructive"
+												onClick={() => {
+													setDeleteId(t.id);
+													setDeleteName(t.name);
+												}}
+											>
+												<Trash2 className="mr-2 size-3.5" />
+												Delete
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
 								</CardTitle>
 							</CardHeader>
 							<CardContent className="flex flex-col gap-3">

@@ -139,6 +139,7 @@ const create = permissionProcedure("invoices.create")
 			paymentTerms: z.string().optional(),
 			preparedBy: z.string().optional(),
 			invoiceNumber: z.string().optional(),
+			department: z.string().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -177,6 +178,7 @@ const create = permissionProcedure("invoices.create")
 				taxRate: input.taxRate ?? "16.5",
 				paymentTerms: input.paymentTerms ?? "due_on_receipt",
 				preparedBy: input.preparedBy ?? null,
+				department: input.department ?? null,
 			})
 			.returning();
 
@@ -210,6 +212,7 @@ const update = permissionProcedure("invoices.update")
 			taxRate: z.string().optional(),
 			paymentTerms: z.string().optional(),
 			preparedBy: z.string().optional(),
+			department: z.string().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -258,6 +261,7 @@ const update = permissionProcedure("invoices.update")
 		if (input.paymentTerms !== undefined)
 			updates.paymentTerms = input.paymentTerms;
 		if (input.preparedBy !== undefined) updates.preparedBy = input.preparedBy;
+		if (input.department !== undefined) updates.department = input.department;
 
 		await db
 			.update(schema.invoice)
@@ -1263,6 +1267,28 @@ const getTaxSummary = permissionProcedure("reports.read")
 		};
 	});
 
+// ── listDepartments ────────────────────────────────────────────────────
+
+const listDepartments = permissionProcedure("invoices.read")
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+		const results = await db.execute<{ department: string }>(sql`
+			SELECT DISTINCT department FROM invoice
+			WHERE organization_id = ${orgId} AND department IS NOT NULL AND department <> ''
+			UNION
+			SELECT DISTINCT department FROM quotation
+			WHERE organization_id = ${orgId} AND department IS NOT NULL AND department <> ''
+			UNION
+			SELECT DISTINCT department FROM credit_note
+			WHERE organization_id = ${orgId} AND department IS NOT NULL AND department <> ''
+			UNION
+			SELECT DISTINCT department FROM vendor_bill
+			WHERE organization_id = ${orgId} AND department IS NOT NULL AND department <> ''
+			ORDER BY department
+		`);
+		return results.rows.map((r) => r.department);
+	});
+
 // ── router export ──────────────────────────────────────────────────────
 
 export const invoicesRouter = {
@@ -1284,4 +1310,5 @@ export const invoicesRouter = {
 	getCustomerStatement,
 	getCustomerBalanceSummary,
 	getTaxSummary,
+	listDepartments,
 };

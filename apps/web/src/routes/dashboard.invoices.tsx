@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	Bell,
+	Building2,
 	ChevronDown,
 	ChevronRight,
 	Copy,
 	CreditCard,
 	Edit2,
 	FileMinus,
+	MoreHorizontal,
 	Plus,
 	Printer,
 	Receipt,
@@ -33,6 +35,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -53,8 +62,10 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { authClient } from "@/lib/auth-client";
-import { openInvoicePdf } from "@/lib/pdf/invoice-pdf";
+import { openInvoicePdf, type DocSettings } from "@/lib/pdf/invoice-pdf";
+import { CustomerCombobox, type CustomerHit } from "@/components/ui/customer-combobox";
 import { formatGYD } from "@/lib/types";
+import { statusBadgeClass } from "@/lib/status-colors";
 import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
 
@@ -69,9 +80,11 @@ interface InvoiceForm {
 	customerName: string;
 	customerAddress: string;
 	customerPhone: string;
+	customerId: string;
 	agencyName: string;
 	contactPersonName: string;
 	contactPersonPosition: string;
+	department: string;
 	issuedDate: string;
 	dueDate: string;
 	notes: string;
@@ -89,9 +102,11 @@ const emptyForm: InvoiceForm = {
 	customerName: "",
 	customerAddress: "",
 	customerPhone: "",
+	customerId: "",
 	agencyName: "",
 	contactPersonName: "",
 	contactPersonPosition: "",
+	department: "",
 	issuedDate: "",
 	dueDate: "",
 	notes: "",
@@ -105,36 +120,17 @@ const emptyForm: InvoiceForm = {
 	customInvoiceNumber: "",
 };
 
-function statusBadgeClass(status: string): string {
-	switch (status) {
-		case "draft":
-			return "bg-secondary text-secondary-foreground";
-		case "sent":
-			return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
-		case "overdue":
-			return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
-		case "outstanding":
-			return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300";
-		case "paid":
-			return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300";
-		case "overpaid":
-			return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300";
-		case "cancelled":
-			return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
-		default:
-			return "bg-secondary text-secondary-foreground";
-	}
-}
-
 type InvoiceRow = {
 	id: string;
 	invoiceNumber: string;
 	customerName: string;
 	customerAddress: string | null;
 	customerPhone: string | null;
+	customerId?: string | null;
 	agencyName?: string | null;
 	contactPersonName?: string | null;
 	contactPersonPosition?: string | null;
+	department?: string | null;
 	items: unknown;
 	subtotal: string;
 	taxTotal: string;
@@ -172,6 +168,8 @@ const emptyRecordPaymentForm: RecordPaymentForm = {
 	notes: "",
 };
 
+const STATUS_FILTERS = ["All", "Draft", "Sent", "Outstanding", "Overdue", "Paid", "Overpaid", "Cancelled"] as const;
+
 export default function InvoicesPage() {
 	const { data: session } = authClient.useSession();
 	const queryClient = useQueryClient();
@@ -183,6 +181,7 @@ export default function InvoicesPage() {
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [form, setForm] = useState<InvoiceForm>(emptyForm);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const [agencyOpen, setAgencyOpen] = useState(false);
 	const [paymentForm, setPaymentForm] = useState({
 		amountPaid: "",
 		chequeNumber: "",
@@ -382,6 +381,7 @@ export default function InvoicesPage() {
 
 	function openCreate() {
 		setEditingId(null);
+		setAgencyOpen(false);
 		setForm({
 			...emptyForm,
 			taxRate: String(docSettings?.defaultTaxRate ?? "16.5"),
@@ -395,13 +395,17 @@ export default function InvoicesPage() {
 
 	function openEdit(inv: InvoiceRow) {
 		setEditingId(inv.id);
+		const hasAgencyData = !!(inv as { agencyName?: string | null }).agencyName;
+		setAgencyOpen(hasAgencyData);
 		setForm({
 			customerName: inv.customerName,
 			customerAddress: inv.customerAddress ?? "",
 			customerPhone: inv.customerPhone ?? "",
+			customerId: (inv as {customerId?: string | null}).customerId ?? "",
 			agencyName: (inv as { agencyName?: string | null }).agencyName ?? "",
 			contactPersonName: (inv as { contactPersonName?: string | null }).contactPersonName ?? "",
 			contactPersonPosition: (inv as { contactPersonPosition?: string | null }).contactPersonPosition ?? "",
+			department: (inv as { department?: string | null }).department ?? "",
 			issuedDate: inv.issuedDate ? (inv.issuedDate.split("T")[0] ?? "") : "",
 			dueDate: inv.dueDate ? (inv.dueDate.split("T")[0] ?? "") : "",
 			notes: inv.notes ?? "",
@@ -465,9 +469,11 @@ export default function InvoicesPage() {
 			customerName: form.customerName,
 			customerAddress: form.customerAddress || undefined,
 			customerPhone: form.customerPhone || undefined,
+			customerId: form.customerId || undefined,
 			agencyName: form.agencyName || undefined,
 			contactPersonName: form.contactPersonName || undefined,
 			contactPersonPosition: form.contactPersonPosition || undefined,
+			department: form.department || undefined,
 			issuedDate: form.issuedDate || undefined,
 			dueDate: form.dueDate || undefined,
 			notes: form.notes || undefined,
@@ -604,51 +610,28 @@ export default function InvoicesPage() {
 						className="pl-9"
 					/>
 				</div>
-				<Select
-					value={statusFilter || "all"}
-					onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}
-				>
-					<SelectTrigger className="w-40">
-						<SelectValue placeholder="All statuses" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">All statuses</SelectItem>
-						<SelectItem value="draft">Draft</SelectItem>
-						<SelectItem value="sent">Sent</SelectItem>
-						<SelectItem value="outstanding">Outstanding</SelectItem>
-						<SelectItem value="paid">Paid</SelectItem>
-						<SelectItem value="overpaid">Overpaid</SelectItem>
-						<SelectItem value="cancelled">Cancelled</SelectItem>
-					</SelectContent>
-				</Select>
 			</div>
 
 			{/* Status filter chips */}
 			<div className="flex flex-wrap gap-2 print:hidden">
-				{[
-					{ value: "", label: "All" },
-					{ value: "draft", label: "Draft" },
-					{ value: "sent", label: "Sent" },
-					{ value: "overdue", label: "Overdue" },
-					{ value: "outstanding", label: "Outstanding" },
-					{ value: "partial", label: "Partial" },
-					{ value: "paid", label: "Paid" },
-				].map((chip) => (
-					<button
-						key={chip.value}
-						type="button"
-						onClick={() => setStatusFilter(chip.value)}
-						className={`rounded-full border px-3 py-1 font-medium text-xs transition-colors ${
-							statusFilter === chip.value
-								? chip.value === "overdue"
-									? "border-red-600 bg-red-600 text-white"
-									: "border-primary bg-primary text-primary-foreground"
-								: "border-border bg-background text-muted-foreground hover:border-primary hover:text-foreground"
-						}`}
-					>
-						{chip.label}
-					</button>
-				))}
+				{STATUS_FILTERS.map((s) => {
+					const value = s === "All" ? "" : s.toLowerCase().replace(" ", "_");
+					const active = statusFilter === value;
+					return (
+						<button
+							key={s}
+							type="button"
+							onClick={() => setStatusFilter(value)}
+							className={`rounded-full border px-3 py-1 text-xs transition-colors hover:border-primary/60 hover:bg-primary/5 ${
+								active
+									? "border-primary bg-primary/10 font-medium text-primary"
+									: "border-border text-muted-foreground"
+							}`}
+						>
+							{s}
+						</button>
+					);
+				})}
 			</div>
 
 			{/* Grid: table + detail */}
@@ -662,7 +645,7 @@ export default function InvoicesPage() {
 									<TableHead className="text-xs">Customer</TableHead>
 									<TableHead className="text-xs">Items</TableHead>
 									<TableHead className="text-right text-xs">Total</TableHead>
-									<TableHead className="text-right text-xs">Paid</TableHead>
+									<TableHead className="text-right text-xs">Balance Due</TableHead>
 									<TableHead className="text-xs">Status</TableHead>
 									<TableHead className="text-xs">Due</TableHead>
 									<TableHead className="text-xs">Actions</TableHead>
@@ -672,7 +655,7 @@ export default function InvoicesPage() {
 								{invoices.length === 0 ? (
 									<TableRow>
 										<TableCell
-											colSpan={9}
+											colSpan={8}
 											className="py-10 text-center text-muted-foreground text-sm"
 										>
 											<Receipt className="mx-auto mb-2 size-8 opacity-30" />
@@ -700,23 +683,12 @@ export default function InvoicesPage() {
 											<TableCell className="text-right font-semibold text-sm">
 												{formatGYD(Number(inv.total))}
 											</TableCell>
-											<TableCell className="text-right text-muted-foreground text-xs">
-												{Number(inv.amountPaid) > 0
-													? formatGYD(Number(inv.amountPaid))
-													: "—"}
-											</TableCell>
-											<TableCell className="text-right text-xs">
+											<TableCell className="text-right text-sm">
 												{(() => {
-													const bal =
-														Number(inv.total) - Number(inv.amountPaid);
-													return bal > 0 &&
-														!["paid", "cancelled"].includes(inv.status) ? (
-														<span className="font-mono text-destructive">
-															{formatGYD(bal)}
-														</span>
-													) : (
-														<span className="text-emerald-600">Paid</span>
-													);
+													const balance = Number(inv.total) - Number(inv.amountPaid);
+													if (balance <= 0) return <span className="text-emerald-600 text-xs">Paid</span>;
+													if (inv.status === "overdue") return <span className="font-mono font-semibold text-destructive text-xs">{formatGYD(balance)}</span>;
+													return <span className="font-mono text-xs">{formatGYD(balance)}</span>;
 												})()}
 											</TableCell>
 											<TableCell>
@@ -748,6 +720,7 @@ export default function InvoicesPage() {
 															size="icon"
 															className="size-7"
 															title="Edit invoice"
+															type="button"
 															onClick={(e) => {
 																e.stopPropagation();
 																openEdit(inv);
@@ -763,37 +736,97 @@ export default function InvoicesPage() {
 																size="icon"
 																className="size-7 text-emerald-600"
 																title="Record payment"
+																type="button"
 																onClick={(e) => openRecordPayment(inv, e)}
 															>
 																<CreditCard className="size-3" />
 															</Button>
 														)}
-													<Button
-														variant="ghost"
-														size="icon"
-														className="size-7 text-muted-foreground"
-														title="Copy reminder to clipboard"
-														onClick={(e) => {
-															e.stopPropagation();
-															handleSendReminder(inv);
-														}}
-													>
-														<Bell className="size-3" />
-													</Button>
-													{canDelete && inv.status !== "cancelled" && (
-														<Button
-															variant="ghost"
-															size="icon"
-															className="size-7 text-destructive"
-															title="Cancel invoice"
-															onClick={(e) => {
-																e.stopPropagation();
-																deleteMut.mutate({ id: inv.id });
-															}}
+													<DropdownMenu>
+														<DropdownMenuTrigger
+															className="inline-flex size-7 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+															type="button"
+															onClick={(e) => e.stopPropagation()}
 														>
-															<Trash2 className="size-3" />
-														</Button>
-													)}
+															<MoreHorizontal className="size-4" />
+														</DropdownMenuTrigger>
+														<DropdownMenuContent align="end" className="w-48">
+															{inv.status === "draft" && (
+																<DropdownMenuItem
+																	onClick={(e) => {
+																		e.stopPropagation();
+																		updateMut.mutate({ id: inv.id, status: "sent" });
+																	}}
+																>
+																	<Send className="mr-2 size-3.5" />
+																	Mark Sent
+																</DropdownMenuItem>
+															)}
+															<DropdownMenuItem
+																onClick={(e) => {
+																	e.stopPropagation();
+																	setForm({
+																		customerName: inv.customerName,
+																		customerAddress: inv.customerAddress ?? "",
+																		customerPhone: inv.customerPhone ?? "",
+																		customerId: inv.customerId ?? "",
+																		agencyName: inv.agencyName ?? "",
+																		contactPersonName: inv.contactPersonName ?? "",
+																		contactPersonPosition: inv.contactPersonPosition ?? "",
+																		issuedDate: todayGY(),
+																		dueDate: "",
+																		notes: inv.notes ?? "",
+																		items: (inv.items as LineItem[]) ?? [],
+																		discountType: (inv.discountType as "percent" | "fixed") ?? "percent",
+																		discountValue: inv.discountValue ?? "0",
+																		taxMode: (inv.taxMode as "invoice" | "line") ?? "invoice",
+																		taxRate: inv.taxRate ?? "16.5",
+																		paymentTerms: inv.paymentTerms ?? "due_on_receipt",
+																		preparedBy: inv.preparedBy ?? "",
+																		customInvoiceNumber: "",
+																		department: (inv as InvoiceRow & { department?: string | null }).department ?? "",
+																	});
+																	setAgencyOpen(!!(inv.agencyName));
+																	setEditingId(null);
+																	setDialogOpen(true);
+																}}
+															>
+																<Copy className="mr-2 size-3.5" />
+																Duplicate Invoice
+															</DropdownMenuItem>
+															<DropdownMenuItem
+																onClick={(e) => {
+																	e.stopPropagation();
+																	openInvoicePdf(inv, docSettings as DocSettings ?? {});
+																}}
+															>
+																<Printer className="mr-2 size-3.5" />
+																Print / Save PDF
+															</DropdownMenuItem>
+															<DropdownMenuItem
+																onClick={(e) => {
+																	e.stopPropagation();
+																	handleSendReminder(inv);
+																}}
+															>
+																<Bell className="mr-2 size-3.5" />
+																Copy Reminder
+															</DropdownMenuItem>
+															<DropdownMenuSeparator />
+															{!["cancelled", "paid"].includes(inv.status) && canDelete && (
+																<DropdownMenuItem
+																	className="text-destructive focus:text-destructive"
+																	onClick={(e) => {
+																		e.stopPropagation();
+																		deleteMut.mutate({ id: inv.id });
+																	}}
+																>
+																	<Trash2 className="mr-2 size-3.5" />
+																	Cancel Invoice
+																</DropdownMenuItem>
+															)}
+														</DropdownMenuContent>
+													</DropdownMenu>
 												</div>
 											</TableCell>
 										</TableRow>
@@ -1233,34 +1266,40 @@ export default function InvoicesPage() {
 					</DialogHeader>
 					<div className="flex flex-col gap-4 py-2">
 						<div className="grid grid-cols-2 gap-3">
-					<div className="flex flex-col gap-1.5">
-						<Label>
-							Invoice Number
-							{!editingId && (
-								<span className="ml-1 font-normal text-muted-foreground text-xs">
-									(blank = auto-generate)
-								</span>
-							)}
-						</Label>
-						<Input
-							placeholder={editingId ? "" : "e.g. BET-001 or 2026/001"}
-							value={form.customInvoiceNumber}
-							disabled={!!editingId}
-							onChange={(e) =>
-								setForm((f) => ({
-									...f,
-									customInvoiceNumber: e.target.value,
-								}))
-							}
-						/>
-					</div>
+							<div className="flex flex-col gap-1.5">
+								<Label>
+									Invoice Number
+									{!editingId && (
+										<span className="ml-1 font-normal text-muted-foreground text-xs">
+											(blank = auto-generate)
+										</span>
+									)}
+								</Label>
+								<Input
+									placeholder={editingId ? "" : "e.g. BET-001 or 2026/001"}
+									value={form.customInvoiceNumber}
+									onChange={(e) =>
+										setForm((f) => ({
+											...f,
+											customInvoiceNumber: e.target.value,
+										}))
+									}
+								/>
+							</div>
 							<div className="col-span-2 flex flex-col gap-1.5">
 								<Label>Customer Name *</Label>
-								<Input
-									placeholder="Customer name"
+								<CustomerCombobox
 									value={form.customerName}
-									onChange={(e) =>
-										setForm((f) => ({ ...f, customerName: e.target.value }))
+									onChange={(name) =>
+										setForm((f) => ({ ...f, customerName: name, customerId: "" }))
+									}
+									onSelect={(c: CustomerHit) =>
+										setForm((f) => ({
+											...f,
+											customerName: c.name,
+											customerPhone: c.phone ?? f.customerPhone,
+											customerId: c.id,
+										}))
 									}
 								/>
 							</div>
@@ -1304,36 +1343,62 @@ export default function InvoicesPage() {
 									}
 								/>
 							</div>
-						<div className="col-span-2 flex flex-col gap-1.5">
-							<Label>Agency / Organization</Label>
-							<Input
-								placeholder="e.g. Ministry of Home Affairs"
-								value={form.agencyName}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, agencyName: e.target.value }))
-								}
-							/>
-						</div>
-						<div className="flex flex-col gap-1.5">
-							<Label>Contact Person</Label>
-							<Input
-								placeholder="Name of person ordering"
-								value={form.contactPersonName}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, contactPersonName: e.target.value }))
-								}
-							/>
-						</div>
-						<div className="flex flex-col gap-1.5">
-							<Label>Position / Title</Label>
-							<Input
-								placeholder="e.g. Senior Manager (Finance)"
-								value={form.contactPersonPosition}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, contactPersonPosition: e.target.value }))
-								}
-							/>
-						</div>
+							<div className="col-span-2">
+								<Collapsible open={agencyOpen} onOpenChange={setAgencyOpen}>
+									<CollapsibleTrigger asChild>
+										<button
+											type="button"
+											className="flex w-full items-center gap-2 rounded-md py-1.5 text-left text-muted-foreground text-sm hover:text-foreground transition-colors"
+										>
+											<Building2 className="size-3.5" />
+											Agency / Organization Details
+											<ChevronDown className={`ml-auto size-3 transition-transform ${agencyOpen ? "rotate-180" : ""}`} />
+										</button>
+									</CollapsibleTrigger>
+									<CollapsibleContent>
+										<div className="grid grid-cols-2 gap-3 pt-2">
+											<div className="col-span-2 flex flex-col gap-1.5">
+												<Label>Agency / Organization</Label>
+												<Input
+													placeholder="e.g. Ministry of Home Affairs"
+													value={form.agencyName}
+													onChange={(e) =>
+														setForm((f) => ({ ...f, agencyName: e.target.value }))
+													}
+												/>
+											</div>
+											<div className="flex flex-col gap-1.5">
+												<Label>Contact Person</Label>
+												<Input
+													placeholder="Name of person ordering"
+													value={form.contactPersonName}
+													onChange={(e) =>
+														setForm((f) => ({ ...f, contactPersonName: e.target.value }))
+													}
+												/>
+											</div>
+											<div className="flex flex-col gap-1.5">
+												<Label>Position / Title</Label>
+												<Input
+													placeholder="e.g. Senior Manager (Finance)"
+													value={form.contactPersonPosition}
+													onChange={(e) =>
+														setForm((f) => ({ ...f, contactPersonPosition: e.target.value }))
+													}
+												/>
+											</div>
+										</div>
+									</CollapsibleContent>
+								</Collapsible>
+							</div>
+							<div className="col-span-2 flex flex-col gap-1.5">
+								<Label>Department (optional)</Label>
+								<Input
+									placeholder="e.g. Kitchen, Front of House, Admin"
+									value={form.department}
+									onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
+								/>
+							</div>
 						</div>
 
 						{/* Line Items */}
@@ -1396,6 +1461,7 @@ export default function InvoicesPage() {
 														variant="ghost"
 														size="icon"
 														className="size-7"
+														type="button"
 														onClick={() => removeItem(i)}
 													>
 														<X className="size-3" />
@@ -1410,6 +1476,7 @@ export default function InvoicesPage() {
 								variant="outline"
 								size="sm"
 								className="gap-1 self-start"
+								type="button"
 								onClick={addItem}
 							>
 								<Plus className="size-3" />
