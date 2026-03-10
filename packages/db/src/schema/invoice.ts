@@ -53,6 +53,9 @@ export const invoice = pgTable(
 		customerName: text("customer_name").notNull(),
 		customerAddress: text("customer_address"),
 		customerPhone: text("customer_phone"),
+		agencyName: text("agency_name"),
+		contactPersonName: text("contact_person_name"),
+		contactPersonPosition: text("contact_person_position"),
 		items: jsonb("items").notNull().default([]),
 		subtotal: numeric("subtotal", { precision: 12, scale: 2 })
 			.notNull()
@@ -121,6 +124,9 @@ export const quotation = pgTable(
 		customerName: text("customer_name").notNull(),
 		customerAddress: text("customer_address"),
 		customerPhone: text("customer_phone"),
+		agencyName: text("agency_name"),
+		contactPersonName: text("contact_person_name"),
+		contactPersonPosition: text("contact_person_position"),
 		items: jsonb("items").notNull().default([]),
 		subtotal: numeric("subtotal", { precision: 12, scale: 2 })
 			.notNull()

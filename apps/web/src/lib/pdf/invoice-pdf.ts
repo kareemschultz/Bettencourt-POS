@@ -16,6 +16,9 @@ export type InvoicePdfRow = {
 	customerName: string;
 	customerAddress?: string | null;
 	customerPhone?: string | null;
+	agencyName?: string | null;
+	contactPersonName?: string | null;
+	contactPersonPosition?: string | null;
 	issuedDate?: string | null;
 	createdAt: string;
 	dueDate?: string | null;
@@ -302,10 +305,15 @@ function buildInvoiceHtml(
     <div class="bill-col">
       <div class="section-label">Bill To</div>
       <div class="customer-name">${escHtml(invoice.customerName)}</div>
+      ${invoice.contactPersonPosition ? `<div class="customer-sub">${escHtml(invoice.contactPersonPosition)}</div>` : ""}
+      ${invoice.agencyName ? `<div class="customer-sub" style="font-weight:600;color:#1e293b">${escHtml(invoice.agencyName)}</div>` : ""}
       ${invoice.customerPhone ? `<div class="customer-sub">${escHtml(invoice.customerPhone)}</div>` : ""}
       ${invoice.customerAddress ? `<div class="customer-sub">${escHtml(invoice.customerAddress)}</div>` : ""}
     </div>
-    ${invoice.preparedBy ? `<div class="bill-col"><div class="section-label">Prepared By</div><div class="customer-name">${escHtml(invoice.preparedBy)}</div></div>` : ""}
+    <div class="bill-col">
+      ${invoice.contactPersonName ? `<div class="section-label">Order Placed By</div><div class="customer-name">${escHtml(invoice.contactPersonName)}</div>` : ""}
+      ${invoice.preparedBy ? `<div class="section-label" style="margin-top:${invoice.contactPersonName ? "12px" : "0"}">Prepared By</div><div class="customer-name">${escHtml(invoice.preparedBy)}</div>` : ""}
+    </div>
   </div>
 
   <!-- Line Items -->

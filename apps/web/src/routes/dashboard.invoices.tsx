@@ -69,6 +69,9 @@ interface InvoiceForm {
 	customerName: string;
 	customerAddress: string;
 	customerPhone: string;
+	agencyName: string;
+	contactPersonName: string;
+	contactPersonPosition: string;
 	issuedDate: string;
 	dueDate: string;
 	notes: string;
@@ -86,6 +89,9 @@ const emptyForm: InvoiceForm = {
 	customerName: "",
 	customerAddress: "",
 	customerPhone: "",
+	agencyName: "",
+	contactPersonName: "",
+	contactPersonPosition: "",
 	issuedDate: "",
 	dueDate: "",
 	notes: "",
@@ -126,6 +132,9 @@ type InvoiceRow = {
 	customerName: string;
 	customerAddress: string | null;
 	customerPhone: string | null;
+	agencyName?: string | null;
+	contactPersonName?: string | null;
+	contactPersonPosition?: string | null;
 	items: unknown;
 	subtotal: string;
 	taxTotal: string;
@@ -390,6 +399,9 @@ export default function InvoicesPage() {
 			customerName: inv.customerName,
 			customerAddress: inv.customerAddress ?? "",
 			customerPhone: inv.customerPhone ?? "",
+			agencyName: (inv as { agencyName?: string | null }).agencyName ?? "",
+			contactPersonName: (inv as { contactPersonName?: string | null }).contactPersonName ?? "",
+			contactPersonPosition: (inv as { contactPersonPosition?: string | null }).contactPersonPosition ?? "",
 			issuedDate: inv.issuedDate ? (inv.issuedDate.split("T")[0] ?? "") : "",
 			dueDate: inv.dueDate ? (inv.dueDate.split("T")[0] ?? "") : "",
 			notes: inv.notes ?? "",
@@ -453,6 +465,9 @@ export default function InvoicesPage() {
 			customerName: form.customerName,
 			customerAddress: form.customerAddress || undefined,
 			customerPhone: form.customerPhone || undefined,
+			agencyName: form.agencyName || undefined,
+			contactPersonName: form.contactPersonName || undefined,
+			contactPersonPosition: form.contactPersonPosition || undefined,
 			issuedDate: form.issuedDate || undefined,
 			dueDate: form.dueDate || undefined,
 			notes: form.notes || undefined,
@@ -843,6 +858,17 @@ export default function InvoicesPage() {
 											</span>
 										)}
 									</div>
+									{((selectedInvoice as unknown as {agencyName?: string | null}).agencyName ||
+										(selectedInvoice as unknown as {contactPersonName?: string | null}).contactPersonName) && (
+										<div className="mb-2 flex flex-wrap gap-4 rounded-md bg-muted/40 px-3 py-2 text-xs">
+											{(selectedInvoice as unknown as {agencyName?: string | null}).agencyName && (
+												<span><span className="text-muted-foreground">Agency: </span><span className="font-medium">{(selectedInvoice as unknown as {agencyName?: string}).agencyName}</span></span>
+											)}
+											{(selectedInvoice as unknown as {contactPersonName?: string | null}).contactPersonName && (
+												<span><span className="text-muted-foreground">Order By: </span><span className="font-medium">{(selectedInvoice as unknown as {contactPersonName?: string}).contactPersonName}</span>{(selectedInvoice as unknown as {contactPersonPosition?: string | null}).contactPersonPosition && <span className="text-muted-foreground ml-1">({(selectedInvoice as unknown as {contactPersonPosition?: string}).contactPersonPosition})</span>}</span>
+											)}
+										</div>
+									)}
 									<Table>
 										<TableHeader>
 											<TableRow>
@@ -1278,6 +1304,36 @@ export default function InvoicesPage() {
 									}
 								/>
 							</div>
+						<div className="col-span-2 flex flex-col gap-1.5">
+							<Label>Agency / Organization</Label>
+							<Input
+								placeholder="e.g. Ministry of Home Affairs"
+								value={form.agencyName}
+								onChange={(e) =>
+									setForm((f) => ({ ...f, agencyName: e.target.value }))
+								}
+							/>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label>Contact Person</Label>
+							<Input
+								placeholder="Name of person ordering"
+								value={form.contactPersonName}
+								onChange={(e) =>
+									setForm((f) => ({ ...f, contactPersonName: e.target.value }))
+								}
+							/>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label>Position / Title</Label>
+							<Input
+								placeholder="e.g. Senior Manager (Finance)"
+								value={form.contactPersonPosition}
+								onChange={(e) =>
+									setForm((f) => ({ ...f, contactPersonPosition: e.target.value }))
+								}
+							/>
+						</div>
 						</div>
 
 						{/* Line Items */}

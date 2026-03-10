@@ -130,6 +130,9 @@ const create = permissionProcedure("quotations.create")
 			customerName: z.string().min(1),
 			customerAddress: z.string().optional(),
 			customerPhone: z.string().optional(),
+			agencyName: z.string().optional(),
+			contactPersonName: z.string().optional(),
+			contactPersonPosition: z.string().optional(),
 			customerId: z.string().uuid().optional(),
 			locationId: z.string().uuid().optional(),
 			validUntil: z.string().optional(),
@@ -164,6 +167,9 @@ const create = permissionProcedure("quotations.create")
 				customerName: input.customerName,
 				customerAddress: input.customerAddress ?? null,
 				customerPhone: input.customerPhone ?? null,
+				agencyName: input.agencyName ?? null,
+				contactPersonName: input.contactPersonName ?? null,
+				contactPersonPosition: input.contactPersonPosition ?? null,
 				items: input.items,
 				subtotal: input.subtotal,
 				taxTotal: input.taxTotal ?? "0",
@@ -194,6 +200,9 @@ const update = permissionProcedure("quotations.update")
 			customerName: z.string().min(1).optional(),
 			customerAddress: z.string().optional(),
 			customerPhone: z.string().optional(),
+			agencyName: z.string().optional(),
+			contactPersonName: z.string().optional(),
+			contactPersonPosition: z.string().optional(),
 			customerId: z.string().uuid().optional(),
 			validUntil: z.string().optional(),
 			notes: z.string().optional(),
@@ -234,6 +243,9 @@ const update = permissionProcedure("quotations.update")
 			updates.customerAddress = input.customerAddress;
 		if (input.customerPhone !== undefined)
 			updates.customerPhone = input.customerPhone;
+		if (input.agencyName !== undefined) updates.agencyName = input.agencyName;
+		if (input.contactPersonName !== undefined) updates.contactPersonName = input.contactPersonName;
+		if (input.contactPersonPosition !== undefined) updates.contactPersonPosition = input.contactPersonPosition;
 		if (input.customerId !== undefined) updates.customerId = input.customerId;
 		if (input.validUntil !== undefined)
 			updates.validUntil = new Date(input.validUntil);
