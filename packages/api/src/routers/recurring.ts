@@ -74,6 +74,68 @@ function advanceDate(current: Date, frequency: string): Date {
 	return d;
 }
 
+function roundMoney(value: number): number {
+	return Math.round(value * 100) / 100;
+}
+
+function normalizeRecurringData(
+	data: Record<string, unknown>,
+	templateType: string,
+	mode: string,
+	rawValue: number,
+): Record<string, unknown> {
+	const normalized = JSON.parse(
+		JSON.stringify(data ?? {}),
+	) as Record<string, unknown>;
+
+	if (mode === "none" || !Number.isFinite(rawValue) || rawValue === 0) {
+		return normalized;
+	}
+
+	if (templateType === "expense") {
+		const current = Number(normalized.amount ?? 0);
+		const next =
+			mode === "fixed_update"
+				? rawValue
+				: roundMoney(current * (1 + rawValue / 100));
+		normalized.amount = String(next);
+		return normalized;
+	}
+
+	const items = Array.isArray(normalized.items)
+		? (normalized.items as Array<Record<string, unknown>>)
+		: [];
+
+	let subtotal = 0;
+	const nextItems = items.map((item) => {
+		const quantity = Number(item.quantity ?? 0);
+		const currentUnit = Number(item.unitPrice ?? 0);
+		const unitPrice =
+			mode === "fixed_update"
+				? rawValue
+				: roundMoney(currentUnit * (1 + rawValue / 100));
+		const total = roundMoney(quantity * unitPrice);
+		subtotal += total;
+		return {
+			...item,
+			unitPrice,
+			total,
+		};
+	});
+
+	normalized.items = nextItems;
+	normalized.subtotal = String(roundMoney(subtotal));
+
+	const oldSubtotal = Number(data.subtotal ?? 0);
+	const oldTaxTotal = Number(data.taxTotal ?? 0);
+	const effectiveTaxRate = oldSubtotal > 0 ? oldTaxTotal / oldSubtotal : 0;
+	const taxTotal = roundMoney(subtotal * effectiveTaxRate);
+	normalized.taxTotal = String(taxTotal);
+	normalized.total = String(roundMoney(subtotal + taxTotal));
+
+	return normalized;
+}
+
 // ── list ───────────────────────────────────────────────────────────────
 
 const list = permissionProcedure("invoices.read")
@@ -82,6 +144,7 @@ const list = permissionProcedure("invoices.read")
 			.object({
 				templateType: z.enum(["invoice", "expense", "vendor_bill"]).optional(),
 				isActive: z.boolean().optional(),
+				status: z.enum(["active", "paused", "completed"]).optional(),
 			})
 			.optional(),
 	)
@@ -100,13 +163,18 @@ const list = permissionProcedure("invoices.read")
 			conditions.push(eq(schema.recurringTemplate.isActive, rawInput.isActive));
 		}
 
+		if (rawInput?.status !== undefined) {
+			conditions.push(eq(schema.recurringTemplate.status, rawInput.status));
+		}
+
 		const templates = await db
 			.select()
 			.from(schema.recurringTemplate)
 			.where(and(...conditions))
 			.orderBy(desc(schema.recurringTemplate.createdAt));
 
-		return templates;
+		// Backward-compatible shape for existing UI (type alias)
+		return templates.map((t) => ({ ...t, type: t.templateType }));
 	});
 
 // ── create ─────────────────────────────────────────────────────────────
@@ -123,9 +191,16 @@ const create = permissionProcedure("invoices.create")
 				"quarterly",
 				"annually",
 			]),
+			startDate: z.string().optional(),
 			nextRunDate: z.string(),
 			endDate: z.string().optional(),
+			remainingCycles: z.number().int().positive().optional(),
 			isActive: z.boolean().default(true),
+			status: z.enum(["active", "paused", "completed"]).optional(),
+			priceAutomationMode: z
+				.enum(["none", "fixed_update", "percent_increase"])
+				.default("none"),
+			priceAutomationValue: z.number().optional(),
 			templateData: z.record(z.string(), z.unknown()),
 			customerId: z.string().uuid().optional(),
 			supplierId: z.string().uuid().optional(),
@@ -142,9 +217,14 @@ const create = permissionProcedure("invoices.create")
 				name: input.name,
 				templateType: input.templateType,
 				frequency: input.frequency,
+				startDate: input.startDate ? new Date(input.startDate) : null,
 				nextRunDate: new Date(input.nextRunDate),
+				remainingCycles: input.remainingCycles ?? null,
 				endDate: input.endDate ? new Date(input.endDate) : null,
 				isActive: input.isActive,
+				status: input.status ?? (input.isActive ? "active" : "paused"),
+				priceAutomationMode: input.priceAutomationMode,
+				priceAutomationValue: String(input.priceAutomationValue ?? 0),
 				templateData: input.templateData,
 				customerId: input.customerId ?? null,
 				supplierId: input.supplierId ?? null,
@@ -177,9 +257,16 @@ const update = permissionProcedure("invoices.update")
 			frequency: z
 				.enum(["weekly", "biweekly", "monthly", "quarterly", "annually"])
 				.optional(),
+			startDate: z.string().optional().nullable(),
 			nextRunDate: z.string().optional(),
+			remainingCycles: z.number().int().positive().optional().nullable(),
 			endDate: z.string().optional().nullable(),
 			isActive: z.boolean().optional(),
+			status: z.enum(["active", "paused", "completed"]).optional(),
+			priceAutomationMode: z
+				.enum(["none", "fixed_update", "percent_increase"])
+				.optional(),
+			priceAutomationValue: z.number().optional(),
 			templateData: z.record(z.string(), z.unknown()).optional(),
 			customerId: z.string().uuid().optional().nullable(),
 			supplierId: z.string().uuid().optional().nullable(),
@@ -210,11 +297,26 @@ const update = permissionProcedure("invoices.update")
 		if (input.templateType !== undefined)
 			updates.templateType = input.templateType;
 		if (input.frequency !== undefined) updates.frequency = input.frequency;
+		if (input.startDate !== undefined)
+			updates.startDate = input.startDate ? new Date(input.startDate) : null;
 		if (input.nextRunDate !== undefined)
 			updates.nextRunDate = new Date(input.nextRunDate);
+		if (input.remainingCycles !== undefined)
+			updates.remainingCycles = input.remainingCycles;
 		if (input.endDate !== undefined)
 			updates.endDate = input.endDate ? new Date(input.endDate) : null;
-		if (input.isActive !== undefined) updates.isActive = input.isActive;
+		if (input.isActive !== undefined) {
+			updates.isActive = input.isActive;
+			updates.status = input.isActive ? "active" : "paused";
+		}
+		if (input.status !== undefined) {
+			updates.status = input.status;
+			updates.isActive = input.status === "active";
+		}
+		if (input.priceAutomationMode !== undefined)
+			updates.priceAutomationMode = input.priceAutomationMode;
+		if (input.priceAutomationValue !== undefined)
+			updates.priceAutomationValue = String(input.priceAutomationValue);
 		if (input.templateData !== undefined)
 			updates.templateData = input.templateData;
 		if (input.customerId !== undefined)
@@ -307,7 +409,7 @@ const pause = permissionProcedure("invoices.update")
 
 		await db
 			.update(schema.recurringTemplate)
-			.set({ isActive: false })
+			.set({ isActive: false, status: "paused" })
 			.where(
 				and(
 					eq(schema.recurringTemplate.id, input.id),
@@ -344,7 +446,7 @@ const resume = permissionProcedure("invoices.update")
 
 		await db
 			.update(schema.recurringTemplate)
-			.set({ isActive: true })
+			.set({ isActive: true, status: "active" })
 			.where(
 				and(
 					eq(schema.recurringTemplate.id, input.id),
@@ -399,7 +501,12 @@ const generateNext = permissionProcedure("invoices.create")
 			};
 		}
 
-		const data = (template.templateData ?? {}) as Record<string, unknown>;
+		const data = normalizeRecurringData(
+			(template.templateData ?? {}) as Record<string, unknown>,
+			template.templateType,
+			template.priceAutomationMode,
+			Number(template.priceAutomationValue ?? 0),
+		);
 		let generatedId: string;
 
 		if (template.templateType === "invoice") {

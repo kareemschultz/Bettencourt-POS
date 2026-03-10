@@ -643,9 +643,21 @@ export const recurringTemplate = pgTable(
 		name: text("name").notNull(),
 		templateType: text("template_type").notNull(), // invoice | expense | vendor_bill
 		frequency: text("frequency").notNull(), // weekly | biweekly | monthly | quarterly | annually
+		startDate: timestamp("start_date", { withTimezone: true }),
 		nextRunDate: timestamp("next_run_date", { withTimezone: true }).notNull(),
+		remainingCycles: integer("remaining_cycles"),
 		endDate: timestamp("end_date", { withTimezone: true }),
 		isActive: boolean("is_active").notNull().default(true),
+		status: text("status").notNull().default("active"), // active | paused | completed
+		priceAutomationMode: text("price_automation_mode")
+			.notNull()
+			.default("none"), // none | fixed_update | percent_increase
+		priceAutomationValue: numeric("price_automation_value", {
+			precision: 12,
+			scale: 2,
+		})
+			.notNull()
+			.default("0"),
 		templateData: jsonb("template_data").notNull().default({}),
 		customerId: uuid("customer_id").references(() => customer.id, {
 			onDelete: "set null",
@@ -691,6 +703,53 @@ export const recurringTemplateRelations = relations(
 		}),
 		createdByUser: one(user, {
 			fields: [recurringTemplate.createdBy],
+			references: [user.id],
+		}),
+	}),
+);
+
+// ── Recurring Template Run (Phase 2) ───────────────────────────────────
+
+export const recurringTemplateRun = pgTable(
+	"recurring_template_run",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		organizationId: uuid("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		templateId: uuid("template_id")
+			.notNull()
+			.references(() => recurringTemplate.id, { onDelete: "cascade" }),
+		generatedType: text("generated_type").notNull(), // invoice | expense | vendor_bill
+		generatedId: uuid("generated_id"),
+		status: text("status").notNull().default("success"), // success | failed
+		details: jsonb("details").notNull().default({}),
+		createdBy: text("created_by")
+			.notNull()
+			.references(() => user.id),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(table) => [
+		index("idx_recurring_run_template").on(table.templateId, table.createdAt),
+		index("idx_recurring_run_org").on(table.organizationId, table.createdAt),
+	],
+);
+
+export const recurringTemplateRunRelations = relations(
+	recurringTemplateRun,
+	({ one }) => ({
+		organization: one(organization, {
+			fields: [recurringTemplateRun.organizationId],
+			references: [organization.id],
+		}),
+		template: one(recurringTemplate, {
+			fields: [recurringTemplateRun.templateId],
+			references: [recurringTemplate.id],
+		}),
+		createdByUser: one(user, {
+			fields: [recurringTemplateRun.createdBy],
 			references: [user.id],
 		}),
 	}),

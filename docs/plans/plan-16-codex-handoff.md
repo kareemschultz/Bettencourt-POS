@@ -316,3 +316,36 @@ win!.location.href = URL.createObjectURL(blob);
 ### API-first execution note
 - Use API endpoints from `api-docs.invoicing.co` as behavioral reference for input/output shapes and status models.
 - Mirror only workflows relevant to Bettencourt operations (restaurant AP/AR + payroll-adjacent expenses), not full freelancer/client-portal scope.
+
+---
+
+## Codex Continuation Checkpoint (2026-03-10, Wave A backend start)
+
+Committed checkpoint includes **partial Wave A backend groundwork**:
+
+- `packages/db/src/schema/invoice.ts`
+  - Added recurring template lifecycle/schedule fields:
+    - `startDate`
+    - `remainingCycles`
+    - `status` (`active|paused|completed`, default `active`)
+    - `priceAutomationMode` (`none|fixed_update|percent_increase`, default `none`)
+    - `priceAutomationValue` numeric default `0`
+  - Added new table:
+    - `recurring_template_run` (`recurringTemplateRun`)
+    - stores each generation event: template, generated doc id/type, status, details, actor, timestamp
+
+- `packages/api/src/routers/recurring.ts`
+  - Added list filter support for lifecycle `status`
+  - Added backward-compatible `type` alias in list response (`type: templateType`) for existing UI
+  - Extended create/update inputs for new recurring lifecycle/automation fields
+  - Synced pause/resume with `status` + `isActive`
+  - Added recurring price automation normalization helper and hooked it into generation payload preparation
+
+### Not finished yet (next codex pass)
+- Complete `generateNext` lifecycle behavior:
+  - enforce `status`/`remainingCycles`/`endDate` completion logic
+  - write run history rows on success/failure
+- Add recurring run history endpoint and UI panel in `dashboard.recurring.tsx`
+- Implement Wave A remaining work:
+  - billable expense -> invoice linkage
+  - payment allocation/refund ledger foundation
