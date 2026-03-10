@@ -135,11 +135,13 @@ const create = permissionProcedure("invoices.create")
 			taxRate: z.string().optional(),
 			paymentTerms: z.string().optional(),
 			preparedBy: z.string().optional(),
+			invoiceNumber: z.string().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
 		const orgId = requireOrganizationId(context);
-		const invoiceNumber = await nextInvoiceNumber(orgId);
+		const invoiceNumber =
+			input.invoiceNumber?.trim() || (await nextInvoiceNumber(orgId));
 		const locationId =
 			input.locationId ?? (await resolveDefaultLocationId(orgId));
 		const createdBy = context.session.user.id;

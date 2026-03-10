@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	CalendarDays,
 	Download,
+	Layers,
 	List,
 	Pencil,
 	Plus,
@@ -69,7 +70,23 @@ import { formatGYD } from "@/lib/types";
 import { escapeHtml, todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
 
-function downloadPdf(title: string, rows: ExpenseRow[], period: string) {
+type SourceGroup = {
+	id: string;
+	name: string;
+	color: string;
+	items: ExpenseRow[];
+	total: number;
+};
+
+function downloadPdf(
+	title: string,
+	rows: ExpenseRow[],
+	period: string,
+	options?: {
+		getSourceName?: (id: string | null | undefined) => string;
+		groups?: SourceGroup[];
+	},
+) {
 	if (!rows.length) return;
 	const fmt = (n: number) =>
 		new Intl.NumberFormat("en-GY", {
@@ -77,48 +94,77 @@ function downloadPdf(title: string, rows: ExpenseRow[], period: string) {
 			currency: "GYD",
 		}).format(n);
 	const total = rows.reduce((s, e) => s + Number(e.amount), 0);
-	const tableRows = rows
-		.map(
-			(e) => `<tr>
-			<td>${new Date(e.created_at).toLocaleString("en-GY", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</td>
-			<td>${escapeHtml(e.supplier_name) || "—"}</td>
-			<td>${escapeHtml(e.category)}</td>
-			<td>${escapeHtml(e.description)}</td>
-			<td>${escapeHtml(e.payment_method) || "—"}</td>
-			<td>${escapeHtml(e.reference_number) || "—"}</td>
-			<td style="text-align:right;font-weight:600">${fmt(Number(e.amount))}</td>
-			<td>${escapeHtml(e.authorized_by_name) || "—"}</td>
-		</tr>`,
-		)
-		.join("\n");
-	const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
-<title>${escapeHtml(title)}</title>
-<style>
-  body { font-family: Arial, sans-serif; font-size: 11px; color: #111; padding: 24px; }
-  h1 { font-size: 18px; margin: 0 0 4px; }
-  p  { margin: 0 0 16px; color: #555; font-size: 11px; }
-  table { width: 100%; border-collapse: collapse; }
-  th { background: #f3f4f6; text-align: left; padding: 6px 8px; font-size: 10px; border-bottom: 2px solid #ddd; }
-  td { padding: 5px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
-  tr:last-child td { border-bottom: none; }
-  .total { font-weight: bold; font-size: 13px; text-align: right; margin-top: 12px; }
-  @media print { button { display: none; } }
-</style></head><body>
-<h1>${escapeHtml(title)}</h1>
-<p>Period: ${escapeHtml(period)} &nbsp;·&nbsp; ${rows.length} entries</p>
-<table>
-<thead><tr>
-  <th>Date</th><th>Supplier</th><th>Category</th><th>Description</th>
-  <th>Payment</th><th>Ref #</th><th style="text-align:right">Amount</th><th>Auth. By</th>
-</tr></thead>
-<tbody>${tableRows}</tbody>
-</table>
-<p class="total">Total: ${fmt(total)}</p>
-<button onclick="window.print()" style="margin-top:16px;padding:8px 16px;cursor:pointer">Print / Save as PDF</button>
-</body></html>`;
+	const getSourceName = options?.getSourceName ?? (() => "General Cash");
+	const groups = options?.groups;
+	let bodyHtml = "";
+	if (groups && groups.length > 0) {
+		for (const src of groups) {
+			const srcRows = src.items
+				.map(
+					(e) =>
+						`<tr><td>${new Date(e.created_at).toLocaleString("en-GY", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</td>` +
+						`<td>${escapeHtml(e.supplier_name) || "\u2014"}</td>` +
+						`<td>${escapeHtml(e.category)}</td>` +
+						`<td>${escapeHtml(e.description)}</td>` +
+						`<td>${escapeHtml(e.payment_method) || "\u2014"}</td>` +
+						`<td>${escapeHtml(e.reference_number) || "\u2014"}</td>` +
+						`<td style="text-align:right;font-weight:600">${fmt(Number(e.amount))}</td>` +
+						`<td>${escapeHtml(e.authorized_by_name) || "\u2014"}</td></tr>`,
+				)
+				.join("");
+			bodyHtml +=
+				`<tr><td colspan="8" style="background:${src.color}22;border-left:4px solid ${src.color};` +
+				`padding:6px 8px;font-weight:700;font-size:11px">${escapeHtml(src.name)}&nbsp;&middot;&nbsp;` +
+				`${src.items.length} expense${src.items.length !== 1 ? "s" : ""}&nbsp;&middot;&nbsp;${fmt(src.total)}</td></tr>` +
+				srcRows;
+		}
+	} else {
+		const showSource = !!options?.getSourceName;
+		bodyHtml = rows
+			.map(
+				(e) =>
+					(showSource ? `<td style="font-size:10px;color:#555">${escapeHtml(getSourceName(e.funding_source_id))}</td>` : "") +
+					`<tr><td>${new Date(e.created_at).toLocaleString("en-GY", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</td>` +
+					`<td>${escapeHtml(e.supplier_name) || "\u2014"}</td>` +
+					`<td>${escapeHtml(e.category)}</td>` +
+					`<td>${escapeHtml(e.description)}</td>` +
+					`<td>${escapeHtml(e.payment_method) || "\u2014"}</td>` +
+					`<td>${escapeHtml(e.reference_number) || "\u2014"}</td>` +
+					`<td style="text-align:right;font-weight:600">${fmt(Number(e.amount))}</td>` +
+					`<td>${escapeHtml(e.authorized_by_name) || "\u2014"}</td></tr>`,
+			)
+			.join("");
+	}
+	const sourceHeader =
+		options?.getSourceName && !groups ? "<th>Funding Source</th>" : "";
+	const html =
+		"<!DOCTYPE html><html><head><meta charset=\"utf-8\"/>\n" +
+		`<title>${escapeHtml(title)}</title>\n` +
+		"<style>\n" +
+		"  body { font-family: Arial, sans-serif; font-size: 11px; color: #111; padding: 24px; }\n" +
+		"  h1 { font-size: 18px; margin: 0 0 4px; }\n" +
+		"  p  { margin: 0 0 16px; color: #555; font-size: 11px; }\n" +
+		"  table { width: 100%; border-collapse: collapse; }\n" +
+		"  th { background: #f3f4f6; text-align: left; padding: 6px 8px; font-size: 10px; border-bottom: 2px solid #ddd; }\n" +
+		"  td { padding: 5px 8px; border-bottom: 1px solid #eee; vertical-align: top; }\n" +
+		"  tr:last-child td { border-bottom: none; }\n" +
+		"  .total { font-weight: bold; font-size: 13px; text-align: right; margin-top: 12px; }\n" +
+		"  @media print { button { display: none; } }\n" +
+		"</style></head><body>\n" +
+		`<h1>${escapeHtml(title)}</h1>\n` +
+		`<p>Period: ${escapeHtml(period)} &nbsp;&middot;&nbsp; ${rows.length} entries</p>\n` +
+		"<table>\n<thead><tr>\n" +
+		`  ${sourceHeader}<th>Date</th><th>Supplier</th><th>Category</th><th>Description</th>\n` +
+		'  <th>Payment</th><th>Ref #</th><th style="text-align:right">Amount</th><th>Auth. By</th>\n' +
+		"</tr></thead>\n" +
+		`<tbody>${bodyHtml}</tbody>\n` +
+		"</table>\n" +
+		`<p class="total">Total: ${fmt(total)}</p>\n` +
+		'<button onclick="window.print()" style="margin-top:16px;padding:8px 16px;cursor:pointer">Print / Save as PDF</button>\n' +
+		"</body></html>";
 	const w = window.open("", "_blank");
 	if (w) {
-		w.document.write(html);
+		w.document["write"](html);
 		w.document.close();
 	}
 }
@@ -235,6 +281,7 @@ export default function ExpensesPage() {
 	// Daily summary state
 	const [viewMode, setViewMode] = useState<"table" | "daily">("table");
 	const [summaryDate, setSummaryDate] = useState(today);
+	const [groupBySource, setGroupBySource] = useState(false);
 
 	const { data: expensesRaw = [] } = useQuery(
 		orpc.cash.getExpenses.queryOptions({
@@ -411,6 +458,26 @@ export default function ExpensesPage() {
 	// Map supplier name → id for clickable stat cards
 	const supplierNameToIdMap = new Map(suppliers.map((s) => [s.name, s.id]));
 
+	// Funding source color palette (hex, matches Tailwind 500 shades)
+	const SOURCE_COLORS_HEX = [
+		"#14b8a6", // teal
+		"#f59e0b", // amber
+		"#a855f7", // purple
+		"#f43f5e", // rose
+		"#38bdf8", // sky
+		"#6366f1", // indigo
+		"#10b981", // emerald
+		"#f97316", // orange
+	];
+	const fundingSourceColorMap = new Map<string, string>();
+	fundingSources.forEach((fs, i) => {
+		fundingSourceColorMap.set(fs.id, SOURCE_COLORS_HEX[i % SOURCE_COLORS_HEX.length]!);
+	});
+	const getSourceColor = (id: string | null | undefined): string =>
+		id ? (fundingSourceColorMap.get(id) ?? "#64748b") : "#64748b";
+	const getSourceName = (id: string | null | undefined): string =>
+		id ? (fundingSources.find((f) => f.id === id)?.name ?? "Unknown") : "General Cash";
+
 	const filtered = expenses
 		.filter((e) => supplierFilter === "all" || e.supplier_id === supplierFilter)
 		.filter((e) => categoryFilter === "all" || e.category === categoryFilter)
@@ -431,6 +498,43 @@ export default function ExpensesPage() {
 		.sort((a, b) => b.total - a.total);
 
 	const totalToday = filtered.reduce((sum, e) => sum + Number(e.amount), 0);
+
+	// Pre-group filtered expenses by funding source (for grouped view + KPI cards)
+	const filteredBySourceMap = new Map<string | null, typeof filtered>();
+	for (const e of filtered) {
+		const key = e.funding_source_id ?? null;
+		const arr = filteredBySourceMap.get(key) ?? [];
+		arr.push(e);
+		filteredBySourceMap.set(key, arr);
+	}
+	const expensesBySource = [
+		...fundingSources
+			.filter((fs) => filteredBySourceMap.has(fs.id))
+			.map((fs) => ({
+				id: fs.id,
+				name: fs.name,
+				color: fundingSourceColorMap.get(fs.id) ?? "#64748b",
+				items: filteredBySourceMap.get(fs.id) ?? [],
+				total: (filteredBySourceMap.get(fs.id) ?? []).reduce(
+					(s, e) => s + Number(e.amount),
+					0,
+				),
+			})),
+		...(filteredBySourceMap.has(null)
+			? [
+					{
+						id: "general",
+						name: "General Cash",
+						color: "#64748b",
+						items: filteredBySourceMap.get(null) ?? [],
+						total: (filteredBySourceMap.get(null) ?? []).reduce(
+							(s, e) => s + Number(e.amount),
+							0,
+						),
+					},
+			  ]
+			: []),
+	];
 
 	// Pivot category-by-month data for stacked bar chart
 	const CHART_CATEGORIES = [
@@ -558,6 +662,18 @@ export default function ExpensesPage() {
 							Daily Summary
 						</Button>
 					</div>
+					{viewMode === "table" && (
+						<Button
+							size="sm"
+							variant={groupBySource ? "secondary" : "outline"}
+							className="gap-1"
+							onClick={() => setGroupBySource((v) => !v)}
+							title="Group expenses by funding source"
+						>
+							<Layers className="size-4" />
+							By Source
+						</Button>
+					)}
 					<Button
 						size="sm"
 						variant="outline"
@@ -583,12 +699,18 @@ export default function ExpensesPage() {
 						onClick={() =>
 							downloadCsv(
 								`expenses-${new Date().toISOString().slice(0, 10)}.csv`,
-								filtered.map((e) => ({
+								(groupBySource
+									? expensesBySource.flatMap((g) =>
+											g.items.map((e) => ({ ...e, _group: g.name })),
+									  )
+								: filtered
+								).map((e) => ({
+									"Funding Source": getSourceName(e.funding_source_id),
 									Date: new Date(e.created_at).toLocaleDateString("en-GY"),
+									Supplier: e.supplier_name ?? "",
 									Category: e.category,
 									Description: e.description ?? "",
 									Amount: e.amount,
-									Supplier: e.supplier_name ?? "",
 									"Payment Method": e.payment_method ?? "",
 									"Ref #": e.reference_number ?? "",
 									Notes: e.notes ?? "",
@@ -608,8 +730,12 @@ export default function ExpensesPage() {
 						onClick={() =>
 							downloadPdf(
 								"Expense Report",
-								filtered,
+								groupBySource ? expensesBySource.flatMap((g) => g.items) : filtered,
 								`${startDate} – ${endDate}`,
+								{
+									getSourceName,
+									groups: groupBySource ? expensesBySource : undefined,
+								},
 							)
 						}
 					>
@@ -808,6 +934,50 @@ export default function ExpensesPage() {
 							})}
 					</div>
 
+					{/* Funding Source Breakdown */}
+					{expensesBySource.length > 0 && (
+						<div>
+							<div className="mb-2 flex items-baseline gap-2">
+								<p className="font-medium text-foreground text-sm">
+									By Funding Source
+								</p>
+								<span className="text-muted-foreground text-xs">
+									click to filter · toggle "By Source" to group table
+								</span>
+							</div>
+							<div className="flex flex-wrap gap-2">
+								{expensesBySource.map((src) => (
+									<button
+										key={src.id}
+										type="button"
+										onClick={() => {
+											if (src.id === "general") {
+												setFundingSourceFilter("all");
+											} else {
+												setFundingSourceFilter(
+													fundingSourceFilter === src.id ? "all" : src.id,
+												);
+											}
+										}}
+										className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors hover:border-primary/50 hover:bg-primary/5 ${src.id !== "general" && fundingSourceFilter === src.id ? "ring-1 ring-primary" : "border-border"}`}
+										style={{ borderLeftWidth: 3, borderLeftColor: src.color }}
+									>
+										<span
+											className="inline-block size-2.5 shrink-0 rounded-full"
+											style={{ backgroundColor: src.color }}
+										/>
+										<span className="font-medium text-foreground">
+											{formatGYD(src.total)}
+										</span>
+										<span className="text-muted-foreground text-xs">
+											{src.name} ({src.items.length})
+										</span>
+									</button>
+								))}
+							</div>
+						</div>
+					)}
+	
 					{/* Category Breakdown */}
 					{categoryBreakdown.length > 0 && (
 						<div>
@@ -844,120 +1014,134 @@ export default function ExpensesPage() {
 					)}
 
 					{/* Table */}
-					<div className="rounded-lg border border-border">
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead className="text-xs">Date</TableHead>
-									<TableHead className="text-xs">Supplier</TableHead>
-									<TableHead className="text-xs">Category</TableHead>
-									<TableHead className="text-xs">Description</TableHead>
-									<TableHead className="text-right text-xs">Amount</TableHead>
-									<TableHead className="text-xs">Authorized By</TableHead>
-									<TableHead className="w-20 text-xs" />
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{filtered.length === 0 ? (
-									<TableRow>
-										<TableCell
-											colSpan={7}
-											className="py-10 text-center text-muted-foreground text-sm"
-										>
-											<ReceiptText className="mx-auto mb-2 size-8 opacity-30" />
-											No expenses recorded
-										</TableCell>
-									</TableRow>
-								) : (
-									filtered.map((e) => {
-										const color = e.supplier_id
-											? supplierColorMap.get(e.supplier_id)
-											: undefined;
-										return (
-											<TableRow
-												key={e.id}
-												className={`cursor-pointer transition-colors hover:bg-muted/60 ${color ? `${color.split(" ")[0]}/5` : ""}`}
-												onClick={() => setViewingExpense(e)}
-											>
-												<TableCell className="whitespace-nowrap text-muted-foreground text-xs">
-													{new Date(e.created_at).toLocaleString("en-GY", {
-														month: "short",
-														day: "numeric",
-														hour: "2-digit",
-														minute: "2-digit",
-														hour12: false,
-													})}
-												</TableCell>
-												<TableCell>
-													{e.supplier_id ? (
-														<Link
-															to={`/dashboard/suppliers/${e.supplier_id}`}
-															onClick={(ev) => ev.stopPropagation()}
-														>
-															<Badge
-																variant="secondary"
-																className={`text-xs hover:opacity-80 ${color ?? ""}`}
-															>
-																{e.supplier_name}
-															</Badge>
-														</Link>
-													) : e.supplier_name ? (
-														<Badge
-															variant="secondary"
-															className={`text-xs ${color ?? ""}`}
-														>
-															{e.supplier_name}
-														</Badge>
-													) : (
-														<span className="text-muted-foreground text-xs">
-															—
-														</span>
-													)}
-												</TableCell>
-												<TableCell className="text-xs">{e.category}</TableCell>
-												<TableCell className="max-w-48 truncate text-xs">
-													{e.description}
-												</TableCell>
-												<TableCell className="text-right font-semibold text-sm">
-													{formatGYD(Number(e.amount))}
-												</TableCell>
-												<TableCell className="text-muted-foreground text-xs">
-													{e.authorized_by_name ?? "—"}
-												</TableCell>
-												<TableCell>
-													<div className="flex items-center justify-end gap-1">
-														<Button
-															size="icon"
-															variant="ghost"
-															className="size-7"
-															onClick={(ev) => {
-																ev.stopPropagation();
-																openEdit(e);
-															}}
-														>
-															<Pencil className="size-3.5" />
-														</Button>
-														<Button
-															size="icon"
-															variant="ghost"
-															className="size-7 text-destructive hover:text-destructive"
-															disabled={deleteExpense.isPending}
-															onClick={(ev) => {
-																ev.stopPropagation();
-																setDeleteExpenseId(e.id);
-															}}
-														>
-															<Trash2 className="size-3.5" />
-														</Button>
-													</div>
-												</TableCell>
+					{groupBySource && expensesBySource.length > 0 ? (
+						<div className="flex flex-col gap-3">
+							{expensesBySource.map((src) => (
+								<div
+									key={src.id}
+									className="overflow-hidden rounded-lg border border-border"
+								>
+									<div
+										className="flex items-center justify-between px-4 py-2 text-sm font-medium"
+										style={{
+											backgroundColor: `${src.color}18`,
+											borderBottom: `2px solid ${src.color}`,
+										}}
+									>
+										<div className="flex items-center gap-2">
+											<span
+												className="inline-block size-2.5 shrink-0 rounded-full"
+												style={{ backgroundColor: src.color }}
+											/>
+											<span>{src.name}</span>
+											<span className="text-muted-foreground text-xs font-normal">
+												{src.items.length} expense{src.items.length !== 1 ? "s" : ""}
+											</span>
+										</div>
+										<span className="font-semibold">{formatGYD(src.total)}</span>
+									</div>
+									<Table>
+										<TableHeader>
+											<TableRow>
+												<TableHead className="text-xs">Date</TableHead>
+												<TableHead className="text-xs">Supplier</TableHead>
+												<TableHead className="text-xs">Category</TableHead>
+												<TableHead className="text-xs">Description</TableHead>
+												<TableHead className="text-right text-xs">Amount</TableHead>
+												<TableHead className="text-xs">Authorized By</TableHead>
+												<TableHead className="w-20 text-xs" />
 											</TableRow>
-										);
-									})
-								)}
-							</TableBody>
-						</Table>
-						{filtered.length > 0 && (
+										</TableHeader>
+										<TableBody>
+											{src.items.map((e) => {
+												const color = e.supplier_id
+													? supplierColorMap.get(e.supplier_id)
+													: undefined;
+												return (
+													<TableRow
+														key={e.id}
+														className="cursor-pointer transition-colors hover:bg-muted/60"
+														onClick={() => setViewingExpense(e)}
+													>
+														<TableCell className="whitespace-nowrap text-muted-foreground text-xs">
+															{new Date(e.created_at).toLocaleString("en-GY", {
+																month: "short",
+																day: "numeric",
+																hour: "2-digit",
+																minute: "2-digit",
+																hour12: false,
+															})}
+														</TableCell>
+														<TableCell>
+															{e.supplier_id ? (
+																<Link
+																	to={`/dashboard/suppliers/${e.supplier_id}`}
+																	onClick={(ev) => ev.stopPropagation()}
+																>
+																	<Badge
+																		variant="secondary"
+																		className={`text-xs hover:opacity-80 ${color ?? ""}`}
+																	>
+																		{e.supplier_name}
+																	</Badge>
+																</Link>
+															) : e.supplier_name ? (
+																<Badge
+																	variant="secondary"
+																	className={`text-xs ${color ?? ""}`}
+																>
+																	{e.supplier_name}
+																</Badge>
+															) : (
+																<span className="text-muted-foreground text-xs">
+																	—
+																</span>
+															)}
+														</TableCell>
+														<TableCell className="text-xs">{e.category}</TableCell>
+														<TableCell className="max-w-48 truncate text-xs">
+															{e.description}
+														</TableCell>
+														<TableCell className="text-right font-semibold text-sm">
+															{formatGYD(Number(e.amount))}
+														</TableCell>
+														<TableCell className="text-muted-foreground text-xs">
+															{e.authorized_by_name ?? "—"}
+														</TableCell>
+														<TableCell>
+															<div className="flex items-center justify-end gap-1">
+																<Button
+																	size="icon"
+																	variant="ghost"
+																	className="size-7"
+																	onClick={(ev) => {
+																		ev.stopPropagation();
+																		openEdit(e);
+																	}}
+																>
+																	<Pencil className="size-3.5" />
+																</Button>
+																<Button
+																	size="icon"
+																	variant="ghost"
+																	className="size-7 text-destructive hover:text-destructive"
+																	disabled={deleteExpense.isPending}
+																	onClick={(ev) => {
+																		ev.stopPropagation();
+																		setDeleteExpenseId(e.id);
+																	}}
+																>
+																	<Trash2 className="size-3.5" />
+																</Button>
+															</div>
+														</TableCell>
+													</TableRow>
+												);
+											})}
+										</TableBody>
+									</Table>
+								</div>
+							))}
 							<div className="flex items-center justify-between border-border border-t px-4 py-3 text-sm">
 								<span className="text-muted-foreground">
 									{filtered.length} expense{filtered.length !== 1 ? "s" : ""}
@@ -971,8 +1155,150 @@ export default function ExpensesPage() {
 									Total: {formatGYD(totalToday)}
 								</span>
 							</div>
-						)}
-					</div>
+						</div>
+					) : (
+						<div className="rounded-lg border border-border">
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead className="w-28 text-xs">Source</TableHead>
+										<TableHead className="text-xs">Date</TableHead>
+										<TableHead className="text-xs">Supplier</TableHead>
+										<TableHead className="text-xs">Category</TableHead>
+										<TableHead className="text-xs">Description</TableHead>
+										<TableHead className="text-right text-xs">Amount</TableHead>
+										<TableHead className="text-xs">Authorized By</TableHead>
+										<TableHead className="w-20 text-xs" />
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{filtered.length === 0 ? (
+										<TableRow>
+											<TableCell
+												colSpan={8}
+												className="py-10 text-center text-muted-foreground text-sm"
+											>
+												<ReceiptText className="mx-auto mb-2 size-8 opacity-30" />
+												No expenses recorded
+											</TableCell>
+										</TableRow>
+									) : (
+										filtered.map((e) => {
+											const color = e.supplier_id
+												? supplierColorMap.get(e.supplier_id)
+												: undefined;
+											const srcColor = getSourceColor(e.funding_source_id);
+											const srcName = getSourceName(e.funding_source_id);
+											return (
+												<TableRow
+													key={e.id}
+													className="cursor-pointer transition-colors hover:bg-muted/60"
+													style={{ borderLeft: `3px solid ${srcColor}` }}
+													onClick={() => setViewingExpense(e)}
+												>
+													<TableCell className="text-xs">
+														<span
+															className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-white"
+															style={{ backgroundColor: srcColor }}
+														>
+															{srcName}
+														</span>
+													</TableCell>
+													<TableCell className="whitespace-nowrap text-muted-foreground text-xs">
+														{new Date(e.created_at).toLocaleString("en-GY", {
+															month: "short",
+															day: "numeric",
+															hour: "2-digit",
+															minute: "2-digit",
+															hour12: false,
+														})}
+													</TableCell>
+													<TableCell>
+														{e.supplier_id ? (
+															<Link
+																to={`/dashboard/suppliers/${e.supplier_id}`}
+																onClick={(ev) => ev.stopPropagation()}
+															>
+																<Badge
+																	variant="secondary"
+																	className={`text-xs hover:opacity-80 ${color ?? ""}`}
+																>
+																	{e.supplier_name}
+																</Badge>
+															</Link>
+														) : e.supplier_name ? (
+															<Badge
+																variant="secondary"
+																className={`text-xs ${color ?? ""}`}
+															>
+																{e.supplier_name}
+															</Badge>
+														) : (
+															<span className="text-muted-foreground text-xs">
+																—
+															</span>
+														)}
+													</TableCell>
+													<TableCell className="text-xs">{e.category}</TableCell>
+													<TableCell className="max-w-48 truncate text-xs">
+														{e.description}
+													</TableCell>
+													<TableCell className="text-right font-semibold text-sm">
+														{formatGYD(Number(e.amount))}
+													</TableCell>
+													<TableCell className="text-muted-foreground text-xs">
+														{e.authorized_by_name ?? "—"}
+													</TableCell>
+													<TableCell>
+														<div className="flex items-center justify-end gap-1">
+															<Button
+																size="icon"
+																variant="ghost"
+																className="size-7"
+																onClick={(ev) => {
+																	ev.stopPropagation();
+																	openEdit(e);
+																}}
+															>
+																<Pencil className="size-3.5" />
+															</Button>
+															<Button
+																size="icon"
+																variant="ghost"
+																className="size-7 text-destructive hover:text-destructive"
+																disabled={deleteExpense.isPending}
+																onClick={(ev) => {
+																	ev.stopPropagation();
+																	setDeleteExpenseId(e.id);
+																}}
+															>
+																<Trash2 className="size-3.5" />
+															</Button>
+														</div>
+													</TableCell>
+												</TableRow>
+											);
+										})
+									)}
+								</TableBody>
+							</Table>
+							{filtered.length > 0 && (
+								<div className="flex items-center justify-between border-border border-t px-4 py-3 text-sm">
+									<span className="text-muted-foreground">
+										{filtered.length} expense{filtered.length !== 1 ? "s" : ""}
+										{(supplierFilter !== "all" ||
+											categoryFilter !== "all" ||
+											fundingSourceFilter !== "all") && (
+											<span className="ml-1 text-xs">(filtered)</span>
+										)}
+									</span>
+									<span className="font-semibold">
+										Total: {formatGYD(totalToday)}
+									</span>
+								</div>
+							)}
+						</div>
+					)}
 
 					{/* Category by Month Chart */}
 					{activeChartCategories.length > 0 && (

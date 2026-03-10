@@ -924,6 +924,8 @@ async function seed() {
 					shifts: ["read"],
 					users: [],
 					audit: ["read"],
+					invoices: ["create", "read", "update", "delete"],
+					quotations: ["create", "read", "update", "delete"],
 				},
 			},
 		])

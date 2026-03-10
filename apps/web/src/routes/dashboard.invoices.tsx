@@ -79,6 +79,7 @@ interface InvoiceForm {
 	taxRate: string;
 	paymentTerms: string;
 	preparedBy: string;
+	customInvoiceNumber: string;
 }
 
 const emptyForm: InvoiceForm = {
@@ -95,6 +96,7 @@ const emptyForm: InvoiceForm = {
 	taxRate: "16.5",
 	paymentTerms: "due_on_receipt",
 	preparedBy: "",
+	customInvoiceNumber: "",
 };
 
 function statusBadgeClass(status: string): string {
@@ -397,6 +399,7 @@ export default function InvoicesPage() {
 			discountType: (inv.discountType as "percent" | "fixed") ?? "percent",
 			discountValue: inv.discountValue ?? "0",
 			taxMode: (inv.taxMode as "invoice" | "line") ?? "invoice",
+			customInvoiceNumber: inv.invoiceNumber,
 			taxRate: inv.taxRate ?? "16.5",
 			paymentTerms: inv.paymentTerms ?? "due_on_receipt",
 			preparedBy: inv.preparedBy ?? "",
@@ -468,7 +471,11 @@ export default function InvoicesPage() {
 		if (editingId) {
 			updateMut.mutate({ id: editingId, ...sharedFields });
 		} else {
-			createMut.mutate({ ...sharedFields, createdBy: userId });
+			createMut.mutate({
+				...sharedFields,
+				createdBy: userId,
+				invoiceNumber: form.customInvoiceNumber.trim() || undefined,
+			});
 		}
 	}
 
@@ -1200,6 +1207,27 @@ export default function InvoicesPage() {
 					</DialogHeader>
 					<div className="flex flex-col gap-4 py-2">
 						<div className="grid grid-cols-2 gap-3">
+					<div className="flex flex-col gap-1.5">
+						<Label>
+							Invoice Number
+							{!editingId && (
+								<span className="ml-1 font-normal text-muted-foreground text-xs">
+									(blank = auto-generate)
+								</span>
+							)}
+						</Label>
+						<Input
+							placeholder={editingId ? "" : "e.g. BET-001 or 2026/001"}
+							value={form.customInvoiceNumber}
+							disabled={!!editingId}
+							onChange={(e) =>
+								setForm((f) => ({
+									...f,
+									customInvoiceNumber: e.target.value,
+								}))
+							}
+						/>
+					</div>
 							<div className="col-span-2 flex flex-col gap-1.5">
 								<Label>Customer Name *</Label>
 								<Input
