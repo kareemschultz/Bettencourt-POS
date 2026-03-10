@@ -1,49 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-	AlertTriangle,
-	Banknote,
-	BarChart3,
-	Bell,
-	BookOpen,
-	Building2,
-	Calculator,
-	CalendarClock,
-	ChefHat,
+	ArrowLeft,
 	ChevronDown,
 	ChevronUp,
-	ClipboardList,
-	Clock,
-	CookingPot,
-	DollarSign,
-	FileText,
-	Gift,
-	GitCompareArrows,
-	HardDrive,
-	LayoutDashboard,
 	LogOut,
-	MapPin,
-	Percent,
-	PieChart,
-	Receipt,
-	ReceiptText,
-	RefreshCw,
-	Salad,
-	Scale,
 	Search,
-	Settings,
-	Shield,
-	Star,
-	Tag,
-	Target,
-	Trash2,
-	TrendingUp,
-	Truck,
 	User,
-	Users,
-	Utensils,
-	UtensilsCrossed,
-	Warehouse,
-	Webhook,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
@@ -75,410 +37,18 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/auth-client";
+import {
+	canSeeItem,
+	canSeeModule,
+	getActiveModule,
+	MODULES,
+	type NavItem,
+} from "@/lib/modules";
 import type { AppUser } from "@/lib/types";
 import { orpc } from "@/utils/orpc";
 
 interface AppSidebarProps {
 	user: AppUser;
-}
-
-const mainNavItems = [
-	{
-		title: "Dashboard",
-		url: "/dashboard",
-		icon: LayoutDashboard,
-		module: null,
-		roles: ["executive", "admin", "cashier"],
-	},
-	{
-		title: "New Sale",
-		url: "/dashboard/pos",
-		icon: UtensilsCrossed,
-		module: "orders",
-		roles: ["executive", "admin", "cashier"],
-	},
-	{
-		title: "Orders",
-		url: "/dashboard/orders",
-		icon: ClipboardList,
-		module: "orders",
-		roles: ["executive", "admin", "cashier"],
-	},
-];
-
-const operationsNavItems = [
-	{
-		title: "Tables",
-		url: "/dashboard/tables",
-		icon: Utensils,
-		module: "orders",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Kitchen Display",
-		url: "/dashboard/kitchen",
-		icon: ChefHat,
-		module: "orders",
-		roles: ["executive", "admin", "cashier", "checkoff"],
-	},
-	{
-		title: "Production Board",
-		url: "/dashboard/production",
-		icon: CookingPot,
-		module: null,
-		roles: ["executive", "admin", "checkoff"],
-	},
-	{
-		title: "Production Report",
-		url: "/dashboard/production-report",
-		icon: BarChart3,
-		module: "reports",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Menu Calendar",
-		url: "/dashboard/menu-schedules",
-		icon: CalendarClock,
-		module: "settings",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Time Clock",
-		url: "/dashboard/timeclock",
-		icon: Clock,
-		module: null,
-		roles: ["executive", "admin", "cashier", "checkoff"],
-	},
-];
-
-const inventoryNavItems = [
-	{
-		title: "Products",
-		url: "/dashboard/products",
-		icon: Salad,
-		module: "products",
-		roles: ["executive", "admin", "cashier"],
-	},
-	{
-		title: "Inventory",
-		url: "/dashboard/inventory",
-		icon: Warehouse,
-		module: "inventory",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Purchase Orders",
-		url: "/dashboard/inventory?tab=purchase-orders",
-		icon: Truck,
-		module: "inventory",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Stock Alerts",
-		url: "/dashboard/stock-alerts",
-		icon: AlertTriangle,
-		module: "inventory",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Labels",
-		url: "/dashboard/labels",
-		icon: Tag,
-		module: "products",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Waste & Shrinkage",
-		url: "/dashboard/waste",
-		icon: Trash2,
-		module: "inventory",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Stock Variance",
-		url: "/dashboard/variance",
-		icon: GitCompareArrows,
-		module: "inventory",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Suppliers",
-		url: "/dashboard/suppliers",
-		icon: Building2,
-		module: "inventory",
-		roles: ["executive", "admin"],
-	},
-];
-
-const financeNavItems = [
-	{
-		title: "Finance Dashboard",
-		url: "/dashboard/finance",
-		icon: TrendingUp,
-		module: "reports",
-		roles: ["executive", "admin", "accountant"],
-	},
-	{
-		title: "Invoices",
-		url: "/dashboard/invoices",
-		icon: Receipt,
-		module: "invoices",
-		roles: ["executive", "admin", "accountant"],
-	},
-	{
-		title: "Quotations",
-		url: "/dashboard/quotations",
-		icon: FileText,
-		module: "quotations",
-		roles: ["executive", "admin", "accountant"],
-	},
-	{
-		title: "Credit Notes",
-		url: "/dashboard/credit-notes",
-		icon: FileText,
-		module: "invoices",
-		roles: ["executive", "admin", "accountant"],
-	},
-	{
-		title: "Vendor Bills",
-		url: "/dashboard/vendor-bills",
-		icon: Truck,
-		module: "invoices",
-		roles: ["executive", "admin", "accountant"],
-	},
-	{
-		title: "Recurring",
-		url: "/dashboard/recurring",
-		icon: RefreshCw,
-		module: "invoices",
-		roles: ["executive", "admin", "accountant"],
-	},
-];
-
-const customerNavItems = [
-	{
-		title: "Customers",
-		url: "/dashboard/customers",
-		icon: Users,
-		module: "orders",
-		roles: ["executive", "admin", "cashier"],
-	},
-	{
-		title: "Loyalty Program",
-		url: "/dashboard/loyalty",
-		icon: Star,
-		module: "orders",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Gift Cards",
-		url: "/dashboard/giftcards",
-		icon: Gift,
-		module: "orders",
-		roles: ["executive", "admin", "cashier"],
-	},
-];
-
-const cashNavItems = [
-	{
-		title: "Expenses",
-		url: "/dashboard/expenses",
-		icon: ReceiptText,
-		module: "settings",
-		roles: ["executive", "admin", "accountant"],
-	},
-	{
-		title: "Aging Report",
-		url: "/dashboard/aging",
-		icon: Clock,
-		module: "reports",
-		roles: ["executive", "admin", "accountant"],
-	},
-	{
-		title: "Customer Statements",
-		url: "/dashboard/customer-statements",
-		icon: Users,
-		module: "reports",
-		roles: ["executive", "admin", "accountant"],
-	},
-	{
-		title: "Tax Summary",
-		url: "/dashboard/tax-summary",
-		icon: Calculator,
-		module: "reports",
-		roles: ["executive", "admin", "accountant"],
-	},
-	{
-		title: "Budgets",
-		url: "/dashboard/budgets",
-		icon: Target,
-		module: "reports",
-		roles: ["executive", "admin", "accountant"],
-	},
-	{
-		title: "Cash Control",
-		url: "/dashboard/cash",
-		icon: DollarSign,
-		module: "shifts",
-		roles: ["executive", "admin", "cashier"],
-	},
-	{
-		title: "Discounts",
-		url: "/dashboard/discounts",
-		icon: Percent,
-		module: "settings",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Cash Reconciliation",
-		url: "/dashboard/reconciliation",
-		icon: Scale,
-		module: "reports",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Sales Journal",
-		url: "/dashboard/journal",
-		icon: BookOpen,
-		module: "reports",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Profit & Loss",
-		url: "/dashboard/pnl",
-		icon: Receipt,
-		module: "reports",
-		roles: ["executive", "admin"],
-	},
-];
-
-const financeAndBillingNavItems = [...financeNavItems, ...cashNavItems];
-
-const insightsNavItems = [
-	{
-		title: "Reports",
-		url: "/dashboard/reports",
-		icon: BarChart3,
-		module: "reports",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "EOD Report",
-		url: "/dashboard/eod",
-		icon: FileText,
-		module: "reports",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Analytics",
-		url: "/dashboard/analytics",
-		icon: TrendingUp,
-		module: "reports",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Labor Cost",
-		url: "/dashboard/labor",
-		icon: Calculator,
-		module: "reports",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Product Profitability",
-		url: "/dashboard/profitability",
-		icon: PieChart,
-		module: "reports",
-		roles: ["executive", "admin"],
-	},
-];
-
-const systemNavItems = [
-	{
-		title: "Audit Log",
-		url: "/dashboard/audit",
-		icon: Shield,
-		module: "audit",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Locations",
-		url: "/dashboard/locations",
-		icon: MapPin,
-		module: "settings",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Settings",
-		url: "/dashboard/settings",
-		icon: Settings,
-		module: "settings",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Webhooks",
-		url: "/dashboard/webhooks",
-		icon: Webhook,
-		module: "settings",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Notifications",
-		url: "/dashboard/notifications",
-		icon: Bell,
-		module: "settings",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Currency",
-		url: "/dashboard/currency",
-		icon: Banknote,
-		module: "settings",
-		roles: ["executive", "admin"],
-	},
-	{
-		title: "Backup & Restore",
-		url: "/dashboard/backup",
-		icon: HardDrive,
-		module: "settings",
-		roles: ["executive", "admin"],
-	},
-];
-
-const WAREHOUSE_MODULES = new Set(["dashboard", "inventory", "products"]);
-
-const ACCOUNTANT_MODULES = new Set([
-	"dashboard",
-	"reports",
-	"invoices",
-	"quotations",
-	"settings",
-	"shifts",
-	"orders",
-]);
-
-function canSeeItem(
-	user: AppUser,
-	item: { module: string | null; roles?: string[] },
-): boolean {
-	// Warehouse and accountant roles use module-set gating instead of roles arrays
-	if (user.role === "warehouse") {
-		const mod = item.module ?? "dashboard";
-		return WAREHOUSE_MODULES.has(mod);
-	}
-	if (user.role === "accountant") {
-		const mod = item.module ?? "dashboard";
-		return ACCOUNTANT_MODULES.has(mod);
-	}
-	// If role-restricted, check user role
-	if (item.roles && item.roles.length > 0) {
-		if (!item.roles.includes(user.role)) return false;
-	}
-	// If module-restricted, check permissions
-	if (item.module) {
-		const perms = user.permissions[item.module];
-		return Array.isArray(perms) && perms.length > 0;
-	}
-	return true;
 }
 
 export function AppSidebar({ user }: AppSidebarProps) {
@@ -500,12 +70,14 @@ export function AppSidebar({ user }: AppSidebarProps) {
 	});
 	const unacknowledgedAlertCount = alertData?.length ?? 0;
 
+	const activeModule = getActiveModule(pathname);
+
 	async function handleSignOut() {
 		await signOut();
 		navigate("/login");
 	}
 
-	function renderNavGroup(label: string, items: typeof mainNavItems) {
+	function renderNavGroup(label: string, items: NavItem[]) {
 		const query = search.trim().toLowerCase();
 		const filtered = items.filter(
 			(item) =>
@@ -519,7 +91,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
 		const forceOpen = sidebarState === "collapsed";
 
 		return (
-			<SidebarGroup>
+			<SidebarGroup key={label}>
 				<Collapsible
 					defaultOpen
 					{...(forceOpen ? { open: true } : {})}
@@ -603,19 +175,27 @@ export function AppSidebar({ user }: AppSidebarProps) {
 				</div>
 			</SidebarHeader>
 			<SidebarContent>
-				{user.role === "accountant" ? (
-					// Finance-only view: accountants see only the Finance section
-					renderNavGroup("Finance", financeAndBillingNavItems)
-				) : (
+				{activeModule ? (
+					// Contextual: show only the current module's items + back link
 					<>
-						{renderNavGroup("Main", mainNavItems)}
-						{renderNavGroup("Operations", operationsNavItems)}
-						{renderNavGroup("Inventory", inventoryNavItems)}
-						{renderNavGroup("Customers", customerNavItems)}
-						{renderNavGroup("Finance", financeAndBillingNavItems)}
-						{renderNavGroup("Insights", insightsNavItems)}
-						{renderNavGroup("System", systemNavItems)}
+						<SidebarGroup>
+							<SidebarGroupLabel asChild>
+								<Link
+									to="/dashboard"
+									className="flex items-center gap-1.5 text-xs hover:text-foreground group-data-[collapsible=icon]:hidden"
+								>
+									<ArrowLeft className="size-3" />
+									All Modules
+								</Link>
+							</SidebarGroupLabel>
+						</SidebarGroup>
+						{renderNavGroup(activeModule.label, activeModule.items)}
 					</>
+				) : (
+					// Default: show all modules as collapsible groups (filtered by role)
+					MODULES.filter((m) => canSeeModule(user, m)).map((mod) =>
+						renderNavGroup(mod.label, mod.items),
+					)
 				)}
 			</SidebarContent>
 			<SidebarFooter>
@@ -637,7 +217,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
 								</div>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent side="top" align="start" className="w-56">
-								<DropdownMenuItem onClick={() => navigate("/dashboard/profile")}>
+								<DropdownMenuItem
+									onClick={() => navigate("/dashboard/profile")}
+								>
 									<User className="mr-2 size-4" />
 									My Profile
 								</DropdownMenuItem>

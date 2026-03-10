@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { authClient } from "@/lib/auth-client";
+import { getActiveModule, PAGE_TITLES } from "@/lib/modules";
 import { hasRouteAccess } from "@/lib/route-access";
 import type { AppUser } from "@/lib/types";
 import {
@@ -43,59 +44,6 @@ import {
 	type WorkspaceRoute,
 } from "@/lib/workspace-preferences";
 import { orpc } from "@/utils/orpc";
-
-// Derive a human-readable page title from pathname
-const PAGE_TITLES: Record<string, string> = {
-	"/dashboard": "Dashboard",
-	"/dashboard/pos": "New Sale",
-	"/dashboard/orders": "Orders",
-	"/dashboard/customers": "Customers",
-	"/dashboard/inventory": "Inventory",
-	"/dashboard/reports": "Reports",
-	"/dashboard/cash": "Cash Control",
-	"/dashboard/settings": "Settings",
-	"/dashboard/kitchen": "Kitchen Display",
-	"/dashboard/production": "Production",
-	"/dashboard/timeclock": "Time Clock",
-	"/dashboard/loyalty": "Loyalty Program",
-	"/dashboard/giftcards": "Gift Cards",
-	"/dashboard/expenses": "Expenses",
-	"/dashboard/suppliers": "Suppliers",
-	"/dashboard/suppliers/:id": "Supplier Detail",
-	"/dashboard/finance": "Finance Dashboard",
-	"/dashboard/invoices": "Invoices",
-	"/dashboard/credit-notes": "Credit Notes",
-	"/dashboard/vendor-bills": "Vendor Bills",
-	"/dashboard/recurring": "Recurring",
-	"/dashboard/aging": "Aging Report",
-	"/dashboard/customer-statements": "Customer Statements",
-	"/dashboard/tax-summary": "Tax Summary",
-	"/dashboard/budgets": "Budgets",
-	"/dashboard/quotations": "Quotations",
-	"/dashboard/tables": "Tables",
-	"/dashboard/waste": "Waste & Shrinkage",
-	"/dashboard/audit": "Audit Log",
-	"/dashboard/analytics": "Analytics",
-	"/dashboard/locations": "Locations",
-	"/dashboard/notifications": "Notifications",
-	"/dashboard/webhooks": "Webhooks",
-	"/dashboard/discounts": "Discounts",
-	"/dashboard/profitability": "Product Profitability",
-	"/dashboard/products": "Products",
-	"/dashboard/stock-alerts": "Stock Alerts",
-	"/dashboard/variance": "Stock Variance",
-	"/dashboard/labor": "Labor Report",
-	"/dashboard/production-report": "Production Report",
-	"/dashboard/pnl": "Profit & Loss",
-	"/dashboard/eod": "End of Day",
-	"/dashboard/journal": "Sales Journal",
-	"/dashboard/menu-schedules": "Menu Calendar",
-	"/dashboard/currency": "Currency",
-	"/dashboard/reconciliation": "Cash Reconciliation",
-	"/dashboard/labels": "Labels",
-	"/dashboard/backup": "Backup & Restore",
-	"/dashboard/profile": "My Profile",
-};
 
 function getPageTitle(pathname: string): string {
 	// Exact match first
@@ -312,9 +260,30 @@ export default function DashboardLayout() {
 				<header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-4">
 					<SidebarTrigger className="-ml-1" />
 					<Separator orientation="vertical" className="mr-2 h-4" />
-					<span className="hidden font-medium text-sm sm:inline">
-						{getPageTitle(pathname)}
-					</span>
+					<nav
+						className="hidden items-center gap-1 text-sm sm:flex"
+						aria-label="Breadcrumb"
+					>
+						{(() => {
+							const activeModule = getActiveModule(pathname);
+							const pageTitle = getPageTitle(pathname);
+							if (activeModule && pathname !== "/dashboard") {
+								return (
+									<>
+										<Link
+											to={activeModule.defaultUrl}
+											className="text-muted-foreground hover:text-foreground"
+										>
+											{activeModule.label}
+										</Link>
+										<span className="text-muted-foreground">/</span>
+										<span className="font-medium">{pageTitle}</span>
+									</>
+								);
+							}
+							return <span className="font-medium">{pageTitle}</span>;
+						})()}
+					</nav>
 					<Separator orientation="vertical" className="hidden h-4 sm:block" />
 					<div className="flex flex-1 items-center gap-2">
 						{locations.filter((l) => l.isActive).length > 0 ? (

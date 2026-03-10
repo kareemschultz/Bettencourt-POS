@@ -1,58 +1,11 @@
 /**
  * Route-level permission gating for dashboard pages.
- * Exported for testability — imported by dashboard.tsx.
+ * The ROUTE_MODULE_MAP is derived from lib/modules.ts — single source of truth.
  * A null module means accessible to all authenticated users.
  */
-export const ROUTE_MODULE_MAP: Record<string, string | null> = {
-	"/dashboard/reports": "reports",
-	"/dashboard/reconciliation": "reports",
-	"/dashboard/eod": "reports",
-	"/dashboard/analytics": "reports",
-	"/dashboard/journal": "reports",
-	"/dashboard/labor": "reports",
-	"/dashboard/profitability": "reports",
-	"/dashboard/pnl": "reports",
-	"/dashboard/production-report": "reports",
-	"/dashboard/inventory": "inventory",
-	"/dashboard/stock-alerts": "inventory",
-	"/dashboard/waste": "inventory",
-	"/dashboard/variance": "inventory",
-	"/dashboard/suppliers": "inventory",
-	"/dashboard/suppliers/:id": "inventory",
-	"/dashboard/settings": "settings",
-	"/dashboard/locations": "settings",
-	"/dashboard/webhooks": "settings",
-	"/dashboard/notifications": "settings",
-	"/dashboard/menu-schedules": "settings",
-	"/dashboard/discounts": "settings",
-	"/dashboard/currency": "settings",
-	"/dashboard/expenses": "settings",
-	"/dashboard/audit": "audit",
-	"/dashboard/finance": "reports",
-	"/dashboard/invoices": "invoices",
-	"/dashboard/credit-notes": "invoices",
-	"/dashboard/vendor-bills": "invoices",
-	"/dashboard/recurring": "invoices",
-	"/dashboard/aging": "reports",
-	"/dashboard/customer-statements": "reports",
-	"/dashboard/tax-summary": "reports",
-	"/dashboard/budgets": "reports",
-	"/dashboard/quotations": "quotations",
-	"/dashboard/labels": "products",
-	"/dashboard/tables": "orders",
-	"/dashboard/loyalty": "orders",
-	"/dashboard/customers": "orders",
-	"/dashboard/giftcards": "orders",
-	"/dashboard/products": "products",
-	"/dashboard/production": "orders",
-	"/dashboard/pos": "orders",
-	"/dashboard/orders": "orders",
-	"/dashboard/cash": "shifts",
-	"/dashboard/kitchen": "orders",
-	"/dashboard/timeclock": "shifts",
-	"/dashboard/backup": "settings",
-	"/dashboard/profile": null,
-};
+import { ROUTE_MODULE_MAP } from "@/lib/modules";
+
+export { ROUTE_MODULE_MAP };
 
 /**
  * Returns true if the user has permission to access the given pathname.

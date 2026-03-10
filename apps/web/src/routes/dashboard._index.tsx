@@ -5,20 +5,21 @@ import {
 	Banknote,
 	BarChart3,
 	ChefHat,
-	ClipboardList,
 	Clock,
 	CreditCard,
 	DollarSign,
 	Factory,
-	ShoppingBag,
 	ShoppingCart,
 	TrendingUp,
 	Users,
 	UtensilsCrossed,
 	Warehouse,
 } from "lucide-react";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { Link } from "react-router";
+import { authClient } from "@/lib/auth-client";
+import { canSeeModule, MODULES } from "@/lib/modules";
+import type { AppUser } from "@/lib/types";
 
 // Lazy-load Recharts (351 KB) so it doesn't block the initial dashboard bundle.
 // The chart only renders after data loads anyway, so Suspense adds zero visible delay.
@@ -38,7 +39,6 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { authClient } from "@/lib/auth-client";
 import { formatGYD } from "@/lib/types";
 import { orpc } from "@/utils/orpc";
 import { mapRoleToSidebarRole } from "./dashboard";
@@ -50,9 +50,37 @@ interface HourlyData {
 	revenue: number;
 }
 
+// ── Module Grid ──────────────────────────────────────────────────────────
+function ModuleGrid({ user }: { user: AppUser }) {
+	const visibleModules = MODULES.filter((m) => canSeeModule(user, m));
+	if (visibleModules.length === 0) return null;
+	return (
+		<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+			{visibleModules.map((mod) => (
+				<Link to={mod.defaultUrl} key={mod.id} className="group">
+					<Card
+						className={`transition-colors ${mod.styles.borderHover} ${mod.styles.bgHover}`}
+					>
+						<CardContent className="flex flex-col items-center gap-2 p-4">
+							<div
+								className={`flex size-12 items-center justify-center rounded-xl ${mod.styles.iconBg}`}
+							>
+								<mod.icon className={`size-6 ${mod.styles.iconColor}`} />
+							</div>
+							<span className="font-medium text-sm">{mod.label}</span>
+							<span className="text-center text-muted-foreground text-xs">
+								{mod.description}
+							</span>
+						</CardContent>
+					</Card>
+				</Link>
+			))}
+		</div>
+	);
+}
+
 // ── Executive / Admin Dashboard ─────────────────────────────────────────
-function ExecutiveDashboard() {
-	const { data: session } = authClient.useSession();
+function ExecutiveDashboard({ user }: { user: AppUser }) {
 	const { data } = useQuery(
 		orpc.dashboard.getSummary.queryOptions({ input: undefined }),
 	);
@@ -94,7 +122,7 @@ function ExecutiveDashboard() {
 			<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<h1 className="text-balance font-bold text-xl sm:text-2xl">
-						Welcome back, {session?.user?.name || "User"}
+						Welcome back, {user.name || "User"}
 					</h1>
 					<p className="text-muted-foreground text-sm">
 						{"Here's what's happening at Bettencourt's today."}
@@ -113,6 +141,9 @@ function ExecutiveDashboard() {
 					</Button>
 				</div>
 			</div>
+
+			{/* Module Grid */}
+			<ModuleGrid user={user} />
 
 			{/* Stats Grid */}
 			<div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -217,50 +248,6 @@ function ExecutiveDashboard() {
 					</Suspense>
 				</CardContent>
 			</Card>
-
-			{/* Quick Actions */}
-			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-				<Link to="/dashboard/pos" className="group">
-					<Card className="transition-colors group-hover:border-emerald-500/50 group-hover:bg-emerald-500/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10">
-								<ShoppingBag className="size-5 text-emerald-500" />
-							</div>
-							<span className="font-medium text-xs">New Sale</span>
-						</CardContent>
-					</Card>
-				</Link>
-				<Link to="/dashboard/kitchen" className="group">
-					<Card className="transition-colors group-hover:border-orange-500/50 group-hover:bg-orange-500/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<div className="flex size-10 items-center justify-center rounded-xl bg-orange-500/10">
-								<UtensilsCrossed className="size-5 text-orange-500" />
-							</div>
-							<span className="font-medium text-xs">Kitchen</span>
-						</CardContent>
-					</Card>
-				</Link>
-				<Link to="/dashboard/inventory" className="group">
-					<Card className="transition-colors group-hover:border-blue-500/50 group-hover:bg-blue-500/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<div className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10">
-								<Warehouse className="size-5 text-blue-500" />
-							</div>
-							<span className="font-medium text-xs">Inventory</span>
-						</CardContent>
-					</Card>
-				</Link>
-				<Link to="/dashboard/cash" className="group">
-					<Card className="transition-colors group-hover:border-violet-500/50 group-hover:bg-violet-500/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<div className="flex size-10 items-center justify-center rounded-xl bg-violet-500/10">
-								<DollarSign className="size-5 text-violet-500" />
-							</div>
-							<span className="font-medium text-xs">Cash Mgmt</span>
-						</CardContent>
-					</Card>
-				</Link>
-			</div>
 
 			{/* Bottom section: Recent Orders + Top Products + Payment */}
 			<div className="grid gap-4 lg:grid-cols-3">
@@ -418,8 +405,7 @@ function ExecutiveDashboard() {
 }
 
 // ── Cashier Dashboard ───────────────────────────────────────────────────
-function CashierDashboard() {
-	const { data: session } = authClient.useSession();
+function CashierDashboard({ user }: { user: AppUser }) {
 	const { data } = useQuery(
 		orpc.dashboard.getSummary.queryOptions({ input: undefined }),
 	);
@@ -435,7 +421,7 @@ function CashierDashboard() {
 			<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<h1 className="text-balance font-bold text-xl sm:text-2xl">
-						Welcome back, {session?.user?.name || "User"}
+						Welcome back, {user.name || "User"}
 					</h1>
 					<p className="text-muted-foreground text-sm">
 						Your quick-access register dashboard — start a sale, check recent
@@ -525,41 +511,14 @@ function CashierDashboard() {
 				</CardContent>
 			</Card>
 
-			{/* Quick Actions */}
-			<div className="grid grid-cols-3 gap-3">
-				<Link to="/dashboard/pos" className="group">
-					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<ShoppingBag className="size-6 text-primary" />
-							<span className="font-medium text-xs">New Sale</span>
-						</CardContent>
-					</Card>
-				</Link>
-				<Link to="/dashboard/orders" className="group">
-					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<ClipboardList className="size-6 text-primary" />
-							<span className="font-medium text-xs">Orders</span>
-						</CardContent>
-					</Card>
-				</Link>
-				<Link to="/dashboard/timeclock" className="group">
-					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<Clock className="size-6 text-primary" />
-							<span className="font-medium text-xs">Time Clock</span>
-						</CardContent>
-					</Card>
-				</Link>
-			</div>
+			{/* Module Grid */}
+			<ModuleGrid user={user} />
 		</>
 	);
 }
 
 // ── Kitchen / Production Dashboard ──────────────────────────────────────
-function KitchenDashboard() {
-	const { data: session } = authClient.useSession();
-
+function KitchenDashboard({ user }: { user: AppUser }) {
 	const { data: tickets = [] } = useQuery({
 		...orpc.kitchen.getActiveTickets.queryOptions({ input: {} }),
 		refetchInterval: 30000,
@@ -576,7 +535,7 @@ function KitchenDashboard() {
 			<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<h1 className="text-balance font-bold text-xl sm:text-2xl">
-						Welcome back, {session?.user?.name || "User"}
+						Welcome back, {user.name || "User"}
 					</h1>
 					<p className="text-muted-foreground text-sm">
 						Monitor kitchen tickets, manage production runs, and track
@@ -644,38 +603,13 @@ function KitchenDashboard() {
 				</CardContent>
 			</Card>
 
-			{/* Quick Action: Time Clock */}
-			<div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-				<Link to="/dashboard/kitchen" className="group">
-					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<ChefHat className="size-6 text-primary" />
-							<span className="font-medium text-xs">Kitchen</span>
-						</CardContent>
-					</Card>
-				</Link>
-				<Link to="/dashboard/production" className="group">
-					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<Factory className="size-6 text-primary" />
-							<span className="font-medium text-xs">Production</span>
-						</CardContent>
-					</Card>
-				</Link>
-				<Link to="/dashboard/timeclock" className="group">
-					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<Clock className="size-6 text-primary" />
-							<span className="font-medium text-xs">Time Clock</span>
-						</CardContent>
-					</Card>
-				</Link>
-			</div>
+			{/* Module Grid */}
+			<ModuleGrid user={user} />
 		</>
 	);
 }
 
-function WarehouseDashboard() {
+function WarehouseDashboard({ user }: { user: AppUser }) {
 	return (
 		<>
 			<div className="flex flex-col gap-2">
@@ -705,45 +639,12 @@ function WarehouseDashboard() {
 				</Card>
 			</Link>
 
-			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-				<Link to="/dashboard/inventory" className="group">
-					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<Warehouse className="size-6 text-primary" />
-							<span className="font-medium text-xs">Inventory</span>
-						</CardContent>
-					</Card>
-				</Link>
-				<Link to="/dashboard/products" className="group">
-					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<ShoppingBag className="size-6 text-primary" />
-							<span className="font-medium text-xs">Products</span>
-						</CardContent>
-					</Card>
-				</Link>
-				<Link to="/dashboard/stock-alerts" className="group">
-					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<AlertTriangle className="size-6 text-primary" />
-							<span className="font-medium text-xs">Stock Alerts</span>
-						</CardContent>
-					</Card>
-				</Link>
-				<Link to="/dashboard/suppliers" className="group">
-					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<Users className="size-6 text-primary" />
-							<span className="font-medium text-xs">Suppliers</span>
-						</CardContent>
-					</Card>
-				</Link>
-			</div>
+			<ModuleGrid user={user} />
 		</>
 	);
 }
 
-function AccountantDashboard() {
+function AccountantDashboard({ user }: { user: AppUser }) {
 	return (
 		<>
 			<div className="flex flex-col gap-2">
@@ -772,49 +673,33 @@ function AccountantDashboard() {
 				</Card>
 			</Link>
 
-			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-				<Link to="/dashboard/reports" className="group">
-					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<BarChart3 className="size-6 text-primary" />
-							<span className="font-medium text-xs">Reports</span>
-						</CardContent>
-					</Card>
-				</Link>
-				<Link to="/dashboard/invoices" className="group">
-					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<Banknote className="size-6 text-primary" />
-							<span className="font-medium text-xs">Invoices</span>
-						</CardContent>
-					</Card>
-				</Link>
-				<Link to="/dashboard/reconciliation" className="group">
-					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<DollarSign className="size-6 text-primary" />
-							<span className="font-medium text-xs">Reconcile</span>
-						</CardContent>
-					</Card>
-				</Link>
-				<Link to="/dashboard/journal" className="group">
-					<Card className="transition-colors group-hover:border-primary/50 group-hover:bg-primary/5">
-						<CardContent className="flex flex-col items-center gap-2 p-4">
-							<ClipboardList className="size-6 text-primary" />
-							<span className="font-medium text-xs">Journal</span>
-						</CardContent>
-					</Card>
-				</Link>
-			</div>
+			<ModuleGrid user={user} />
 		</>
 	);
 }
 
 // ── Main Page Export ────────────────────────────────────────────────────
 export default function DashboardIndexPage() {
+	// All hooks must be called before any conditional returns (Rules of Hooks)
 	const { data: userProfile, isLoading } = useQuery(
 		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
 	);
+	const { data: session } = authClient.useSession();
+	const role = mapRoleToSidebarRole(userProfile?.roleName || "Cashier");
+
+	const user: AppUser | null = useMemo(() => {
+		if (!session || !userProfile) return null;
+		return {
+			id: session.user.id,
+			name: userProfile.name,
+			email: userProfile.email,
+			role,
+			organization_id: userProfile.organizationId ?? null,
+			location_id: null,
+			custom_role_id: userProfile.roleId,
+			permissions: userProfile.permissions,
+		};
+	}, [session, userProfile, role]);
 
 	if (isLoading) {
 		return (
@@ -833,25 +718,25 @@ export default function DashboardIndexPage() {
 		);
 	}
 
-	const role = mapRoleToSidebarRole(userProfile?.roleName || "Cashier");
+	if (!user) return null;
 
 	let content: React.ReactNode;
 	switch (role) {
 		case "executive":
 		case "admin":
-			content = <ExecutiveDashboard />;
+			content = <ExecutiveDashboard user={user} />;
 			break;
 		case "warehouse":
-			content = <WarehouseDashboard />;
+			content = <WarehouseDashboard user={user} />;
 			break;
 		case "accountant":
-			content = <AccountantDashboard />;
+			content = <AccountantDashboard user={user} />;
 			break;
 		case "checkoff":
-			content = <KitchenDashboard />;
+			content = <KitchenDashboard user={user} />;
 			break;
 		default:
-			content = <CashierDashboard />;
+			content = <CashierDashboard user={user} />;
 			break;
 	}
 
