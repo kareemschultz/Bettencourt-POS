@@ -21,6 +21,7 @@
 		"@orpc/openapi": "catalog:",
 		"@orpc/server": "catalog:",
 		"@orpc/zod": "catalog:",
+		"better-auth": "^1.5.4",
 		"dotenv": "catalog:",
 		"drizzle-orm": "^0.45.1",
 		"zod": "catalog:"

@@ -1625,7 +1625,66 @@ Click **Print Daily Summary** to generate a printable form with signature lines 
 
 ---
 
-## 42. Getting Help
+## 42. Backup & Restore
+
+The system automatically backs up all data every night at midnight. Up to 7 days of backups are stored.
+
+**To access:** Settings → Backup & Restore (admin and executive only)
+
+### Download a Backup
+Go to **Backup & Restore** → click **Download** next to any backup in the list.
+
+### Backup Now
+Click **Backup Now** to create an immediate backup at any time.
+
+### Restore from a Listed Backup
+1. Go to **Backup & Restore**
+2. Click **Restore** next to the backup you want
+3. Read the confirmation dialog — it shows what data will be restored
+4. Click **Yes, Restore**
+5. A snapshot of your current data is saved automatically before the restore begins
+6. Refresh the page after restore completes
+
+### Restore from a File
+Upload a previously downloaded `.json.gz` backup file using the "Restore from File" section at the bottom of the page.
+
+### Backup Health Indicator
+- **Green dot** — a backup was created in the last 24 hours (healthy)
+- **Yellow dot** — last backup is 25–48 hours old (check connection)
+- **Red dot** — no backup in 48+ hours, or no backups at all (urgent)
+
+---
+
+## 43. User Management
+
+### My Profile
+Every staff member can access their own profile by clicking their name in the bottom-left corner of the sidebar and selecting **My Profile**.
+
+**On your profile you can:**
+- View your name, email, role, and last login time
+- **Change your password** — enter your current password, then set a new one. A strength indicator shows Weak / Fair / Strong
+- **Change your PIN** — enter a 4–8 digit numeric PIN for quick POS login
+- **Sign out all other devices** — removes sessions from all other browsers/devices except your current one
+
+### Admin User Management (Settings → Users)
+Admins can manage all staff accounts from **Settings → Users**:
+
+- **Last Login** column shows when each user last logged in (or "Never")
+- **Edit** — update a staff member's name and email
+- **Reset Password** — set a temporary password with a copy-to-clipboard button to share via WhatsApp/SMS
+- **Set PIN** — assign or clear a 4–8 digit PIN for any staff member
+- **Revoke All Sessions** — immediately signs out all devices for that user (useful when offboarding)
+- **Delete** — permanently removes the user account (requires confirmation)
+
+### Invite by Email
+When creating a new user, toggle **Invite by email** to send the staff member a link to set their own password. If email is not configured, you must set a password manually.
+
+### Forgot Password
+On the login screen, click **Forgot password?** below the password field. Enter your email address and you will receive a reset link to set a new password.
+
+---
+
+## 44. Getting Help
 
 For technical support or system questions:
 

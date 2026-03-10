@@ -2,7 +2,8 @@ import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { createHash } from "node:crypto";
 import { ORPCError } from "@orpc/server";
-import { and, asc, desc, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
+import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { z } from "zod";
 import { permissionProcedure, protectedProcedure } from "../index";
 import { requireOrganizationId } from "../lib/org-context";
@@ -353,6 +354,8 @@ const getUsers = permissionProcedure("users.read")
 				name: schema.user.name,
 				email: schema.user.email,
 				role: schema.user.role,
+				banned: schema.user.banned,
+				hasPin: schema.user.pinHash,
 				createdAt: schema.user.createdAt,
 				updatedAt: schema.user.updatedAt,
 			})
@@ -361,7 +364,32 @@ const getUsers = permissionProcedure("users.read")
 			.where(eq(schema.member.organizationId, orgId))
 			.orderBy(desc(schema.user.createdAt));
 
-		return users;
+		// Get the most recent session per user (last login indicator)
+		const userIds = users.map((u) => u.id);
+		const recentSessions =
+			userIds.length > 0
+				? await db
+						.select({
+							userId: schema.session.userId,
+							updatedAt: schema.session.updatedAt,
+						})
+						.from(schema.session)
+						.where(inArray(schema.session.userId, userIds))
+						.orderBy(desc(schema.session.updatedAt))
+				: [];
+
+		const lastLoginMap = new Map<string, string>();
+		for (const s of recentSessions) {
+			if (!lastLoginMap.has(s.userId) && s.updatedAt) {
+				lastLoginMap.set(s.userId, s.updatedAt.toISOString());
+			}
+		}
+
+		return users.map((u) => ({
+			...u,
+			hasPin: !!u.hasPin,
+			lastLoginAt: lastLoginMap.get(u.id) ?? null,
+		}));
 	});
 
 // ── createUser ──────────────────────────────────────────────────────────
@@ -1212,6 +1240,322 @@ const updatePosSettings = permissionProcedure("settings.update")
 		return { success: true };
 	});
 
+// ── updateUserDetails (admin) ───────────────────────────────────────────
+const updateUserDetails = permissionProcedure("users.update")
+	.input(
+		z.object({
+			userId: z.string(),
+			name: z.string().min(1).optional(),
+			email: z.string().email().optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const memberRows = await db
+			.select({ userId: schema.member.userId })
+			.from(schema.member)
+			.where(
+				and(
+					eq(schema.member.userId, input.userId),
+					eq(schema.member.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (memberRows.length === 0)
+			throw new ORPCError("NOT_FOUND", { message: "User not found" });
+		const updates: Record<string, unknown> = { updatedAt: new Date() };
+		if (input.name) updates.name = input.name;
+		if (input.email) updates.email = input.email;
+		await db.update(schema.user).set(updates).where(eq(schema.user.id, input.userId));
+		return { success: true };
+	});
+
+// ── adminResetPassword ──────────────────────────────────────────────────
+const adminResetPassword = permissionProcedure("users.update")
+	.input(z.object({ userId: z.string(), newPassword: z.string().min(8) }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const memberRows = await db
+			.select({ userId: schema.member.userId })
+			.from(schema.member)
+			.where(
+				and(
+					eq(schema.member.userId, input.userId),
+					eq(schema.member.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (memberRows.length === 0)
+			throw new ORPCError("NOT_FOUND", { message: "User not found" });
+		const hashed = await hashPassword(input.newPassword);
+		const updated = await db
+			.update(schema.account)
+			.set({ password: hashed, updatedAt: new Date() })
+			.where(
+				and(
+					eq(schema.account.userId, input.userId),
+					eq(schema.account.providerId, "credential"),
+				),
+			)
+			.returning({ id: schema.account.id });
+		if (updated.length === 0) {
+			// No credential account yet — create one
+			await db.insert(schema.account).values({
+				id: crypto.randomUUID(),
+				accountId: input.userId,
+				providerId: "credential",
+				userId: input.userId,
+				password: hashed,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+		}
+		return { success: true };
+	});
+
+// ── adminSetPin ─────────────────────────────────────────────────────────
+const adminSetPin = permissionProcedure("users.update")
+	.input(
+		z.object({
+			userId: z.string(),
+			pin: z.string().regex(/^\d{4,8}$/).optional().nullable(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const memberRows = await db
+			.select({ userId: schema.member.userId })
+			.from(schema.member)
+			.where(
+				and(
+					eq(schema.member.userId, input.userId),
+					eq(schema.member.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (memberRows.length === 0)
+			throw new ORPCError("NOT_FOUND", { message: "User not found" });
+		const pinHash = input.pin
+			? createHash("sha256").update(input.pin).digest("hex")
+			: null;
+		await db.update(schema.user).set({ pinHash }).where(eq(schema.user.id, input.userId));
+		return { success: true };
+	});
+
+// ── revokeUserSessions (admin) ──────────────────────────────────────────
+const revokeUserSessions = permissionProcedure("users.update")
+	.input(z.object({ userId: z.string() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const memberRows = await db
+			.select({ userId: schema.member.userId })
+			.from(schema.member)
+			.where(
+				and(
+					eq(schema.member.userId, input.userId),
+					eq(schema.member.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (memberRows.length === 0)
+			throw new ORPCError("NOT_FOUND", { message: "User not found" });
+		await db.delete(schema.session).where(eq(schema.session.userId, input.userId));
+		return { success: true };
+	});
+
+// ── deleteUser (admin) ─────────────────────────────────────────────────
+const deleteUser = permissionProcedure("users.update")
+	.input(z.object({ userId: z.string() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		if (input.userId === context.session.user.id)
+			throw new ORPCError("BAD_REQUEST", { message: "You cannot delete your own account" });
+		const memberRows = await db
+			.select({ userId: schema.member.userId })
+			.from(schema.member)
+			.where(
+				and(
+					eq(schema.member.userId, input.userId),
+					eq(schema.member.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (memberRows.length === 0)
+			throw new ORPCError("NOT_FOUND", { message: "User not found" });
+		await db.delete(schema.user).where(eq(schema.user.id, input.userId));
+		return { success: true };
+	});
+
+// ── inviteUser (admin, replaces createUser) ─────────────────────────────
+const inviteUser = permissionProcedure("users.create")
+	.input(
+		z.object({
+			name: z.string().min(1),
+			email: z.string().email(),
+			roleId: z.string().uuid(),
+			sendInvite: z.boolean().default(false),
+			tempPassword: z.string().min(8).optional(),
+			pin: z.string().regex(/^\d{4,8}$/).optional().nullable(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const roleRows = await db
+			.select({ id: schema.customRole.id })
+			.from(schema.customRole)
+			.where(
+				and(
+					eq(schema.customRole.id, input.roleId),
+					eq(schema.customRole.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (roleRows.length === 0)
+			throw new ORPCError("BAD_REQUEST", { message: "Invalid role" });
+
+		const password = input.tempPassword ?? crypto.randomUUID().slice(0, 12);
+		const hashed = await hashPassword(password);
+		const pinHash = input.pin
+			? createHash("sha256").update(input.pin).digest("hex")
+			: null;
+		const id = crypto.randomUUID();
+		const now = new Date();
+
+		await db.transaction(async (tx) => {
+			await tx.insert(schema.user).values({
+				id,
+				name: input.name,
+				email: input.email,
+				role: "user",
+				emailVerified: true,
+				pinHash,
+				createdAt: now,
+				updatedAt: now,
+			});
+			await tx.insert(schema.member).values({
+				id: crypto.randomUUID(),
+				organizationId: orgId,
+				userId: id,
+				role: "member",
+				createdAt: now,
+			});
+			await tx.insert(schema.userRole).values({
+				userId: id,
+				roleId: input.roleId,
+			});
+			await tx.insert(schema.account).values({
+				id: crypto.randomUUID(),
+				accountId: id,
+				providerId: "credential",
+				userId: id,
+				password: hashed,
+				createdAt: now,
+				updatedAt: now,
+			});
+		});
+
+		return { success: true, userId: id, tempPassword: input.sendInvite ? null : password };
+	});
+
+// ── changeOwnPassword (self-service) ───────────────────────────────────
+const changeOwnPassword = protectedProcedure
+	.input(
+		z.object({
+			currentPassword: z.string().min(1),
+			newPassword: z.string().min(8),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const userId = context.session.user.id;
+		const accountRows = await db
+			.select({ id: schema.account.id, password: schema.account.password })
+			.from(schema.account)
+			.where(
+				and(
+					eq(schema.account.userId, userId),
+					eq(schema.account.providerId, "credential"),
+				),
+			)
+			.limit(1);
+		if (accountRows.length === 0 || !accountRows[0]!.password)
+			throw new ORPCError("BAD_REQUEST", { message: "No password set on this account" });
+		const valid = await verifyPassword({
+			password: input.currentPassword,
+			hash: accountRows[0]!.password,
+		});
+		if (!valid)
+			throw new ORPCError("BAD_REQUEST", { message: "Current password is incorrect" });
+		const hashed = await hashPassword(input.newPassword);
+		await db
+			.update(schema.account)
+			.set({ password: hashed, updatedAt: new Date() })
+			.where(eq(schema.account.id, accountRows[0]!.id));
+		return { success: true };
+	});
+
+// ── changeOwnPin (self-service) ─────────────────────────────────────────
+const changeOwnPin = protectedProcedure
+	.input(
+		z.object({
+			pin: z.string().regex(/^\d{4,8}$/, "PIN must be 4–8 digits").optional().nullable(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const userId = context.session.user.id;
+		const pinHash = input.pin
+			? createHash("sha256").update(input.pin).digest("hex")
+			: null;
+		await db.update(schema.user).set({ pinHash }).where(eq(schema.user.id, userId));
+		return { success: true };
+	});
+
+// ── getOwnSessions (self-service) ───────────────────────────────────────
+const getOwnSessions = protectedProcedure
+	.input(z.object({}).optional())
+	.handler(async ({ context }) => {
+		const userId = context.session.user.id;
+		const currentToken = context.session.session.token;
+		const sessions = await db
+			.select({
+				id: schema.session.id,
+				token: schema.session.token,
+				ipAddress: schema.session.ipAddress,
+				userAgent: schema.session.userAgent,
+				createdAt: schema.session.createdAt,
+				updatedAt: schema.session.updatedAt,
+				expiresAt: schema.session.expiresAt,
+			})
+			.from(schema.session)
+			.where(eq(schema.session.userId, userId))
+			.orderBy(desc(schema.session.updatedAt));
+		return sessions.map((s) => ({
+			id: s.id,
+			ipAddress: s.ipAddress,
+			userAgent: s.userAgent,
+			createdAt: s.createdAt,
+			updatedAt: s.updatedAt,
+			expiresAt: s.expiresAt,
+			isCurrent: s.token === currentToken,
+		}));
+	});
+
+// ── revokeOtherSessions (self-service) ─────────────────────────────────
+const revokeOtherSessions = protectedProcedure
+	.input(z.object({}).optional())
+	.handler(async ({ context }) => {
+		const userId = context.session.user.id;
+		const currentToken = context.session.session.token;
+		await db
+			.delete(schema.session)
+			.where(
+				and(
+					eq(schema.session.userId, userId),
+					ne(schema.session.token, currentToken),
+				),
+			);
+		return { success: true };
+	});
+
 export const settingsRouter = {
 	getCurrentUser,
 	getOrganization,
@@ -1235,7 +1579,17 @@ export const settingsRouter = {
 	updateTable,
 	getUsers,
 	createUser,
+	inviteUser,
 	updateUser,
+	updateUserDetails,
+	adminResetPassword,
+	adminSetPin,
+	revokeUserSessions,
+	deleteUser,
+	changeOwnPassword,
+	changeOwnPin,
+	getOwnSessions,
+	revokeOtherSessions,
 	getRoles,
 	createRole,
 	updateRole,
