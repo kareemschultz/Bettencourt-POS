@@ -38,7 +38,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 type BackupFile = {
 	filename: string;
@@ -80,7 +80,6 @@ async function apiPost(path: string): Promise<{
 }
 
 export default function BackupPage() {
-	const { toast } = useToast();
 	const queryClient = useQueryClient();
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [restoreTarget, setRestoreTarget] = useState<BackupFile | null>(null);
@@ -116,9 +115,9 @@ export default function BackupPage() {
 		mutationFn: () => apiPost("/api/backups/trigger"),
 		onSuccess: (res) => {
 			if (res.error) {
-				toast({ title: "Backup failed", description: res.error, variant: "destructive" });
+				toast.error("Backup failed: " + res.error);
 			} else {
-				toast({ title: "Backup created", description: res.filename });
+				toast.success("Backup created: " + res.filename);
 				queryClient.invalidateQueries({ queryKey: ["backups"] });
 			}
 		},
@@ -141,12 +140,9 @@ export default function BackupPage() {
 		},
 		onSuccess: (res) => {
 			if (res.error) {
-				toast({ title: "Restore failed", description: res.error, variant: "destructive" });
+				toast.error("Restore failed: " + res.error);
 			} else {
-				toast({
-					title: "Restore complete",
-					description: "Data restored successfully. Please refresh.",
-				});
+				toast.success("Restore complete — data restored. Please refresh.");
 				queryClient.invalidateQueries({ queryKey: ["backups"] });
 			}
 		},
@@ -165,12 +161,9 @@ export default function BackupPage() {
 		},
 		onSuccess: (res) => {
 			if (res.error) {
-				toast({ title: "Restore failed", description: res.error, variant: "destructive" });
+				toast.error("Restore failed: " + res.error);
 			} else {
-				toast({
-					title: "Restore complete",
-					description: "Data restored from uploaded file. Please refresh.",
-				});
+				toast.success("Restore complete — data restored from file. Please refresh.");
 				queryClient.invalidateQueries({ queryKey: ["backups"] });
 				setUploadFile(null);
 				if (fileInputRef.current) fileInputRef.current.value = "";

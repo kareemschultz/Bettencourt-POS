@@ -56,6 +56,7 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -636,6 +637,11 @@ export function AppSidebar({ user }: AppSidebarProps) {
 								</div>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent side="top" align="start" className="w-56">
+								<DropdownMenuItem onClick={() => navigate("/dashboard/profile")}>
+									<User className="mr-2 size-4" />
+									My Profile
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />
 								<DropdownMenuItem onClick={handleSignOut}>
 									<LogOut className="mr-2 size-4" />
 									Sign out

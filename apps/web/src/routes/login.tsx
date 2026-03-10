@@ -259,6 +259,7 @@ function EmailLogin({ onSwitchToPin }: { onSwitchToPin: () => void }) {
 	const [password, setPassword] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
+	const [showForgot, setShowForgot] = useState(false);
 
 	async function handleLogin(e: React.FormEvent) {
 		e.preventDefault();
@@ -276,6 +277,10 @@ function EmailLogin({ onSwitchToPin }: { onSwitchToPin: () => void }) {
 			setError("Login failed. Please try again.");
 			setLoading(false);
 		}
+	}
+
+	if (showForgot) {
+		return <ForgotPassword onBack={() => setShowForgot(false)} />;
 	}
 
 	return (
@@ -306,9 +311,18 @@ function EmailLogin({ onSwitchToPin }: { onSwitchToPin: () => void }) {
 					/>
 				</div>
 				<div className="flex flex-col gap-2">
-					<Label htmlFor="password" className="font-medium text-sm">
-						Password
-					</Label>
+					<div className="flex items-center justify-between">
+						<Label htmlFor="password" className="font-medium text-sm">
+							Password
+						</Label>
+						<button
+							type="button"
+							className="text-muted-foreground text-xs transition-colors hover:text-foreground"
+							onClick={() => setShowForgot(true)}
+						>
+							Forgot password?
+						</button>
+					</div>
 					<Input
 						id="password"
 						type="password"
@@ -343,6 +357,108 @@ function EmailLogin({ onSwitchToPin }: { onSwitchToPin: () => void }) {
 				onClick={onSwitchToPin}
 			>
 				<KeyRound className="size-3.5" /> Switch to PIN Login
+			</button>
+		</div>
+	);
+}
+
+function ForgotPassword({ onBack }: { onBack: () => void }) {
+	const [email, setEmail] = useState("");
+	const [loading, setLoading] = useState(false);
+	const [sent, setSent] = useState(false);
+	const [error, setError] = useState("");
+
+	async function handleSubmit(e: React.FormEvent) {
+		e.preventDefault();
+		setLoading(true);
+		setError("");
+		try {
+			// Better Auth's forget-password endpoint sends the reset email
+			const res = await fetch("/api/auth/forget-password", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({
+					email,
+					redirectTo: `${window.location.origin}/reset-password`,
+				}),
+			});
+			if (!res.ok) {
+				const data = await res.json().catch(() => ({}));
+				setError((data as { message?: string }).message || "Failed to send reset email");
+				setLoading(false);
+			} else {
+				setSent(true);
+				setLoading(false);
+			}
+		} catch {
+			setError("Failed to send reset email. Please try again.");
+			setLoading(false);
+		}
+	}
+
+	if (sent) {
+		return (
+			<div className="flex flex-col gap-5">
+				<div>
+					<h2 className="font-bold text-2xl text-foreground tracking-tight">Check Your Email</h2>
+					<p className="mt-2 text-muted-foreground text-sm">
+						If an account exists for <strong>{email}</strong>, a password reset link
+						has been sent. Check your inbox and follow the instructions.
+					</p>
+				</div>
+				<p className="text-muted-foreground text-xs">
+					The link expires in 1 hour. If you do not receive the email, check your spam folder
+					or contact your administrator.
+				</p>
+				<button
+					type="button"
+					className="flex items-center justify-center gap-1.5 text-muted-foreground text-xs transition-colors hover:text-foreground"
+					onClick={onBack}
+				>
+					← Back to Login
+				</button>
+			</div>
+		);
+	}
+
+	return (
+		<div className="flex flex-col gap-5">
+			<div>
+				<h2 className="font-bold text-2xl text-foreground tracking-tight">Reset Password</h2>
+				<p className="mt-1 text-muted-foreground text-sm">
+					Enter your email address and we will send you a reset link.
+				</p>
+			</div>
+			<form onSubmit={handleSubmit} className="flex flex-col gap-4">
+				<div className="flex flex-col gap-2">
+					<Label htmlFor="forgot-email">Email address</Label>
+					<Input
+						id="forgot-email"
+						type="email"
+						placeholder="admin@bettencourt.com"
+						value={email}
+						onChange={(e) => setEmail(e.target.value)}
+						required
+						autoComplete="email"
+						className="h-12 text-base lg:h-11 lg:text-sm"
+					/>
+				</div>
+				{error && (
+					<p className="rounded-md bg-destructive/10 px-3 py-2 text-destructive text-sm" role="alert">
+						{error}
+					</p>
+				)}
+				<Button type="submit" className="h-12 w-full font-semibold" disabled={loading || !email}>
+					{loading ? "Sending..." : "Send Reset Link"}
+				</Button>
+			</form>
+			<button
+				type="button"
+				className="flex items-center justify-center gap-1.5 text-muted-foreground text-xs transition-colors hover:text-foreground"
+				onClick={onBack}
+			>
+				← Back to Login
 			</button>
 		</div>
 	);

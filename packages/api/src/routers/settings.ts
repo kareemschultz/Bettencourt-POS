@@ -1271,8 +1271,10 @@ const updateUserDetails = permissionProcedure("users.update")
 	});
 
 // ── adminResetPassword ──────────────────────────────────────────────────
+// Generates a random temporary password, hashes and stores it, then returns
+// the plain-text value once so the admin can share it with the user.
 const adminResetPassword = permissionProcedure("users.update")
-	.input(z.object({ userId: z.string(), newPassword: z.string().min(8) }))
+	.input(z.object({ userId: z.string() }))
 	.handler(async ({ input, context }) => {
 		const orgId = requireOrganizationId(context);
 		const memberRows = await db
@@ -1287,7 +1289,9 @@ const adminResetPassword = permissionProcedure("users.update")
 			.limit(1);
 		if (memberRows.length === 0)
 			throw new ORPCError("NOT_FOUND", { message: "User not found" });
-		const hashed = await hashPassword(input.newPassword);
+		// Generate a human-friendly temp password (12 chars, UUID-derived)
+		const tempPassword = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+		const hashed = await hashPassword(tempPassword);
 		const updated = await db
 			.update(schema.account)
 			.set({ password: hashed, updatedAt: new Date() })
@@ -1310,7 +1314,9 @@ const adminResetPassword = permissionProcedure("users.update")
 				updatedAt: new Date(),
 			});
 		}
-		return { success: true };
+		// Also revoke all active sessions so the user must log in with the new password
+		await db.delete(schema.session).where(eq(schema.session.userId, input.userId));
+		return { success: true, tempPassword };
 	});
 
 // ── adminSetPin ─────────────────────────────────────────────────────────
