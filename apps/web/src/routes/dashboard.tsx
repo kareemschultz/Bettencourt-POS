@@ -93,6 +93,8 @@ const PAGE_TITLES: Record<string, string> = {
 	"/dashboard/currency": "Currency",
 	"/dashboard/reconciliation": "Cash Reconciliation",
 	"/dashboard/labels": "Labels",
+	"/dashboard/backup": "Backup & Restore",
+	"/dashboard/profile": "My Profile",
 };
 
 function getPageTitle(pathname: string): string {

@@ -27,10 +27,16 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    volumes:
+      - bettencourt-backups:/app/backups
     networks:
       - kt-net-apps
       - kt-net-databases
       - pangolin
+
+volumes:
+  bettencourt-backups:
+    driver: local
 
 networks:
   kt-net-apps:

@@ -1,8 +1,9 @@
 /**
  * Route-level permission gating for dashboard pages.
  * Exported for testability — imported by dashboard.tsx.
+ * A null module means accessible to all authenticated users.
  */
-export const ROUTE_MODULE_MAP: Record<string, string> = {
+export const ROUTE_MODULE_MAP: Record<string, string | null> = {
 	"/dashboard/reports": "reports",
 	"/dashboard/reconciliation": "reports",
 	"/dashboard/eod": "reports",
@@ -49,6 +50,8 @@ export const ROUTE_MODULE_MAP: Record<string, string> = {
 	"/dashboard/cash": "shifts",
 	"/dashboard/kitchen": "orders",
 	"/dashboard/timeclock": "shifts",
+	"/dashboard/backup": "settings",
+	"/dashboard/profile": null,
 };
 
 /**
@@ -62,6 +65,8 @@ export function hasRouteAccess(
 ): boolean {
 	for (const [prefix, module] of Object.entries(ROUTE_MODULE_MAP)) {
 		if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
+			// null module = accessible to all authenticated users
+			if (module === null) return true;
 			const perms = permissions[module];
 			return Array.isArray(perms) && perms.length > 0;
 		}
