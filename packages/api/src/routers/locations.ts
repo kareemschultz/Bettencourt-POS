@@ -7,7 +7,9 @@ import { permissionProcedure, protectedProcedure } from "../index";
 import { requireOrganizationId } from "../lib/org-context";
 
 // ── listLocations ────────────────────────────────────────────────────
-const listLocations = permissionProcedure("settings.read")
+// Uses protectedProcedure (not permission-gated) since this is called
+// from the dashboard layout shell for ALL authenticated users (location switcher).
+const listLocations = protectedProcedure
 	.input(z.object({}).optional())
 	.handler(async ({ context }) => {
 		const orgId = requireOrganizationId(context);

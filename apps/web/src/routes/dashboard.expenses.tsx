@@ -843,80 +843,6 @@ export default function ExpensesPage() {
 						</div>
 					)}
 
-					{/* Category by Month Chart */}
-					{activeChartCategories.length > 0 && (
-						<div className="rounded-lg border border-border p-4">
-							<div className="mb-4 flex items-baseline gap-2">
-								<p className="font-medium text-foreground text-sm">
-									Spending by Category — Last 12 Months
-								</p>
-								<span className="text-muted-foreground text-xs">
-									(full-year view — independent of date filter above)
-								</span>
-							</div>
-							<ResponsiveContainer width="100%" height={280}>
-								<BarChart
-									data={chartData}
-									margin={{ top: 4, right: 8, left: 8, bottom: 4 }}
-								>
-									<CartesianGrid
-										strokeDasharray="3 3"
-										vertical={false}
-										className="stroke-border"
-									/>
-									<XAxis
-										dataKey="label"
-										tick={{ fontSize: 11 }}
-										axisLine={false}
-										tickLine={false}
-									/>
-									<YAxis
-										tick={{ fontSize: 11 }}
-										axisLine={false}
-										tickLine={false}
-										tickFormatter={(v: number) =>
-											v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
-										}
-									/>
-									<RechartsTooltip
-										formatter={(
-											value: number | undefined,
-											name: string | undefined,
-										) => [
-											new Intl.NumberFormat("en-GY", {
-												style: "currency",
-												currency: "GYD",
-												maximumFractionDigits: 0,
-											}).format(value ?? 0),
-											name ?? "",
-										]}
-										contentStyle={{
-											fontSize: 12,
-											borderRadius: 8,
-											border: "1px solid hsl(var(--border))",
-											background: "hsl(var(--card))",
-											color: "hsl(var(--foreground))",
-										}}
-									/>
-									<Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-									{activeChartCategories.map((cat, i) => (
-										<Bar
-											key={cat}
-											dataKey={cat}
-											stackId="a"
-											fill={CHART_COLORS[i % CHART_COLORS.length]}
-											radius={
-												i === activeChartCategories.length - 1
-													? [4, 4, 0, 0]
-													: [0, 0, 0, 0]
-											}
-										/>
-									))}
-								</BarChart>
-							</ResponsiveContainer>
-						</div>
-					)}
-
 					{/* Table */}
 					<div className="rounded-lg border border-border">
 						<Table>
@@ -1047,6 +973,80 @@ export default function ExpensesPage() {
 							</div>
 						)}
 					</div>
+
+					{/* Category by Month Chart */}
+					{activeChartCategories.length > 0 && (
+						<div className="rounded-lg border border-border p-4">
+							<div className="mb-4 flex items-baseline gap-2">
+								<p className="font-medium text-foreground text-sm">
+									Spending by Category — Last 12 Months
+								</p>
+								<span className="text-muted-foreground text-xs">
+									(full-year view — independent of date filter above)
+								</span>
+							</div>
+							<ResponsiveContainer width="100%" height={280}>
+								<BarChart
+									data={chartData}
+									margin={{ top: 4, right: 8, left: 8, bottom: 4 }}
+								>
+									<CartesianGrid
+										strokeDasharray="3 3"
+										vertical={false}
+										className="stroke-border"
+									/>
+									<XAxis
+										dataKey="label"
+										tick={{ fontSize: 11 }}
+										axisLine={false}
+										tickLine={false}
+									/>
+									<YAxis
+										tick={{ fontSize: 11 }}
+										axisLine={false}
+										tickLine={false}
+										tickFormatter={(v: number) =>
+											v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
+										}
+									/>
+									<RechartsTooltip
+										formatter={(
+											value: number | undefined,
+											name: string | undefined,
+										) => [
+											new Intl.NumberFormat("en-GY", {
+												style: "currency",
+												currency: "GYD",
+												maximumFractionDigits: 0,
+											}).format(value ?? 0),
+											name ?? "",
+										]}
+										contentStyle={{
+											fontSize: 12,
+											borderRadius: 8,
+											border: "1px solid hsl(var(--border))",
+											background: "hsl(var(--card))",
+											color: "hsl(var(--foreground))",
+										}}
+									/>
+									<Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+									{activeChartCategories.map((cat, i) => (
+										<Bar
+											key={cat}
+											dataKey={cat}
+											stackId="a"
+											fill={CHART_COLORS[i % CHART_COLORS.length]}
+											radius={
+												i === activeChartCategories.length - 1
+													? [4, 4, 0, 0]
+													: [0, 0, 0, 0]
+											}
+										/>
+									))}
+								</BarChart>
+							</ResponsiveContainer>
+						</div>
+					)}
 				</>
 			)}
 
