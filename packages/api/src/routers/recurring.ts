@@ -630,7 +630,8 @@ const generateNext = permissionProcedure("invoices.create")
           })
           .where(eq(schema.recurringTemplate.id, template.id));
 
-        await recordRun(tx, {
+        // biome-ignore lint/suspicious/noExplicitAny: PgTransaction is structurally compatible with db for insert operations
+        await recordRun(tx as unknown as typeof db, {
           organizationId: orgId,
           templateId: template.id,
           generatedType: template.templateType,
