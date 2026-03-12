@@ -2213,6 +2213,16 @@ function CategoriesTab() {
 		}),
 	);
 
+	const togglePinMutation = useMutation(
+		orpc.categories.update.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: catQueryKey });
+			},
+			onError: (err) =>
+				toast.error(err.message || "Failed to update PIN setting"),
+		}),
+	);
+
 	const deleteCat = useMutation(
 		orpc.categories.delete.mutationOptions({
 			onSuccess: () => {
@@ -2284,6 +2294,7 @@ function CategoriesTab() {
 								<TableHead>Name</TableHead>
 								<TableHead className="text-right">Sort Order</TableHead>
 								<TableHead>Status</TableHead>
+								<TableHead>PIN Required</TableHead>
 								<TableHead className="text-right">Actions</TableHead>
 							</TableRow>
 						</TableHeader>
@@ -2291,7 +2302,7 @@ function CategoriesTab() {
 							{categories.length === 0 ? (
 								<TableRow>
 									<TableCell
-										colSpan={4}
+										colSpan={5}
 										className="py-8 text-center text-muted-foreground"
 									>
 										No categories configured.
@@ -2308,6 +2319,22 @@ function CategoriesTab() {
 											<Badge variant={cat.isActive ? "default" : "secondary"}>
 												{cat.isActive ? "Active" : "Inactive"}
 											</Badge>
+										</TableCell>
+										<TableCell>
+											<div className="flex items-center gap-2">
+												<Switch
+													checked={cat.pinProtected}
+													onCheckedChange={(checked) =>
+														togglePinMutation.mutate({
+															id: cat.id,
+															pinProtected: checked,
+														})
+													}
+												/>
+												<span className="text-muted-foreground text-xs">
+													{cat.pinProtected ? "On" : "Off"}
+												</span>
+											</div>
 										</TableCell>
 										<TableCell className="text-right">
 											<div className="flex justify-end gap-1">
