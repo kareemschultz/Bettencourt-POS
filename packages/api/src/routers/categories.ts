@@ -57,6 +57,7 @@ const update = permissionProcedure("departments.update")
 			name: z.string().optional(),
 			sortOrder: z.number().int().optional(),
 			isActive: z.boolean().optional(),
+			pinProtected: z.boolean().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
