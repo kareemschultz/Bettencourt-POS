@@ -822,7 +822,7 @@ Track business expenses (non-COGS) such as utilities, rent, staff meals, repairs
 
 At the top of the page are **clickable summary cards** showing your expense totals:
 
-- **All Expenses** card — shows the grand total for the selected period. Click it to reset to viewing all expenses.
+- **All Expenses** card — shows the grand total for the selected period and a **"+X% vs last month"** indicator so you can see at a glance whether spending is up or down. Click it to reset to viewing all expenses.
 - **Supplier cards** (up to 3) — show the total spent with each top supplier. **Click any supplier card to instantly filter the expense table below to show only that supplier's entries** — full date, category, description, and amount detail.
 
 The active card is highlighted with a ring so you always know which filter is in effect.
@@ -831,13 +831,16 @@ The active card is highlighted with a ring so you always know which filter is in
 
 1. Click **Add Expense** (top right)
 2. Enter the **amount** (GYD)
-3. Select the **supplier** (optional — your full vendor list is pre-loaded)
+3. Select the **supplier** (optional — your full vendor list is pre-loaded). The system will **automatically suggest the category** based on what you charged to that supplier before.
 4. Select the **category** from the list below
 5. Enter a **description** of what the expense was for
 6. Select the **payment method** — Cash, Card, Bank Transfer, Cheque, or Other
 7. Enter the **receipt / reference number** (invoice # or receipt # from the supplier — optional but recommended)
 8. Add any **notes** (optional — e.g. "receipt in green folder")
-9. Click **Save Expense**
+9. **Take or upload a receipt photo** — click the upload box to attach a picture of the physical receipt (JPEG, PNG, or WebP — max 5 MB). A thumbnail will appear in the form for confirmation.
+10. Click **Save Expense**
+
+> **Tip:** If you enter the same amount for the same supplier on the same day as a previous entry, the system will show a warning. This helps you avoid double-entry mistakes.
 
 ### Expense Categories
 
@@ -864,7 +867,7 @@ The active card is highlighted with a ring so you always know which filter is in
 ### Filtering Expenses
 
 Use the controls at the top to narrow down what you see:
-- **From / To** date range
+- **From / To** date range — the page opens showing **the current month** by default so you always see your latest activity
 - **Quick date buttons** — Today, This Week, This Month, Last Month
 - **Supplier** dropdown
 - **Category** dropdown
@@ -872,7 +875,7 @@ Use the controls at the top to narrow down what you see:
 
 ### Viewing Full Details
 
-Click any expense row to open a read-only detail dialog showing all fields including notes, receipt number, who recorded it, and who authorized it. The **Edit** button inside the dialog opens the edit form.
+Click any expense row to open a read-only detail dialog showing all fields including notes, receipt number, who recorded it, and who authorized it. If a **receipt photo** was uploaded, a thumbnail is shown — click it to view the full image. The **Edit** button inside the dialog opens the edit form.
 
 ### Editing or Deleting an Expense
 
@@ -882,7 +885,7 @@ Click any expense row to open a read-only detail dialog showing all fields inclu
 ### Exporting
 
 - **Export CSV** — downloads all currently filtered expenses with every field
-- **Print PDF** — opens a formatted expense report for printing or saving as PDF
+- **Print PDF** — opens a **branded expense report** in a new tab showing: KPI summary (total, # entries, top category, top supplier), color-coded category breakdown bars, the full expense table with category dot indicators, grand total strip, and signature lines. Use the in-page "Print / Save as PDF" button to print or save.
 
 Expenses feed into the **P&L Statement** automatically under "Operating Expenses".
 

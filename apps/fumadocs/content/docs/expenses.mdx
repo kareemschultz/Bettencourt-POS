@@ -1,6 +1,6 @@
 ---
 title: Expenses
-description: Track daily business expenses with full detail — supplier, category, payment method, receipt reference, and notes. Filter, export CSV, and print PDF reports.
+description: Track daily business expenses with full detail — supplier, category, payment method, receipt photo, reference number, and notes. Filter, export CSV, and print branded PDF reports. Smart features include duplicate detection and auto-categorization.
 ---
 
 **Navigate to:** Dashboard → Expenses
@@ -13,7 +13,7 @@ Track business expenses (non-COGS) such as utilities, rent, staff meals, repairs
 
 At the top of the page are **clickable summary cards** showing your expense totals for the selected period:
 
-- **All Expenses** card — shows the grand total. Click it to reset to viewing all entries.
+- **All Expenses** card — shows the grand total and a **"+X% vs last month"** badge so you can instantly see whether spending is up or down compared to the previous month. Click it to reset to viewing all entries.
 - **Supplier cards** (up to 3) — show the total spent with each top supplier.
 
 **Click any supplier card to instantly filter the expense table to show only that supplier's entries.** The active card is highlighted with a ring so you always know which filter is in effect.
@@ -30,7 +30,7 @@ Below the supplier cards is a **spending-by-category** row showing the total for
 
 Use the controls at the top to narrow down what you see:
 
-- **From / To** date fields — view expenses for a specific period
+- **From / To** date fields — the page opens showing **the current month** by default so you always see relevant data
 - **Quick range** buttons — **Today**, **This Week**, **This Month**, **Last Month** — instantly set the date range with one click
 - **Supplier** dropdown — filter by a specific supplier
 - **Category** dropdown — filter by a specific expense category
@@ -70,13 +70,16 @@ Category names must be unique per organisation.
 
 1. Click **Add Expense** (top right)
 2. Enter the **amount** (GYD)
-3. Select the **supplier** (optional)
+3. Select the **supplier** (optional) — the system will **auto-fill the category** based on your most recent expense for that supplier
 4. Select the **category** from your managed list
 5. Enter a **description** of what the expense was for
 6. Select the **payment method** — Cash, Card, Bank Transfer, Cheque, or Other
 7. Enter the **receipt or reference number** (invoice # or receipt # from the supplier — optional but recommended for audit)
 8. Add any **notes** — e.g. "receipt in green folder", "approved verbally by Shakira" (optional)
-9. Click **Save Expense**
+9. **Upload a receipt photo** — click the upload area to attach a JPEG, PNG, or WebP image (max 5 MB). A thumbnail preview appears; click **Remove** to clear it.
+10. Click **Save Expense**
+
+> **Duplicate warning:** If you enter an expense with the same amount and supplier on the same day as an existing entry, the system will warn you before saving. This helps prevent accidental double-entry.
 
 ---
 
@@ -94,6 +97,7 @@ Click anywhere on an expense row to open a read-only details dialog showing:
 | Receipt / Ref # | Invoice or receipt number |
 | Description | Full description (no truncation) |
 | Notes | Internal notes (only shown if present) |
+| Receipt Photo | Attached photo (click to open full size) — only shown if uploaded |
 | Recorded By | Staff member who entered it |
 | Authorized By | Manager who approved it |
 
@@ -113,7 +117,13 @@ Each row in the expense table has:
 
 **Export CSV** (top right) — downloads the current filtered expenses as a CSV file including all fields: date, category, description, amount, supplier, payment method, ref #, notes, recorded by, authorized by.
 
-**Print PDF** — opens a formatted, print-ready expense report in a new browser tab. Click "Print / Save as PDF" inside that page to save it as a PDF or send it to a printer.
+**Print PDF** — opens a **professional branded expense report** in a new browser tab featuring:
+- Dark slate header with logo and period
+- KPI summary row: Total Spent, # Entries, Top Category, Top Supplier
+- Color-coded category breakdown bars with percentages
+- Grouped or flat expense table with category dot indicators
+- Grand total strip and signature lines (Prepared By / Checked By / Authorized By)
+- In-page Print and Close buttons (no automatic print dialog)
 
 ---
 
