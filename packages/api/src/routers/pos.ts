@@ -61,7 +61,7 @@ const getProducts = permissionProcedure("orders.read")
 		}
 
 		// Get departments (filtered if register has restrictions)
-		let departments: { id: string; name: string; sortOrder: number | null }[] =
+		let departments: { id: string; name: string; sortOrder: number | null; pinProtected: boolean }[] =
 			[];
 		if (departmentFilter.length > 0) {
 			departments = await db
@@ -69,6 +69,7 @@ const getProducts = permissionProcedure("orders.read")
 					id: schema.reportingCategory.id,
 					name: schema.reportingCategory.name,
 					sortOrder: schema.reportingCategory.sortOrder,
+					pinProtected: schema.reportingCategory.pinProtected,
 				})
 				.from(schema.reportingCategory)
 				.where(
@@ -87,6 +88,7 @@ const getProducts = permissionProcedure("orders.read")
 					id: schema.reportingCategory.id,
 					name: schema.reportingCategory.name,
 					sortOrder: schema.reportingCategory.sortOrder,
+					pinProtected: schema.reportingCategory.pinProtected,
 				})
 				.from(schema.reportingCategory)
 				.where(eq(schema.reportingCategory.isActive, true))
