@@ -223,7 +223,7 @@ export default function ExpensesPage() {
 	// Daily summary state
 	const [viewMode, setViewMode] = useState<"table" | "daily">("table");
 	const [summaryDate, setSummaryDate] = useState(today);
-	const [groupBySource, setGroupBySource] = useState(false);
+	const [groupBy, setGroupBy] = useState<"none" | "source" | "category" | "supplier">("none");
 
 	const { data: expensesRaw = [] } = useQuery(
 		orpc.cash.getExpenses.queryOptions({
@@ -506,7 +506,67 @@ export default function ExpensesPage() {
 			: []),
 	];
 
-	// Pivot category-by-month data for stacked bar chart
+	// Grouped by category
+	const expensesByCategory = Object.entries(
+		filtered.reduce<Record<string, typeof filtered>>((acc, e) => {
+			(acc[e.category] ??= []).push(e);
+			return acc;
+		}, {}),
+	)
+		.sort(([, a], [, b]) => {
+			const ta = a.reduce((s, e) => s + Number(e.amount), 0);
+			const tb = b.reduce((s, e) => s + Number(e.amount), 0);
+			return tb - ta;
+		})
+		.map(([name, items]) => ({
+			id: name,
+			name,
+			color: "#64748b",
+			items,
+			total: items.reduce((s, e) => s + Number(e.amount), 0),
+		}));
+
+	// Grouped by supplier
+	const expensesBySupplier = Object.entries(
+		filtered.reduce<Record<string, typeof filtered>>((acc, e) => {
+			const key = e.supplier_name ?? "(No supplier)";
+			(acc[key] ??= []).push(e);
+			return acc;
+		}, {}),
+	)
+		.sort(([, a], [, b]) => {
+			const ta = a.reduce((s, e) => s + Number(e.amount), 0);
+			const tb = b.reduce((s, e) => s + Number(e.amount), 0);
+			return tb - ta;
+		})
+		.map(([name, items]) => ({
+			id: name,
+			name,
+			color: "#0ea5e9",
+			items,
+			total: items.reduce((s, e) => s + Number(e.amount), 0),
+		}));
+
+	// Active group list based on current groupBy selection
+	const activeGroups =
+		groupBy === "source" ? expensesBySource
+		: groupBy === "category" ? expensesByCategory
+		: groupBy === "supplier" ? expensesBySupplier
+		: null;
+
+	// Smart report title — used as PDF tab title (becomes Save-as filename)
+	const pdfTitle = (() => {
+		const d = new Date(startDate + "T12:00:00");
+		const monthLabel = d.toLocaleString("en-GY", { month: "short", year: "numeric" });
+		const groupLabel =
+			groupBy === "source" ? " — By Source"
+			: groupBy === "category" ? " — By Category"
+			: groupBy === "supplier" ? " — By Supplier"
+			: "";
+		return `Expense Report${groupLabel} — ${monthLabel}`;
+	})();
+
+		// Pivot category-by-month data for stacked bar chart
 	const CHART_CATEGORIES = [
 		"Food Cost",
 		"Beverages",
@@ -651,16 +711,21 @@ export default function ExpensesPage() {
 						</Button>
 					</div>
 					{viewMode === "table" && (
-						<Button
-							size="sm"
-							variant={groupBySource ? "secondary" : "outline"}
-							className="gap-1"
-							onClick={() => setGroupBySource((v) => !v)}
-							title="Group expenses by funding source"
+						<Select
+							value={groupBy}
+							onValueChange={(v) => setGroupBy(v as typeof groupBy)}
 						>
-							<Layers className="size-4" />
-							By Source
-						</Button>
+							<SelectTrigger className="h-8 w-40 gap-1 text-xs">
+								<Layers className="size-3.5 shrink-0 text-muted-foreground" />
+								<SelectValue placeholder="No grouping" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="none">No grouping</SelectItem>
+								<SelectItem value="source">By Funding Source</SelectItem>
+								<SelectItem value="category">By Category</SelectItem>
+								<SelectItem value="supplier">By Supplier</SelectItem>
+							</SelectContent>
+						</Select>
 					)}
 					<Button
 						size="sm"
@@ -687,8 +752,8 @@ export default function ExpensesPage() {
 						onClick={() =>
 							downloadCsv(
 								`expenses-${new Date().toISOString().slice(0, 10)}.csv`,
-								(groupBySource
-									? expensesBySource.flatMap((g) =>
+								(activeGroups
+									? activeGroups.flatMap((g) =>
 											g.items.map((e) => ({ ...e, _group: g.name })),
 									  )
 								: filtered
@@ -717,13 +782,13 @@ export default function ExpensesPage() {
 						className="gap-1"
 						onClick={() =>
 							printExpenseReport({
-								title: "Expense Report",
-								rows: groupBySource
-									? expensesBySource.flatMap((g) => g.items)
+								title: pdfTitle,
+								rows: activeGroups
+									? activeGroups.flatMap((g) => g.items)
 									: filtered,
 								period: `${startDate} – ${endDate}`,
-								getSourceName,
-								groups: groupBySource ? expensesBySource : undefined,
+								getSourceName: groupBy === "none" ? getSourceName : undefined,
+								groups: activeGroups ?? undefined,
 								preparedBy:
 									session?.user?.name ?? userProfile?.name ?? undefined,
 							})
@@ -1016,9 +1081,9 @@ export default function ExpensesPage() {
 					)}
 
 					{/* Table */}
-					{groupBySource && expensesBySource.length > 0 ? (
+					{activeGroups && activeGroups.length > 0 ? (
 						<div className="flex flex-col gap-3">
-							{expensesBySource.map((src) => (
+							{activeGroups.map((src) => (
 								<div
 									key={src.id}
 									className="overflow-hidden rounded-lg border border-border"
