@@ -626,13 +626,11 @@ const getExpenses = permissionProcedure("shifts.read")
       sql`SELECT e.*,
 				au.name as authorized_by_name,
 				cu.name as created_by_name,
-				s.name as supplier_name,
-				c.name as customer_name
+				s.name as supplier_name
 			FROM expense e
 			LEFT JOIN "user" au ON au.id = e.authorized_by
 			LEFT JOIN "user" cu ON cu.id = e.created_by
 			LEFT JOIN supplier s ON s.id = e.supplier_id
-			LEFT JOIN customer c ON c.id = e.customer_id
 			WHERE e.organization_id = ${orgId}::uuid
 				${input.startDate ? sql`AND e.created_at >= ${input.startDate}::timestamptz` : sql``}
 				${input.endDate ? sql`AND e.created_at <= ${input.endDate}::timestamptz` : sql``}
