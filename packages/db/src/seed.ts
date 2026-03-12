@@ -6779,6 +6779,29 @@ async function seed() {
 		])
 		.onConflictDoNothing();
 
+	// 26b. Expense Categories
+	console.log("  -> Expense Categories");
+	await db
+		.insert(schema.expenseCategory)
+		.values([
+			{ organizationId: ORG_ID, name: "Food & Ingredients" },
+			{ organizationId: ORG_ID, name: "Beverages" },
+			{ organizationId: ORG_ID, name: "Kitchen Supplies" },
+			{ organizationId: ORG_ID, name: "Cleaning & Sanitation" },
+			{ organizationId: ORG_ID, name: "Packaging & Disposables" },
+			{ organizationId: ORG_ID, name: "Gas & Fuel" },
+			{ organizationId: ORG_ID, name: "Utilities" },
+			{ organizationId: ORG_ID, name: "Repairs & Maintenance" },
+			{ organizationId: ORG_ID, name: "Staff Meals & Allowance" },
+			{ organizationId: ORG_ID, name: "Transport & Delivery" },
+			{ organizationId: ORG_ID, name: "Marketing & Promotions" },
+			{ organizationId: ORG_ID, name: "Rent & Lease" },
+			{ organizationId: ORG_ID, name: "Equipment & Tools" },
+			{ organizationId: ORG_ID, name: "Office Supplies" },
+			{ organizationId: ORG_ID, name: "Miscellaneous" },
+		])
+		.onConflictDoNothing();
+
 	// 27. Expenses
 	console.log("  -> Expenses");
 	const EXPEN = (n: number) =>

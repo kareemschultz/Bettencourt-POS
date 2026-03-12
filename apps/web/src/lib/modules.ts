@@ -60,6 +60,8 @@ export interface NavItem {
 	roles: string[];
 	/** Human-readable title shown in page header */
 	pageTitle: string;
+	/** When true, hidden from sidebar and command palette (page still accessible via URL) */
+	hidden?: boolean;
 }
 
 export interface ModuleStyles {
@@ -407,6 +409,7 @@ export const MODULES: ModuleDefinition[] = [
 				module: "invoices",
 				roles: ["executive", "admin", "accountant"],
 				pageTitle: "Recurring",
+				hidden: true,
 			},
 			{
 				title: "Expenses",
@@ -423,6 +426,7 @@ export const MODULES: ModuleDefinition[] = [
 				module: "reports",
 				roles: ["executive", "admin", "accountant"],
 				pageTitle: "Aging Report",
+				hidden: true,
 			},
 			{
 				title: "Customer Statements",
@@ -431,6 +435,7 @@ export const MODULES: ModuleDefinition[] = [
 				module: "reports",
 				roles: ["executive", "admin", "accountant"],
 				pageTitle: "Customer Statements",
+				hidden: true,
 			},
 			{
 				title: "Tax Summary",

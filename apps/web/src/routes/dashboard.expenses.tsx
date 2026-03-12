@@ -49,6 +49,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
 	Command,
@@ -145,8 +146,10 @@ function downloadPdf(
 		bodyHtml = rows
 			.map(
 				(e) =>
+					// <tr> must come first — source <td> is a cell inside the row, not before it
+					`<tr>` +
 					(showSource ? `<td style="font-size:10px;color:#555">${escapeHtml(getSourceName(e.funding_source_id))}</td>` : "") +
-					`<tr><td>${new Date(e.created_at).toLocaleString("en-GY", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</td>` +
+					`<td>${new Date(e.created_at).toLocaleString("en-GY", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</td>` +
 					`<td>${escapeHtml(e.supplier_name) || "\u2014"}</td>` +
 					`<td>${escapeHtml(e.category)}</td>` +
 					`<td>${escapeHtml(e.description)}</td>` +
@@ -171,8 +174,11 @@ function downloadPdf(
 		"  td { padding: 5px 8px; border-bottom: 1px solid #eee; vertical-align: top; }\n" +
 		"  tr:last-child td { border-bottom: none; }\n" +
 		"  .total { font-weight: bold; font-size: 13px; text-align: right; margin-top: 12px; }\n" +
-		"  @media print { button { display: none; } }\n" +
-		"</style></head><body>\n" +
+		"  .save-tip { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:10px 14px; margin-top:12px; font-size:11px; color:#166534; }\n" +
+		"  @media print { .no-print { display: none !important; } }\n" +
+		"</style>\n" +
+		"<script>window.onload = function(){ window.print(); }<\/script>\n" +
+		"</head><body>\n" +
 		`<h1>${escapeHtml(title)}</h1>\n` +
 		`<p>Period: ${escapeHtml(period)} &nbsp;&middot;&nbsp; ${rows.length} entries</p>\n` +
 		"<table>\n<thead><tr>\n" +
@@ -182,13 +188,14 @@ function downloadPdf(
 		`<tbody>${bodyHtml}</tbody>\n` +
 		"</table>\n" +
 		`<p class="total">Total: ${fmt(total)}</p>\n` +
-		'<button onclick="window.print()" style="margin-top:16px;padding:8px 16px;cursor:pointer">Print / Save as PDF</button>\n' +
+		'<div class="no-print save-tip">💡 To save as PDF: in the print dialog, change the <strong>Destination</strong> to <strong>Save as PDF</strong>, then click Save.</div>\n' +
+		'<button class="no-print" onclick="window.print()" style="margin-top:12px;padding:8px 16px;cursor:pointer">Print / Save as PDF</button>\n' +
 		"</body></html>";
-	const w = window.open("", "_blank");
-	if (w) {
-		w.document["write"](html);
-		w.document.close();
-	}
+	const blob = new Blob([html], { type: "text/html" });
+	const url = URL.createObjectURL(blob);
+	const w = window.open(url, "_blank");
+	if (!w) window.open(url, "_blank");
+	setTimeout(() => URL.revokeObjectURL(url), 15_000);
 }
 
 const SUPPLIER_COLORS = [
@@ -747,7 +754,7 @@ export default function ExpensesPage() {
 						}
 					>
 						<Download className="size-4" />
-						Export
+						Export CSV
 					</Button>
 					<Button
 						size="sm"
@@ -1674,12 +1681,13 @@ export default function ExpensesPage() {
 						</div>
 						<div className="flex flex-col gap-1.5">
 							<Label>Description</Label>
-							<Input
+							<Textarea
 								placeholder="What was this expense for?"
 								value={form.description}
 								onChange={(e) =>
 									setForm((f) => ({ ...f, description: e.target.value }))
 								}
+								rows={3}
 							/>
 						</div>
 						<div className="grid grid-cols-2 gap-3">

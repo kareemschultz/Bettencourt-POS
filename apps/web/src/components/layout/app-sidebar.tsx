@@ -81,6 +81,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
 		const query = search.trim().toLowerCase();
 		const filtered = items.filter(
 			(item) =>
+				!item.hidden &&
 				canSeeItem(user, item) &&
 				(query === "" || item.title.toLowerCase().includes(query)),
 		);
