@@ -27,6 +27,7 @@ export const reportingCategory = pgTable(
 		name: text("name").notNull(),
 		sortOrder: integer("sort_order").notNull().default(0),
 		isActive: boolean("is_active").notNull().default(true),
+		pinProtected: boolean("pin_protected").notNull().default(false),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.defaultNow(),
