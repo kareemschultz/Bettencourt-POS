@@ -19,6 +19,8 @@ export const env = createEnv({
 		SMTP_PASS: z.string().optional(),
 		SMTP_FROM: z.string().optional().default("noreply@bettencourt-pos.com"),
 		SMTP_ALERT_TO: z.string().optional(),
+		SMTP_DIGEST_TO: z.string().optional(),
+		REMINDER_INTERVAL_DAYS: z.coerce.number().default(7),
 	},
 	runtimeEnv: process.env,
 	emptyStringAsUndefined: true,
