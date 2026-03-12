@@ -97,6 +97,10 @@ export const invoice = pgTable(
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
+    lastEmailedAt: timestamp("last_emailed_at", { withTimezone: true }),
+    lastReminderSentAt: timestamp("last_reminder_sent_at", {
+      withTimezone: true,
+    }),
   },
   (table) => [
     index("idx_invoice_org").on(table.organizationId),

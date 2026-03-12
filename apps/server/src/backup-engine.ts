@@ -1,5 +1,7 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
+import { env } from "@Bettencourt-POS/env/server";
+import { sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import {
 	mkdir,
@@ -13,7 +15,11 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { gunzip, gzip } from "node:zlib";
 import cron from "node-cron";
-import { sendBackupFailureAlert } from "./email";
+import {
+	sendBackupFailureAlert,
+	sendDailyDigest,
+	sendOverdueReminder,
+} from "./email";
 
 const gzipAsync = promisify(gzip);
 const gunzipAsync = promisify(gunzip);
@@ -273,6 +279,150 @@ export function startBackupScheduler(): void {
 		},
 		{ timezone: "UTC" },
 	);
+	// Daily digest email — 04:30 UTC (after backup)
+	cron.schedule(
+		"30 4 * * *",
+		async () => {
+			const to = env.SMTP_DIGEST_TO ?? env.SMTP_ALERT_TO;
+			if (!to) {
+				console.log("[digest] No SMTP_DIGEST_TO configured — skipping");
+				return;
+			}
+			try {
+				const today = new Date().toLocaleDateString("en-CA", {
+					timeZone: "America/Guyana",
+				});
+
+				const [revenueRes, expensesRes, invoicesRes, stockRes, topRes] =
+					await Promise.all([
+						db.execute(sql`
+              SELECT COALESCE(SUM(total),0)::text as revenue, COUNT(*)::int as order_count
+              FROM "order"
+              WHERE status IN ('completed','closed')
+                AND DATE(created_at AT TIME ZONE 'America/Guyana') = ${today}`),
+						db.execute(sql`
+              SELECT COALESCE(SUM(amount),0)::text as total
+              FROM expense
+              WHERE DATE(created_at AT TIME ZONE 'America/Guyana') = ${today}`),
+						db.execute(sql`
+              SELECT COUNT(*)::int as cnt, COALESCE(SUM(total - amount_paid),0)::text as outstanding
+              FROM invoice
+              WHERE status IN ('sent','partial')`),
+						db.execute(sql`
+              SELECT COUNT(*)::int as cnt FROM stock_alert
+              WHERE acknowledged = false AND alert_type IN ('low_stock','out_of_stock')`),
+						db.execute(sql`
+              SELECT oli.product_name_snapshot as name, SUM(oli.quantity)::int as qty
+              FROM order_line_item oli
+              JOIN "order" o ON o.id = oli.order_id
+              WHERE o.status IN ('completed','closed')
+                AND DATE(o.created_at AT TIME ZONE 'America/Guyana') = ${today}
+                AND oli.voided = false
+              GROUP BY oli.product_name_snapshot
+              ORDER BY qty DESC LIMIT 5`),
+					]);
+
+				const rev = revenueRes.rows[0] as {
+					revenue: string;
+					order_count: number;
+				};
+				const exp = expensesRes.rows[0] as { total: string };
+				const inv = invoicesRes.rows[0] as {
+					cnt: number;
+					outstanding: string;
+				};
+				const stk = stockRes.rows[0] as { cnt: number };
+
+				await sendDailyDigest(
+					{
+						date: today,
+						revenue: rev.revenue,
+						orderCount: rev.order_count,
+						expensesTotal: exp.total,
+						openInvoicesCount: inv.cnt,
+						openInvoicesTotal: inv.outstanding,
+						stockAlertCount: stk.cnt,
+						topProducts: topRes.rows as Array<{ name: string; qty: number }>,
+					},
+					to,
+				);
+
+				console.log(`[digest] Daily digest sent to ${to}`);
+			} catch (err) {
+				console.error("[digest] Failed to send daily digest:", err);
+			}
+		},
+		{ timezone: "UTC" },
+	);
+
+	// Overdue invoice reminders — 05:00 UTC
+	cron.schedule(
+		"0 5 * * *",
+		async () => {
+			try {
+				const intervalDays = env.REMINDER_INTERVAL_DAYS ?? 7;
+				const cutoff = new Date();
+				cutoff.setDate(cutoff.getDate() - intervalDays);
+
+				const overdueRows = await db.execute(sql`
+          SELECT
+            i.id,
+            i.invoice_number as "invoiceNumber",
+            i.customer_name as "customerName",
+            i.due_date as "dueDate",
+            (i.total - i.amount_paid)::text as "amountOutstanding",
+            c.email as "customerEmail"
+          FROM invoice i
+          LEFT JOIN customer c ON c.id = i.customer_id
+          WHERE i.status IN ('sent', 'partial')
+            AND i.due_date < NOW()
+            AND c.email IS NOT NULL
+            AND (i.last_reminder_sent_at IS NULL OR i.last_reminder_sent_at < ${cutoff.toISOString()})
+        `);
+
+				const orgRows = await db.execute(
+					sql`SELECT name FROM organization LIMIT 1`,
+				);
+				const orgName =
+					(orgRows.rows[0] as { name: string })?.name ?? "Bettencourt's";
+
+				let sent = 0;
+				for (const row of overdueRows.rows as Array<{
+					id: string;
+					invoiceNumber: string;
+					customerName: string;
+					dueDate: string;
+					amountOutstanding: string;
+					customerEmail: string;
+				}>) {
+					try {
+						await sendOverdueReminder({
+							to: row.customerEmail,
+							customerName: row.customerName,
+							invoiceNumber: row.invoiceNumber,
+							dueDate: new Date(row.dueDate).toLocaleDateString("en-GY"),
+							amountOutstanding: row.amountOutstanding,
+							organizationName: orgName,
+						});
+						await db.execute(
+							sql`UPDATE invoice SET last_reminder_sent_at = NOW() WHERE id = ${row.id}`,
+						);
+						sent++;
+					} catch (e) {
+						console.error(
+							`[reminders] Failed to send reminder for invoice ${row.invoiceNumber}:`,
+							e,
+						);
+					}
+				}
+				console.log(`[reminders] Sent ${sent} overdue reminder(s)`);
+			} catch (err) {
+				console.error("[reminders] Overdue reminder job failed:", err);
+			}
+		},
+		{ timezone: "UTC" },
+	);
+
 	console.log(
 		"[backup] Scheduler started — daily at 04:00 UTC (midnight Guyana)",
 	);

@@ -57,6 +57,13 @@
       "when": 1773400000000,
       "tag": "0012_operations_polish",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1773400001000,
+      "tag": "0013_comms_notifications",
+      "breakpoints": true
     }
   ]
 }
