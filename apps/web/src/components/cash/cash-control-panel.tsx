@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, DollarSign, Unlock } from "lucide-react";
+import { ArrowDown, ArrowUp, DollarSign, Printer, Unlock } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { printCashSessionReport } from "@/lib/pdf/cash-session-pdf";
 import { formatGYD } from "@/lib/types";
 import { orpc } from "@/utils/orpc";
 
@@ -46,12 +47,14 @@ interface CashControlPanelProps {
 	sessions: CashSession[];
 	openSession: CashSession | null;
 	locationId: string;
+	organizationName?: string;
 }
 
 export function CashControlPanel({
 	sessions,
 	openSession,
 	locationId,
+	organizationName = "Bettencourt's Diner",
 }: CashControlPanelProps) {
 	const queryClient = useQueryClient();
 	const [openShiftDialog, setOpenShiftDialog] = useState(false);
@@ -302,6 +305,7 @@ export function CashControlPanel({
 									<TableHead>Actual</TableHead>
 									<TableHead>Variance</TableHead>
 									<TableHead>Status</TableHead>
+									<TableHead></TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -360,6 +364,24 @@ export function CashControlPanel({
 												>
 													{s.status}
 												</Badge>
+											</TableCell>
+											<TableCell>
+												{s.status === "closed" && (
+													<Button
+														size="sm"
+														variant="ghost"
+														className="gap-1 text-xs"
+														onClick={() =>
+															printCashSessionReport({
+																session: s,
+																organizationName,
+															})
+														}
+													>
+														<Printer className="size-3" />
+														Report
+													</Button>
+												)}
 											</TableCell>
 										</TableRow>
 									))}
