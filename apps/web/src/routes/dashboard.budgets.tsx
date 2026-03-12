@@ -181,6 +181,9 @@ export default function BudgetsPage() {
 	const { data: budgetsRaw, isLoading: loadingBudgets } = useQuery(
 		orpc.budgets.list.queryOptions({ input: {} }),
 	);
+	const { data: monthlyBudgetData } = useQuery(
+		orpc.budgets.getCurrentMonthBudgets.queryOptions({ input: {} }),
+	);
 	const budgets = (budgetsRaw as BudgetRow[] | undefined) ?? [];
 
 	// Placeholder UUID used when no budget is expanded; query is disabled in that case.
@@ -634,6 +637,94 @@ export default function BudgetsPage() {
 						);
 					})}
 				</div>
+			)}
+
+			{/* Current Month Budget vs Actual Chart */}
+			{monthlyBudgetData && monthlyBudgetData.rows.length > 0 && (
+				<Card>
+					<CardContent className="p-4">
+						<div className="mb-3 flex items-center justify-between">
+							<div>
+								<h3 className="font-semibold">
+									Budget vs Actual — {monthlyBudgetData.month}
+								</h3>
+								<p className="text-xs text-muted-foreground">
+									Current month spending vs budget
+								</p>
+							</div>
+							<div className="text-right text-xs">
+								<span
+									className={
+										Number(monthlyBudgetData.totalVariance) >= 0
+											? "text-green-600"
+											: "text-destructive"
+									}
+								>
+									{Number(monthlyBudgetData.totalVariance) >= 0
+										? "Under budget"
+										: "Over budget"}{" "}
+									by{" "}
+									{new Intl.NumberFormat("en-GY", {
+										style: "currency",
+										currency: "GYD",
+									}).format(
+										Math.abs(Number(monthlyBudgetData.totalVariance)),
+									)}
+								</span>
+							</div>
+						</div>
+						<ResponsiveContainer
+							width="100%"
+							height={Math.max(200, monthlyBudgetData.rows.length * 44)}
+						>
+							<BarChart
+								layout="vertical"
+								data={monthlyBudgetData.rows.map((r) => ({
+									category: r.category,
+									budgeted: Number(r.budgeted),
+									actual: Number(r.actual),
+								}))}
+								margin={{ left: 120, right: 20, top: 4, bottom: 4 }}
+							>
+								<CartesianGrid strokeDasharray="3 3" horizontal={false} />
+								<XAxis
+									type="number"
+									tickFormatter={(v: number) =>
+										`$${(v / 1000).toFixed(0)}k`
+									}
+									tick={{ fontSize: 10 }}
+								/>
+								<YAxis
+									type="category"
+									dataKey="category"
+									tick={{ fontSize: 11 }}
+									width={115}
+								/>
+								<Tooltip
+									formatter={(value: number) =>
+										new Intl.NumberFormat("en-GY", {
+											style: "currency",
+											currency: "GYD",
+										}).format(value)
+									}
+								/>
+								<Legend />
+								<Bar
+									dataKey="budgeted"
+									name="Budget"
+									fill="#0f766e"
+									radius={[0, 3, 3, 0]}
+								/>
+								<Bar
+									dataKey="actual"
+									name="Actual"
+									fill="#22c55e"
+									radius={[0, 3, 3, 0]}
+								/>
+							</BarChart>
+						</ResponsiveContainer>
+					</CardContent>
+				</Card>
 			)}
 
 			{/* Create / Edit Dialog */}

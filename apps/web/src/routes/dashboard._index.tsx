@@ -97,6 +97,12 @@ function ExecutiveDashboard({ user }: { user: AppUser }) {
 	const voidCount = data?.voidCount || 0;
 
 	const hourlySales = (data?.hourlySales || []) as Record<string, unknown>[];
+	const expensesToday = Number(data?.expensesToday ?? "0");
+	const openInvoicesCount = data?.openInvoicesCount ?? 0;
+	const openInvoicesTotal = Number(data?.openInvoicesTotal ?? "0");
+	const overdueInvoicesCount = data?.overdueInvoicesCount ?? 0;
+	const lowStockCount = data?.lowStockCount ?? 0;
+
 	const hourlyData: HourlyData[] = Array.from({ length: 24 }, (_, i) => {
 		const match = hourlySales.find((h) => Number(h.hour) === i);
 		return {
@@ -226,6 +232,56 @@ function ExecutiveDashboard({ user }: { user: AppUser }) {
 								</Badge>
 							)}
 						</div>
+					</CardContent>
+				</Card>
+			</div>
+
+			{/* Financial Pulse row */}
+			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+				<Card>
+					<CardContent className="p-4">
+						<p className="text-xs font-medium text-muted-foreground">Expenses Today</p>
+						<p className="mt-1 text-xl font-bold text-destructive">
+							{formatGYD(expensesToday)}
+						</p>
+					</CardContent>
+				</Card>
+
+				<Card>
+					<CardContent className="p-4">
+						<p className="text-xs font-medium text-muted-foreground">AR Outstanding</p>
+						<p className="mt-1 text-xl font-bold text-violet-600">
+							{formatGYD(openInvoicesTotal)}
+						</p>
+						<p className="text-xs text-muted-foreground">{openInvoicesCount} invoice(s)</p>
+					</CardContent>
+				</Card>
+
+				<Card className={overdueInvoicesCount > 0 ? "border-destructive/40" : ""}>
+					<CardContent className="p-4">
+						<p className="text-xs font-medium text-muted-foreground">Overdue Invoices</p>
+						<p className={`mt-1 text-xl font-bold ${overdueInvoicesCount > 0 ? "text-destructive" : ""}`}>
+							{overdueInvoicesCount}
+						</p>
+						{overdueInvoicesCount > 0 && (
+							<Link to="/dashboard/invoices" className="text-xs text-destructive hover:underline">
+								View →
+							</Link>
+						)}
+					</CardContent>
+				</Card>
+
+				<Card className={lowStockCount > 0 ? "border-amber-400/40" : ""}>
+					<CardContent className="p-4">
+						<Link to="/dashboard/stock-alerts" className="block">
+							<p className="text-xs font-medium text-muted-foreground">Low Stock</p>
+							<p className={`mt-1 text-xl font-bold ${lowStockCount > 0 ? "text-amber-600" : ""}`}>
+								{lowStockCount}
+							</p>
+							{lowStockCount > 0 && (
+								<p className="text-xs text-amber-600">Need attention</p>
+							)}
+						</Link>
 					</CardContent>
 				</Card>
 			</div>

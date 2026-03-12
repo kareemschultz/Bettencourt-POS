@@ -20,6 +20,10 @@ const getSummary = permissionProcedure("orders.read").handler(async () => {
 		paymentBreakdownResult,
 		voidCountResult,
 		hourlySalesResult,
+		expensesTodayResult,
+		openInvoicesResult,
+		overdueInvoicesResult,
+		lowStockResult,
 	] = await Promise.all([
 		// Today's stats
 		db.execute(
@@ -91,6 +95,33 @@ const getSummary = permissionProcedure("orders.read").handler(async () => {
 				GROUP BY EXTRACT(HOUR FROM o.created_at AT TIME ZONE 'America/Guyana')
 				ORDER BY hour`,
 		),
+		// Expenses today
+		db.execute(
+			sql`SELECT COALESCE(SUM(amount), 0)::numeric as total
+				FROM expense
+				WHERE DATE(created_at AT TIME ZONE 'America/Guyana') = ${today}`,
+		),
+		// Open invoices count + total outstanding
+		db.execute(
+			sql`SELECT COUNT(*)::int as cnt,
+					COALESCE(SUM(total - amount_paid), 0)::numeric as outstanding
+				FROM invoice
+				WHERE status IN ('sent', 'partial')`,
+		),
+		// Overdue invoices count
+		db.execute(
+			sql`SELECT COUNT(*)::int as cnt
+				FROM invoice
+				WHERE status IN ('sent', 'partial')
+					AND due_date < NOW()`,
+		),
+		// Low / out-of-stock alerts count
+		db.execute(
+			sql`SELECT COUNT(*)::int as cnt
+				FROM stock_alert
+				WHERE acknowledged = false
+					AND alert_type IN ('low_stock', 'out_of_stock')`,
+		),
 	]);
 
 	return {
@@ -106,6 +137,22 @@ const getSummary = permissionProcedure("orders.read").handler(async () => {
 		paymentBreakdown: paymentBreakdownResult.rows as Record<string, unknown>[],
 		voidCount: Number((voidCountResult.rows[0] as Record<string, unknown>).cnt),
 		hourlySales: hourlySalesResult.rows as Record<string, unknown>[],
+		// Financial Pulse
+		expensesToday: String(
+			(expensesTodayResult.rows[0] as Record<string, unknown>).total ?? "0",
+		),
+		openInvoicesCount: Number(
+			(openInvoicesResult.rows[0] as Record<string, unknown>).cnt ?? 0,
+		),
+		openInvoicesTotal: String(
+			(openInvoicesResult.rows[0] as Record<string, unknown>).outstanding ?? "0",
+		),
+		overdueInvoicesCount: Number(
+			(overdueInvoicesResult.rows[0] as Record<string, unknown>).cnt ?? 0,
+		),
+		lowStockCount: Number(
+			(lowStockResult.rows[0] as Record<string, unknown>).cnt ?? 0,
+		),
 	};
 });
 

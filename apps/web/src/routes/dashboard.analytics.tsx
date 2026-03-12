@@ -9,6 +9,16 @@ import {
 	Users,
 } from "lucide-react";
 import { useState } from "react";
+import {
+	Bar,
+	BarChart,
+	CartesianGrid,
+	Legend,
+	ResponsiveContainer,
+	Tooltip as RechartsTooltip,
+	XAxis,
+	YAxis,
+} from "recharts";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -38,6 +48,9 @@ const DAY_NAMES = [
 export default function AnalyticsPage() {
 	const [revenueDays, setRevenueDays] = useState<DayRange>(30);
 	const [abcView, setAbcView] = useState<AbcView>("abc");
+	const [weeklyMetric, setWeeklyMetric] = useState<"revenue" | "orders">(
+		"revenue",
+	);
 
 	const today = todayGY();
 	const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
@@ -63,6 +76,9 @@ export default function AnalyticsPage() {
 	);
 	const { data: laborData, isLoading: loadingLabor } = useQuery(
 		orpc.analytics.getLaborCostRatio.queryOptions({ input: { days: 30 } }),
+	);
+	const { data: weeklyRaw } = useQuery(
+		orpc.analytics.getWeeklyComparison.queryOptions({ input: undefined }),
 	);
 	const { data: deptData, isLoading: loadingDept } = useQuery(
 		orpc.reports.getDepartmentProfitability.queryOptions({
@@ -124,6 +140,11 @@ export default function AnalyticsPage() {
 
 	const abcRows = (abcData || []) as Record<string, unknown>[];
 	const deptRows = (deptData || []) as Record<string, unknown>[];
+	const weeklyChartData = (weeklyRaw ?? []).map((d) => ({
+		...d,
+		thisWeekRevenue: Number(d.thisWeekRevenue),
+		lastWeekRevenue: Number(d.lastWeekRevenue),
+	}));
 	const maxDeptRev = Math.max(
 		...deptRows.map((r) => Number(r.revenue) || 0),
 		1,
@@ -561,6 +582,85 @@ export default function AnalyticsPage() {
 					</CardContent>
 				</Card>
 			</div>
+
+			{/* Week-over-Week Comparison */}
+			<Card>
+				<CardContent className="p-4">
+					<div className="mb-4 flex items-center justify-between">
+						<h3 className="font-semibold">This Week vs Last Week</h3>
+						<div className="flex rounded-md border text-xs">
+							<button
+								type="button"
+								className={`px-3 py-1 ${weeklyMetric === "revenue" ? "bg-muted font-medium" : ""}`}
+								onClick={() => setWeeklyMetric("revenue")}
+							>
+								Revenue
+							</button>
+							<button
+								type="button"
+								className={`px-3 py-1 ${weeklyMetric === "orders" ? "bg-muted font-medium" : ""}`}
+								onClick={() => setWeeklyMetric("orders")}
+							>
+								Orders
+							</button>
+						</div>
+					</div>
+					{weeklyChartData.length === 0 ? (
+						<p className="py-8 text-center text-muted-foreground text-sm">
+							No weekly data available.
+						</p>
+					) : (
+						<ResponsiveContainer width="100%" height={220}>
+							<BarChart data={weeklyChartData} barGap={4}>
+								<CartesianGrid strokeDasharray="3 3" vertical={false} />
+								<XAxis dataKey="dayLabel" tick={{ fontSize: 11 }} />
+								<YAxis
+									tick={{ fontSize: 11 }}
+									tickFormatter={
+										weeklyMetric === "revenue"
+											? (v: number) => `$${(v / 1000).toFixed(0)}k`
+											: undefined
+									}
+								/>
+								<RechartsTooltip
+									formatter={(value: number, name: string) =>
+										weeklyMetric === "revenue"
+											? [
+													new Intl.NumberFormat("en-GY", {
+														style: "currency",
+														currency: "GYD",
+													}).format(value),
+													name,
+												]
+											: [value, name]
+									}
+								/>
+								<Legend />
+								<Bar
+									dataKey={
+										weeklyMetric === "revenue"
+											? "thisWeekRevenue"
+											: "thisWeekOrders"
+									}
+									name="This Week"
+									fill="#0f766e"
+									radius={[3, 3, 0, 0]}
+								/>
+								<Bar
+									dataKey={
+										weeklyMetric === "revenue"
+											? "lastWeekRevenue"
+											: "lastWeekOrders"
+									}
+									name="Last Week"
+									fill="#94a3b8"
+									radius={[3, 3, 0, 0]}
+								/>
+							</BarChart>
+						</ResponsiveContainer>
+					)}
+				</CardContent>
+			</Card>
 
 			{/* ABC Analysis / Department Revenue toggle */}
 			<Card>

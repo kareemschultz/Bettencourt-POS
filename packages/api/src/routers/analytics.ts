@@ -405,6 +405,65 @@ const getLaborByRole = permissionProcedure("reports.read")
 		}));
 	});
 
+// ── getWeeklyComparison ─────────────────────────────────────────────
+// Returns this week vs last week sales by day (Mon–Sun), Guyana timezone.
+const getWeeklyComparison = permissionProcedure("orders.read").handler(
+	async () => {
+		const result = await db.execute(sql`
+			WITH week_data AS (
+				SELECT
+					DATE(created_at AT TIME ZONE 'America/Guyana') as day,
+					COALESCE(SUM(total), 0)::numeric as revenue,
+					COUNT(*)::int as orders
+				FROM "order"
+				WHERE status IN ('completed', 'closed')
+					AND created_at AT TIME ZONE 'America/Guyana'
+						>= (CURRENT_TIMESTAMP AT TIME ZONE 'America/Guyana')::date - interval '13 days'
+				GROUP BY DATE(created_at AT TIME ZONE 'America/Guyana')
+			),
+			this_week AS (
+				SELECT
+					generate_series(
+						date_trunc('week', (CURRENT_TIMESTAMP AT TIME ZONE 'America/Guyana')::date),
+						date_trunc('week', (CURRENT_TIMESTAMP AT TIME ZONE 'America/Guyana')::date) + interval '6 days',
+						interval '1 day'
+					)::date AS day
+			),
+			last_week AS (
+				SELECT
+					generate_series(
+						date_trunc('week', (CURRENT_TIMESTAMP AT TIME ZONE 'America/Guyana')::date) - interval '7 days',
+						date_trunc('week', (CURRENT_TIMESTAMP AT TIME ZONE 'America/Guyana')::date) - interval '1 day',
+						interval '1 day'
+					)::date AS day
+			)
+			SELECT
+				tw.day::text as "thisWeekDay",
+				lw.day::text as "lastWeekDay",
+				TO_CHAR(tw.day, 'Dy') as "dayLabel",
+				COALESCE(wd_this.revenue, 0)::text as "thisWeekRevenue",
+				COALESCE(wd_last.revenue, 0)::text as "lastWeekRevenue",
+				COALESCE(wd_this.orders, 0)::int as "thisWeekOrders",
+				COALESCE(wd_last.orders, 0)::int as "lastWeekOrders"
+			FROM this_week tw
+			JOIN last_week lw ON tw.day = lw.day + interval '7 days'
+			LEFT JOIN week_data wd_this ON wd_this.day = tw.day
+			LEFT JOIN week_data wd_last ON wd_last.day = lw.day
+			ORDER BY tw.day
+		`);
+
+		return result.rows as Array<{
+			thisWeekDay: string;
+			lastWeekDay: string;
+			dayLabel: string;
+			thisWeekRevenue: string;
+			lastWeekRevenue: string;
+			thisWeekOrders: number;
+			lastWeekOrders: number;
+		}>;
+	},
+);
+
 export const analyticsRouter = {
 	getRevenueTrend,
 	getHourlyPattern,
@@ -415,4 +474,5 @@ export const analyticsRouter = {
 	getLaborDetails,
 	getLaborTrend,
 	getLaborByRole,
+	getWeeklyComparison,
 };
