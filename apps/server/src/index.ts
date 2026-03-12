@@ -9,7 +9,9 @@ import { auth } from "@Bettencourt-POS/auth";
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { env } from "@Bettencourt-POS/env/server";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { extname, join } from "node:path";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
@@ -164,6 +166,66 @@ app.post("/api/auth/demo-login", async (c) => {
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 app.route("/api/backups", backupsRouter);
+
+// ── Receipt photo upload ───────────────────────────────────────────────
+const ALLOWED_MIME: Record<string, string> = {
+	"image/jpeg": ".jpg",
+	"image/png": ".png",
+	"image/webp": ".webp",
+};
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB
+
+app.post("/api/uploads/receipt", async (c) => {
+	const session = await auth.api.getSession({ headers: c.req.raw.headers });
+	if (!session?.user) return c.json({ error: "Unauthorized" }, 401);
+
+	const formData = await c.req.formData();
+	const file = formData.get("file");
+	if (!file || !(file instanceof File)) {
+		return c.json({ error: "No file provided" }, 400);
+	}
+	if (file.size > MAX_UPLOAD_BYTES) {
+		return c.json({ error: "File too large (max 5 MB)" }, 400);
+	}
+	const ext = ALLOWED_MIME[file.type];
+	if (!ext) {
+		return c.json({ error: "Only JPEG, PNG, and WebP are allowed" }, 400);
+	}
+
+	const uploadsDir = join(env.UPLOADS_DIR, "receipts");
+	await mkdir(uploadsDir, { recursive: true });
+
+	const filename = `${randomUUID()}${ext}`;
+	const dest = join(uploadsDir, filename);
+	const buffer = Buffer.from(await file.arrayBuffer());
+	await writeFile(dest, buffer);
+
+	const url = `/uploads/receipts/${filename}`;
+	return c.json({ url });
+});
+
+// Serve uploaded files with correct MIME types
+app.get("/uploads/*", async (c) => {
+	const { readFile } = await import("node:fs/promises");
+	const reqPath = new URL(c.req.url).pathname;
+	const filePath = join(env.UPLOADS_DIR, reqPath.replace(/^\/uploads/, ""));
+	try {
+		const data = await readFile(filePath);
+		const ext2 = extname(filePath).toLowerCase();
+		const mimeMap: Record<string, string> = {
+			".jpg": "image/jpeg",
+			".jpeg": "image/jpeg",
+			".png": "image/png",
+			".webp": "image/webp",
+		};
+		const contentType = mimeMap[ext2] ?? "application/octet-stream";
+		return new Response(data, {
+			headers: { "Content-Type": contentType, "Cache-Control": "max-age=86400" },
+		});
+	} catch {
+		return c.json({ error: "Not found" }, 404);
+	}
+});
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
 	plugins: [

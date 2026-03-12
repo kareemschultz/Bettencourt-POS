@@ -29,6 +29,7 @@ services:
         max-file: "3"
     volumes:
       - bettencourt-backups:/app/backups
+      - bettencourt-uploads:/app/uploads
     networks:
       - kt-net-apps
       - kt-net-databases
@@ -36,6 +37,8 @@ services:
 
 volumes:
   bettencourt-backups:
+    driver: local
+  bettencourt-uploads:
     driver: local
 
 networks:

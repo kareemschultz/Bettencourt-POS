@@ -89,8 +89,9 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { downloadCsv } from "@/lib/csv-export";
 import { printDailyExpenseSummary } from "@/lib/pdf/daily-expense-summary-pdf";
+import { printExpenseReport } from "@/lib/pdf/expense-report-pdf";
 import { formatGYD } from "@/lib/types";
-import { escapeHtml, todayGY } from "@/lib/utils";
+import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
 
 type SourceGroup = {
@@ -101,102 +102,6 @@ type SourceGroup = {
 	total: number;
 };
 
-function downloadPdf(
-	title: string,
-	rows: ExpenseRow[],
-	period: string,
-	options?: {
-		getSourceName?: (id: string | null | undefined) => string;
-		groups?: SourceGroup[];
-	},
-) {
-	if (!rows.length) return;
-	const fmt = (n: number) =>
-		new Intl.NumberFormat("en-GY", {
-			style: "currency",
-			currency: "GYD",
-		}).format(n);
-	const total = rows.reduce((s, e) => s + Number(e.amount), 0);
-	const getSourceName = options?.getSourceName ?? (() => "General Cash");
-	const groups = options?.groups;
-	let bodyHtml = "";
-	if (groups && groups.length > 0) {
-		for (const src of groups) {
-			const srcRows = src.items
-				.map(
-					(e) =>
-						`<tr><td>${new Date(e.created_at).toLocaleString("en-GY", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</td>` +
-						`<td>${escapeHtml(e.supplier_name) || "\u2014"}</td>` +
-						`<td>${escapeHtml(e.category)}</td>` +
-						`<td>${escapeHtml(e.description)}</td>` +
-						`<td>${escapeHtml(e.payment_method) || "\u2014"}</td>` +
-						`<td>${escapeHtml(e.reference_number) || "\u2014"}</td>` +
-						`<td style="text-align:right;font-weight:600">${fmt(Number(e.amount))}</td>` +
-						`<td>${escapeHtml(e.authorized_by_name) || "\u2014"}</td></tr>`,
-				)
-				.join("");
-			bodyHtml +=
-				`<tr><td colspan="8" style="background:${src.color}22;border-left:4px solid ${src.color};` +
-				`padding:6px 8px;font-weight:700;font-size:11px">${escapeHtml(src.name)}&nbsp;&middot;&nbsp;` +
-				`${src.items.length} expense${src.items.length !== 1 ? "s" : ""}&nbsp;&middot;&nbsp;${fmt(src.total)}</td></tr>` +
-				srcRows;
-		}
-	} else {
-		const showSource = !!options?.getSourceName;
-		bodyHtml = rows
-			.map(
-				(e) =>
-					// <tr> must come first — source <td> is a cell inside the row, not before it
-					`<tr>` +
-					(showSource ? `<td style="font-size:10px;color:#555">${escapeHtml(getSourceName(e.funding_source_id))}</td>` : "") +
-					`<td>${new Date(e.created_at).toLocaleString("en-GY", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</td>` +
-					`<td>${escapeHtml(e.supplier_name) || "\u2014"}</td>` +
-					`<td>${escapeHtml(e.category)}</td>` +
-					`<td>${escapeHtml(e.description)}</td>` +
-					`<td>${escapeHtml(e.payment_method) || "\u2014"}</td>` +
-					`<td>${escapeHtml(e.reference_number) || "\u2014"}</td>` +
-					`<td style="text-align:right;font-weight:600">${fmt(Number(e.amount))}</td>` +
-					`<td>${escapeHtml(e.authorized_by_name) || "\u2014"}</td></tr>`,
-			)
-			.join("");
-	}
-	const sourceHeader =
-		options?.getSourceName && !groups ? "<th>Funding Source</th>" : "";
-	const html =
-		"<!DOCTYPE html><html><head><meta charset=\"utf-8\"/>\n" +
-		`<title>${escapeHtml(title)}</title>\n` +
-		"<style>\n" +
-		"  body { font-family: Arial, sans-serif; font-size: 11px; color: #111; padding: 24px; }\n" +
-		"  h1 { font-size: 18px; margin: 0 0 4px; }\n" +
-		"  p  { margin: 0 0 16px; color: #555; font-size: 11px; }\n" +
-		"  table { width: 100%; border-collapse: collapse; }\n" +
-		"  th { background: #f3f4f6; text-align: left; padding: 6px 8px; font-size: 10px; border-bottom: 2px solid #ddd; }\n" +
-		"  td { padding: 5px 8px; border-bottom: 1px solid #eee; vertical-align: top; }\n" +
-		"  tr:last-child td { border-bottom: none; }\n" +
-		"  .total { font-weight: bold; font-size: 13px; text-align: right; margin-top: 12px; }\n" +
-		"  .save-tip { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:10px 14px; margin-top:12px; font-size:11px; color:#166534; }\n" +
-		"  @media print { .no-print { display: none !important; } }\n" +
-		"</style>\n" +
-		"<script>window.onload = function(){ window.print(); }<\/script>\n" +
-		"</head><body>\n" +
-		`<h1>${escapeHtml(title)}</h1>\n` +
-		`<p>Period: ${escapeHtml(period)} &nbsp;&middot;&nbsp; ${rows.length} entries</p>\n` +
-		"<table>\n<thead><tr>\n" +
-		`  ${sourceHeader}<th>Date</th><th>Supplier</th><th>Category</th><th>Description</th>\n` +
-		'  <th>Payment</th><th>Ref #</th><th style="text-align:right">Amount</th><th>Auth. By</th>\n' +
-		"</tr></thead>\n" +
-		`<tbody>${bodyHtml}</tbody>\n` +
-		"</table>\n" +
-		`<p class="total">Total: ${fmt(total)}</p>\n` +
-		'<div class="no-print save-tip">💡 To save as PDF: in the print dialog, change the <strong>Destination</strong> to <strong>Save as PDF</strong>, then click Save.</div>\n' +
-		'<button class="no-print" onclick="window.print()" style="margin-top:12px;padding:8px 16px;cursor:pointer">Print / Save as PDF</button>\n' +
-		"</body></html>";
-	const blob = new Blob([html], { type: "text/html" });
-	const url = URL.createObjectURL(blob);
-	const w = window.open(url, "_blank");
-	if (!w) window.open(url, "_blank");
-	setTimeout(() => URL.revokeObjectURL(url), 15_000);
-}
 
 const SUPPLIER_COLORS = [
 	"bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
@@ -227,6 +132,7 @@ const emptyForm = {
 	notes: "",
 	fundingSourceId: "",
 	department: "",
+	receiptPhotoUrl: "",
 };
 
 type ExpenseRow = {
@@ -282,7 +188,12 @@ export default function ExpensesPage() {
 		}
 	}
 
-	const [startDate, setStartDate] = useState(today);
+	const [startDate, setStartDate] = useState(() => {
+		const now = new Date(
+			new Date().toLocaleString("en-US", { timeZone: "America/Guyana" }),
+		);
+		return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+	});
 	const [endDate, setEndDate] = useState(today);
 	const [supplierFilter, setSupplierFilter] = useState("all");
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -292,6 +203,7 @@ export default function ExpensesPage() {
 	const [newCategoryName, setNewCategoryName] = useState("");
 	const [viewingExpense, setViewingExpense] = useState<ExpenseRow | null>(null);
 	const [categoryFilter, setCategoryFilter] = useState("all");
+	const [receiptUploading, setReceiptUploading] = useState(false);
 
 	// Funding source state
 	const [fundingSourceFilter, setFundingSourceFilter] = useState("all");
@@ -355,6 +267,32 @@ export default function ExpensesPage() {
 		orpc.cash.getDailyExpenseSummary.queryOptions({
 			input: { date: summaryDate },
 			enabled: viewMode === "daily" && !!orgId,
+		}),
+	);
+
+	// Previous month expense report (for period comparison badge)
+	const prevMonthRange = (() => {
+		const now = new Date(
+			new Date().toLocaleString("en-US", { timeZone: "America/Guyana" }),
+		);
+		const pad = (n: number) => String(n).padStart(2, "0");
+		const y = now.getFullYear();
+		const m = now.getMonth(); // 0-indexed current month => prev month is m-1
+		const prevFirst = new Date(y, m - 1, 1);
+		const prevLast = new Date(y, m, 0);
+		return {
+			startDate: `${prevFirst.getFullYear()}-${pad(prevFirst.getMonth() + 1)}-01`,
+			endDate: `${prevLast.getFullYear()}-${pad(prevLast.getMonth() + 1)}-${pad(prevLast.getDate())}T23:59:59`,
+		};
+	})();
+	const { data: prevMonthReport } = useQuery(
+		orpc.cash.getExpenseReport.queryOptions({
+			input: {
+				organizationId: orgId ?? "",
+				startDate: prevMonthRange.startDate,
+				endDate: prevMonthRange.endDate,
+			},
+			enabled: !!orgId,
 		}),
 	);
 
@@ -621,6 +559,7 @@ export default function ExpensesPage() {
 			notes: e.notes ?? "",
 			fundingSourceId: e.funding_source_id ?? "",
 			department: "",
+			receiptPhotoUrl: e.receipt_photo_url ?? "",
 		});
 		setDialogOpen(true);
 	}
@@ -645,8 +584,23 @@ export default function ExpensesPage() {
 				referenceNumber: form.referenceNumber || null,
 				notes: form.notes || null,
 				fundingSourceId: form.fundingSourceId || null,
+				receiptPhotoUrl: form.receiptPhotoUrl || null,
 			});
 		} else {
+			// Duplicate detection: warn if same amount + supplier on same day
+			const sameDay = expenses.filter((e) => {
+				const eDate = new Date(e.created_at).toLocaleDateString("en-CA", {
+					timeZone: "America/Guyana",
+				});
+				return (
+					eDate === today &&
+					e.amount === form.amount &&
+					e.supplier_id === (form.supplierId || null)
+				);
+			});
+			if (sameDay.length > 0) {
+				toast.warning("Similar expense already exists today — double-check before saving");
+			}
 			createExpense.mutate({
 				amount: form.amount,
 				category: form.category,
@@ -657,6 +611,7 @@ export default function ExpensesPage() {
 				notes: form.notes || null,
 				organizationId: orgId,
 				fundingSourceId: form.fundingSourceId || undefined,
+				receiptPhotoUrl: form.receiptPhotoUrl || null,
 			});
 		}
 	}
@@ -761,15 +716,17 @@ export default function ExpensesPage() {
 						variant="outline"
 						className="gap-1"
 						onClick={() =>
-							downloadPdf(
-								"Expense Report",
-								groupBySource ? expensesBySource.flatMap((g) => g.items) : filtered,
-								`${startDate} – ${endDate}`,
-								{
-									getSourceName,
-									groups: groupBySource ? expensesBySource : undefined,
-								},
-							)
+							printExpenseReport({
+								title: "Expense Report",
+								rows: groupBySource
+									? expensesBySource.flatMap((g) => g.items)
+									: filtered,
+								period: `${startDate} – ${endDate}`,
+								getSourceName,
+								groups: groupBySource ? expensesBySource : undefined,
+								preparedBy:
+									session?.user?.name ?? userProfile?.name ?? undefined,
+							})
 						}
 					>
 						<Printer className="size-4" />
@@ -930,6 +887,18 @@ export default function ExpensesPage() {
 								<p className="text-muted-foreground text-xs">
 									{expenses.length} entries
 								</p>
+								{prevMonthReport?.grandTotal && Number(prevMonthReport.grandTotal) > 0 && (() => {
+									const curr = Number(reportData?.grandTotal ?? 0);
+									const prev = Number(prevMonthReport.grandTotal);
+									const diff = prev > 0 ? ((curr - prev) / prev) * 100 : 0;
+									return (
+										<span className={`text-xs font-medium ${
+											diff > 0 ? "text-destructive" : "text-green-600 dark:text-green-400"
+										}`}>
+											{diff > 0 ? "+" : ""}{diff.toFixed(0)}% vs last month
+										</span>
+									);
+								})()}
 							</CardContent>
 						</Card>
 						{(
@@ -1613,7 +1582,20 @@ export default function ExpensesPage() {
 															key={s.id}
 															value={s.name}
 															onSelect={() => {
-																setForm((f) => ({ ...f, supplierId: s.id }));
+																// Auto-fill category from most recent expense for this supplier
+																const recent = expenses
+																	.filter((e) => e.supplier_id === s.id)
+																	.sort(
+																		(a, b) =>
+																			new Date(b.created_at).getTime() -
+																			new Date(a.created_at).getTime(),
+																	)[0];
+																setForm((f) => ({
+																	...f,
+																	supplierId: s.id,
+																	category:
+																		f.category || (recent?.category ?? f.category),
+																}));
 																setSupplierSearch("");
 																setSupplierPopoverOpen(false);
 															}}
@@ -1749,6 +1731,71 @@ export default function ExpensesPage() {
 								onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
 							/>
 						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label>
+								Receipt Photo{" "}
+								<span className="text-muted-foreground text-xs">(optional)</span>
+							</Label>
+							{form.receiptPhotoUrl ? (
+								<div className="flex items-start gap-3">
+									<img
+										src={form.receiptPhotoUrl}
+										alt="Receipt"
+										className="h-24 w-24 rounded border object-cover"
+									/>
+									<Button
+										type="button"
+										size="sm"
+										variant="ghost"
+										className="text-destructive hover:text-destructive"
+										onClick={() =>
+											setForm((f) => ({ ...f, receiptPhotoUrl: "" }))
+										}
+									>
+										Remove
+									</Button>
+								</div>
+							) : (
+								<label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed bg-muted/30 p-6 text-muted-foreground text-sm hover:bg-muted/50">
+									<input
+										type="file"
+										accept="image/jpeg,image/png,image/webp"
+										className="hidden"
+										disabled={receiptUploading}
+										onChange={async (e) => {
+											const file = e.target.files?.[0];
+											if (!file) return;
+											setReceiptUploading(true);
+											try {
+												const fd = new FormData();
+												fd.append("file", file);
+												const res = await fetch("/api/uploads/receipt", {
+													method: "POST",
+													body: fd,
+													credentials: "include",
+												});
+												if (!res.ok) {
+													const err = (await res.json()) as { error?: string };
+													toast.error(err.error ?? "Upload failed");
+													return;
+												}
+												const { url } = (await res.json()) as { url: string };
+												setForm((f) => ({ ...f, receiptPhotoUrl: url }));
+											} catch {
+												toast.error("Upload failed");
+											} finally {
+												setReceiptUploading(false);
+											}
+										}}
+									/>
+									{receiptUploading ? (
+										<span>Uploading…</span>
+									) : (
+										<span>Click to upload receipt photo (JPEG / PNG / WebP, max 5 MB)</span>
+									)}
+								</label>
+							)}
+						</div>
 					</div>
 					<DialogFooter>
 						<Button variant="outline" onClick={() => setDialogOpen(false)}>
@@ -1846,6 +1893,22 @@ export default function ExpensesPage() {
 								<div className="flex flex-col gap-1">
 									<p className="text-muted-foreground text-xs">Notes</p>
 									<p className="text-sm">{viewingExpense.notes}</p>
+								</div>
+							)}
+							{viewingExpense.receipt_photo_url && (
+								<div className="flex flex-col gap-1">
+									<p className="text-muted-foreground text-xs">Receipt Photo</p>
+									<a
+										href={viewingExpense.receipt_photo_url}
+										target="_blank"
+										rel="noreferrer"
+									>
+										<img
+											src={viewingExpense.receipt_photo_url}
+											alt="Receipt"
+											className="max-h-48 rounded border object-contain"
+										/>
+									</a>
 								</div>
 							)}
 							<div className="h-px bg-border" />

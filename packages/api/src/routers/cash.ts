@@ -1012,6 +1012,7 @@ const updateExpense = permissionProcedure("shifts.update")
       referenceNumber: z.string().nullable().optional(),
       notes: z.string().nullable().optional(),
       fundingSourceId: z.string().uuid().nullable().optional(),
+      receiptPhotoUrl: z.string().nullable().optional(),
       billable: z.boolean().optional(),
       customerId: z.string().uuid().nullable().optional(),
     }),
@@ -1029,6 +1030,7 @@ const updateExpense = permissionProcedure("shifts.update")
         referenceNumber: input.referenceNumber ?? null,
         notes: input.notes ?? null,
         fundingSourceId: input.fundingSourceId ?? null,
+        receiptPhotoUrl: input.receiptPhotoUrl ?? null,
         billable: input.billable ?? false,
         customerId: input.customerId ?? null,
       })
