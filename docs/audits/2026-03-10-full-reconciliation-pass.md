@@ -144,3 +144,25 @@ Despite that limitation, implemented improvements aligned with mainstream accoun
   - recurring lifecycle state tests
 
 These changes reduce drift between stored and computed monetary fields and improve recurring generation stability.
+
+---
+
+## 9) Extended enhancement implementation (current)
+
+Implemented additional high-value roadmap items from the pending list:
+
+- Billable expense to invoice flow foundation:
+  - Added `expense.billable`, `expense.customerId`, `expense.invoicedAt`, `expense.invoiceId`, `expense.invoiceLineId`
+  - Added API to list billable expenses (`invoiced` / `uninvoiced`)
+  - Added API to bulk attach billable expenses into invoice line items with total recalculation and traceability updates on expenses
+- Payment allocation ledger foundation:
+  - Added `customer_payment`, `customer_payment_allocation`, and `customer_payment_ledger` tables
+  - Added API for creating unapplied customer payments
+  - Added API for allocating unapplied payments across invoices with customer/amount validation and immutable ledger entries
+- Lifecycle timeline + scheduled send foundation:
+  - Added `invoice_lifecycle_event` table
+  - Added schedule-send endpoint for invoices/quotations (`scheduledSendAt`)
+  - Added lifecycle timeline query endpoint
+  - `markSent` now records explicit lifecycle events
+
+These changes establish the core data model and API contracts required for full UI rollout, reconciliation, and future automation workers.
