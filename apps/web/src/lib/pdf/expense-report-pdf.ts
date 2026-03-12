@@ -289,7 +289,7 @@ function buildReportHtml(opts: ExpenseReportOptions, logo: string): string {
 
   <!-- Expense table -->
   <div style="overflow-x:auto">
-    <table style="min-width:820px">
+    <table style="min-width:1050px">
       <colgroup>
         ${showSource ? '<col class="c-source" />' : ''}
         <col class="c-date" /><col class="c-supplier" /><col class="c-cat" />
