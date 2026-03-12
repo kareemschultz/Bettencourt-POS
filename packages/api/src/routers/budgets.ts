@@ -280,6 +280,65 @@ const getBudgetVsActual = permissionProcedure("reports.read")
 		return result;
 	});
 
+// ── getCurrentMonthBudgets ─────────────────────────────────────────────
+// Compares current-month budget amounts against actual expense totals per category.
+// Aggregates all active budgets for the current month across the organization.
+const getCurrentMonthBudgets = permissionProcedure("reports.read")
+	.input(z.object({}).optional())
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+		const now = new Date();
+		const year = now
+			.toLocaleString("en-CA", {
+				timeZone: "America/Guyana",
+				year: "numeric",
+			})
+			.slice(0, 4);
+		const mon = now
+			.toLocaleString("en-CA", {
+				timeZone: "America/Guyana",
+				month: "2-digit",
+			})
+			.slice(-2);
+		const month = `${year}-${mon}`;
+
+		const result = await db.execute(sql`
+			SELECT
+				cat->>'category' as category,
+				(cat->>'budgeted')::numeric as budgeted,
+				COALESCE(SUM(e.amount), 0)::numeric as actual,
+				((cat->>'budgeted')::numeric - COALESCE(SUM(e.amount), 0))::numeric as variance
+			FROM budget b,
+				jsonb_array_elements(b.categories) as cat
+			LEFT JOIN expense e ON e.category = cat->>'category'
+				AND e.organization_id = b.organization_id
+				AND EXTRACT(YEAR  FROM e.created_at AT TIME ZONE 'America/Guyana') = ${Number(year)}
+				AND EXTRACT(MONTH FROM e.created_at AT TIME ZONE 'America/Guyana') = ${Number(mon)}
+			WHERE b.organization_id = ${orgId}
+				AND b.status = 'active'
+			GROUP BY cat->>'category', (cat->>'budgeted')::numeric
+			ORDER BY category
+		`);
+
+		const rows = result.rows as Array<{
+			category: string;
+			budgeted: string;
+			actual: string;
+			variance: string;
+		}>;
+
+		const totalBudgeted = rows.reduce((s, r) => s + Number(r.budgeted), 0);
+		const totalActual = rows.reduce((s, r) => s + Number(r.actual), 0);
+
+		return {
+			rows,
+			totalBudgeted: totalBudgeted.toString(),
+			totalActual: totalActual.toString(),
+			totalVariance: (totalBudgeted - totalActual).toString(),
+			month,
+		};
+	});
+
 // ── router export ──────────────────────────────────────────────────────
 
 export const budgetsRouter = {
@@ -289,4 +348,5 @@ export const budgetsRouter = {
 	update,
 	delete: remove,
 	getBudgetVsActual,
+	getCurrentMonthBudgets,
 };
