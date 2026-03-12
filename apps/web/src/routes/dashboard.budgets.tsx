@@ -701,11 +701,11 @@ export default function BudgetsPage() {
 									width={115}
 								/>
 								<Tooltip
-									formatter={(value: number) =>
+									formatter={(value) =>
 										new Intl.NumberFormat("en-GY", {
 											style: "currency",
 											currency: "GYD",
-										}).format(value)
+										}).format(value as number)
 									}
 								/>
 								<Legend />

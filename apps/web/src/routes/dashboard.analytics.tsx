@@ -623,6 +623,7 @@ export default function AnalyticsPage() {
 									}
 								/>
 								<RechartsTooltip
+									// @ts-ignore - recharts Formatter type mismatch
 									formatter={(value: number, name: string) =>
 										weeklyMetric === "revenue"
 											? [
@@ -632,7 +633,7 @@ export default function AnalyticsPage() {
 													}).format(value),
 													name,
 												]
-											: [value, name]
+											: [String(value), name]
 									}
 								/>
 								<Legend />
