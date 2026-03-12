@@ -4,6 +4,7 @@ import {
 	Clock,
 	Gift,
 	Keyboard,
+	Lock,
 	ReceiptText,
 	ShoppingBag,
 	ShoppingCart,
@@ -75,6 +76,9 @@ export function POSTerminal({
 		userPermissions.discounts?.includes("apply") ?? false;
 	const [cart, setCart] = useState<CartItem[]>([]);
 	const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
+	const [unlockedCategories, setUnlockedCategories] = useState<Set<string>>(
+		new Set(),
+	);
 	const [selectedRegister, setSelectedRegister] = useState<string>(
 		"c0000000-0000-4000-8000-000000000001",
 	);
@@ -152,7 +156,7 @@ export function POSTerminal({
 	);
 
 	// Map oRPC camelCase response to frontend Product type
-	const departments: { id: string; name: string }[] =
+	const departments: { id: string; name: string; pinProtected: boolean }[] =
 		posData?.departments || [];
 	const products: Product[] = (posData?.products || []).map((p) => ({
 		id: p.id,
@@ -535,16 +539,40 @@ export function POSTerminal({
 					>
 						All
 					</button>
-					{departments.map((dept) => (
-						<button
-							key={dept.id}
-							type="button"
-							className={`shrink-0 touch-manipulation rounded-full border px-2.5 py-1 font-medium text-xs sm:px-3 ${selectedDepartment === dept.id ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background hover:bg-accent"}`}
-							onClick={() => setSelectedDepartment(dept.id)}
-						>
-							{dept.name}
-						</button>
-					))}
+					{departments.map((dept) => {
+						const isLocked =
+							dept.pinProtected && !unlockedCategories.has(dept.id);
+						return (
+							<button
+								key={dept.id}
+								type="button"
+								className={`flex shrink-0 touch-manipulation items-center gap-1 rounded-full border px-2.5 py-1 font-medium text-xs sm:px-3 ${selectedDepartment === dept.id ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background hover:bg-accent"}`}
+								onClick={async () => {
+									if (isLocked) {
+										try {
+											await requestOverride(
+												"pos.unlock_category",
+												`Unlock ${dept.name}`,
+											);
+											setUnlockedCategories((prev) => {
+												const next = new Set(prev);
+												next.add(dept.id);
+												return next;
+											});
+											setSelectedDepartment(dept.id);
+										} catch {
+											// cancelled
+										}
+									} else {
+										setSelectedDepartment(dept.id);
+									}
+								}}
+							>
+								{dept.name}
+								{isLocked && <Lock className="size-3 opacity-60" />}
+							</button>
+						);
+					})}
 					{departmentOverrideActive ? (
 						<button
 							type="button"
