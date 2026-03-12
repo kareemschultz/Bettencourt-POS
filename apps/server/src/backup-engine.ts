@@ -19,6 +19,7 @@ import {
 	sendBackupFailureAlert,
 	sendDailyDigest,
 	sendOverdueReminder,
+	sendStockAlertEmail,
 } from "./email";
 
 const gzipAsync = promisify(gzip);
@@ -279,6 +280,50 @@ export function startBackupScheduler(): void {
 		},
 		{ timezone: "UTC" },
 	);
+	// Stock alert email — 04:15 UTC (after backup, before digest)
+	cron.schedule(
+		"15 4 * * *",
+		async () => {
+			if (!env.SMTP_ALERT_TO) return;
+			try {
+				const result = await db.execute(sql`
+          SELECT
+            ii.name as "itemName",
+            ii.category,
+            COALESCE(ist.quantity_on_hand, 0) as "quantityOnHand",
+            COALESCE(ii.reorder_point, 0) as threshold,
+            sa.type
+          FROM stock_alert sa
+          JOIN inventory_item ii ON ii.id = sa.inventory_item_id
+          LEFT JOIN inventory_stock ist ON ist.inventory_item_id = sa.inventory_item_id
+          WHERE sa.acknowledged_by IS NULL
+            AND sa.type IN ('low_stock', 'out_of_stock')
+          ORDER BY sa.type DESC, ii.name ASC
+        `);
+
+				const alerts = result.rows as Array<{
+					itemName: string;
+					category: string;
+					quantityOnHand: string;
+					threshold: string;
+					type: string;
+				}>;
+
+				if (alerts.length > 0) {
+					await sendStockAlertEmail(alerts);
+					console.log(
+						`[stock-alerts] Sent alert email for ${alerts.length} item(s)`,
+					);
+				} else {
+					console.log("[stock-alerts] No unacknowledged alerts — skipping");
+				}
+			} catch (err) {
+				console.error("[stock-alerts] Failed to send stock alert email:", err);
+			}
+		},
+		{ timezone: "UTC" },
+	);
+
 	// Daily digest email — 04:30 UTC (after backup)
 	cron.schedule(
 		"30 4 * * *",

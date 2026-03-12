@@ -254,6 +254,90 @@ export async function sendOverdueReminder(
 	});
 }
 
+// ── Stock Alert Email ──────────────────────────────────────────────────
+
+interface StockAlertRow {
+	itemName: string;
+	category: string;
+	quantityOnHand: string | number;
+	threshold: string | number;
+	type: string;
+}
+
+export async function sendStockAlertEmail(
+	alerts: StockAlertRow[],
+): Promise<void> {
+	if (!env.SMTP_HOST || !env.SMTP_ALERT_TO) return;
+	if (alerts.length === 0) return;
+
+	const transporter = nodemailer.createTransport({
+		host: env.SMTP_HOST,
+		port: env.SMTP_PORT,
+		auth: env.SMTP_USER
+			? { user: env.SMTP_USER, pass: env.SMTP_PASS }
+			: undefined,
+	});
+
+	const statusColor = (type: string) =>
+		type === "out_of_stock" ? "#dc2626" : "#d97706";
+	const statusLabel = (type: string) =>
+		type === "out_of_stock" ? "Out of Stock" : "Low Stock";
+
+	const rows = alerts
+		.map(
+			(a) =>
+				`<tr>
+      <td style="padding:5px 8px;border-bottom:1px solid #eee">${a.itemName}</td>
+      <td style="padding:5px 8px;border-bottom:1px solid #eee;color:#6b7280">${a.category}</td>
+      <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:center">${Number(a.quantityOnHand)}</td>
+      <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:center">${Number(a.threshold)}</td>
+      <td style="padding:5px 8px;border-bottom:1px solid #eee">
+        <span style="color:${statusColor(a.type)};font-weight:600;font-size:11px">${statusLabel(a.type)}</span>
+      </td>
+    </tr>`,
+		)
+		.join("");
+
+	const date = new Date().toLocaleDateString("en-GY", {
+		timeZone: "America/Guyana",
+	});
+
+	const html = `
+<div style="font-family:Arial,sans-serif;max-width:650px;margin:0 auto">
+  <div style="background:#0f766e;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0">
+    <h1 style="margin:0;font-size:18px">Bettencourt's — Stock Alerts</h1>
+    <p style="margin:4px 0 0;font-size:12px;opacity:.8">${date} &nbsp;&bull;&nbsp; ${alerts.length} unacknowledged alert${alerts.length !== 1 ? "s" : ""}</p>
+  </div>
+  <div style="background:#fff;padding:20px;border:1px solid #e5e7eb;border-top:0">
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:#f9fafb">
+          <th style="padding:6px 8px;text-align:left">Item</th>
+          <th style="padding:6px 8px;text-align:left">Category</th>
+          <th style="padding:6px 8px;text-align:center">Qty On Hand</th>
+          <th style="padding:6px 8px;text-align:center">Threshold</th>
+          <th style="padding:6px 8px;text-align:left">Status</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="font-size:11px;color:#9ca3af;margin-top:16px;text-align:center">
+      <a href="https://pos.karetechsolutions.com/dashboard/inventory" style="color:#0f766e">Go to Inventory →</a>
+    </p>
+  </div>
+</div>`;
+
+	const recipients = env.SMTP_ALERT_TO.split(",")
+		.map((s) => s.trim())
+		.filter(Boolean);
+	await transporter.sendMail({
+		from: env.SMTP_FROM,
+		to: recipients.join(", "),
+		subject: `[Bettencourt's] Stock Alert — ${alerts.length} item${alerts.length !== 1 ? "s" : ""} need attention (${date})`,
+		html,
+	});
+}
+
 // ── Backup Failure Alert ───────────────────────────────────────────────
 
 export async function sendBackupFailureAlert(error: string): Promise<void> {
