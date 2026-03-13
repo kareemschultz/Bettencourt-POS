@@ -133,6 +133,7 @@ const update = permissionProcedure("customers.update")
 			phone: z.string().optional(),
 			email: z.string().email().nullable().optional(),
 			notes: z.string().nullable().optional(),
+			pricelistId: z.string().uuid().nullable().optional(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -179,6 +180,8 @@ const update = permissionProcedure("customers.update")
 		if (input.phone !== undefined) updates.phone = input.phone;
 		if (input.email !== undefined) updates.email = input.email;
 		if (input.notes !== undefined) updates.notes = input.notes;
+		if (input.pricelistId !== undefined)
+			updates.pricelistId = input.pricelistId;
 
 		await db
 			.update(schema.customer)

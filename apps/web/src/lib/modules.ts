@@ -209,6 +209,14 @@ export const MODULES: ModuleDefinition[] = [
 				pageTitle: "Gift Cards",
 			},
 			{
+				title: "Pricelists",
+				url: "/dashboard/pricelists",
+				icon: Tag,
+				module: "products",
+				roles: ["executive", "admin"],
+				pageTitle: "Pricelists",
+			},
+			{
 				title: "Cash Control",
 				url: "/dashboard/cash",
 				icon: DollarSign,

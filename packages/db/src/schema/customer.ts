@@ -11,6 +11,7 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { organization } from "./organization";
+import { pricelist } from "./pricelist";
 import { product } from "./product";
 
 // ── Customer ──────────────────────────────────────────────────────────
@@ -30,6 +31,9 @@ export const customer = pgTable(
 			.notNull()
 			.default("0"),
 		visitCount: integer("visit_count").notNull().default(0),
+		pricelistId: uuid("pricelist_id").references(() => pricelist.id, {
+			onDelete: "set null",
+		}),
 		lastVisitAt: timestamp("last_visit_at", { withTimezone: true }),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
@@ -248,6 +252,10 @@ export const customerRelations = relations(customer, ({ one, many }) => ({
 	organization: one(organization, {
 		fields: [customer.organizationId],
 		references: [organization.id],
+	}),
+	pricelist: one(pricelist, {
+		fields: [customer.pricelistId],
+		references: [pricelist.id],
 	}),
 	loyaltyMemberships: many(customerLoyalty),
 	giftCards: many(giftCard),

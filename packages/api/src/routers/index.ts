@@ -27,6 +27,7 @@ import { notificationsRouter } from "./notifications";
 import { onlineOrderRouter } from "./online-order";
 import { ordersRouter } from "./orders";
 import { posRouter } from "./pos";
+import { pricelistsRouter } from "./pricelists";
 import { printersRouter } from "./printers";
 import { productionRouter } from "./production";
 import { productsRouter } from "./products";
@@ -80,6 +81,7 @@ export const appRouter = {
 	journal: journalRouter,
 	splitBill: splitBillRouter,
 	tables: tablesRouter,
+	pricelists: pricelistsRouter,
 	printers: printersRouter,
 	reservations: reservationsRouter,
 	onlineOrder: onlineOrderRouter,
