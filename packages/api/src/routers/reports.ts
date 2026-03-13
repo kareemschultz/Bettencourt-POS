@@ -236,17 +236,55 @@ const getReport = permissionProcedure("reports.read")
 
 
 		if (input.type === "tips") {
-			const result = await db.execute(
+			const summaryResult = await db.execute(
 				sql`SELECT
-					COALESCE(SUM(o.tip_amount), 0) as total_tips,
-					COALESCE(AVG(o.tip_amount), 0) as avg_tip_per_order,
-					COUNT(*) FILTER (WHERE o.tip_amount > 0) as tipped_orders
+					COALESCE(SUM(o.tip_amount), 0)::numeric as total_tips,
+					COALESCE(AVG(CASE WHEN o.tip_amount > 0 THEN o.tip_amount END), 0)::numeric as avg_tip,
+					COUNT(*) FILTER (WHERE o.tip_amount > 0)::int as tipped_orders,
+					COUNT(*)::int as total_orders,
+					COALESCE(SUM(o.total), 0)::numeric as total_revenue
 				FROM "order" o
 				WHERE o.status IN ('completed', 'closed')
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz`,
 			);
-			return result.rows[0];
+
+			const byEmployeeResult = await db.execute(
+				sql`SELECT
+					COALESCE(u.name, 'Unknown') as employee_name,
+					o.user_id,
+					COALESCE(SUM(o.tip_amount), 0)::numeric as tips_earned,
+					COUNT(*) FILTER (WHERE o.tip_amount > 0)::int as tipped_orders,
+					COUNT(*)::int as total_orders,
+					COALESCE(AVG(CASE WHEN o.tip_amount > 0 THEN o.tip_amount END), 0)::numeric as avg_tip
+				FROM "order" o
+				LEFT JOIN "user" u ON o.user_id = u.id
+				WHERE o.status IN ('completed', 'closed')
+					AND o.created_at >= ${startDate}::timestamptz
+					AND o.created_at <= ${endDate}::timestamptz
+				GROUP BY u.name, o.user_id
+				ORDER BY tips_earned DESC`,
+			);
+
+			const byMethodResult = await db.execute(
+				sql`SELECT
+					p.method,
+					COALESCE(SUM(p.tip_amount), 0)::numeric as tips_total,
+					COUNT(*) FILTER (WHERE p.tip_amount::numeric > 0)::int as tip_count
+				FROM payment p
+				INNER JOIN "order" o ON p.order_id = o.id
+				WHERE o.status IN ('completed', 'closed')
+					AND o.created_at >= ${startDate}::timestamptz
+					AND o.created_at <= ${endDate}::timestamptz
+				GROUP BY p.method
+				ORDER BY tips_total DESC`,
+			);
+
+			return {
+				summary: summaryResult.rows[0],
+				byEmployee: byEmployeeResult.rows,
+				byMethod: byMethodResult.rows,
+			};
 		}
 
 		if (input.type === "voids") {
