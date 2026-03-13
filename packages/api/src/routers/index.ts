@@ -33,6 +33,7 @@ import { recurringRouter } from "./recurring";
 import { reportsRouter } from "./reports";
 import { settingsRouter } from "./settings";
 import { splitBillRouter } from "./split-bill";
+import { printersRouter } from "./printers";
 import { tablesRouter } from "./tables";
 import { timeclockRouter } from "./timeclock";
 import { vendorBillsRouter } from "./vendor-bills";
@@ -74,6 +75,7 @@ export const appRouter = {
 	journal: journalRouter,
 	splitBill: splitBillRouter,
 	tables: tablesRouter,
+	printers: printersRouter,
 	onlineOrder: onlineOrderRouter,
 	locations: locationsRouter,
 	webhooks: webhooksRouter,

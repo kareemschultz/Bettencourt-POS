@@ -169,6 +169,57 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 app.route("/api/backups", backupsRouter);
 
+// ── Network print proxy ─────────────────────────────────────────────────
+// Forwards ESC/POS data to a TCP printer on the local network
+app.post("/api/print/network", async (c) => {
+	const session = await auth.api.getSession({ headers: c.req.raw.headers });
+	if (!session?.user) {
+		return c.json({ error: "Unauthorized" }, 401);
+	}
+
+	try {
+		const body = await c.req.json();
+		const { address, data } = body as { address: string; data: number[] };
+
+		if (!address || !data) {
+			return c.json({ error: "address and data are required" }, 400);
+		}
+
+		// Parse host:port
+		const [host, portStr] = address.split(":");
+		const port = Number(portStr) || 9100; // Default ESC/POS port
+
+		// Connect and send via Bun's TCP socket
+		const payload = new Uint8Array(data);
+		await new Promise<void>((resolve, reject) => {
+			const socket = Bun.connect({
+				hostname: host!,
+				port,
+				socket: {
+					open(sock) {
+						sock.write(payload);
+						sock.end();
+					},
+					close() {
+						resolve();
+					},
+					error(_sock, err) {
+						reject(err);
+					},
+					data() {},
+				},
+			});
+			// Reject if connect itself fails
+			socket.catch(reject);
+		});
+
+		return c.json({ success: true });
+	} catch (err) {
+		console.error("[print/network] Error:", err);
+		return c.json({ error: "Failed to send to printer" }, 500);
+	}
+});
+
 app.get("/ws", async (c) => {
 	const session = await auth.api.getSession({ headers: c.req.raw.headers });
 	if (!session?.user) {
