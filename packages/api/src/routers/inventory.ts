@@ -783,8 +783,8 @@ const getWasteLog = permissionProcedure("inventory.read")
 		const offset = (page - 1) * limit;
 
 		const conditions = [
-			gte(schema.wasteLog.createdAt, new Date(startDate)),
-			lte(schema.wasteLog.createdAt, new Date(`${endDate}T23:59:59.999Z`)),
+			gte(schema.wasteLog.createdAt, new Date(`${startDate}T00:00:00-04:00`)),
+			lte(schema.wasteLog.createdAt, new Date(`${endDate}T23:59:59.999-04:00`)),
 		];
 
 		if (input.reason) {

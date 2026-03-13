@@ -623,7 +623,7 @@ export default function AnalyticsPage() {
 									}
 								/>
 								<RechartsTooltip
-									// @ts-ignore - recharts Formatter type mismatch
+									// @ts-expect-error - recharts Formatter overload doesn't match inferred tuple return type
 									formatter={(value: number, name: string) =>
 										weeklyMetric === "revenue"
 											? [

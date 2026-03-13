@@ -355,7 +355,7 @@ function CreateReservationForm({
 	const [notes, setNotes] = useState("");
 
 	const { data: locations = [] } = useQuery(
-		orpc.locations.list.queryOptions({ input: {} }),
+		orpc.locations.listLocations.queryOptions({ input: {} }),
 	);
 	const locationId = (locations as Array<{ id: string }>)[0]?.id ?? "";
 

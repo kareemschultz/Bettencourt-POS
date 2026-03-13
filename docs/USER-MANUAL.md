@@ -47,8 +47,23 @@
 37. [Webhooks](#37-webhooks)
 38. [Menu Board (TV Display)](#38-menu-board-tv-display)
 39. [Online Ordering](#39-online-ordering)
-40. [Frequently Asked Questions](#40-frequently-asked-questions)
-41. [Getting Help](#41-getting-help)
+40. [Kiosk Mode](#40-kiosk-mode)
+41. [QR Code Table Ordering](#41-qr-code-table-ordering)
+42. [Tips Report](#42-tips-report)
+43. [Void & Comp Report](#43-void--comp-report)
+44. [Customer Analytics](#44-customer-analytics)
+45. [Reservations](#45-reservations)
+46. [Waitlist](#46-waitlist)
+47. [Customer Feedback](#47-customer-feedback)
+48. [Shift Scheduling](#48-shift-scheduling)
+49. [Price Lists](#49-price-lists)
+50. [Printer Configuration](#50-printer-configuration)
+51. [Finance Module (Bettencourt Finance)](#51-finance-module-bettencourt-finance)
+52. [Backup & Restore](#52-backup--restore)
+53. [User Management](#53-user-management)
+54. [Frequently Asked Questions](#54-frequently-asked-questions)
+55. [Getting Help](#55-getting-help)
+
 
 ---
 
@@ -1493,74 +1508,310 @@ Online orders appear in the Orders list tagged as "Pickup" or "Delivery". The KD
 
 ---
 
-## 40. Frequently Asked Questions
+## 40. Kiosk Mode
 
-**Q: A customer wants a refund. How do I process it?**
-Go to **Orders** → find the order → click **Refund**. Enter the amount to refund and confirm. The refund is logged against the original payment method.
+**Access at:** `/kiosk` — open on a dedicated tablet or touch-screen facing customers.
 
-**Q: The till is short (or over). What do I do?**
-When closing the shift, enter the actual cash count. The system records the variance. Report discrepancies to the manager. The Audit Log and no-sale event log can help explain what happened.
+The Kiosk allows customers to **browse the menu and place their own orders** without staff assistance — ideal for walk-in counter service.
 
-**Q: How do I void an order that's already been paid?**
-Go to **Operations → Orders** → open the order → click **Void Order** → confirm. Only managers can void completed orders.
+### How It Works
 
-**Q: A product is sold out. How do I hide it from the POS?**
-Go to **Settings → Products** → find the product → toggle **Active** to off. It disappears from the POS grid immediately.
+1. A staff member or manager opens `/kiosk` on the tablet
+2. The kiosk displays the full menu with images, prices, and categories
+3. The customer taps items to add them to the cart
+4. They can select modifiers (size, toppings, etc.) when prompted
+5. At checkout the customer chooses **Pickup** or **Dine-In** and enters their name
+6. The order is sent directly to the kitchen (KDS) and appears in Orders
 
-**Q: How do I add a new staff member?**
-Go to **Settings → Users → New User**. Set their name, email, role, and PIN. They can log in immediately.
+### Managing the Kiosk Menu
 
-**Q: How do I reset a staff member's PIN?**
-Go to **Settings → Users** → click the user's name → change the PIN → Save.
+- Only products marked **Active** appear on the kiosk
+- Items marked out-of-stock via the **86 system** are hidden automatically in real-time
+- Categories and display order are controlled from **Settings → Categories**
 
-**Q: How do I see yesterday's sales?**
-Go to **Reports → Sales Report**. Use the date picker to select yesterday.
-
-**Q: How do I print the end-of-day summary?**
-Go to **End of Day** and click **Print Report**.
-
-**Q: How do I see which cashier processed a specific order?**
-Open the order in **Orders** — the "Served by" field shows the cashier's name.
-
-**Q: How do I track a gift card balance?**
-Go to **Gift Cards**, search by card code, and click it to see the current balance and transaction history.
-
-**Q: A customer says their loyalty points are wrong.**
-Go to **Loyalty Program**, find the customer, and click their name to see the full points history. Each transaction that earned or redeemed points is listed.
-
-**Q: How do I change a product's price?**
-Go to **Settings → Products** → click the product → change the price → Save. The new price takes effect in the POS immediately.
-
-**Q: How do I see what staff member opened/closed the cash drawer?**
-Go to **Cash Control → Shift History** and click a shift to see who opened and closed it, with timestamps. For no-sale events, check the **Audit Log**.
-
-**Q: The POS isn't loading. What should I try?**
-1. Refresh the page (press F5 or Ctrl+R)
-2. Check your internet connection
-3. Try a different browser
-4. If nothing works, contact KareTech Solutions
-
-**Q: Can I use the POS on a tablet or phone?**
-Yes. The system is mobile-responsive and works on tablets. The New Sale screen is designed to work on 10" and larger screens for the best experience.
-
-**Q: How do I set up the menu board TV?**
-Open a browser on the TV, go to https://pos.karetechsolutions.com/menu-board, and click the fullscreen button.
-
-**Q: Customers want to order online. Where do they go?**
-Send them to **https://pos.karetechsolutions.com/order** — or make a link/button on your WhatsApp or Facebook page.
-
-**Q: Is there a faster way to navigate between sections?**
-Yes — press **Ctrl+K** (or **Cmd+K** on Mac) anywhere in the dashboard to open the command palette. Start typing any section name and press Enter to jump there instantly.
-
-**Q: A customer didn't receive their SMS notification. How do I check?**
-Go to **System → Notifications → Log** tab and search for their phone number. The log shows whether the message was delivered, failed, or had an error. Check for typos in the phone number.
-
-**Q: How do I connect the POS to QuickBooks or another accounting system?**
-Go to **System → Webhooks** and add a new endpoint with the URL provided by your accounting software or integration (e.g., a Zapier webhook URL). Select the events you want to sync (e.g., `order.completed`). Contact KareTech Solutions for help setting this up.
+> **Tip:** Keep the kiosk tablet plugged in and set to never sleep. Use a wall-mount stand for the best customer experience.
 
 ---
 
-## 41. Finance Module (Bettencourt Finance)
+## 41. QR Code Table Ordering
+
+Customers at a table can scan a **QR code** to view the menu and place orders from their own phone.
+
+### Setting Up Table QR Codes
+
+1. Go to **Tables** in the dashboard
+2. Click **Print QR Codes** (top right)
+3. Print and laminate the QR codes
+4. Place each QR code on the matching table
+
+### How It Works for Customers
+
+1. Customer scans the QR code with their phone camera
+2. The menu opens in their browser — no app download required
+3. They browse, add items to their cart, and tap **Place Order**
+4. The order goes straight to the kitchen (KDS) linked to their table
+5. Staff can see the order in **Orders** with the table number
+
+### Managing QR Orders
+
+QR orders appear in the **Orders** list tagged with the table number and **QR** source. They can be managed like any other dine-in order.
+
+---
+
+## 42. Tips Report
+
+**Navigate to:** Dashboard → Tips Report
+
+The Tips Report shows all tip amounts collected across a date range — broken down by employee and payment method.
+
+### Reading the Report
+
+| Column | Meaning |
+|--------|---------|
+| Employee | Cashier who processed the order |
+| Orders | Number of orders with tips |
+| Total Tips | Sum of all tip amounts |
+| Cash Tips | Tips paid in cash |
+| Card Tips | Tips paid by card |
+| Avg Tip | Average tip per tipping order |
+
+### Using the Report
+
+- Use the **date range** picker at the top to filter by period
+- Click **Export CSV** to download for payroll processing
+- Use the **Payment Method** tab to see tips broken down by cash vs. card vs. online
+
+> **Important:** The system records the tip amount entered at payment time. If a cashier adjusts a tip after the fact, the original amount is used.
+
+---
+
+## 43. Void & Comp Report
+
+**Navigate to:** Dashboard → Voids
+
+The Void & Comp Report shows all voided orders and comped (complimentary) items within a date range — with employee breakdown and reasons.
+
+### What It Shows
+
+- **Total Void Value** — the dollar amount removed from sales through voids
+- **Void Count** — number of orders or items voided
+- **By Employee** — which staff member authorized each void
+- **Void Reason** — the reason entered when the void was approved
+
+### Filtering
+
+- Filter by **date range**, **employee**, or **reason**
+- Toggle between **Order Voids** (entire orders voided) and **Item Voids** (individual items removed from open orders)
+
+### Export
+
+Click **Export CSV** to download void data for review or auditing.
+
+> Only managers (Admin / Executive) can authorize voids. All voids are also logged in the **Audit Log**.
+
+---
+
+## 44. Customer Analytics
+
+**Navigate to:** Dashboard → Customer Analytics
+
+Gives you a deeper view of your customer base beyond basic sales numbers.
+
+### Key Metrics (top cards)
+
+| Metric | What It Means |
+|--------|--------------|
+| Total Customers | Unique customers who purchased in the period |
+| Returning Customers | Customers who visited more than once |
+| Retention Rate | % of customers who came back |
+| Avg Customer Lifetime Value (CLV) | Average total spend per customer |
+| Avg Visits | Average number of visits per customer |
+
+### Charts
+
+- **Spend Distribution** — pie chart showing what % of customers are in each spend bracket (e.g., 0–500, 500–2000, 2000+ GYD)
+- **Visit Trend** — line chart showing new vs. returning customers over time
+
+### Top Customers Tables
+
+- **Top by Spend** — customers who have spent the most total
+- **Top by Visits** — your most frequent customers
+
+Use this page to identify VIP customers for loyalty rewards or special promotions.
+
+---
+
+## 45. Reservations
+
+**Navigate to:** Dashboard → Reservations
+
+Manage future bookings for tables or events.
+
+### Creating a Reservation
+
+1. Click **New Reservation**
+2. Enter:
+   - Customer name and phone number
+   - Date and time
+   - Party size (number of guests)
+   - Table (optional — can assign later)
+   - Notes (e.g., "Birthday — needs cake")
+3. Click **Save**
+
+### Reservation Statuses
+
+| Status | Meaning |
+|--------|---------|
+| Confirmed | Booking is confirmed |
+| Seated | Customer has arrived and is at their table |
+| Completed | Visit is done |
+| Cancelled | Booking was cancelled |
+| No-Show | Customer did not arrive |
+
+### Managing Reservations
+
+- Use the **date picker** to view reservations for a specific day
+- Click any reservation to update its status, assign a table, or add notes
+- Confirmed reservations show on the **Tables** page so floor staff know which tables to hold
+
+---
+
+## 46. Waitlist
+
+**Navigate to:** Dashboard → Waitlist
+
+Manage walk-in customers who are waiting for a table.
+
+### Adding to Waitlist
+
+1. Click **Add to Waitlist**
+2. Enter customer name, phone number, and party size
+3. The system records the time they joined the waitlist
+4. Click **Save**
+
+### Waitlist Actions
+
+| Action | When to Use |
+|--------|------------|
+| **Seat** | Customer is ready — moves them off the waitlist |
+| **Notify** | Sends the customer an SMS when their table is ready |
+| **No-Show** | Remove without seating if they left |
+| **Remove** | Cancel the waitlist entry |
+
+### Estimated Wait Time
+
+The system calculates average table turnover to estimate how long each party will wait. This estimate is shown next to each entry.
+
+---
+
+## 47. Customer Feedback
+
+**Navigate to:** Dashboard → Feedback
+
+View and manage customer feedback submitted through the POS or kiosk.
+
+### What Customers Can Rate
+
+Customers can leave a star rating (1–5) and a written comment after their order.
+
+### Reading the Feedback Page
+
+- **Average Rating** card shows your overall score for the selected period
+- **Rating Distribution** shows how many 1-star, 2-star, etc. reviews you received
+- Each feedback entry shows: date, order number, rating, and comment
+
+### Filtering
+
+Filter feedback by **date range**, **rating** (e.g., show only 1–2 star reviews to find problems), or **keyword** in the comments.
+
+---
+
+## 48. Shift Scheduling
+
+**Navigate to:** Dashboard → Shifts
+
+Create and manage weekly staff schedules.
+
+### Adding a Shift
+
+1. Click **Add Shift**
+2. Select the **staff member** from the dropdown
+3. Choose the **day of week** (Monday–Sunday)
+4. Enter **start time** and **end time** (24-hour format, e.g., 08:00–16:00)
+5. Add optional **notes** (e.g., "Open register")
+6. Click **Save**
+
+### Viewing the Schedule
+
+Shifts are displayed in a weekly grid sorted by day and time. Use the **Location** filter to view schedules per location.
+
+### Editing or Removing a Shift
+
+Click the pencil icon to edit a shift, or the trash icon to remove it. Changes take effect immediately — there is no publish/draft step.
+
+> **Note:** The Shift Schedule shows *planned* hours. For *actual* clocked hours, use the **Time Clock** page.
+
+---
+
+## 49. Price Lists
+
+**Navigate to:** Dashboard → Price Lists
+
+Price Lists allow you to set **different prices for the same products** in different contexts — for example, a **dine-in** price vs. a **takeaway** price, or a **wholesale** price for corporate customers.
+
+### Creating a Price List
+
+1. Click **New Price List**
+2. Enter a name (e.g., "Dine-In", "Wholesale")
+3. Add products and their prices in this list
+4. Click **Save**
+
+### Assigning a Price List
+
+- Price Lists can be assigned to specific **customers** (so they always get their special price)
+- They can also be applied manually at the POS when starting an order
+
+### How Prices Override
+
+When a price list is active for an order, the product price from the list replaces the standard price. If a product is not in the price list, its default price is used.
+
+---
+
+## 50. Printer Configuration
+
+**Navigate to:** Dashboard → Printers
+
+Configure receipt printers, kitchen ticket printers, and label printers connected to the system.
+
+### Printer Types
+
+| Type | Purpose |
+|------|---------|
+| **Receipt** | Customer receipts at the POS counter |
+| **Kitchen** | Order tickets printed in the kitchen |
+| **Label** | Item labels (e.g., for packaged goods) |
+
+### Adding a Printer
+
+1. Click **Add Printer**
+2. Enter a name and select the type
+3. Choose connection method:
+   - **USB** — connected directly to this device (uses WebUSB)
+   - **Network** — enter the printer's IP address and port
+4. Select the paper width (80mm is standard for POS printers)
+5. Click **Save & Test** to print a test receipt
+
+### Printer Settings
+
+- **Auto-Print** — automatically prints a receipt after every sale
+- **Kitchen Copy** — sends a copy to the kitchen printer
+- **Logo** — upload your logo to print at the top of receipts
+
+> **Troubleshooting:** If the printer shows "Offline", check the USB cable or network connection. For network printers, make sure the printer is on the same WiFi network as the POS device.
+
+---
+
+## 51. Finance Module (Bettencourt Finance)
 
 The **Finance** section of the sidebar gives you a complete accounting and billing system — comparable to QuickBooks or Peachtree — built right into the POS.
 
@@ -1639,7 +1890,7 @@ Click **Print Daily Summary** to generate a printable form with signature lines 
 
 ---
 
-## 42. Backup & Restore
+## 52. Backup & Restore
 
 The system automatically backs up all data every night at midnight. Up to 7 days of backups are stored.
 
@@ -1669,7 +1920,7 @@ Upload a previously downloaded `.json.gz` backup file using the "Restore from Fi
 
 ---
 
-## 43. User Management
+## 53. User Management
 
 ### My Profile
 Every staff member can access their own profile by clicking their name in the bottom-left corner of the sidebar and selecting **My Profile**.
@@ -1698,7 +1949,74 @@ On the login screen, click **Forgot password?** below the password field. Enter 
 
 ---
 
-## 44. Getting Help
+## 54. Frequently Asked Questions
+
+**Q: A customer wants a refund. How do I process it?**
+Go to **Orders** → find the order → click **Refund**. Enter the amount to refund and confirm. The refund is logged against the original payment method.
+
+**Q: The till is short (or over). What do I do?**
+When closing the shift, enter the actual cash count. The system records the variance. Report discrepancies to the manager. The Audit Log and no-sale event log can help explain what happened.
+
+**Q: How do I void an order that's already been paid?**
+Go to **Operations → Orders** → open the order → click **Void Order** → confirm. Only managers can void completed orders.
+
+**Q: A product is sold out. How do I hide it from the POS?**
+Go to **Settings → Products** → find the product → toggle **Active** to off. It disappears from the POS grid immediately.
+
+**Q: How do I add a new staff member?**
+Go to **Settings → Users → New User**. Set their name, email, role, and PIN. They can log in immediately.
+
+**Q: How do I reset a staff member's PIN?**
+Go to **Settings → Users** → click the user's name → change the PIN → Save.
+
+**Q: How do I see yesterday's sales?**
+Go to **Reports → Sales Report**. Use the date picker to select yesterday.
+
+**Q: How do I print the end-of-day summary?**
+Go to **End of Day** and click **Print Report**.
+
+**Q: How do I see which cashier processed a specific order?**
+Open the order in **Orders** — the "Served by" field shows the cashier's name.
+
+**Q: How do I track a gift card balance?**
+Go to **Gift Cards**, search by card code, and click it to see the current balance and transaction history.
+
+**Q: A customer says their loyalty points are wrong.**
+Go to **Loyalty Program**, find the customer, and click their name to see the full points history. Each transaction that earned or redeemed points is listed.
+
+**Q: How do I change a product's price?**
+Go to **Settings → Products** → click the product → change the price → Save. The new price takes effect in the POS immediately.
+
+**Q: How do I see what staff member opened/closed the cash drawer?**
+Go to **Cash Control → Shift History** and click a shift to see who opened and closed it, with timestamps. For no-sale events, check the **Audit Log**.
+
+**Q: The POS isn't loading. What should I try?**
+1. Refresh the page (press F5 or Ctrl+R)
+2. Check your internet connection
+3. Try a different browser
+4. If nothing works, contact KareTech Solutions
+
+**Q: Can I use the POS on a tablet or phone?**
+Yes. The system is mobile-responsive and works on tablets. The New Sale screen is designed to work on 10" and larger screens for the best experience.
+
+**Q: How do I set up the menu board TV?**
+Open a browser on the TV, go to https://pos.karetechsolutions.com/menu-board, and click the fullscreen button.
+
+**Q: Customers want to order online. Where do they go?**
+Send them to **https://pos.karetechsolutions.com/order** — or make a link/button on your WhatsApp or Facebook page.
+
+**Q: Is there a faster way to navigate between sections?**
+Yes — press **Ctrl+K** (or **Cmd+K** on Mac) anywhere in the dashboard to open the command palette. Start typing any section name and press Enter to jump there instantly.
+
+**Q: A customer didn't receive their SMS notification. How do I check?**
+Go to **System → Notifications → Log** tab and search for their phone number. The log shows whether the message was delivered, failed, or had an error. Check for typos in the phone number.
+
+**Q: How do I connect the POS to QuickBooks or another accounting system?**
+Go to **System → Webhooks** and add a new endpoint with the URL provided by your accounting software or integration (e.g., a Zapier webhook URL). Select the events you want to sync (e.g., `order.completed`). Contact KareTech Solutions for help setting this up.
+
+---
+
+## 55. Getting Help
 
 For technical support or system questions:
 
