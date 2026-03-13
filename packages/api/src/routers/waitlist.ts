@@ -39,7 +39,7 @@ const add = permissionProcedure("orders.create")
 			customerName: z.string().min(1),
 			customerPhone: z.string().optional().nullable(),
 			partySize: z.number().int().min(1).max(50),
-			estimatedWaitMinutes: z.number().int().optional().nullable(),
+			estimatedWaitMinutes: z.number().int().min(0).optional().nullable(),
 			notes: z.string().optional().nullable(),
 			locationId: z.string().uuid().optional().nullable(),
 		}),

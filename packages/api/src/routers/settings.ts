@@ -80,8 +80,13 @@ const getCurrentUser = protectedProcedure
 // ── getOrganization ─────────────────────────────────────────────────────
 const getOrganization = permissionProcedure("settings.read")
 	.input(z.object({}).optional())
-	.handler(async () => {
-		const rows = await db.select().from(schema.organization).limit(1);
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+		const rows = await db
+			.select()
+			.from(schema.organization)
+			.where(eq(schema.organization.id, orgId))
+			.limit(1);
 
 		if (rows.length === 0) return null;
 		return rows[0]!;
