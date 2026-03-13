@@ -430,13 +430,15 @@ const checkout = permissionProcedure("orders.create")
 			const createdOrder = orderRows[0]!;
 
 			// Insert line items with snapshots
-			for (const item of items) {
+			const lineItemIdByIndex = new Map<number, string>();
+			for (let _itemIdx = 0; _itemIdx < items.length; _itemIdx++) {
+				const item = items[_itemIdx]!;
 				const modifierTotal = item.modifiers.reduce((s, m) => s + m.price, 0);
 				const lineTotal = (item.unitPrice + modifierTotal) * item.quantity;
 				const taxAmount = lineTotal * item.taxRate;
 
 				// Insert the main line item
-				await tx.insert(schema.orderLineItem).values({
+				const [lineItemRow] = await tx.insert(schema.orderLineItem).values({
 					orderId: createdOrder.id,
 					productId: item.productId,
 					productNameSnapshot: item.productName,
@@ -448,7 +450,8 @@ const checkout = permissionProcedure("orders.create")
 					modifiersSnapshot: item.modifiers,
 					notes: item.notes ?? null,
 					courseNumber: item.courseNumber ?? 1,
-				});
+				}).returning({ id: schema.orderLineItem.id });
+				if (lineItemRow) lineItemIdByIndex.set(_itemIdx, lineItemRow.id);
 
 				// If combo product, also insert component line items for reporting
 				if (
@@ -532,7 +535,8 @@ const checkout = permissionProcedure("orders.create")
 			const ticketId = ticketRows[0]!.id;
 
 			// Create kitchen items
-			for (const item of items) {
+			for (let _kitIdx = 0; _kitIdx < items.length; _kitIdx++) {
+				const item = items[_kitIdx]!;
 				// Build modifiers array: combo components first (as isComponent entries), then selected modifiers
 				const kitchenMods: Array<{
 					name: string;
@@ -550,7 +554,7 @@ const checkout = permissionProcedure("orders.create")
 				];
 				await tx.insert(schema.kitchenOrderItem).values({
 					ticketId,
-					orderLineItemId: null,
+					orderLineItemId: lineItemIdByIndex.get(_kitIdx) ?? null,
 					productName: item.productName,
 					quantity: item.quantity,
 					modifiers:

@@ -25,6 +25,12 @@ export default function KdsRoute() {
 		}),
 	);
 
+	const fireCourse = useMutation(
+		orpc.kitchen.fireCourse.mutationOptions({
+			onSuccess: () => qc.invalidateQueries({ queryKey }),
+		}),
+	);
+
 	const filtered = useMemo(() => {
 		if (station === "all") return orders;
 		return orders.filter((o) => (o.printerTarget ?? "kitchen").toLowerCase().includes(station));
@@ -47,6 +53,9 @@ export default function KdsRoute() {
 							order={order}
 							onBumpItem={(itemId) =>
 								bumpItem.mutate({ itemId, itemStatus: "done" })
+							}
+							onFireCourse={(ticketId, courseNumber) =>
+								fireCourse.mutate({ ticketId, courseNumber })
 							}
 						/>
 					))}

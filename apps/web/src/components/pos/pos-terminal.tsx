@@ -1043,6 +1043,27 @@ export function POSTerminal({
 				</div>
 			)}
 
+			{/* Course selector (visible on all terminals for dine-in) */}
+			{!isBeverageTerminal && (
+				<div className="flex items-center gap-2 border-border border-b bg-muted/20 px-3 py-1.5">
+					<span className="text-[10px] text-muted-foreground uppercase">Course</span>
+					<div className="flex items-center gap-0.5 rounded-md border p-0.5">
+						{[1, 2, 3, 4].map((course) => (
+							<Button
+								key={course}
+								type="button"
+								size="sm"
+								variant={selectedCourse === course ? "default" : "ghost"}
+								className="h-6 w-6 p-0 text-xs"
+								onClick={() => setSelectedCourse(course)}
+							>
+								{course}
+							</Button>
+						))}
+					</div>
+				</div>
+			)}
+
 			{/* Main area: product grid + cart */}
 			<div className="flex flex-1 overflow-hidden">
 				<div className="flex-1 overflow-y-auto p-2 sm:p-3">
