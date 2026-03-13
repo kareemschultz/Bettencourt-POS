@@ -133,7 +133,7 @@ export function POSTerminal({
 		enabled: customerSearchQuery.length >= 2,
 	});
 
-	// Pickup / Delivery state (Terminal 3 only)
+	// Order type state
 	const isBeverageTerminal = selectedRegister === BEVERAGE_REGISTER;
 	const [orderMode, setOrderMode] = useState<"dine_in" | "pickup" | "delivery">(
 		"dine_in",
@@ -260,7 +260,7 @@ export function POSTerminal({
 				setLastChange(result.change || 0);
 				setLastOrderMeta({
 					placedAt: new Date(),
-					mode: isBeverageTerminal ? orderMode : "dine_in",
+					mode: orderMode,
 				});
 				setPaymentOpen(false);
 				setReceiptOpen(true);
@@ -429,7 +429,7 @@ export function POSTerminal({
 			}
 		}
 
-		const isPickupOrDelivery = isBeverageTerminal && orderMode !== "dine_in";
+		const isPickupOrDelivery = orderMode !== "dine_in";
 		const estimatedReadyMs = isPickupOrDelivery
 			? Number.parseInt(estimatedReady, 10) * 60_000
 			: 0;
@@ -439,7 +439,7 @@ export function POSTerminal({
 				payments,
 				registerId: selectedRegister,
 				locationId: effectiveLocationId,
-				orderType: isBeverageTerminal ? orderMode : "dine_in",
+				orderType: orderMode,
 			discountTotal: discount,
 			tipAmount: meta?.tipAmount ?? 0,
 			tabName: tabName || selectedCustomer?.name || null,
@@ -447,7 +447,7 @@ export function POSTerminal({
 			customerName: isPickupOrDelivery ? customerName || null : null,
 			customerPhone: isPickupOrDelivery ? customerPhone || null : null,
 			deliveryAddress:
-				isBeverageTerminal && orderMode === "delivery"
+				orderMode === "delivery"
 					? deliveryAddress || null
 					: null,
 			estimatedReadyAt: isPickupOrDelivery
@@ -567,10 +567,10 @@ export function POSTerminal({
 			canApplyDiscount={canApplyDiscount}
 			onOpenNotes={(id) => setNotesItemId(id)}
 			onApplyPromo={canApplyDiscount ? handleApplyDiscount : undefined}
-			orderMode={isBeverageTerminal ? orderMode : undefined}
+			orderMode={orderMode}
 			customerName={
 				selectedCustomer?.name ||
-				(isBeverageTerminal ? customerName : undefined)
+				(orderMode !== "dine_in" ? customerName : undefined)
 			}
 		/>
 	);
@@ -894,8 +894,8 @@ export function POSTerminal({
 				</div>
 			)}
 
-			{/* Pickup/Delivery bar (Terminal 3 only) */}
-			{isBeverageTerminal && (
+			{/* Order type bar */}
+			{(
 				<div className="flex flex-wrap items-end gap-2 border-border border-b bg-muted/30 px-3 py-2 md:gap-3 md:px-4">
 					<div className="flex items-center gap-0.5 rounded-lg border border-border bg-background p-0.5">
 						<Button
