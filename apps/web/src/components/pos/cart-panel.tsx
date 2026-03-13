@@ -240,10 +240,10 @@ export function CartPanel({
 									<Button
 										variant="outline"
 										size="icon"
-										className="size-7"
+										className="size-11"
 										onClick={() => onUpdateQuantity(item.id, -1)}
 									>
-										<Minus className="size-3" />
+										<Minus className="size-4" />
 										<span className="sr-only">Decrease</span>
 									</Button>
 									<span className="w-8 text-center font-medium text-sm">
@@ -252,10 +252,10 @@ export function CartPanel({
 									<Button
 										variant="outline"
 										size="icon"
-										className="size-7"
+										className="size-11"
 										onClick={() => onUpdateQuantity(item.id, 1)}
 									>
-										<Plus className="size-3" />
+										<Plus className="size-4" />
 										<span className="sr-only">Increase</span>
 									</Button>
 									<span className="ml-auto text-muted-foreground text-xs">
@@ -264,19 +264,19 @@ export function CartPanel({
 									<Button
 										variant="ghost"
 										size="icon"
-										className="size-7 text-muted-foreground hover:text-foreground"
+										className="size-11 text-muted-foreground hover:text-foreground"
 										onClick={() => onOpenNotes(item.id)}
 									>
-										<StickyNote className="size-3" />
+										<StickyNote className="size-4" />
 										<span className="sr-only">Add notes</span>
 									</Button>
 									<Button
 										variant="ghost"
 										size="icon"
-										className="size-7 text-destructive hover:text-destructive"
+										className="size-11 text-destructive hover:text-destructive"
 										onClick={() => onRemoveItem(item.id)}
 									>
-										<Trash2 className="size-3" />
+										<Trash2 className="size-4" />
 										<span className="sr-only">Remove</span>
 									</Button>
 								</div>
@@ -371,7 +371,7 @@ export function CartPanel({
 
 				<div className="mt-3 flex flex-col gap-2">
 					<Button
-						className="h-12 w-full font-bold text-base"
+						className="min-h-[56px] w-full font-bold text-lg"
 						onClick={onCheckout}
 						disabled={items.length === 0}
 					>
@@ -381,33 +381,30 @@ export function CartPanel({
 						{canApplyDiscount && (
 							<Button
 								variant="outline"
-								size="sm"
-								className="flex-1 gap-1.5"
+								className="min-h-[44px] flex-1 gap-1.5"
 								onClick={onOpenDiscount}
 								disabled={items.length === 0}
 							>
-								<Percent className="size-3.5" />
+								<Percent className="size-4" />
 								Discount
 							</Button>
 						)}
 						<Button
 							variant="outline"
-							size="sm"
-							className="flex-1 gap-1.5"
+							className="min-h-[44px] flex-1 gap-1.5"
 							onClick={onHoldOrder}
 							disabled={items.length === 0}
 						>
-							<Pause className="size-3.5" />
+							<Pause className="size-4" />
 							Hold
 						</Button>
 						<Button
 							variant="outline"
-							size="sm"
-							className="flex-1 gap-1.5"
+							className="min-h-[44px] flex-1 gap-1.5"
 							onClick={onClearCart}
 							disabled={items.length === 0}
 						>
-							<X className="size-3.5" />
+							<X className="size-4" />
 							Clear
 						</Button>
 					</div>

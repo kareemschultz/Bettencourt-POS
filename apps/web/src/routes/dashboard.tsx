@@ -15,6 +15,7 @@ import {
 	useOutletContext,
 } from "react-router";
 import { PinLockScreen } from "@/components/auth/pin-lock-screen";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { SyncIndicator } from "@/components/layout/sync-indicator";
@@ -310,6 +311,7 @@ export default function DashboardLayout() {
 							</span>
 						)}
 					</div>
+					<LanguageSwitcher />
 					<SyncIndicator />
 				</header>
 				<main className="flex-1 overflow-auto">

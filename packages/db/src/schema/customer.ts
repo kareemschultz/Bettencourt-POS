@@ -329,3 +329,106 @@ export const discountRuleRelations = relations(discountRule, ({ one }) => ({
 		references: [organization.id],
 	}),
 }));
+
+// ── Pricelist (GAP-018) ───────────────────────────────────────────────
+
+export const pricelist = pgTable(
+	"pricelist",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		organizationId: uuid("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		description: text("description"),
+		isActive: boolean("is_active").notNull().default(true),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.notNull()
+			.defaultNow()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [index("idx_pricelist_org").on(table.organizationId)],
+);
+
+export const pricelistItem = pgTable(
+	"pricelist_item",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		pricelistId: uuid("pricelist_id")
+			.notNull()
+			.references(() => pricelist.id, { onDelete: "cascade" }),
+		productId: uuid("product_id")
+			.notNull()
+			.references(() => product.id, { onDelete: "cascade" }),
+		price: numeric("price", { precision: 12, scale: 2 }).notNull(),
+	},
+	(table) => [
+		index("idx_pricelist_item_list").on(table.pricelistId),
+		index("idx_pricelist_item_product").on(table.productId),
+		uniqueIndex("idx_pricelist_item_uniq").on(
+			table.pricelistId,
+			table.productId,
+		),
+	],
+);
+
+// Link customers to pricelists
+export const customerPricelist = pgTable(
+	"customer_pricelist",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		customerId: uuid("customer_id")
+			.notNull()
+			.references(() => customer.id, { onDelete: "cascade" }),
+		pricelistId: uuid("pricelist_id")
+			.notNull()
+			.references(() => pricelist.id, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(table) => [
+		index("idx_customer_pricelist_cust").on(table.customerId),
+		uniqueIndex("idx_customer_pricelist_uniq").on(
+			table.customerId,
+			table.pricelistId,
+		),
+	],
+);
+
+export const pricelistRelations = relations(pricelist, ({ one, many }) => ({
+	organization: one(organization, {
+		fields: [pricelist.organizationId],
+		references: [organization.id],
+	}),
+	items: many(pricelistItem),
+	customers: many(customerPricelist),
+}));
+
+export const pricelistItemRelations = relations(pricelistItem, ({ one }) => ({
+	pricelist: one(pricelist, {
+		fields: [pricelistItem.pricelistId],
+		references: [pricelist.id],
+	}),
+	product: one(product, {
+		fields: [pricelistItem.productId],
+		references: [product.id],
+	}),
+}));
+
+export const customerPricelistRelations = relations(
+	customerPricelist,
+	({ one }) => ({
+		customer: one(customer, {
+			fields: [customerPricelist.customerId],
+			references: [customer.id],
+		}),
+		pricelist: one(pricelist, {
+			fields: [customerPricelist.pricelistId],
+			references: [pricelist.id],
+		}),
+	}),
+);

@@ -27,6 +27,8 @@ import { notificationsRouter } from "./notifications";
 import { onlineOrderRouter } from "./online-order";
 import { ordersRouter } from "./orders";
 import { posRouter } from "./pos";
+
+import { pricelistsRouter } from "./pricelists";
 import { printersRouter } from "./printers";
 import { productionRouter } from "./production";
 import { productsRouter } from "./products";
@@ -96,6 +98,7 @@ export const appRouter = {
 	waitlist: waitlistRouter,
 	feedback: feedbackRouter,
 	deliveryPlatforms: deliveryPlatformsRouter,
+	pricelists: pricelistsRouter,
 };
 export type AppRouter = typeof appRouter;
 export type AppRouterClient = RouterClient<typeof appRouter>;

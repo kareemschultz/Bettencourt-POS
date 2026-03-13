@@ -257,8 +257,7 @@ export default function KitchenPage() {
 								<CardFooter className="pt-0">
 									{order.status === "pending" && (
 										<Button
-											className="w-full"
-											size="sm"
+											className="min-h-[48px] w-full text-base"
 											onClick={() =>
 												updateStatus.mutate({
 													id: order.id,
@@ -271,8 +270,7 @@ export default function KitchenPage() {
 									)}
 									{order.status === "preparing" && (
 										<Button
-											className="w-full"
-											size="sm"
+											className="min-h-[48px] w-full text-base"
 											variant="outline"
 											onClick={() =>
 												updateStatus.mutate({ id: order.id, status: "ready" })
@@ -283,8 +281,7 @@ export default function KitchenPage() {
 									)}
 									{order.status === "ready" && (
 										<Button
-											className="w-full"
-											size="sm"
+											className="min-h-[48px] w-full text-base"
 											variant="secondary"
 											onClick={() =>
 												updateStatus.mutate({ id: order.id, status: "served" })
