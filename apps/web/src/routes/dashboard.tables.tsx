@@ -161,6 +161,9 @@ export default function TablesPage() {
 	const { data: locations = [] } = useQuery(
 		orpc.settings.getLocations.queryOptions({ input: {} }),
 	);
+
+	const defaultLocationId = locations[0]?.id ?? "";
+
 	const { data: floors = [] } = useQuery({
 		...orpc.floorPlan.listFloors.queryOptions({
 			input: { locationId: selectedLocationId || defaultLocationId },
@@ -554,7 +557,7 @@ export default function TablesPage() {
 					open={showAddDialog}
 					onClose={() => setShowAddDialog(false)}
 					onSubmit={(data) =>
-						createTableMut.mutate({ ...data, locationId: defaultLocationId })
+						createTableMut.mutate({ ...data, locationId: selectedLocationId || defaultLocationId })
 					}
 					isProcessing={createTableMut.isPending}
 				/>

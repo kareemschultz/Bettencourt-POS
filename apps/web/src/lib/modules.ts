@@ -6,6 +6,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
 	AlertTriangle,
+	Ban,
 	Banknote,
 	BarChart3,
 	Bell,
@@ -184,6 +185,14 @@ export const MODULES: ModuleDefinition[] = [
 				module: "orders",
 				roles: ["executive", "admin"],
 				pageTitle: "Tables",
+			},
+			{
+				title: "Reservations",
+				url: "/dashboard/reservations",
+				icon: BookOpen,
+				module: "orders",
+				roles: ["executive", "admin"],
+				pageTitle: "Reservations",
 			},
 			{
 				title: "Customers",
@@ -569,6 +578,30 @@ export const MODULES: ModuleDefinition[] = [
 				pageTitle: "Product Profitability",
 			},
 			{
+				title: "Tips Report",
+				url: "/dashboard/tips",
+				icon: Banknote,
+				module: "reports",
+				roles: ["executive", "admin"],
+				pageTitle: "Tips Report",
+			},
+			{
+				title: "Void & Comp Report",
+				url: "/dashboard/voids",
+				icon: Ban,
+				module: "reports",
+				roles: ["executive", "admin"],
+				pageTitle: "Void & Comp Report",
+			},
+			{
+				title: "Customer Analytics",
+				url: "/dashboard/customer-analytics",
+				icon: TrendingUp,
+				module: "reports",
+				roles: ["executive", "admin"],
+				pageTitle: "Customer Analytics",
+			},
+			{
 				title: "Customer Feedback",
 				url: "/dashboard/feedback",
 				icon: MessageCircle,
@@ -692,12 +725,6 @@ export const ROUTE_MODULE_MAP: Record<string, string | null> = {
 	// Additional routes not represented as nav items
 	"/dashboard/profile": null,
 	"/dashboard/suppliers/:id": "inventory",
-	"/dashboard/customer-analytics": "analytics",
-	"/dashboard/voids": "reports",
-	"/dashboard/feedback": null,
-	"/dashboard/shifts": "settings",
-	"/dashboard/waitlist": null,
-	"/dashboard/reservations": null,
 };
 
 /**

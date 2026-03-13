@@ -7,6 +7,7 @@ import {
 	TrendingDown,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,6 +56,7 @@ function varianceBg(pct: number): string {
 }
 
 export default function VarianceAnalysisPage() {
+	const navigate = useNavigate();
 	const today = todayGY();
 	const monthStart = `${today.slice(0, 7)}-01`;
 
@@ -368,7 +370,7 @@ export default function VarianceAnalysisPage() {
 																variant="ghost"
 																className="h-7 text-xs"
 																onClick={() => {
-																	window.location.href = `/dashboard/inventory?tab=ledger&item=${row.ingredient_id}`;
+																	navigate(`/dashboard/inventory?tab=ledger&item=${row.ingredient_id}`);
 																}}
 															>
 																Investigate

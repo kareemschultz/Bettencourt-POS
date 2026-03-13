@@ -57,7 +57,7 @@ export const product = pgTable(
 		sku: text("sku"),
 		price: numeric("price", { precision: 10, scale: 2 }).notNull().default("0"),
 		cost: numeric("cost", { precision: 10, scale: 2 }).default("0"),
-		taxRate: numeric("tax_rate", { precision: 5, scale: 4 })
+		taxRate: numeric("tax_rate", { precision: 6, scale: 2 })
 			.notNull()
 			.default("0"),
 		isActive: boolean("is_active").notNull().default(true),
@@ -226,7 +226,7 @@ export const taxRate = pgTable(
 			.notNull()
 			.references(() => organization.id, { onDelete: "cascade" }),
 		name: text("name").notNull(),
-		rate: numeric("rate", { precision: 5, scale: 4 }).notNull().default("0"),
+		rate: numeric("rate", { precision: 6, scale: 2 }).notNull().default("0"),
 		isDefault: boolean("is_default").notNull().default(false),
 		isActive: boolean("is_active").notNull().default(true),
 		createdAt: timestamp("created_at", { withTimezone: true })

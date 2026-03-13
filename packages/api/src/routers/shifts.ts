@@ -15,6 +15,14 @@ const DAYS = [
 	"sunday",
 ] as const;
 
+const timeSchema = z
+	.string()
+	.regex(/^\d{2}:\d{2}$/)
+	.refine((t) => {
+		const [h, m] = t.split(":").map(Number);
+		return h! >= 0 && h! <= 23 && m! >= 0 && m! <= 59;
+	}, "Invalid time — must be HH:MM (00:00–23:59)");
+
 const list = permissionProcedure("settings.read")
 	.input(
 		z
@@ -68,8 +76,8 @@ const create = permissionProcedure("settings.update")
 			userId: z.string(),
 			locationId: z.string().uuid().optional().nullable(),
 			dayOfWeek: z.enum(DAYS),
-			startTime: z.string().regex(/^\d{2}:\d{2}$/),
-			endTime: z.string().regex(/^\d{2}:\d{2}$/),
+			startTime: timeSchema,
+			endTime: timeSchema,
 			notes: z.string().optional().nullable(),
 		}),
 	)
@@ -95,16 +103,10 @@ const update = permissionProcedure("settings.update")
 		z.object({
 			id: z.string().uuid(),
 			dayOfWeek: z.enum(DAYS).optional(),
-			startTime: z
-				.string()
-				.regex(/^\d{2}:\d{2}$/)
-				.optional(),
-			endTime: z
-				.string()
-				.regex(/^\d{2}:\d{2}$/)
-				.optional(),
+			startTime: timeSchema.optional(),
+			endTime: timeSchema.optional(),
 			notes: z.string().optional().nullable(),
-			isActive: z.string().optional(),
+			isActive: z.boolean().optional(),
 		}),
 	)
 	.handler(async ({ input }) => {

@@ -40,7 +40,7 @@ const getReport = permissionProcedure("reports.read")
 			const result = await db.execute(
 				sql`SELECT
 					COUNT(*) as total_orders,
-					COALESCE(SUM(total), 0) as gross_revenue,
+					COALESCE(SUM(subtotal), 0) as gross_revenue,
 					COALESCE(SUM(discount_total), 0) as total_discounts,
 					COALESCE(SUM(tax_total), 0) as total_tax,
 					COALESCE(SUM(total), 0) as net_revenue,
@@ -472,8 +472,8 @@ const getReport = permissionProcedure("reports.read")
 const getEodReport = permissionProcedure("reports.read")
 	.input(z.object({ date: z.string() }))
 	.handler(async ({ input }) => {
-		const dayStart = `${input.date}T00:00:00`;
-		const dayEnd = `${input.date}T23:59:59`;
+		const dayStart = `${input.date}T00:00:00-04:00`;
+		const dayEnd = `${input.date}T23:59:59-04:00`;
 
 		const [
 			salesResult,

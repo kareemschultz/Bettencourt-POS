@@ -42,6 +42,7 @@ export const customer = pgTable(
 	(table) => [
 		index("idx_customer_org").on(table.organizationId),
 		index("idx_customer_phone").on(table.phone),
+		index("idx_customer_email").on(table.email),
 		uniqueIndex("idx_customer_org_phone").on(table.organizationId, table.phone),
 	],
 );
@@ -129,7 +130,10 @@ export const loyaltyTransaction = pgTable(
 			.notNull()
 			.defaultNow(),
 	},
-	(table) => [index("idx_loyalty_txn_customer").on(table.customerLoyaltyId)],
+	(table) => [
+		index("idx_loyalty_txn_customer").on(table.customerLoyaltyId),
+		index("idx_loyalty_txn_order").on(table.orderId),
+	],
 );
 
 // ── Gift Card ─────────────────────────────────────────────────────────

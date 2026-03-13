@@ -323,13 +323,6 @@ export default function ProductionReportPage() {
 					and Variance columns.
 				</p>
 			)}
-			{rows.length > 0 && (
-				<p className="text-muted-foreground text-xs print:hidden">
-					<span className="font-medium text-amber-600">Closing</span> = leftover
-					at end of day. <span className="font-medium">% Sold</span> = Actual ÷
-					Expected. Combo sales are split into components in both columns.
-				</p>
-			)}
 			{/* Print footer */}
 			<div className="mt-8 hidden border-t pt-2 text-center text-muted-foreground text-xs print:block">
 				Bettencourt's Food Inc. · Production Report ·{" "}
