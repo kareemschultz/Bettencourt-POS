@@ -5,6 +5,7 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 import { createAuditLog } from "../lib/audit";
+import { printService } from "../../../server/services/print-service";
 import { emitKitchenEvent } from "../lib/kitchen-events";
 import { requireOrganizationId } from "../lib/org-context";
 
@@ -278,6 +279,7 @@ const checkout = permissionProcedure("orders.create")
 						.optional(),
 					modifiers: z.array(z.object({ name: z.string(), price: z.number() })),
 					notes: z.string().nullable().optional(),
+					courseNumber: z.number().int().min(1).default(1),
 				}),
 			),
 			payments: z
@@ -300,6 +302,8 @@ const checkout = permissionProcedure("orders.create")
 			registerId: z.string().uuid(),
 			tableId: z.string().uuid().nullable().optional(),
 			notes: z.string().nullable().optional(),
+			tabName: z.string().nullable().optional(),
+			tipAmount: z.number().min(0).default(0),
 			discountTotal: z.number().min(0).default(0),
 			customerId: z.string().uuid().nullable().optional(),
 			customerName: z.string().nullable().optional(),
@@ -318,6 +322,8 @@ const checkout = permissionProcedure("orders.create")
 			registerId,
 			tableId,
 			notes,
+			tabName,
+			tipAmount,
 			discountTotal,
 			customerId,
 			customerName,
@@ -344,12 +350,13 @@ const checkout = permissionProcedure("orders.create")
 			taxTotal += lineTax;
 		}
 		const grossTotal = subtotal + taxTotal;
+		const totalWithTip = grossTotal - discountTotal + tipAmount;
 		if (discountTotal > grossTotal + 0.01) {
 			throw new ORPCError("BAD_REQUEST", {
 				message: `Discount (${discountTotal.toFixed(2)}) cannot exceed subtotal + tax (${grossTotal.toFixed(2)})`,
 			});
 		}
-		const total = Math.max(0, grossTotal - discountTotal);
+		const total = Math.max(0, totalWithTip);
 
 		// Validate payment sum covers order total
 		const paymentSum = payments.reduce((s, p) => s + p.amount, 0);
@@ -408,6 +415,8 @@ const checkout = permissionProcedure("orders.create")
 					subtotal: subtotal.toFixed(2),
 					taxTotal: taxTotal.toFixed(2),
 					discountTotal: discountTotal.toFixed(2),
+					tipAmount: tipAmount.toFixed(2),
+					tabName: tabName ?? null,
 					total: total.toFixed(2),
 					notes: notes ?? null,
 				})
@@ -437,6 +446,7 @@ const checkout = permissionProcedure("orders.create")
 					total: lineTotal.toFixed(2),
 					modifiersSnapshot: item.modifiers,
 					notes: item.notes ?? null,
+					courseNumber: item.courseNumber ?? 1,
 				});
 
 				// If combo product, also insert component line items for reporting
@@ -467,6 +477,7 @@ const checkout = permissionProcedure("orders.create")
 			// Insert payments
 			// Allocate payment amounts sequentially against remaining balance
 			let remaining = total;
+			let tipRemaining = tipAmount;
 			let totalCashAllocated = 0;
 			for (const pmt of payments) {
 				const remainingBefore = remaining;
@@ -483,6 +494,8 @@ const checkout = permissionProcedure("orders.create")
 				if (pmt.method === "cash") {
 					totalCashAllocated += allocated;
 				}
+				const tipAllocated = Math.min(tipRemaining, allocated);
+				tipRemaining -= tipAllocated;
 
 				await tx.insert(schema.payment).values({
 					orderId: createdOrder.id,
@@ -490,6 +503,7 @@ const checkout = permissionProcedure("orders.create")
 					amount: allocated.toFixed(2),
 					tendered: tendered?.toFixed(2) ?? null,
 					changeGiven: changeGiven.toFixed(2),
+					tipAmount: tipAllocated.toFixed(2),
 					reference: pmt.reference ?? null,
 					status: "completed",
 				});
@@ -566,11 +580,22 @@ const checkout = permissionProcedure("orders.create")
 			if (userRows.length > 0) userName = userRows[0]!.name;
 
 			return {
+				organizationId,
+				locationId,
+				printedItems: items.map((item) => ({
+					name: item.productName,
+					quantity: item.quantity,
+					courseNumber: item.courseNumber,
+					notes: item.notes ?? null,
+					modifiers: item.modifiers.map((m) => m.name),
+					reportingCategoryName: item.department ?? null,
+				})),
 				order: {
 					id: createdOrder.id,
 					orderNumber: createdOrder.orderNumber,
 					dailyNumber: dailyNum,
 					total: Number(createdOrder.total),
+					tipAmount,
 					createdAt: createdOrder.createdAt,
 					userName,
 				},
@@ -628,6 +653,23 @@ const checkout = permissionProcedure("orders.create")
 			type: "ticket:created",
 			ticketId: result.ticketId,
 			orderId: result.order.id,
+		});
+
+		const printTargets = await printService.dispatch({
+			type: "kitchen_ticket",
+			organizationId: result.organizationId,
+			locationId: result.locationId,
+			orderId: result.order.id,
+			orderNumber: result.order.orderNumber,
+			station: "kitchen",
+			items: result.printedItems,
+			timestamp: new Date(),
+		});
+		emitKitchenEvent({
+			type: "ticket:printed",
+			ticketId: result.ticketId,
+			orderId: result.order.id,
+			targets: printTargets.map((t) => t.printerName),
 		});
 
 		return result;

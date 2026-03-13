@@ -10,6 +10,7 @@ import { creditNotesRouter } from "./credit-notes";
 import { customersRouter } from "./customers";
 import { dashboardRouter } from "./dashboard";
 import { discountsRouter } from "./discounts";
+import { floorPlanRouter } from "./floor-plan";
 import { giftcardsRouter } from "./giftcards";
 import { inventoryRouter } from "./inventory";
 import { invoicesRouter } from "./invoices";
@@ -65,6 +66,7 @@ export const appRouter = {
 	customers: customersRouter,
 	loyalty: loyaltyRouter,
 	discounts: discountsRouter,
+	floorPlan: floorPlanRouter,
 	giftcards: giftcardsRouter,
 	analytics: analyticsRouter,
 	menuSchedules: menuSchedulesRouter,

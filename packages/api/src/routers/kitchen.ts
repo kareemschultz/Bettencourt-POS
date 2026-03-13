@@ -4,6 +4,7 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 import { emitKitchenEvent } from "../lib/kitchen-events";
+import { printService } from "../../../server/services/print-service";
 
 // ── getActiveTickets ────────────────────────────────────────────────────
 const getActiveTickets = permissionProcedure("orders.read")
@@ -160,6 +161,53 @@ const updateItemStatus = permissionProcedure("orders.update")
 					.set({ status: newItemStatus })
 					.where(eq(schema.kitchenOrderItem.ticketId, id));
 			}
+
+			if (status === "preparing") {
+				const ticketRows = await db
+					.select({
+						id: schema.kitchenOrderTicket.id,
+						orderId: schema.kitchenOrderTicket.orderId,
+						locationId: schema.kitchenOrderTicket.locationId,
+						station: schema.kitchenOrderTicket.station,
+						orderNumber: schema.order.orderNumber,
+						organizationId: schema.order.organizationId,
+					})
+					.from(schema.kitchenOrderTicket)
+					.innerJoin(schema.order, eq(schema.kitchenOrderTicket.orderId, schema.order.id))
+					.where(eq(schema.kitchenOrderTicket.id, id))
+					.limit(1);
+				if (ticketRows.length > 0) {
+					const ticket = ticketRows[0]!;
+					const items = await db
+						.select({
+							name: schema.kitchenOrderItem.productName,
+							quantity: schema.kitchenOrderItem.quantity,
+							notes: schema.kitchenOrderItem.notes,
+						})
+						.from(schema.kitchenOrderItem)
+						.where(eq(schema.kitchenOrderItem.ticketId, id));
+
+					const jobType = (ticket.station ?? "").toLowerCase().includes("bar")
+						? "bar_ticket"
+						: "kitchen_ticket";
+
+					await printService.dispatch({
+						type: jobType,
+						organizationId: ticket.organizationId,
+						locationId: ticket.locationId,
+						orderId: ticket.orderId,
+						orderNumber: ticket.orderNumber,
+						station: ticket.station,
+						items: items.map((item) => ({
+							name: item.name,
+							quantity: item.quantity,
+							notes: item.notes,
+						})),
+						timestamp: new Date(),
+					});
+				}
+			}
+
 			emitKitchenEvent({ type: "ticket:updated", ticketId: id, status });
 		}
 

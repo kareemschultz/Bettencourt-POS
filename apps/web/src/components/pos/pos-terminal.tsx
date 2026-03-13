@@ -3,6 +3,7 @@ import {
 	Barcode,
 	Clock,
 	Gift,
+	FileText,
 	Keyboard,
 	Lock,
 	ReceiptText,
@@ -53,6 +54,7 @@ import { CartPanel } from "./cart-panel";
 import { DiscountDialog } from "./discount-dialog";
 import { ItemNotesDialog } from "./item-notes-dialog";
 import { PaymentDialog } from "./payment-dialog";
+import { TabListDialog } from "./tab-list-dialog";
 import { ProductGrid } from "./product-grid";
 import { ReceiptPreview } from "./receipt-preview";
 import { SellGiftCardDialog } from "./sell-gift-card-dialog";
@@ -139,6 +141,9 @@ export function POSTerminal({
 	const [customerPhone, setCustomerPhone] = useState("");
 	const [deliveryAddress, setDeliveryAddress] = useState("");
 	const [estimatedReady, setEstimatedReady] = useState("15");
+	const [tabName, setTabName] = useState("");
+	const [tabDialogOpen, setTabDialogOpen] = useState(false);
+	const [selectedCourse, setSelectedCourse] = useState(1);
 
 	// Resolve effective location from the active dashboard location context/prop.
 	const effectiveLocationId = propLocationId ?? undefined;
@@ -237,6 +242,7 @@ export function POSTerminal({
 					modifiers: [],
 					notes: "",
 					line_total: product.price,
+					courseNumber: selectedCourse,
 				},
 			];
 		});
@@ -304,6 +310,7 @@ export function POSTerminal({
 		setDeliveryAddress("");
 		setEstimatedReady("15");
 		setOrderMode("dine_in");
+		setTabName("");
 	}
 
 	const cartItemCount = cart.reduce((s, i) => s + i.quantity, 0);
@@ -320,6 +327,7 @@ export function POSTerminal({
 			amount: number;
 			reference?: string;
 		}[],
+		meta?: { tipAmount?: number },
 	) {
 		const checkoutItems = cart.map((item) => ({
 			productId: item.product.id,
@@ -336,6 +344,7 @@ export function POSTerminal({
 			})),
 			modifiers: item.modifiers.map((m) => ({ name: m.name, price: m.price })),
 			notes: item.notes || null,
+			courseNumber: item.courseNumber ?? 1,
 		}));
 
 		if (orderMode === "pickup" && !customerPhone.trim()) {
@@ -369,6 +378,8 @@ export function POSTerminal({
 				locationId: effectiveLocationId,
 				orderType: isBeverageTerminal ? orderMode : "dine_in",
 			discountTotal: discount,
+			tipAmount: meta?.tipAmount ?? 0,
+			tabName: tabName || selectedCustomer?.name || null,
 			customerId: selectedCustomer?.id ?? null,
 			customerName: isPickupOrDelivery ? customerName || null : null,
 			customerPhone: isPickupOrDelivery ? customerPhone || null : null,
@@ -608,6 +619,15 @@ export function POSTerminal({
 
 				{/* Held orders, reprint, shortcuts, user */}
 				<div className="flex shrink-0 items-center gap-1.5">
+					<Button
+						variant={tabName ? "default" : "ghost"}
+						size="sm"
+						className="gap-1.5 text-xs"
+						onClick={() => setTabDialogOpen(true)}
+					>
+						<FileText className="size-3.5" />
+						{tabName ? `Tab: ${tabName}` : "Open Tab"}
+					</Button>
 					{heldOrders.map((_held, i) => (
 						<button
 							type="button"
@@ -844,6 +864,22 @@ export function POSTerminal({
 						</Button>
 					</div>
 
+					<div className="flex items-center gap-1 rounded-md border p-1">
+						<span className="px-1 text-[10px] text-muted-foreground uppercase">Course</span>
+						{[1, 2, 3, 4].map((course) => (
+							<Button
+								key={course}
+								type="button"
+								size="sm"
+								variant={selectedCourse === course ? "default" : "ghost"}
+								className="h-7 px-2 text-xs"
+								onClick={() => setSelectedCourse(course)}
+							>
+								{course}
+							</Button>
+						))}
+					</div>
+
 					{(orderMode === "pickup" || orderMode === "delivery") && (
 						<>
 							<div className="flex flex-col gap-1">
@@ -1010,6 +1046,12 @@ export function POSTerminal({
 			)}
 
 			{/* Dialogs */}
+			<TabListDialog
+				open={tabDialogOpen}
+				onClose={() => setTabDialogOpen(false)}
+				onSelectTab={(name) => setTabName(name)}
+			/>
+
 			<PaymentDialog
 				open={paymentOpen}
 				onClose={() => setPaymentOpen(false)}

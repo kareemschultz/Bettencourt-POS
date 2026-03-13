@@ -8,6 +8,7 @@ export * from "./notification";
 export * from "./order";
 export * from "./organization";
 export * from "./permissions";
+export * from "./printer";
 export * from "./product";
 export * from "./production";
 export * from "./webhook";

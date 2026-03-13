@@ -127,6 +127,7 @@ export interface OrderLineItem {
 	tax_rate_snapshot: number;
 	tax_amount: number;
 	line_total: number;
+	courseNumber?: number;
 	notes: string | null;
 	sort_order: number;
 	is_combo_component: boolean;
@@ -158,6 +159,7 @@ export interface CartItem {
 	modifiers: CartModifier[];
 	notes: string;
 	line_total: number;
+	courseNumber?: number;
 }
 
 export interface CartModifier {

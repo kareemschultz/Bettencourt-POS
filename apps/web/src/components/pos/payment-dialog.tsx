@@ -36,6 +36,7 @@ interface PaymentDialogProps {
 			amount: number;
 			reference?: string;
 		}[],
+		meta?: { tipAmount?: number },
 	) => Promise<void>;
 }
 
@@ -59,6 +60,8 @@ export function PaymentDialog({
 	const [splitCashAmount, setSplitCashAmount] = useState("");
 	const [processing, setProcessing] = useState(false);
 	const [change, setChange] = useState(0);
+	const [tipPercent, setTipPercent] = useState<number | null>(null);
+	const [customTip, setCustomTip] = useState("");
 
 	// Gift card state
 	const [giftCardCode, setGiftCardCode] = useState("");
@@ -103,6 +106,8 @@ export function PaymentDialog({
 		setSplitCashAmount("");
 		setProcessing(false);
 		setChange(0);
+		setTipPercent(null);
+		setCustomTip("");
 		setGiftCardCode("");
 		setGiftCardData(null);
 		setGiftCardApplied(false);
@@ -110,11 +115,11 @@ export function PaymentDialog({
 
 	async function handleCashPayment() {
 		const tendered = Number(cashTendered) || 0;
-		if (tendered < total) return;
+		if (tendered < totalWithTip) return;
 		setProcessing(true);
 		try {
-			await onComplete([{ method: "cash", amount: tendered }]);
-			setChange(tendered - total);
+			await onComplete([{ method: "cash", amount: tendered }], { tipAmount });
+			setChange(tendered - totalWithTip);
 			setStep("complete");
 		} catch {
 			setProcessing(false);
@@ -125,8 +130,8 @@ export function PaymentDialog({
 		setProcessing(true);
 		try {
 			await onComplete([
-				{ method: "card", amount: total, reference: `CARD-${Date.now()}` },
-			]);
+				{ method: "card", amount: totalWithTip, reference: `CARD-${Date.now()}` },
+			], { tipAmount });
 			setStep("complete");
 		} catch {
 			setProcessing(false);
@@ -135,8 +140,8 @@ export function PaymentDialog({
 
 	async function handleSplitPayment() {
 		const cashPart = Number(splitCashAmount) || 0;
-		if (cashPart <= 0 || cashPart >= total) return;
-		const cardPart = total - cashPart;
+		if (cashPart <= 0 || cashPart >= totalWithTip) return;
+		const cardPart = totalWithTip - cashPart;
 		setProcessing(true);
 		try {
 			await onComplete([
@@ -146,7 +151,7 @@ export function PaymentDialog({
 					amount: cardPart,
 					reference: `SPLIT-CARD-${Date.now()}`,
 				},
-			]);
+			], { tipAmount });
 			setChange(0);
 			setStep("complete");
 		} catch {
@@ -157,8 +162,8 @@ export function PaymentDialog({
 	const giftCardBalance = giftCardData
 		? Number(giftCardData.currentBalance)
 		: 0;
-	const giftCardPayAmount = Math.min(giftCardBalance, total);
-	const giftCardRemaining = total - giftCardPayAmount;
+	const giftCardPayAmount = Math.min(giftCardBalance, totalWithTip);
+	const giftCardRemaining = totalWithTip - giftCardPayAmount;
 
 	async function handleGiftCardFullPayment() {
 		if (!giftCardData || giftCardPayAmount <= 0) return;
@@ -167,8 +172,8 @@ export function PaymentDialog({
 			if (giftCardRemaining <= 0) {
 				// Gift card covers full amount
 				await onComplete([
-					{ method: "gift_card", amount: total, reference: giftCardData.code },
-				]);
+					{ method: "gift_card", amount: totalWithTip, reference: giftCardData.code },
+				], { tipAmount });
 			} else {
 				// Gift card partially covers — remainder on card
 				await onComplete([
@@ -182,7 +187,7 @@ export function PaymentDialog({
 						amount: giftCardRemaining,
 						reference: `GC-SPLIT-CARD-${Date.now()}`,
 					},
-				]);
+				], { tipAmount });
 			}
 			setChange(0);
 			setStep("complete");
@@ -203,7 +208,7 @@ export function PaymentDialog({
 					reference: giftCardData.code,
 				},
 				{ method: "cash", amount: giftCardRemaining },
-			]);
+			], { tipAmount });
 			setChange(0);
 			setStep("complete");
 		} catch {
@@ -214,12 +219,17 @@ export function PaymentDialog({
 	async function handleCreditPayment() {
 		setProcessing(true);
 		try {
-			await onComplete([{ method: "credit", amount: total }]);
+			await onComplete([{ method: "credit", amount: totalWithTip }], { tipAmount });
 			setStep("complete");
 		} catch {
 			setProcessing(false);
 		}
 	}
+
+	const computedTip =
+		tipPercent !== null ? Number((total * tipPercent).toFixed(2)) : Number(customTip) || 0;
+	const tipAmount = Math.max(0, computedTip);
+	const totalWithTip = total + tipAmount;
 
 	// GYD quick amounts
 	const quickCashAmounts = [
@@ -227,10 +237,10 @@ export function PaymentDialog({
 		Math.ceil(total / 500) * 500,
 		Math.ceil(total / 1000) * 1000,
 		Math.ceil(total / 5000) * 5000,
-	].filter((v, i, a) => a.indexOf(v) === i && v >= total);
+	].filter((v, i, a) => a.indexOf(v) === i && v >= totalWithTip);
 
 	const splitCashNum = Number(splitCashAmount) || 0;
-	const splitCardRemaining = Math.max(0, total - splitCashNum);
+	const splitCardRemaining = Math.max(0, totalWithTip - splitCashNum);
 
 	return (
 		<Dialog
@@ -247,12 +257,46 @@ export function PaymentDialog({
 					<DialogTitle className="text-center text-lg">
 						{step === "complete"
 							? "Payment Complete"
-							: `Payment - ${formatGYD(total)}`}
+							: `Payment - ${formatGYD(totalWithTip)}`}
 					</DialogTitle>
 				</DialogHeader>
 
 				{step === "method" && (
 					<div className="flex flex-col gap-3 py-4">
+						<div className="rounded-lg border bg-muted/20 p-3">
+							<p className="mb-2 font-medium text-sm">Add tip</p>
+							<div className="mb-2 grid grid-cols-4 gap-2">
+								{[0.1, 0.15, 0.18, 0.2].map((pct) => (
+									<Button
+										key={pct}
+										type="button"
+										variant={tipPercent === pct ? "default" : "outline"}
+										className="h-8 text-xs"
+										onClick={() => {
+											setTipPercent(pct);
+											setCustomTip("");
+										}}
+									>
+										{Math.round(pct * 100)}%
+									</Button>
+								))}
+							</div>
+							<div className="flex items-center gap-2">
+								<Input
+									type="number"
+									step="0.01"
+									min="0"
+									placeholder="Custom tip"
+									value={customTip}
+									onChange={(e) => {
+										setTipPercent(null);
+										setCustomTip(e.target.value);
+									}}
+									className="h-8"
+								/>
+								<p className="text-muted-foreground text-xs">Tip: {formatGYD(tipAmount)}</p>
+							</div>
+						</div>
 						<Button
 							variant="outline"
 							className="flex h-16 touch-manipulation items-center justify-start gap-3 px-5 sm:h-14"
@@ -329,7 +373,7 @@ export function PaymentDialog({
 						<div className="text-center">
 							<p className="text-muted-foreground text-sm">Amount Due</p>
 							<p className="font-bold text-3xl sm:text-2xl">
-								{formatGYD(total)}
+								{formatGYD(totalWithTip)}
 							</p>
 						</div>
 						<div className="flex flex-col gap-2">
@@ -358,9 +402,9 @@ export function PaymentDialog({
 								</Button>
 							))}
 						</div>
-						{Number(cashTendered) >= total && (
+						{Number(cashTendered) >= totalWithTip && (
 							<p className="text-center font-semibold text-green-600 text-xl sm:text-lg dark:text-green-400">
-								Change: {formatGYD(Number(cashTendered) - total)}
+								Change: {formatGYD(Number(cashTendered) - totalWithTip)}
 							</p>
 						)}
 						<div className="flex gap-2">
@@ -374,7 +418,7 @@ export function PaymentDialog({
 							<Button
 								className="h-12 flex-1 touch-manipulation font-bold text-base"
 								onClick={handleCashPayment}
-								disabled={processing || Number(cashTendered) < total}
+								disabled={processing || Number(cashTendered) < totalWithTip}
 							>
 								{processing ? "Processing..." : "Complete"}
 							</Button>
@@ -386,7 +430,7 @@ export function PaymentDialog({
 					<div className="flex flex-col gap-4 py-2">
 						<div className="text-center">
 							<p className="text-muted-foreground text-sm">Total Due</p>
-							<p className="font-bold text-2xl">{formatGYD(total)}</p>
+							<p className="font-bold text-2xl">{formatGYD(totalWithTip)}</p>
 						</div>
 						<div className="flex flex-col gap-2">
 							<Label>Cash Portion (GYD)</Label>
@@ -429,7 +473,7 @@ export function PaymentDialog({
 								className="h-12 flex-1 touch-manipulation font-bold text-base"
 								onClick={handleSplitPayment}
 								disabled={
-									processing || splitCashNum <= 0 || splitCashNum >= total
+									processing || splitCashNum <= 0 || splitCashNum >= totalWithTip
 								}
 							>
 								{processing ? "Processing..." : "Complete Split"}
@@ -442,7 +486,7 @@ export function PaymentDialog({
 					<div className="flex flex-col gap-4 py-2">
 						<div className="text-center">
 							<p className="text-muted-foreground text-sm">Amount Due</p>
-							<p className="font-bold text-2xl">{formatGYD(total)}</p>
+							<p className="font-bold text-2xl">{formatGYD(totalWithTip)}</p>
 						</div>
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="gc-code">Gift Card Code</Label>
@@ -512,7 +556,7 @@ export function PaymentDialog({
 										>
 											{processing
 												? "Processing..."
-												: `Pay ${formatGYD(total)} with Gift Card`}
+												: `Pay ${formatGYD(totalWithTip)} with Gift Card`}
 										</Button>
 									) : (
 										<>
@@ -560,7 +604,7 @@ export function PaymentDialog({
 						<div className="text-center">
 							<p className="text-muted-foreground text-sm">Amount Due</p>
 							<p className="font-bold text-3xl sm:text-2xl">
-								{formatGYD(total)}
+								{formatGYD(totalWithTip)}
 							</p>
 						</div>
 						<div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-800 text-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">

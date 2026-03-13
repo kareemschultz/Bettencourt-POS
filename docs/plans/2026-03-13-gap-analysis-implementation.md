@@ -22,6 +22,22 @@
 
 ---
 
+## Current Implementation Status (2026-03-13)
+
+- ✅ Task 0.1 implemented: WebSocket endpoint (`/ws`) with channel subscriptions and kitchen event bridge is in place.
+- ✅ Kitchen dashboard switched to reusable WebSocket hook with exponential reconnect and polling fallback.
+- ✅ Task 0.3 schema groundwork completed (tips/tabs/courses/floor fields + migration).
+- ✅ Task 0.2 foundation implemented: server print service with pluggable ESC/POS adapter abstraction (mock adapter), category/station routing, and templates for kitchen/bar/receipt preview.
+- ✅ Print integration baseline: checkout and kitchen fire events now dispatch print jobs through print service and emit `ticket:printed` kitchen event for realtime consumers.
+- ✅ Task 1.2 backend groundwork implemented: `floorPlan` API router supports floor CRUD plus location/floor table batch save for floor-plan editor persistence.
+- ✅ Task 1.2 frontend baseline implemented: `dashboard.tables.tsx` now includes floor/location selectors, floor creation, edit/live modes, drag-drop layout editing, and save-to-API persistence via `floorPlan.saveTableBatch`.
+- 🟡 Task 1.7 in progress: POS checkout supports persisted tips (`order.tipAmount`, `payment.tipAmount`) with payment-dialog tip selection and tips report endpoint.
+- 🟡 Task 1.5 partial UX implemented: POS now has `TabListDialog` for open/recall tab naming plus checkout `tabName` wiring.
+- ⏳ Remaining Task 1.5 work: true persisted tab lifecycle (append items to existing open tab and close-tab settlement flow).
+- 🟡 Task 1.7/1.3 course groundwork implemented: POS supports per-item `courseNumber` persistence with terminal course selector and cart display.
+- ✅ Task 1.1 baseline implemented: new full-screen `/kds` route with order cards, station filter, realtime updates (`pos:kds`), and bump action wiring.
+- ⏳ Next focus: KDS audio/expo polish + full tab lifecycle completion + 86 system.
+
 ## Sprint 0: Foundation & Infrastructure (Week 1-2)
 
 ### Task 0.1: WebSocket Infrastructure
@@ -80,11 +96,11 @@ const printerRoute = pgTable("printer_route", {
 ```
 
 **Acceptance Criteria:**
-- [ ] PrintService interface with `printReceipt()`, `printKOT()`, `printBill()` methods
-- [ ] WebUSB adapter connects to USB thermal printer
-- [ ] Network adapter sends to IP:port
-- [ ] Browser print fallback always works
-- [ ] Printer + printerRoute tables created
+- [x] PrintService abstraction implemented with pluggable adapter + route resolution (`dispatch` + template helpers).
+- [ ] WebUSB adapter connects to USB thermal printer (blocked: hardware-specific integration intentionally deferred in this environment).
+- [ ] Network adapter sends to IP:port (blocked: hardware-specific transport intentionally deferred; mock adapter in use).
+- [ ] Browser print fallback always works (blocked: frontend/browser print adapter not yet implemented).
+- [x] Printer + printerRoute tables created.
 
 ---
 

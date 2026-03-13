@@ -22,6 +22,7 @@ const getReport = permissionProcedure("reports.read")
 					"voids",
 					"production",
 					"weekly-trend",
+					"tips",
 				])
 				.default("summary"),
 			startDate: z.string().optional(),
@@ -231,6 +232,21 @@ const getReport = permissionProcedure("reports.read")
 				cashierActivity: cashierResult.rows,
 				paymentBreakdown: paymentResult.rows,
 			};
+		}
+
+
+		if (input.type === "tips") {
+			const result = await db.execute(
+				sql`SELECT
+					COALESCE(SUM(o.tip_amount), 0) as total_tips,
+					COALESCE(AVG(o.tip_amount), 0) as avg_tip_per_order,
+					COUNT(*) FILTER (WHERE o.tip_amount > 0) as tipped_orders
+				FROM "order" o
+				WHERE o.status IN ('completed', 'closed')
+					AND o.created_at >= ${startDate}::timestamptz
+					AND o.created_at <= ${endDate}::timestamptz`,
+			);
+			return result.rows[0];
 		}
 
 		if (input.type === "voids") {

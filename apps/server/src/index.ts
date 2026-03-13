@@ -32,6 +32,7 @@ import {
 	recordPinFailure,
 } from "./pin-rate-limit";
 import { backupsRouter } from "./routes/backups";
+import { publishPosEvent, websocket, wsHandler } from "./ws";
 
 const app = new Hono();
 
@@ -167,6 +168,20 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 app.route("/api/backups", backupsRouter);
 
+app.get("/ws", async (c) => {
+	const session = await auth.api.getSession({ headers: c.req.raw.headers });
+	if (!session?.user) {
+		return c.json({ error: "Unauthorized" }, 401);
+	}
+
+	const permissions = await loadUserPermissions(session.user.id);
+	if (!hasPermission(permissions, "orders.read")) {
+		return c.json({ error: "Forbidden" }, 403);
+	}
+
+	return wsHandler(c);
+});
+
 // ── Receipt photo upload ───────────────────────────────────────────────
 const ALLOWED_MIME: Record<string, string> = {
 	"image/jpeg": ".jpg",
@@ -272,6 +287,17 @@ app.use("/*", async (c, next) => {
 	await next();
 });
 
+
+// Bridge existing kitchen events into channel-based WebSocket feed
+onKitchenEvent((event) => {
+	publishPosEvent({
+		channel: "pos:kds",
+		event: event.type,
+		payload: event,
+		source: "kitchen-events",
+	});
+});
+
 // Health check for Docker
 app.get("/health", (c) => {
 	return c.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -357,4 +383,5 @@ process.on("SIGTERM", () => {
 export default {
 	port: process.env.PORT ? Number(process.env.PORT) : 3000,
 	fetch: app.fetch,
+	websocket,
 };
