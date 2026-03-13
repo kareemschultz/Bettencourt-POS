@@ -242,6 +242,36 @@ const ALLOWED_MIME: Record<string, string> = {
 };
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB
 
+// Product image upload
+app.post("/api/uploads/product", async (c) => {
+	const session = await auth.api.getSession({ headers: c.req.raw.headers });
+	if (!session?.user) return c.json({ error: "Unauthorized" }, 401);
+
+	const formData = await c.req.formData();
+	const file = formData.get("file");
+	if (!file || !(file instanceof File)) {
+		return c.json({ error: "No file provided" }, 400);
+	}
+	if (file.size > MAX_UPLOAD_BYTES) {
+		return c.json({ error: "File too large (max 5 MB)" }, 400);
+	}
+	const ext = ALLOWED_MIME[file.type];
+	if (!ext) {
+		return c.json({ error: "Only JPEG, PNG, and WebP are allowed" }, 400);
+	}
+
+	const uploadsDir = join(env.UPLOADS_DIR, "products");
+	await mkdir(uploadsDir, { recursive: true });
+
+	const filename = `${randomUUID()}${ext}`;
+	const dest = join(uploadsDir, filename);
+	const buffer = Buffer.from(await file.arrayBuffer());
+	await writeFile(dest, buffer);
+
+	const url = `/uploads/products/${filename}`;
+	return c.json({ url });
+});
+
 app.post("/api/uploads/receipt", async (c) => {
 	const session = await auth.api.getSession({ headers: c.req.raw.headers });
 	if (!session?.user) return c.json({ error: "Unauthorized" }, 401);
