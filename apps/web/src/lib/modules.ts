@@ -30,6 +30,7 @@ import {
 	MessageCircle,
 	Percent,
 	PieChart,
+	Printer,
 	Receipt,
 	ReceiptText,
 	RefreshCw,
@@ -199,6 +200,14 @@ export const MODULES: ModuleDefinition[] = [
 				module: "orders",
 				roles: ["executive", "admin"],
 				pageTitle: "Loyalty Program",
+			},
+			{
+				title: "Pricelists",
+				url: "/dashboard/pricelists",
+				icon: Tag,
+				module: "orders",
+				roles: ["executive", "admin"],
+				pageTitle: "Customer Pricelists",
 			},
 			{
 				title: "Gift Cards",
@@ -638,6 +647,14 @@ export const MODULES: ModuleDefinition[] = [
 				roles: ["executive", "admin"],
 				pageTitle: "Backup & Restore",
 			},
+			{
+				title: "Printers",
+				url: "/dashboard/printers",
+				icon: Printer,
+				module: "settings",
+				roles: ["executive", "admin"],
+				pageTitle: "Printer Configuration",
+			},
 		],
 	},
 ];
@@ -675,6 +692,12 @@ export const ROUTE_MODULE_MAP: Record<string, string | null> = {
 	// Additional routes not represented as nav items
 	"/dashboard/profile": null,
 	"/dashboard/suppliers/:id": "inventory",
+	"/dashboard/customer-analytics": "analytics",
+	"/dashboard/voids": "reports",
+	"/dashboard/feedback": null,
+	"/dashboard/shifts": "settings",
+	"/dashboard/waitlist": null,
+	"/dashboard/reservations": null,
 };
 
 /**

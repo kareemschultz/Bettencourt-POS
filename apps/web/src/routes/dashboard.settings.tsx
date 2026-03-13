@@ -29,6 +29,7 @@ import {
 	X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
 	AlertDialog,
@@ -83,6 +84,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { SUPPORTED_LANGUAGES } from "@/i18n/index";
 import { hasRouteAccess } from "@/lib/route-access";
 import { todayGY } from "@/lib/utils";
 import {
@@ -156,6 +158,10 @@ export default function SettingsPage() {
 						<ToggleLeft className="size-3.5" />
 						<span className="hidden sm:inline">POS Behavior</span>
 					</TabsTrigger>
+					<TabsTrigger value="language" className="gap-1.5">
+						<Settings className="size-3.5" />
+						<span className="hidden sm:inline">Language</span>
+					</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="organization" className="mt-4">
@@ -190,6 +196,9 @@ export default function SettingsPage() {
 				</TabsContent>
 				<TabsContent value="pos" className="mt-4">
 					<PosSettingsTab />
+				</TabsContent>
+				<TabsContent value="language" className="mt-4">
+					<LanguageTab />
 				</TabsContent>
 			</Tabs>
 		</div>
@@ -1095,7 +1104,9 @@ function UsersTab() {
 	const [newPin, setNewPin] = useState("");
 	const [confirmPin, setConfirmPin] = useState("");
 	// Deactivate / Delete
-	const [deactivateTarget, setDeactivateTarget] = useState<UserRow | null>(null);
+	const [deactivateTarget, setDeactivateTarget] = useState<UserRow | null>(
+		null,
+	);
 	const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
 
 	const { data: users = [], isLoading } = useQuery(
@@ -1106,14 +1117,19 @@ function UsersTab() {
 	);
 
 	const usersKey = orpc.settings.getUsers.queryOptions({ input: {} }).queryKey;
-	const invalidate = () => queryClient.invalidateQueries({ queryKey: usersKey });
+	const invalidate = () =>
+		queryClient.invalidateQueries({ queryKey: usersKey });
 
 	const createUser = useMutation(
 		orpc.settings.createUser.mutationOptions({
 			onSuccess: () => {
 				invalidate();
 				setShowCreate(false);
-				setNewName(""); setNewEmail(""); setNewRoleId(""); setNewUserPin(""); setSendInvite(false);
+				setNewName("");
+				setNewEmail("");
+				setNewRoleId("");
+				setNewUserPin("");
+				setSendInvite(false);
 				toast.success("User created");
 			},
 			onError: (err) => toast.error(err.message || "Failed to create user"),
@@ -1125,8 +1141,14 @@ function UsersTab() {
 			onSuccess: () => {
 				invalidate();
 				setShowCreate(false);
-				setNewName(""); setNewEmail(""); setNewRoleId(""); setNewUserPin(""); setSendInvite(false);
-				toast.success("Invitation sent — user will receive a reset-password email");
+				setNewName("");
+				setNewEmail("");
+				setNewRoleId("");
+				setNewUserPin("");
+				setSendInvite(false);
+				toast.success(
+					"Invitation sent — user will receive a reset-password email",
+				);
 			},
 			onError: (err) => toast.error(err.message || "Failed to send invite"),
 		}),
@@ -1159,8 +1181,12 @@ function UsersTab() {
 		orpc.settings.adminResetPassword.mutationOptions({
 			onSuccess: (data) => {
 				invalidate();
-				setTempPassword((data as unknown as { tempPassword: string }).tempPassword ?? "");
-				toast.success("Password reset — share the temporary password with the user");
+				setTempPassword(
+					(data as unknown as { tempPassword: string }).tempPassword ?? "",
+				);
+				toast.success(
+					"Password reset — share the temporary password with the user",
+				);
 			},
 			onError: (err) => toast.error(err.message || "Failed to reset password"),
 		}),
@@ -1171,7 +1197,8 @@ function UsersTab() {
 			onSuccess: () => {
 				invalidate();
 				setPinTarget(null);
-				setNewPin(""); setConfirmPin("");
+				setNewPin("");
+				setConfirmPin("");
 				toast.success("PIN updated");
 			},
 			onError: (err) => toast.error(err.message || "Failed to set PIN"),
@@ -1211,7 +1238,11 @@ function UsersTab() {
 							{users.length} staff account{users.length !== 1 ? "s" : ""}
 						</CardDescription>
 					</div>
-					<Button size="sm" className="gap-1.5" onClick={() => setShowCreate(true)}>
+					<Button
+						size="sm"
+						className="gap-1.5"
+						onClick={() => setShowCreate(true)}
+					>
 						<Plus className="size-3.5" /> Add User
 					</Button>
 				</CardHeader>
@@ -1231,7 +1262,10 @@ function UsersTab() {
 						<TableBody>
 							{users.length === 0 ? (
 								<TableRow>
-									<TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+									<TableCell
+										colSpan={7}
+										className="py-8 text-center text-muted-foreground"
+									>
 										No users found.
 									</TableCell>
 								</TableRow>
@@ -1239,11 +1273,18 @@ function UsersTab() {
 								users.map((u) => {
 									const row = u as UserRow;
 									return (
-										<TableRow key={u.id} className={row.banned ? "opacity-50" : ""}>
+										<TableRow
+											key={u.id}
+											className={row.banned ? "opacity-50" : ""}
+										>
 											<TableCell className="font-medium">{u.name}</TableCell>
-											<TableCell className="text-muted-foreground">{u.email}</TableCell>
+											<TableCell className="text-muted-foreground">
+												{u.email}
+											</TableCell>
 											<TableCell>
-												<Badge variant={u.role === "admin" ? "default" : "outline"}>
+												<Badge
+													variant={u.role === "admin" ? "default" : "outline"}
+												>
 													{u.role ?? "user"}
 												</Badge>
 											</TableCell>
@@ -1253,26 +1294,34 @@ function UsersTab() {
 														<Hash className="size-3" /> Set
 													</Badge>
 												) : (
-													<span className="text-muted-foreground text-xs">—</span>
+													<span className="text-muted-foreground text-xs">
+														—
+													</span>
 												)}
 											</TableCell>
 											<TableCell>
 												{row.banned ? (
 													<Badge variant="destructive">Inactive</Badge>
 												) : (
-													<Badge variant="secondary" className="text-green-700 dark:text-green-400">
+													<Badge
+														variant="secondary"
+														className="text-green-700 dark:text-green-400"
+													>
 														Active
 													</Badge>
 												)}
 											</TableCell>
 											<TableCell className="text-muted-foreground text-xs">
 												{row.lastLoginAt
-													? new Date(row.lastLoginAt).toLocaleDateString("en-GY", {
-															timeZone: "America/Guyana",
-															day: "2-digit",
-															month: "short",
-															year: "numeric",
-														})
+													? new Date(row.lastLoginAt).toLocaleDateString(
+															"en-GY",
+															{
+																timeZone: "America/Guyana",
+																day: "2-digit",
+																month: "short",
+																year: "numeric",
+															},
+														)
 													: "Never"}
 											</TableCell>
 											<TableCell className="text-right">
@@ -1308,27 +1357,38 @@ function UsersTab() {
 																setCopied(false);
 															}}
 														>
-															<KeyRound className="mr-2 size-4" /> Reset Password
+															<KeyRound className="mr-2 size-4" /> Reset
+															Password
 														</DropdownMenuItem>
 														<DropdownMenuItem
 															onClick={() => {
 																setPinTarget(row);
-																setNewPin(""); setConfirmPin("");
+																setNewPin("");
+																setConfirmPin("");
 															}}
 														>
 															<Hash className="mr-2 size-4" /> Set PIN
 														</DropdownMenuItem>
 														<DropdownMenuItem
-															onClick={() => revokeSessions.mutate({ userId: u.id })}
+															onClick={() =>
+																revokeSessions.mutate({ userId: u.id })
+															}
 														>
-															<LogOut className="mr-2 size-4" /> Revoke All Sessions
+															<LogOut className="mr-2 size-4" /> Revoke All
+															Sessions
 														</DropdownMenuItem>
 														<DropdownMenuSeparator />
 														{row.banned ? (
 															<DropdownMenuItem
-																onClick={() => updateUser.mutate({ userId: u.id, banned: false })}
+																onClick={() =>
+																	updateUser.mutate({
+																		userId: u.id,
+																		banned: false,
+																	})
+																}
 															>
-																<Power className="mr-2 size-4 text-green-600" /> Reactivate
+																<Power className="mr-2 size-4 text-green-600" />{" "}
+																Reactivate
 															</DropdownMenuItem>
 														) : (
 															<DropdownMenuItem
@@ -1342,7 +1402,8 @@ function UsersTab() {
 															className="text-destructive focus:text-destructive"
 															onClick={() => setDeleteTarget(row)}
 														>
-															<Trash2 className="mr-2 size-4" /> Delete Permanently
+															<Trash2 className="mr-2 size-4" /> Delete
+															Permanently
 														</DropdownMenuItem>
 													</DropdownMenuContent>
 												</DropdownMenu>
@@ -1365,18 +1426,38 @@ function UsersTab() {
 					<form
 						onSubmit={(e) => {
 							e.preventDefault();
-							if (!newRoleId) { toast.error("Please select a role"); return; }
-							inviteUser.mutate({ name: newName, email: newEmail, roleId: newRoleId, pin: newUserPin || undefined, sendInvite });
+							if (!newRoleId) {
+								toast.error("Please select a role");
+								return;
+							}
+							inviteUser.mutate({
+								name: newName,
+								email: newEmail,
+								roleId: newRoleId,
+								pin: newUserPin || undefined,
+								sendInvite,
+							});
 						}}
 						className="flex flex-col gap-4"
 					>
 						<div className="flex flex-col gap-1.5">
 							<Label htmlFor="user-name">Full Name</Label>
-							<Input id="user-name" value={newName} onChange={(e) => setNewName(e.target.value)} required />
+							<Input
+								id="user-name"
+								value={newName}
+								onChange={(e) => setNewName(e.target.value)}
+								required
+							/>
 						</div>
 						<div className="flex flex-col gap-1.5">
 							<Label htmlFor="user-email">Email</Label>
-							<Input id="user-email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required />
+							<Input
+								id="user-email"
+								type="email"
+								value={newEmail}
+								onChange={(e) => setNewEmail(e.target.value)}
+								required
+							/>
 						</div>
 						<div className="flex flex-col gap-1.5">
 							<Label htmlFor="user-role">Role</Label>
@@ -1386,7 +1467,9 @@ function UsersTab() {
 								</SelectTrigger>
 								<SelectContent>
 									{roles.map((r) => (
-										<SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+										<SelectItem key={r.id} value={r.id}>
+											{r.name}
+										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
@@ -1400,19 +1483,36 @@ function UsersTab() {
 								maxLength={6}
 								placeholder="Leave blank to skip"
 								value={newUserPin}
-								onChange={(e) => setNewUserPin(e.target.value.replace(/\D/g, ""))}
+								onChange={(e) =>
+									setNewUserPin(e.target.value.replace(/\D/g, ""))
+								}
 							/>
 						</div>
 						<div className="flex items-center gap-2">
-							<Switch id="send-invite" checked={sendInvite} onCheckedChange={setSendInvite} />
+							<Switch
+								id="send-invite"
+								checked={sendInvite}
+								onCheckedChange={setSendInvite}
+							/>
 							<Label htmlFor="send-invite" className="cursor-pointer text-sm">
 								Send password-setup email to user
 							</Label>
 						</div>
 						<DialogFooter>
-							<Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
-							<Button type="submit" disabled={createUser.isPending || inviteUser.isPending}>
-								{(createUser.isPending || inviteUser.isPending) && <Loader2 className="mr-2 size-4 animate-spin" />}
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setShowCreate(false)}
+							>
+								Cancel
+							</Button>
+							<Button
+								type="submit"
+								disabled={createUser.isPending || inviteUser.isPending}
+							>
+								{(createUser.isPending || inviteUser.isPending) && (
+									<Loader2 className="mr-2 size-4 animate-spin" />
+								)}
 								{sendInvite ? "Send Invite" : "Create User"}
 							</Button>
 						</DialogFooter>
@@ -1421,7 +1521,10 @@ function UsersTab() {
 			</Dialog>
 
 			{/* ── Edit Details Dialog ─────────────────────────── */}
-			<Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
+			<Dialog
+				open={!!editTarget}
+				onOpenChange={(open) => !open && setEditTarget(null)}
+			>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Edit Details — {editTarget?.name}</DialogTitle>
@@ -1429,19 +1532,39 @@ function UsersTab() {
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-1.5">
 							<Label htmlFor="edit-name">Full Name</Label>
-							<Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+							<Input
+								id="edit-name"
+								value={editName}
+								onChange={(e) => setEditName(e.target.value)}
+							/>
 						</div>
 						<div className="flex flex-col gap-1.5">
 							<Label htmlFor="edit-email">Email</Label>
-							<Input id="edit-email" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+							<Input
+								id="edit-email"
+								type="email"
+								value={editEmail}
+								onChange={(e) => setEditEmail(e.target.value)}
+							/>
 						</div>
 						<DialogFooter>
-							<Button variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+							<Button variant="outline" onClick={() => setEditTarget(null)}>
+								Cancel
+							</Button>
 							<Button
 								disabled={!editName || !editEmail || updateDetails.isPending}
-								onClick={() => editTarget && updateDetails.mutate({ userId: editTarget.id, name: editName, email: editEmail })}
+								onClick={() =>
+									editTarget &&
+									updateDetails.mutate({
+										userId: editTarget.id,
+										name: editName,
+										email: editEmail,
+									})
+								}
 							>
-								{updateDetails.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+								{updateDetails.isPending && (
+									<Loader2 className="mr-2 size-4 animate-spin" />
+								)}
 								Save Changes
 							</Button>
 						</DialogFooter>
@@ -1450,7 +1573,10 @@ function UsersTab() {
 			</Dialog>
 
 			{/* ── Change Role Dialog ──────────────────────────── */}
-			<Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+			<Dialog
+				open={!!editingUser}
+				onOpenChange={(open) => !open && setEditingUser(null)}
+			>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Change Role — {editingUser?.name}</DialogTitle>
@@ -1465,19 +1591,30 @@ function UsersTab() {
 								<SelectContent>
 									{roles.map((r) => (
 										<SelectItem key={r.id} value={r.id}>
-											{r.name}{r.isSystem ? " (System)" : ""}
+											{r.name}
+											{r.isSystem ? " (System)" : ""}
 										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
 						</div>
 						<DialogFooter>
-							<Button variant="outline" onClick={() => setEditingUser(null)}>Cancel</Button>
+							<Button variant="outline" onClick={() => setEditingUser(null)}>
+								Cancel
+							</Button>
 							<Button
 								disabled={!selectedRoleId || updateUser.isPending}
-								onClick={() => editingUser && updateUser.mutate({ userId: editingUser.id, roleId: selectedRoleId })}
+								onClick={() =>
+									editingUser &&
+									updateUser.mutate({
+										userId: editingUser.id,
+										roleId: selectedRoleId,
+									})
+								}
 							>
-								{updateUser.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+								{updateUser.isPending && (
+									<Loader2 className="mr-2 size-4 animate-spin" />
+								)}
 								Apply Role
 							</Button>
 						</DialogFooter>
@@ -1488,7 +1625,13 @@ function UsersTab() {
 			{/* ── Reset Password Dialog ───────────────────────── */}
 			<Dialog
 				open={!!resetPwTarget}
-				onOpenChange={(open) => { if (!open) { setResetPwTarget(null); setTempPassword(""); setCopied(false); } }}
+				onOpenChange={(open) => {
+					if (!open) {
+						setResetPwTarget(null);
+						setTempPassword("");
+						setCopied(false);
+					}
+				}}
 			>
 				<DialogContent>
 					<DialogHeader>
@@ -1496,8 +1639,9 @@ function UsersTab() {
 					</DialogHeader>
 					{tempPassword ? (
 						<div className="flex flex-col gap-4">
-							<p className="text-sm text-muted-foreground">
-								Temporary password generated. Share this with the user — they should change it on next login.
+							<p className="text-muted-foreground text-sm">
+								Temporary password generated. Share this with the user — they
+								should change it on next login.
 							</p>
 							<div className="flex items-center gap-2 rounded-md border bg-muted px-3 py-2 font-mono text-sm">
 								<span className="flex-1 select-all">{tempPassword}</span>
@@ -1512,25 +1656,49 @@ function UsersTab() {
 										setTimeout(() => setCopied(false), 2000);
 									}}
 								>
-									{copied ? <Check className="size-4 text-green-600" /> : <Copy className="size-4" />}
+									{copied ? (
+										<Check className="size-4 text-green-600" />
+									) : (
+										<Copy className="size-4" />
+									)}
 								</Button>
 							</div>
 							<DialogFooter>
-								<Button onClick={() => { setResetPwTarget(null); setTempPassword(""); setCopied(false); }}>Done</Button>
+								<Button
+									onClick={() => {
+										setResetPwTarget(null);
+										setTempPassword("");
+										setCopied(false);
+									}}
+								>
+									Done
+								</Button>
 							</DialogFooter>
 						</div>
 					) : (
 						<div className="flex flex-col gap-4">
-							<p className="text-sm text-muted-foreground">
-								This will generate a temporary password for <strong>{resetPwTarget?.name}</strong> and revoke their existing sessions.
+							<p className="text-muted-foreground text-sm">
+								This will generate a temporary password for{" "}
+								<strong>{resetPwTarget?.name}</strong> and revoke their existing
+								sessions.
 							</p>
 							<DialogFooter>
-								<Button variant="outline" onClick={() => setResetPwTarget(null)}>Cancel</Button>
+								<Button
+									variant="outline"
+									onClick={() => setResetPwTarget(null)}
+								>
+									Cancel
+								</Button>
 								<Button
 									disabled={resetPassword.isPending}
-									onClick={() => resetPwTarget && resetPassword.mutate({ userId: resetPwTarget.id })}
+									onClick={() =>
+										resetPwTarget &&
+										resetPassword.mutate({ userId: resetPwTarget.id })
+									}
 								>
-									{resetPassword.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+									{resetPassword.isPending && (
+										<Loader2 className="mr-2 size-4 animate-spin" />
+									)}
 									Generate Temporary Password
 								</Button>
 							</DialogFooter>
@@ -1540,14 +1708,24 @@ function UsersTab() {
 			</Dialog>
 
 			{/* ── Set PIN Dialog ──────────────────────────────── */}
-			<Dialog open={!!pinTarget} onOpenChange={(open) => { if (!open) { setPinTarget(null); setNewPin(""); setConfirmPin(""); } }}>
+			<Dialog
+				open={!!pinTarget}
+				onOpenChange={(open) => {
+					if (!open) {
+						setPinTarget(null);
+						setNewPin("");
+						setConfirmPin("");
+					}
+				}}
+			>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Set PIN — {pinTarget?.name}</DialogTitle>
 					</DialogHeader>
 					<div className="flex flex-col gap-4">
-						<p className="text-sm text-muted-foreground">
-							POS PIN is used for quick login on the cashier screen. Must be 4–6 digits.
+						<p className="text-muted-foreground text-sm">
+							POS PIN is used for quick login on the cashier screen. Must be 4–6
+							digits.
 						</p>
 						<div className="flex flex-col gap-1.5">
 							<Label htmlFor="pin-new">New PIN</Label>
@@ -1569,7 +1747,9 @@ function UsersTab() {
 								inputMode="numeric"
 								maxLength={6}
 								value={confirmPin}
-								onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
+								onChange={(e) =>
+									setConfirmPin(e.target.value.replace(/\D/g, ""))
+								}
 								placeholder="Re-enter PIN"
 							/>
 						</div>
@@ -1577,19 +1757,28 @@ function UsersTab() {
 							<p className="text-destructive text-xs">PINs do not match</p>
 						)}
 						<DialogFooter>
-							<Button variant="outline" onClick={() => { setPinTarget(null); setNewPin(""); setConfirmPin(""); }}>Cancel</Button>
+							<Button
+								variant="outline"
+								onClick={() => {
+									setPinTarget(null);
+									setNewPin("");
+									setConfirmPin("");
+								}}
+							>
+								Cancel
+							</Button>
 							<Button
 								disabled={
-									newPin.length < 4 ||
-									newPin !== confirmPin ||
-									setPin.isPending
+									newPin.length < 4 || newPin !== confirmPin || setPin.isPending
 								}
 								onClick={() =>
 									pinTarget &&
 									setPin.mutate({ userId: pinTarget.id, pin: newPin })
 								}
 							>
-								{setPin.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+								{setPin.isPending && (
+									<Loader2 className="mr-2 size-4 animate-spin" />
+								)}
 								Set PIN
 							</Button>
 						</DialogFooter>
@@ -1598,19 +1787,28 @@ function UsersTab() {
 			</Dialog>
 
 			{/* ── Deactivate Confirmation ─────────────────────── */}
-			<AlertDialog open={!!deactivateTarget} onOpenChange={(open) => !open && setDeactivateTarget(null)}>
+			<AlertDialog
+				open={!!deactivateTarget}
+				onOpenChange={(open) => !open && setDeactivateTarget(null)}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Deactivate {deactivateTarget?.name}?</AlertDialogTitle>
+						<AlertDialogTitle>
+							Deactivate {deactivateTarget?.name}?
+						</AlertDialogTitle>
 						<AlertDialogDescription>
-							This will prevent them from logging in. Their data is preserved and they can be reactivated later.
+							This will prevent them from logging in. Their data is preserved
+							and they can be reactivated later.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
 						<AlertDialogAction
 							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-							onClick={() => deactivateTarget && updateUser.mutate({ userId: deactivateTarget.id, banned: true })}
+							onClick={() =>
+								deactivateTarget &&
+								updateUser.mutate({ userId: deactivateTarget.id, banned: true })
+							}
 						>
 							Deactivate
 						</AlertDialogAction>
@@ -1619,21 +1817,32 @@ function UsersTab() {
 			</AlertDialog>
 
 			{/* ── Delete Confirmation ─────────────────────────── */}
-			<AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+			<AlertDialog
+				open={!!deleteTarget}
+				onOpenChange={(open) => !open && setDeleteTarget(null)}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Permanently Delete {deleteTarget?.name}?</AlertDialogTitle>
+						<AlertDialogTitle>
+							Permanently Delete {deleteTarget?.name}?
+						</AlertDialogTitle>
 						<AlertDialogDescription>
-							This cannot be undone. All data associated with this account will be removed. Consider deactivating instead.
+							This cannot be undone. All data associated with this account will
+							be removed. Consider deactivating instead.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
 						<AlertDialogAction
 							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-							onClick={() => deleteTarget && deleteUserMutation.mutate({ userId: deleteTarget.id })}
+							onClick={() =>
+								deleteTarget &&
+								deleteUserMutation.mutate({ userId: deleteTarget.id })
+							}
 						>
-							{deleteUserMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+							{deleteUserMutation.isPending && (
+								<Loader2 className="mr-2 size-4 animate-spin" />
+							)}
 							Delete Permanently
 						</AlertDialogAction>
 					</AlertDialogFooter>
@@ -3963,6 +4172,55 @@ function LoadingCard() {
 		<Card>
 			<CardContent className="flex items-center justify-center py-12">
 				<Loader2 className="size-6 animate-spin text-muted-foreground" />
+			</CardContent>
+		</Card>
+	);
+}
+
+// ── Language Tab ──────────────────────────────────────────────────────
+
+function LanguageTab() {
+	const { i18n } = useTranslation();
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle>Language & Region</CardTitle>
+				<CardDescription>
+					Choose your preferred display language for the POS interface.
+				</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+					{SUPPORTED_LANGUAGES.map((lang) => {
+						const isActive = i18n.language === lang.code;
+						return (
+							<button
+								key={lang.code}
+								type="button"
+								onClick={() => i18n.changeLanguage(lang.code)}
+								className={`flex min-h-[64px] items-center gap-3 rounded-lg border p-4 text-left transition-colors ${
+									isActive
+										? "border-primary bg-primary/5 ring-2 ring-primary"
+										: "border-border hover:border-primary/50 hover:bg-muted"
+								}`}
+							>
+								<span className="text-2xl">{lang.flag}</span>
+								<div>
+									<p className="font-medium text-sm">{lang.label}</p>
+									<p className="text-muted-foreground text-xs">
+										{lang.code.toUpperCase()}
+									</p>
+								</div>
+								{isActive && <Check className="ml-auto size-4 text-primary" />}
+							</button>
+						);
+					})}
+				</div>
+				<p className="mt-4 text-muted-foreground text-xs">
+					Language preference is saved to your browser and applies to all POS
+					screens.
+				</p>
 			</CardContent>
 		</Card>
 	);
