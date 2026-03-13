@@ -12,6 +12,7 @@ import {
 	Timer,
 	Trash2,
 	Users,
+	QrCode,
 	UtensilsCrossed,
 	X,
 } from "lucide-react";
@@ -42,6 +43,7 @@ import { FloorPlanEditor } from "@/components/tables/floor-plan-editor";
 import type { FloorPlanTable } from "@/components/tables/table-shape";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { formatGYD } from "@/lib/types";
+import { printTableQrCodes } from "@/lib/qr-code";
 import { orpc } from "@/utils/orpc";
 
 // ── Status config ────────────────────────────────────────────────────────
@@ -387,6 +389,21 @@ export default function TablesPage() {
 					</div>
 
 					{/* Add table button */}
+					<Button
+						variant="outline"
+						size="sm"
+						className="h-8 gap-1"
+						onClick={() => {
+							const tableList = (tables as Array<{ id: string; name: string }>).map((t) => ({
+								id: t.id,
+								name: t.name,
+							}));
+							printTableQrCodes(tableList, window.location.origin);
+						}}
+						disabled={!tables || tables.length === 0}
+					>
+						<QrCode className="size-3.5" /> Print QR Codes
+					</Button>
 					<Button
 						size="sm"
 						className="h-8 gap-1"
