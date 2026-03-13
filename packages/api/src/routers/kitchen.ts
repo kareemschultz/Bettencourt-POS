@@ -4,7 +4,7 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 import { emitKitchenEvent } from "../lib/kitchen-events";
-import { printService } from "../../../server/services/print-service";
+import { printService } from "../lib/print-service";
 
 // ── getActiveTickets ────────────────────────────────────────────────────
 const getActiveTickets = permissionProcedure("orders.read")
@@ -43,6 +43,7 @@ const getActiveTickets = permissionProcedure("orders.read")
 				orderId: schema.kitchenOrderTicket.orderId,
 				locationId: schema.kitchenOrderTicket.locationId,
 				status: schema.kitchenOrderTicket.status,
+				station: schema.kitchenOrderTicket.station,
 				printerTarget: schema.kitchenOrderTicket.printerTarget,
 				createdAt: schema.kitchenOrderTicket.createdAt,
 				updatedAt: schema.kitchenOrderTicket.updatedAt,
@@ -62,7 +63,7 @@ const getActiveTickets = permissionProcedure("orders.read")
 			.where(and(...conditions))
 			.orderBy(asc(schema.kitchenOrderTicket.createdAt));
 
-		// Get items for all tickets
+		// Get items for all tickets (include firedAt, completedAt)
 		const ticketIds = tickets.map((t) => t.id);
 		let items: Array<{
 			id: string;
@@ -73,6 +74,8 @@ const getActiveTickets = permissionProcedure("orders.read")
 			modifiers: string | null;
 			notes: string | null;
 			status: string;
+			firedAt: Date | null;
+			completedAt: Date | null;
 			createdAt: Date;
 			updatedAt: Date;
 		}> = [];
@@ -109,10 +112,17 @@ const updateItemStatus = permissionProcedure("orders.update")
 		const { id, status, itemId, itemStatus } = input;
 
 		if (itemId && itemStatus) {
-			// Update individual item
+			// Update individual item — set completedAt when done, firedAt when preparing
+			const itemUpdate: Record<string, unknown> = { status: itemStatus };
+			if (itemStatus === "done") {
+				itemUpdate.completedAt = new Date();
+			} else if (itemStatus === "preparing") {
+				itemUpdate.firedAt = new Date();
+			}
+
 			await db
 				.update(schema.kitchenOrderItem)
-				.set({ status: itemStatus })
+				.set(itemUpdate)
 				.where(eq(schema.kitchenOrderItem.id, itemId));
 
 			// Check if all items on the ticket are done
@@ -153,58 +163,80 @@ const updateItemStatus = permissionProcedure("orders.update")
 				.set({ status })
 				.where(eq(schema.kitchenOrderTicket.id, id));
 
-			// Cascade status to items
+			// Cascade status to items with timestamp tracking
 			if (status === "preparing" || status === "ready" || status === "served") {
 				const newItemStatus = status === "served" ? "done" : status;
+				const itemUpdate: Record<string, unknown> = { status: newItemStatus };
+				if (status === "preparing") {
+					itemUpdate.firedAt = new Date();
+				} else if (status === "served") {
+					itemUpdate.completedAt = new Date();
+				}
 				await db
 					.update(schema.kitchenOrderItem)
-					.set({ status: newItemStatus })
+					.set(itemUpdate)
 					.where(eq(schema.kitchenOrderItem.ticketId, id));
 			}
 
 			if (status === "preparing") {
-				const ticketRows = await db
-					.select({
-						id: schema.kitchenOrderTicket.id,
-						orderId: schema.kitchenOrderTicket.orderId,
-						locationId: schema.kitchenOrderTicket.locationId,
-						station: schema.kitchenOrderTicket.station,
-						orderNumber: schema.order.orderNumber,
-						organizationId: schema.order.organizationId,
-					})
-					.from(schema.kitchenOrderTicket)
-					.innerJoin(schema.order, eq(schema.kitchenOrderTicket.orderId, schema.order.id))
-					.where(eq(schema.kitchenOrderTicket.id, id))
-					.limit(1);
-				if (ticketRows.length > 0) {
-					const ticket = ticketRows[0]!;
-					const items = await db
+				// Print KOT when ticket moves to preparing
+				try {
+					const ticketRows = await db
 						.select({
-							name: schema.kitchenOrderItem.productName,
-							quantity: schema.kitchenOrderItem.quantity,
-							notes: schema.kitchenOrderItem.notes,
+							id: schema.kitchenOrderTicket.id,
+							orderId: schema.kitchenOrderTicket.orderId,
+							locationId: schema.kitchenOrderTicket.locationId,
+							station: schema.kitchenOrderTicket.station,
+							orderNumber: schema.order.orderNumber,
+							organizationId: schema.order.organizationId,
 						})
-						.from(schema.kitchenOrderItem)
-						.where(eq(schema.kitchenOrderItem.ticketId, id));
+						.from(schema.kitchenOrderTicket)
+						.innerJoin(schema.order, eq(schema.kitchenOrderTicket.orderId, schema.order.id))
+						.where(eq(schema.kitchenOrderTicket.id, id))
+						.limit(1);
 
-					const jobType = (ticket.station ?? "").toLowerCase().includes("bar")
-						? "bar_ticket"
-						: "kitchen_ticket";
+					if (ticketRows.length > 0) {
+						const ticket = ticketRows[0]!;
+						// Query items with courseNumber + reportingCategoryName via orderLineItem join
+						const items = await db
+							.select({
+								name: schema.kitchenOrderItem.productName,
+								quantity: schema.kitchenOrderItem.quantity,
+								notes: schema.kitchenOrderItem.notes,
+								courseNumber: schema.orderLineItem.courseNumber,
+								reportingCategoryName: schema.orderLineItem.reportingCategorySnapshot,
+							})
+							.from(schema.kitchenOrderItem)
+							.leftJoin(
+								schema.orderLineItem,
+								eq(schema.kitchenOrderItem.orderLineItemId, schema.orderLineItem.id),
+							)
+							.where(eq(schema.kitchenOrderItem.ticketId, id));
 
-					await printService.dispatch({
-						type: jobType,
-						organizationId: ticket.organizationId,
-						locationId: ticket.locationId,
-						orderId: ticket.orderId,
-						orderNumber: ticket.orderNumber,
-						station: ticket.station,
-						items: items.map((item) => ({
-							name: item.name,
-							quantity: item.quantity,
-							notes: item.notes,
-						})),
-						timestamp: new Date(),
-					});
+						const jobType = (ticket.station ?? "").toLowerCase().includes("bar")
+							? "bar_ticket"
+							: "kitchen_ticket";
+
+						await printService.dispatch({
+							type: jobType,
+							organizationId: ticket.organizationId,
+							locationId: ticket.locationId,
+							orderId: ticket.orderId,
+							orderNumber: ticket.orderNumber,
+							station: ticket.station,
+							items: items.map((item) => ({
+								name: item.name,
+								quantity: item.quantity,
+								notes: item.notes,
+								courseNumber: item.courseNumber ?? undefined,
+								reportingCategoryName: item.reportingCategoryName,
+							})),
+							timestamp: new Date(),
+						});
+					}
+				} catch (err) {
+					console.error("[kitchen] Print dispatch failed:", err);
+					// Don't fail the status update if printing fails
 				}
 			}
 
