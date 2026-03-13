@@ -23,6 +23,7 @@ const getReport = permissionProcedure("reports.read")
 					"production",
 					"weekly-trend",
 					"tips",
+					"customer_analytics",
 				])
 				.default("summary"),
 			startDate: z.string().optional(),
@@ -376,6 +377,89 @@ const getReport = permissionProcedure("reports.read")
 				ORDER BY date ASC`,
 			);
 			return result.rows;
+		}
+
+
+		if (input.type === "customer_analytics") {
+			// KPI summary
+			const kpiResult = await db.execute(
+				sql`SELECT
+					COUNT(*)::int as total_customers,
+					COUNT(*) FILTER (WHERE c.created_at >= ${startDate}::timestamptz AND c.created_at <= ${endDate}::timestamptz)::int as new_customers,
+					COALESCE(AVG(c.visit_count), 0)::numeric as avg_visits,
+					COALESCE(AVG(c.total_spent), 0)::numeric as avg_lifetime_spend,
+					COALESCE(SUM(c.total_spent), 0)::numeric as total_revenue_from_customers,
+					COUNT(*) FILTER (WHERE c.visit_count > 1)::int as returning_customers
+				FROM customer c`,
+			);
+
+			// Top customers by spend
+			const topBySpendResult = await db.execute(
+				sql`SELECT c.id, c.name, c.phone, c.email,
+					c.total_spent::numeric, c.visit_count::int,
+					c.last_visit_at,
+					CASE WHEN c.visit_count > 0 THEN (c.total_spent / c.visit_count)::numeric ELSE 0 END as avg_order_value
+				FROM customer c
+				WHERE c.total_spent > 0
+				ORDER BY c.total_spent DESC
+				LIMIT 20`,
+			);
+
+			// Top customers by visit count
+			const topByVisitsResult = await db.execute(
+				sql`SELECT c.id, c.name, c.phone, c.email,
+					c.total_spent::numeric, c.visit_count::int,
+					c.last_visit_at,
+					CASE WHEN c.visit_count > 0 THEN (c.total_spent / c.visit_count)::numeric ELSE 0 END as avg_order_value
+				FROM customer c
+				WHERE c.visit_count > 0
+				ORDER BY c.visit_count DESC
+				LIMIT 20`,
+			);
+
+			// Orders per day trend (new vs returning)
+			const trendResult = await db.execute(
+				sql`SELECT
+					DATE(o.created_at) as date,
+					COUNT(DISTINCT o.customer_id) FILTER (WHERE c.visit_count <= 1)::int as new_customers,
+					COUNT(DISTINCT o.customer_id) FILTER (WHERE c.visit_count > 1)::int as returning_customers,
+					COUNT(*)::int as total_orders,
+					COALESCE(SUM(o.total), 0)::numeric as revenue
+				FROM "order" o
+				LEFT JOIN customer c ON c.id = o.customer_id
+				WHERE o.status IN ('completed', 'closed')
+					AND o.customer_id IS NOT NULL
+					AND o.created_at >= ${startDate}::timestamptz
+					AND o.created_at <= ${endDate}::timestamptz
+				GROUP BY DATE(o.created_at)
+				ORDER BY date ASC`,
+			);
+
+			// Spend distribution buckets
+			const distributionResult = await db.execute(
+				sql`SELECT
+					CASE
+						WHEN c.total_spent < 5000 THEN 'Under K'
+						WHEN c.total_spent < 20000 THEN 'K-0K'
+						WHEN c.total_spent < 50000 THEN '0K-0K'
+						WHEN c.total_spent < 100000 THEN '0K-00K'
+						ELSE '00K+'
+					END as bucket,
+					COUNT(*)::int as count,
+					COALESCE(SUM(c.total_spent), 0)::numeric as total_spend
+				FROM customer c
+				WHERE c.total_spent > 0
+				GROUP BY bucket
+				ORDER BY MIN(c.total_spent) ASC`,
+			);
+
+			return {
+				kpi: kpiResult.rows[0],
+				topBySpend: topBySpendResult.rows,
+				topByVisits: topByVisitsResult.rows,
+				trend: trendResult.rows,
+				spendDistribution: distributionResult.rows,
+			};
 		}
 
 		throw new ORPCError("BAD_REQUEST", {
