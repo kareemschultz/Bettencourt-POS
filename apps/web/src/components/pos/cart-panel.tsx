@@ -200,6 +200,9 @@ export function CartPanel({
 										<p className="truncate font-medium text-sm leading-tight">
 											{item.product.name}
 										</p>
+										{item.courseNumber ? (
+											<p className="text-[10px] text-muted-foreground">Course {item.courseNumber}</p>
+										) : null}
 										{item.product.is_combo &&
 											(item.product.combo_components ?? []).length > 0 && (
 												<ul className="mt-0.5 flex flex-col gap-0">

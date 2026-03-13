@@ -44,6 +44,10 @@ export const order = pgTable(
 			.notNull()
 			.default("0"),
 		total: numeric("total", { precision: 10, scale: 2 }).notNull().default("0"),
+		tipAmount: numeric("tip_amount", { precision: 10, scale: 2 })
+			.notNull()
+			.default("0"),
+		tabName: text("tab_name"),
 		customerId: uuid("customer_id").references(() => customer.id, {
 			onDelete: "set null",
 		}),
@@ -105,6 +109,7 @@ export const orderLineItem = pgTable(
 		isComponent: boolean("is_component").notNull().default(false),
 		voided: boolean("voided").notNull().default(false),
 		voidReason: text("void_reason"),
+		courseNumber: integer("course_number").notNull().default(1),
 	},
 	(table) => [
 		index("idx_order_line_item_order").on(table.orderId),
@@ -127,6 +132,9 @@ export const payment = pgTable(
 		changeGiven: numeric("change_given", { precision: 10, scale: 2 }).default(
 			"0",
 		),
+		tipAmount: numeric("tip_amount", { precision: 10, scale: 2 })
+			.notNull()
+			.default("0"),
 		currency: text("currency").notNull().default("GYD"),
 		exchangeRate: numeric("exchange_rate", { precision: 10, scale: 4 }),
 		reference: text("reference"),

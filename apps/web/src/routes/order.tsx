@@ -17,6 +17,7 @@ import {
 	X,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { formatGYD } from "@/lib/types";
 import { orpc } from "@/utils/orpc";
 
@@ -44,17 +45,20 @@ interface CartItem {
 	notes: string;
 }
 
-type OrderType = "pickup" | "delivery";
+type OrderType = "pickup" | "delivery" | "dine_in";
 type PageView = "menu" | "checkout" | "confirmation";
 
 // ── Main Component ──────────────────────────────────────────────────────
 
 export default function OnlineOrderPage() {
+	const [searchParams] = useSearchParams();
+	const tableId = searchParams.get("table");
+	const tableName = searchParams.get("tableName");
 	const [cart, setCart] = useState<CartItem[]>([]);
 	const [cartOpen, setCartOpen] = useState(false);
 	const [activeDepartment, setActiveDepartment] = useState<string | null>(null);
 	const [view, setView] = useState<PageView>("menu");
-	const [orderType, setOrderType] = useState<OrderType>("pickup");
+	const [orderType, setOrderType] = useState<OrderType>(tableId ? "dine_in" : "pickup");
 	const [customerName, setCustomerName] = useState("");
 	const [customerPhone, setCustomerPhone] = useState("");
 	const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -167,14 +171,15 @@ export default function OnlineOrderPage() {
 	});
 
 	const handleSubmitOrder = useCallback(() => {
-		if (!customerName.trim() || !customerPhone.trim()) return;
+		if (orderType !== "dine_in" && (!customerName.trim() || !customerPhone.trim())) return;
 		if (orderType === "delivery" && !deliveryAddress.trim()) return;
 		if (cart.length === 0) return;
 
 		placeOrderMutation.mutate({
-			customerName: customerName.trim(),
-			customerPhone: customerPhone.trim(),
+			customerName: customerName.trim() || (tableName ? `Table ${tableName}` : "Guest"),
+			customerPhone: customerPhone.trim() || undefined,
 			orderType,
+			tableId: tableId || undefined,
 			deliveryAddress:
 				orderType === "delivery" ? deliveryAddress.trim() : undefined,
 			items: cart.map((item) => ({
@@ -190,6 +195,8 @@ export default function OnlineOrderPage() {
 		deliveryAddress,
 		cart,
 		placeOrderMutation,
+		tableId,
+		tableName,
 	]);
 
 	const handleNewOrder = useCallback(() => {

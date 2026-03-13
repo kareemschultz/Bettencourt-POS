@@ -570,12 +570,41 @@ function ProductDetailsForm({
 				</div>
 			</div>
 			<div className="flex flex-col gap-1.5">
-				<Label>Image URL (optional)</Label>
-				<Input
-					value={form.imageUrl}
-					onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-					placeholder="https://..."
-				/>
+				<Label>Product Image (optional)</Label>
+				<div className="flex items-center gap-3">
+					{form.imageUrl && (
+						<img
+							src={form.imageUrl}
+							alt="Product"
+							className="h-16 w-16 rounded-md border object-cover"
+						/>
+					)}
+					<div className="flex flex-1 flex-col gap-1.5">
+						<Input
+							value={form.imageUrl}
+							onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+							placeholder="URL or upload below"
+						/>
+						<input
+							type="file"
+							accept="image/jpeg,image/png,image/webp"
+							className="text-xs file:mr-2 file:rounded file:border-0 file:bg-primary/10 file:px-2 file:py-1 file:font-medium file:text-primary file:text-xs"
+							onChange={async (e) => {
+								const file = e.target.files?.[0];
+								if (!file) return;
+								const fd = new FormData();
+								fd.append("file", file);
+								try {
+									const res = await fetch("/api/uploads/product", { method: "POST", body: fd });
+									const data = await res.json() as { url?: string; error?: string };
+									if (data.url) setForm({ ...form, imageUrl: data.url });
+								} catch {
+									// Upload failed silently
+								}
+							}}
+						/>
+					</div>
+				</div>
 			</div>
 			<div className="flex items-center gap-3">
 				<Switch

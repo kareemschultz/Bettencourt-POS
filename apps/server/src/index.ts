@@ -1,5 +1,6 @@
 import { createContext } from "@Bettencourt-POS/api/context";
 import { onKitchenEvent } from "@Bettencourt-POS/api/lib/kitchen-events";
+import { onPosEvent } from "@Bettencourt-POS/api/lib/pos-events";
 import {
 	hasPermission,
 	loadUserPermissions,
@@ -32,6 +33,7 @@ import {
 	recordPinFailure,
 } from "./pin-rate-limit";
 import { backupsRouter } from "./routes/backups";
+import { publishPosEvent, websocket, wsHandler } from "./ws";
 
 const app = new Hono();
 
@@ -167,6 +169,71 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 app.route("/api/backups", backupsRouter);
 
+// ── Network print proxy ─────────────────────────────────────────────────
+// Forwards ESC/POS data to a TCP printer on the local network
+app.post("/api/print/network", async (c) => {
+	const session = await auth.api.getSession({ headers: c.req.raw.headers });
+	if (!session?.user) {
+		return c.json({ error: "Unauthorized" }, 401);
+	}
+
+	try {
+		const body = await c.req.json();
+		const { address, data } = body as { address: string; data: number[] };
+
+		if (!address || !data) {
+			return c.json({ error: "address and data are required" }, 400);
+		}
+
+		// Parse host:port
+		const [host, portStr] = address.split(":");
+		const port = Number(portStr) || 9100; // Default ESC/POS port
+
+		// Connect and send via Bun's TCP socket
+		const payload = new Uint8Array(data);
+		await new Promise<void>((resolve, reject) => {
+			const socket = Bun.connect({
+				hostname: host!,
+				port,
+				socket: {
+					open(sock) {
+						sock.write(payload);
+						sock.end();
+					},
+					close() {
+						resolve();
+					},
+					error(_sock, err) {
+						reject(err);
+					},
+					data() {},
+				},
+			});
+			// Reject if connect itself fails
+			socket.catch(reject);
+		});
+
+		return c.json({ success: true });
+	} catch (err) {
+		console.error("[print/network] Error:", err);
+		return c.json({ error: "Failed to send to printer" }, 500);
+	}
+});
+
+app.get("/ws", async (c) => {
+	const session = await auth.api.getSession({ headers: c.req.raw.headers });
+	if (!session?.user) {
+		return c.json({ error: "Unauthorized" }, 401);
+	}
+
+	const permissions = await loadUserPermissions(session.user.id);
+	if (!hasPermission(permissions, "orders.read")) {
+		return c.json({ error: "Forbidden" }, 403);
+	}
+
+	return wsHandler(c);
+});
+
 // ── Receipt photo upload ───────────────────────────────────────────────
 const ALLOWED_MIME: Record<string, string> = {
 	"image/jpeg": ".jpg",
@@ -174,6 +241,36 @@ const ALLOWED_MIME: Record<string, string> = {
 	"image/webp": ".webp",
 };
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB
+
+// Product image upload
+app.post("/api/uploads/product", async (c) => {
+	const session = await auth.api.getSession({ headers: c.req.raw.headers });
+	if (!session?.user) return c.json({ error: "Unauthorized" }, 401);
+
+	const formData = await c.req.formData();
+	const file = formData.get("file");
+	if (!file || !(file instanceof File)) {
+		return c.json({ error: "No file provided" }, 400);
+	}
+	if (file.size > MAX_UPLOAD_BYTES) {
+		return c.json({ error: "File too large (max 5 MB)" }, 400);
+	}
+	const ext = ALLOWED_MIME[file.type];
+	if (!ext) {
+		return c.json({ error: "Only JPEG, PNG, and WebP are allowed" }, 400);
+	}
+
+	const uploadsDir = join(env.UPLOADS_DIR, "products");
+	await mkdir(uploadsDir, { recursive: true });
+
+	const filename = `${randomUUID()}${ext}`;
+	const dest = join(uploadsDir, filename);
+	const buffer = Buffer.from(await file.arrayBuffer());
+	await writeFile(dest, buffer);
+
+	const url = `/uploads/products/${filename}`;
+	return c.json({ url });
+});
 
 app.post("/api/uploads/receipt", async (c) => {
 	const session = await auth.api.getSession({ headers: c.req.raw.headers });
@@ -272,6 +369,32 @@ app.use("/*", async (c, next) => {
 	await next();
 });
 
+
+// Bridge existing kitchen events into channel-based WebSocket feed
+onKitchenEvent((event) => {
+	publishPosEvent({
+		channel: "pos:kds",
+		event: event.type,
+		payload: event,
+		source: "kitchen-events",
+	});
+});
+
+// Bridge POS events (86, order, table) into WebSocket feed
+onPosEvent((event) => {
+	const channelMap: Record<string, string> = {
+		"product:86": "pos:86",
+		"order:created": "pos:orders",
+		"table:status_changed": "pos:tables",
+	};
+	publishPosEvent({
+		channel: channelMap[event.type] as "pos:86" | "pos:orders" | "pos:tables",
+		event: event.type === "product:86" ? "product:toggled" : event.type,
+		payload: event,
+		source: "pos-events",
+	});
+});
+
 // Health check for Docker
 app.get("/health", (c) => {
 	return c.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -357,4 +480,5 @@ process.on("SIGTERM", () => {
 export default {
 	port: process.env.PORT ? Number(process.env.PORT) : 3000,
 	fetch: app.fetch,
+	websocket,
 };

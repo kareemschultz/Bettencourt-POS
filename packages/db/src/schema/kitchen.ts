@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+	boolean,
 	index,
 	integer,
 	pgTable,
@@ -10,6 +11,29 @@ import {
 import { order, orderLineItem } from "./order";
 import { location } from "./organization";
 
+// ── Floor ──────────────────────────────────────────────────────────────
+
+export const floor = pgTable(
+	"floor",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		locationId: uuid("location_id")
+			.notNull()
+			.references(() => location.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		backgroundImage: text("background_image"),
+		sortOrder: integer("sort_order").notNull().default(0),
+		isActive: boolean("is_active").notNull().default(true),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(table) => [
+		index("idx_floor_location").on(table.locationId),
+		index("idx_floor_active").on(table.isActive),
+	],
+);
+
 // ── Table Layout ───────────────────────────────────────────────────────
 
 export const tableLayout = pgTable(
@@ -19,11 +43,16 @@ export const tableLayout = pgTable(
 		locationId: uuid("location_id")
 			.notNull()
 			.references(() => location.id, { onDelete: "cascade" }),
+		floorId: uuid("floor_id").references(() => floor.id, {
+			onDelete: "set null",
+		}),
 		name: text("name").notNull(),
 		section: text("section"),
 		seats: integer("seats").notNull().default(4),
 		positionX: integer("position_x").notNull().default(0),
 		positionY: integer("position_y").notNull().default(0),
+		width: integer("width").notNull().default(100),
+		height: integer("height").notNull().default(100),
 		shape: text("shape").notNull().default("square"),
 		status: text("status").notNull().default("available"),
 		currentOrderId: uuid("current_order_id").references(() => order.id),
@@ -38,6 +67,7 @@ export const tableLayout = pgTable(
 	},
 	(table) => [
 		index("idx_table_layout_location").on(table.locationId),
+		index("idx_table_layout_floor").on(table.floorId),
 		index("idx_table_layout_status").on(table.status),
 	],
 );
@@ -56,6 +86,7 @@ export const kitchenOrderTicket = pgTable(
 			.references(() => location.id),
 		status: text("status").notNull().default("pending"),
 		printerTarget: text("printer_target"),
+		station: text("station"),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.defaultNow(),
@@ -67,6 +98,7 @@ export const kitchenOrderTicket = pgTable(
 	(table) => [
 		index("idx_kot_order").on(table.orderId),
 		index("idx_kot_location").on(table.locationId),
+		index("idx_kot_station").on(table.station),
 		index("idx_kot_status").on(table.status),
 	],
 );
@@ -88,6 +120,8 @@ export const kitchenOrderItem = pgTable(
 		modifiers: text("modifiers"),
 		notes: text("notes"),
 		status: text("status").notNull().default("pending"),
+		firedAt: timestamp("fired_at", { withTimezone: true }),
+		completedAt: timestamp("completed_at", { withTimezone: true }),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.defaultNow(),
@@ -104,10 +138,22 @@ export const kitchenOrderItem = pgTable(
 
 // ── Relations ──────────────────────────────────────────────────────────
 
+export const floorRelations = relations(floor, ({ one, many }) => ({
+	location: one(location, {
+		fields: [floor.locationId],
+		references: [location.id],
+	}),
+	tables: many(tableLayout),
+}));
+
 export const tableLayoutRelations = relations(tableLayout, ({ one }) => ({
 	location: one(location, {
 		fields: [tableLayout.locationId],
 		references: [location.id],
+	}),
+	floor: one(floor, {
+		fields: [tableLayout.floorId],
+		references: [floor.id],
 	}),
 	currentOrder: one(order, {
 		fields: [tableLayout.currentOrderId],

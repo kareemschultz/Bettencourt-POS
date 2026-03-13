@@ -1,5 +1,6 @@
 type KitchenEvent =
 	| { type: "ticket:created"; ticketId: string; orderId: string }
+	| { type: "ticket:printed"; ticketId: string; orderId: string; targets: string[] }
 	| {
 			type: "ticket:updated";
 			ticketId: string;

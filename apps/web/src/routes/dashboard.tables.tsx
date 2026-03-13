@@ -12,10 +12,11 @@ import {
 	Timer,
 	Trash2,
 	Users,
+	QrCode,
 	UtensilsCrossed,
 	X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,11 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FloorPlanEditor } from "@/components/tables/floor-plan-editor";
+import type { FloorPlanTable } from "@/components/tables/table-shape";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { formatGYD } from "@/lib/types";
+import { printTableQrCodes } from "@/lib/qr-code";
 import { orpc } from "@/utils/orpc";
 
 // ── Status config ────────────────────────────────────────────────────────
@@ -140,6 +145,11 @@ export default function TablesPage() {
 	const [showAddDialog, setShowAddDialog] = useState(false);
 	const [editTable, setEditTable] = useState<TableRow | null>(null);
 	const [confirmDelete, setConfirmDelete] = useState<TableRow | null>(null);
+	const [selectedLocationId, setSelectedLocationId] = useState("");
+	const [selectedFloorId, setSelectedFloorId] = useState<string | null>(null);
+	const [editFloorMode, setEditFloorMode] = useState(false);
+	const [draftTables, setDraftTables] = useState<FloorPlanTable[]>([]);
+	const [newFloorName, setNewFloorName] = useState("Main Floor");
 
 	// ── Queries ──────────────────────────────────────────────────────────
 
@@ -151,7 +161,46 @@ export default function TablesPage() {
 	const { data: locations = [] } = useQuery(
 		orpc.settings.getLocations.queryOptions({ input: {} }),
 	);
-	const defaultLocationId = locations[0]?.id ?? "";
+	const { data: floors = [] } = useQuery({
+		...orpc.floorPlan.listFloors.queryOptions({
+			input: { locationId: selectedLocationId || defaultLocationId },
+		}),
+		enabled: !!(selectedLocationId || defaultLocationId),
+	});
+
+	const { data: floorTables = [] } = useQuery({
+		...orpc.floorPlan.listTables.queryOptions({
+			input: {
+				locationId: selectedLocationId || defaultLocationId,
+				floorId: selectedFloorId,
+			},
+		}),
+		enabled: !!(selectedLocationId || defaultLocationId),
+	});
+
+	useEffect(() => {
+		setDraftTables(
+			floorTables.map((t) => ({
+				id: t.id,
+				name: t.name,
+				section: t.section,
+				seats: t.seats,
+				positionX: t.positionX,
+				positionY: t.positionY,
+				width: t.width,
+				height: t.height,
+				shape: t.shape as FloorPlanTable["shape"],
+				status: t.status as FloorPlanTable["status"],
+				currentOrderId: t.currentOrderId,
+				currentGuests: t.currentGuests,
+			})),
+		);
+	}, [floorTables]);
+	useEffect(() => {
+		if (!selectedLocationId && defaultLocationId) {
+			setSelectedLocationId(defaultLocationId);
+		}
+	}, [selectedLocationId, defaultLocationId]);
 
 	// ── Mutations ────────────────────────────────────────────────────────
 
@@ -216,6 +265,37 @@ export default function TablesPage() {
 		}),
 	);
 
+	const createFloorMut = useMutation(
+		orpc.floorPlan.createFloor.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.floorPlan.listFloors.queryOptions({
+						input: { locationId: selectedLocationId || defaultLocationId },
+					}).queryKey,
+				});
+				toast.success("Floor created");
+			},
+			onError: (err) => toast.error(err.message),
+		}),
+	);
+
+	const saveFloorLayoutMut = useMutation(
+		orpc.floorPlan.saveTableBatch.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.floorPlan.listTables.queryOptions({
+						input: {
+							locationId: selectedLocationId || defaultLocationId,
+							floorId: selectedFloorId,
+						},
+					}).queryKey,
+				});
+				toast.success("Floor layout saved");
+			},
+			onError: (err) => toast.error(err.message),
+		}),
+	);
+
 	// ── Derived data ─────────────────────────────────────────────────────
 
 	const sections = useMemo(() => {
@@ -235,6 +315,26 @@ export default function TablesPage() {
 		}
 		return c;
 	}, [tables]);
+
+
+	useWebSocket({
+		channels: ["pos:tables"],
+		onMessage: () => {
+			queryClient.invalidateQueries({
+				queryKey: orpc.tables.list.queryOptions({ input: {} }).queryKey,
+			});
+			if (selectedLocationId || defaultLocationId) {
+				queryClient.invalidateQueries({
+					queryKey: orpc.floorPlan.listTables.queryOptions({
+						input: {
+							locationId: selectedLocationId || defaultLocationId,
+							floorId: selectedFloorId,
+						},
+					}).queryKey,
+				});
+			}
+		},
+	});
 
 	// ── Render ───────────────────────────────────────────────────────────
 
@@ -290,6 +390,21 @@ export default function TablesPage() {
 
 					{/* Add table button */}
 					<Button
+						variant="outline"
+						size="sm"
+						className="h-8 gap-1"
+						onClick={() => {
+							const tableList = (tables as Array<{ id: string; name: string }>).map((t) => ({
+								id: t.id,
+								name: t.name,
+							}));
+							printTableQrCodes(tableList, window.location.origin);
+						}}
+						disabled={!tables || tables.length === 0}
+					>
+						<QrCode className="size-3.5" /> Print QR Codes
+					</Button>
+					<Button
 						size="sm"
 						className="h-8 gap-1"
 						onClick={() => setShowAddDialog(true)}
@@ -322,10 +437,67 @@ export default function TablesPage() {
 					</Button>
 				</div>
 			) : viewMode === "floor" ? (
-				<FloorPlan
-					tables={tables as TableRow[]}
-					onSelect={(t) => setSelectedTable(t)}
-				/>
+				<div className="space-y-3">
+					<div className="flex flex-wrap items-end gap-2">
+						<div className="w-44">
+							<Label className="mb-1 block text-xs">Location</Label>
+							<Select value={selectedLocationId || defaultLocationId} onValueChange={setSelectedLocationId}>
+								<SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+								<SelectContent>
+									{locations.map((loc) => (
+										<SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="w-44">
+							<Label className="mb-1 block text-xs">Floor</Label>
+							<Select value={selectedFloorId ?? "__none__"} onValueChange={(v) => setSelectedFloorId(v === "__none__" ? null : v)}>
+								<SelectTrigger className="h-8"><SelectValue placeholder="No floor" /></SelectTrigger>
+								<SelectContent>
+									<SelectItem value="__none__">No floor</SelectItem>
+									{floors.map((f) => (
+										<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="flex items-center gap-2">
+							<Input className="h-8 w-40" value={newFloorName} onChange={(e)=>setNewFloorName(e.target.value)} placeholder="New floor" />
+							<Button size="sm" variant="outline" className="h-8" onClick={() => createFloorMut.mutate({ locationId: selectedLocationId || defaultLocationId, name: newFloorName })} disabled={!newFloorName.trim() || createFloorMut.isPending}>Create floor</Button>
+							<Button size="sm" className="h-8" variant={editFloorMode ? "default" : "outline"} onClick={() => setEditFloorMode((v)=>!v)}>{editFloorMode ? "Live mode" : "Edit mode"}</Button>
+						</div>
+					</div>
+					<FloorPlanEditor
+						tables={draftTables}
+						editable={editFloorMode}
+						onTablesChange={setDraftTables}
+						onSave={() =>
+							saveFloorLayoutMut.mutate({
+								locationId: selectedLocationId || defaultLocationId,
+								floorId: selectedFloorId,
+								tables: draftTables.map((t) => ({
+									id: t.id,
+									name: t.name,
+									section: t.section ?? null,
+									seats: t.seats,
+									positionX: t.positionX,
+									positionY: t.positionY,
+									width: t.width,
+									height: t.height,
+									shape: t.shape,
+									status: t.status,
+								})),
+								removeMissing: false,
+							})
+						}
+						isSaving={saveFloorLayoutMut.isPending}
+						onSelect={(t) => {
+							const found = (tables as TableRow[]).find((x) => x.id === t.id);
+							if (found) setSelectedTable(found);
+						}}
+					/>
+				</div>
 			) : (
 				/* Grid view */
 				Object.entries(sections).map(([section, sectionTables]) => (

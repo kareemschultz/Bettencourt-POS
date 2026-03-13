@@ -70,6 +70,8 @@ const list = permissionProcedure("orders.read")
 				discountTotal: schema.order.discountTotal,
 				taxTotal: schema.order.taxTotal,
 				total: schema.order.total,
+				tipAmount: schema.order.tipAmount,
+				tabName: schema.order.tabName,
 				customerName: schema.order.customerName,
 				notes: schema.order.notes,
 				createdAt: schema.order.createdAt,
@@ -113,6 +115,8 @@ const getById = permissionProcedure("orders.read")
 				discountTotal: schema.order.discountTotal,
 				taxTotal: schema.order.taxTotal,
 				total: schema.order.total,
+				tipAmount: schema.order.tipAmount,
+				tabName: schema.order.tabName,
 				customerName: schema.order.customerName,
 				customerPhone: schema.order.customerPhone,
 				deliveryAddress: schema.order.deliveryAddress,
@@ -170,6 +174,7 @@ const getById = permissionProcedure("orders.read")
 				notes: schema.orderLineItem.notes,
 				voided: schema.orderLineItem.voided,
 				voidReason: schema.orderLineItem.voidReason,
+				courseNumber: schema.orderLineItem.courseNumber,
 				imageUrl: schema.product.imageUrl,
 			})
 			.from(schema.orderLineItem)
@@ -284,6 +289,45 @@ const voidOrder = permissionProcedure("orders.void")
 		return { success: true, orderNumber: order.orderNumber };
 	});
 
+
+
+// ── listOpenTabs ──────────────────────────────────────────────────────
+const listOpenTabs = permissionProcedure("orders.read")
+	.input(
+		z
+			.object({
+				locationId: z.string().uuid().optional(),
+			})
+			.optional(),
+	)
+	.handler(async ({ input: rawInput, context }) => {
+		const input = rawInput ?? {};
+		const orgId = requireOrganizationId(context);
+
+		const conditions = [
+			eq(schema.order.organizationId, orgId),
+			eq(schema.order.status, "open"),
+			sql`${schema.order.tabName} IS NOT NULL`,
+		];
+		if (input.locationId) {
+			conditions.push(eq(schema.order.locationId, input.locationId));
+		}
+
+		return db
+			.select({
+				id: schema.order.id,
+				orderNumber: schema.order.orderNumber,
+				tabName: schema.order.tabName,
+				total: schema.order.total,
+				tipAmount: schema.order.tipAmount,
+				createdAt: schema.order.createdAt,
+				locationId: schema.order.locationId,
+			})
+			.from(schema.order)
+			.where(and(...conditions))
+			.orderBy(desc(schema.order.createdAt));
+	});
+
 // ── refund ──────────────────────────────────────────────────────────────
 const refund = permissionProcedure("orders.refund")
 	.input(
@@ -390,4 +434,5 @@ export const ordersRouter = {
 	getById,
 	void: voidOrder,
 	refund,
+	listOpenTabs,
 };

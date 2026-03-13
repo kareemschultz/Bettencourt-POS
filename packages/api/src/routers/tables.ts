@@ -1,9 +1,10 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { ORPCError } from "@orpc/server";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
+import { emitPosEvent } from "../lib/pos-events";
 
 // ── list ────────────────────────────────────────────────────────────────
 // Returns all tables with their current status and order info
@@ -268,6 +269,233 @@ const updateStatus = permissionProcedure("orders.create")
 		return { success: true };
 	});
 
+// ── transferOrder ──────────────────────────────────────────────────────
+// Move an order from one table to another
+const transferOrder = permissionProcedure("orders.update")
+	.input(
+		z.object({
+			fromTableId: z.string().uuid(),
+			toTableId: z.string().uuid(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const { fromTableId, toTableId } = input;
+
+		if (fromTableId === toTableId) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Source and destination tables must be different",
+			});
+		}
+
+		// Get source table with its order
+		const [fromTable] = await db
+			.select({
+				id: schema.tableLayout.id,
+				currentOrderId: schema.tableLayout.currentOrderId,
+				name: schema.tableLayout.name,
+			})
+			.from(schema.tableLayout)
+			.where(eq(schema.tableLayout.id, fromTableId));
+
+		if (!fromTable) {
+			throw new ORPCError("NOT_FOUND", { message: "Source table not found" });
+		}
+		if (!fromTable.currentOrderId) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Source table has no active order",
+			});
+		}
+
+		// Get destination table
+		const [toTable] = await db
+			.select({
+				id: schema.tableLayout.id,
+				currentOrderId: schema.tableLayout.currentOrderId,
+				name: schema.tableLayout.name,
+			})
+			.from(schema.tableLayout)
+			.where(eq(schema.tableLayout.id, toTableId));
+
+		if (!toTable) {
+			throw new ORPCError("NOT_FOUND", {
+				message: "Destination table not found",
+			});
+		}
+		if (toTable.currentOrderId) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Destination table already has an active order",
+			});
+		}
+
+		// Transfer: update order.tableId, swap table assignments
+		await db.transaction(async (tx) => {
+			await tx
+				.update(schema.order)
+				.set({ tableId: toTableId })
+				.where(eq(schema.order.id, fromTable.currentOrderId!));
+
+			await tx
+				.update(schema.tableLayout)
+				.set({ currentOrderId: null, currentGuests: null, status: "available" })
+				.where(eq(schema.tableLayout.id, fromTableId));
+
+			await tx
+				.update(schema.tableLayout)
+				.set({
+					currentOrderId: fromTable.currentOrderId,
+					status: "occupied",
+				})
+				.where(eq(schema.tableLayout.id, toTableId));
+		});
+
+		emitPosEvent({
+			type: "table:status_changed",
+			tableId: fromTableId,
+			status: "available",
+		});
+		emitPosEvent({
+			type: "table:status_changed",
+			tableId: toTableId,
+			status: "occupied",
+		});
+
+		return {
+			success: true,
+			fromTable: fromTable.name,
+			toTable: toTable.name,
+		};
+	});
+
+// ── mergeOrders ────────────────────────────────────────────────────────
+// Merge all line items from one table's order into another table's order
+const mergeOrders = permissionProcedure("orders.update")
+	.input(
+		z.object({
+			sourceTableId: z.string().uuid(),
+			targetTableId: z.string().uuid(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		const { sourceTableId, targetTableId } = input;
+
+		if (sourceTableId === targetTableId) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Source and target tables must be different",
+			});
+		}
+
+		// Get both tables with orders
+		const [sourceTable] = await db
+			.select({
+				id: schema.tableLayout.id,
+				currentOrderId: schema.tableLayout.currentOrderId,
+				name: schema.tableLayout.name,
+			})
+			.from(schema.tableLayout)
+			.where(eq(schema.tableLayout.id, sourceTableId));
+
+		const [targetTable] = await db
+			.select({
+				id: schema.tableLayout.id,
+				currentOrderId: schema.tableLayout.currentOrderId,
+				name: schema.tableLayout.name,
+			})
+			.from(schema.tableLayout)
+			.where(eq(schema.tableLayout.id, targetTableId));
+
+		if (!sourceTable?.currentOrderId) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Source table has no active order",
+			});
+		}
+		if (!targetTable?.currentOrderId) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Target table has no active order to merge into",
+			});
+		}
+
+		const sourceOrderId = sourceTable.currentOrderId;
+		const targetOrderId = targetTable.currentOrderId;
+
+		await db.transaction(async (tx) => {
+			// Move all line items from source order to target order
+			await tx
+				.update(schema.orderLineItem)
+				.set({ orderId: targetOrderId })
+				.where(eq(schema.orderLineItem.orderId, sourceOrderId));
+
+			// Move kitchen items: update the ticket's orderId
+			await tx
+				.update(schema.kitchenOrderTicket)
+				.set({ orderId: targetOrderId })
+				.where(eq(schema.kitchenOrderTicket.orderId, sourceOrderId));
+
+			// Recalculate target order totals
+			const lineItems = await tx
+				.select({
+					total: schema.orderLineItem.total,
+					tax: schema.orderLineItem.tax,
+				})
+				.from(schema.orderLineItem)
+				.where(
+					and(
+						eq(schema.orderLineItem.orderId, targetOrderId),
+						eq(schema.orderLineItem.voided, false),
+					),
+				);
+
+			const subtotal = lineItems.reduce(
+				(sum, li) => sum + Number(li.total),
+				0,
+			);
+			const taxTotal = lineItems.reduce(
+				(sum, li) => sum + Number(li.tax),
+				0,
+			);
+
+			await tx
+				.update(schema.order)
+				.set({
+					subtotal: subtotal.toFixed(2),
+					taxTotal: taxTotal.toFixed(2),
+					total: (subtotal + taxTotal).toFixed(2),
+					notes: sql`COALESCE(${schema.order.notes}, '') || ' [Merged from ${sourceTable.name}]'`,
+				})
+				.where(eq(schema.order.id, targetOrderId));
+
+			// Mark source order as voided
+			await tx
+				.update(schema.order)
+				.set({
+					status: "voided",
+					voidReason: `Merged into order at ${targetTable.name}`,
+				})
+				.where(eq(schema.order.id, sourceOrderId));
+
+			// Clear source table
+			await tx
+				.update(schema.tableLayout)
+				.set({
+					currentOrderId: null,
+					currentGuests: null,
+					status: "available",
+				})
+				.where(eq(schema.tableLayout.id, sourceTableId));
+		});
+
+		emitPosEvent({
+			type: "table:status_changed",
+			tableId: sourceTableId,
+			status: "available",
+		});
+
+		return {
+			success: true,
+			sourceTable: sourceTable.name,
+			targetTable: targetTable.name,
+		};
+	});
+
 export const tablesRouter = {
 	list,
 	create,
@@ -276,4 +504,6 @@ export const tablesRouter = {
 	assignOrder,
 	clearTable,
 	updateStatus,
+	transferOrder,
+	mergeOrders,
 };

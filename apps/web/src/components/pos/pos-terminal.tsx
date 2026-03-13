@@ -3,6 +3,7 @@ import {
 	Barcode,
 	Clock,
 	Gift,
+	FileText,
 	Keyboard,
 	Lock,
 	ReceiptText,
@@ -46,13 +47,15 @@ import {
 } from "@/components/ui/tooltip";
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { useSupervisorOverride } from "@/hooks/use-supervisor-override";
+import { useWebSocket } from "@/hooks/use-websocket";
 import type { CartItem, Product } from "@/lib/types";
 import { formatGYD } from "@/lib/types";
-import { orpc } from "@/utils/orpc";
+import { orpc, queryClient } from "@/utils/orpc";
 import { CartPanel } from "./cart-panel";
 import { DiscountDialog } from "./discount-dialog";
 import { ItemNotesDialog } from "./item-notes-dialog";
 import { PaymentDialog } from "./payment-dialog";
+import { TabListDialog } from "./tab-list-dialog";
 import { ProductGrid } from "./product-grid";
 import { ReceiptPreview } from "./receipt-preview";
 import { SellGiftCardDialog } from "./sell-gift-card-dialog";
@@ -130,7 +133,7 @@ export function POSTerminal({
 		enabled: customerSearchQuery.length >= 2,
 	});
 
-	// Pickup / Delivery state (Terminal 3 only)
+	// Order type state
 	const isBeverageTerminal = selectedRegister === BEVERAGE_REGISTER;
 	const [orderMode, setOrderMode] = useState<"dine_in" | "pickup" | "delivery">(
 		"dine_in",
@@ -139,9 +142,74 @@ export function POSTerminal({
 	const [customerPhone, setCustomerPhone] = useState("");
 	const [deliveryAddress, setDeliveryAddress] = useState("");
 	const [estimatedReady, setEstimatedReady] = useState("15");
+	const [tabName, setTabName] = useState("");
+	const [tabDialogOpen, setTabDialogOpen] = useState(false);
+	const [selectedCourse, setSelectedCourse] = useState(1);
 
 	// Resolve effective location from the active dashboard location context/prop.
 	const effectiveLocationId = propLocationId ?? undefined;
+
+	// ── 86 system ────────────────────────────────────────────────────────
+	const [eightySixedIds, setEightySixedIds] = useState<Set<string>>(new Set());
+
+	useWebSocket({
+		channels: ["pos:86"],
+		onMessage: (event) => {
+			try {
+				const msg = JSON.parse(event.data);
+				if (msg.channel === "pos:86" && msg.event === "product:toggled") {
+					const { productId, isAvailable } = msg.payload as {
+						productId: string;
+						isAvailable: boolean;
+					};
+					setEightySixedIds((prev) => {
+						const next = new Set(prev);
+						if (isAvailable) next.delete(productId);
+						else next.add(productId);
+						return next;
+					});
+					queryClient.invalidateQueries({ queryKey: ["pos", "getProducts"] });
+				}
+			} catch {
+				// Ignore malformed messages
+			}
+		},
+	});
+
+	const toggle86Mutation = useMutation(
+		orpc.pos.toggle86.mutationOptions({
+			onSuccess: (result) => {
+				setEightySixedIds((prev) => {
+					const next = new Set(prev);
+					if (result.isAvailable) {
+						next.delete(result.productId);
+						toast.success(`${result.productName} is back on the menu`);
+					} else {
+						next.add(result.productId);
+						toast.info(`${result.productName} has been 86'd`);
+					}
+					return next;
+				});
+				queryClient.invalidateQueries({ queryKey: ["pos", "getProducts"] });
+			},
+			onError: (err) => {
+				toast.error(`Failed to update availability: ${err.message}`);
+			},
+		}),
+	);
+
+	const handleProductLongPress = useCallback(
+		(product: Product) => {
+			if (!effectiveLocationId) return;
+			const isCurrently86 = eightySixedIds.has(product.id);
+			toggle86Mutation.mutate({
+				productId: product.id,
+				locationId: effectiveLocationId,
+				isAvailable: isCurrently86,
+			});
+		},
+		[effectiveLocationId, eightySixedIds, toggle86Mutation],
+	);
 
 	// Fetch products via oRPC (filtered by location; skip register filter when override active)
 	const { data: posData, isLoading } = useQuery(
@@ -192,7 +260,7 @@ export function POSTerminal({
 				setLastChange(result.change || 0);
 				setLastOrderMeta({
 					placedAt: new Date(),
-					mode: isBeverageTerminal ? orderMode : "dine_in",
+					mode: orderMode,
 				});
 				setPaymentOpen(false);
 				setReceiptOpen(true);
@@ -237,6 +305,7 @@ export function POSTerminal({
 					modifiers: [],
 					notes: "",
 					line_total: product.price,
+					courseNumber: selectedCourse,
 				},
 			];
 		});
@@ -304,6 +373,7 @@ export function POSTerminal({
 		setDeliveryAddress("");
 		setEstimatedReady("15");
 		setOrderMode("dine_in");
+		setTabName("");
 	}
 
 	const cartItemCount = cart.reduce((s, i) => s + i.quantity, 0);
@@ -320,6 +390,7 @@ export function POSTerminal({
 			amount: number;
 			reference?: string;
 		}[],
+		meta?: { tipAmount?: number },
 	) {
 		const checkoutItems = cart.map((item) => ({
 			productId: item.product.id,
@@ -336,6 +407,7 @@ export function POSTerminal({
 			})),
 			modifiers: item.modifiers.map((m) => ({ name: m.name, price: m.price })),
 			notes: item.notes || null,
+			courseNumber: item.courseNumber ?? 1,
 		}));
 
 		if (orderMode === "pickup" && !customerPhone.trim()) {
@@ -357,7 +429,7 @@ export function POSTerminal({
 			}
 		}
 
-		const isPickupOrDelivery = isBeverageTerminal && orderMode !== "dine_in";
+		const isPickupOrDelivery = orderMode !== "dine_in";
 		const estimatedReadyMs = isPickupOrDelivery
 			? Number.parseInt(estimatedReady, 10) * 60_000
 			: 0;
@@ -367,13 +439,15 @@ export function POSTerminal({
 				payments,
 				registerId: selectedRegister,
 				locationId: effectiveLocationId,
-				orderType: isBeverageTerminal ? orderMode : "dine_in",
+				orderType: orderMode,
 			discountTotal: discount,
+			tipAmount: meta?.tipAmount ?? 0,
+			tabName: tabName || selectedCustomer?.name || null,
 			customerId: selectedCustomer?.id ?? null,
 			customerName: isPickupOrDelivery ? customerName || null : null,
 			customerPhone: isPickupOrDelivery ? customerPhone || null : null,
 			deliveryAddress:
-				isBeverageTerminal && orderMode === "delivery"
+				orderMode === "delivery"
 					? deliveryAddress || null
 					: null,
 			estimatedReadyAt: isPickupOrDelivery
@@ -493,10 +567,10 @@ export function POSTerminal({
 			canApplyDiscount={canApplyDiscount}
 			onOpenNotes={(id) => setNotesItemId(id)}
 			onApplyPromo={canApplyDiscount ? handleApplyDiscount : undefined}
-			orderMode={isBeverageTerminal ? orderMode : undefined}
+			orderMode={orderMode}
 			customerName={
 				selectedCustomer?.name ||
-				(isBeverageTerminal ? customerName : undefined)
+				(orderMode !== "dine_in" ? customerName : undefined)
 			}
 		/>
 	);
@@ -608,6 +682,15 @@ export function POSTerminal({
 
 				{/* Held orders, reprint, shortcuts, user */}
 				<div className="flex shrink-0 items-center gap-1.5">
+					<Button
+						variant={tabName ? "default" : "ghost"}
+						size="sm"
+						className="gap-1.5 text-xs"
+						onClick={() => setTabDialogOpen(true)}
+					>
+						<FileText className="size-3.5" />
+						{tabName ? `Tab: ${tabName}` : "Open Tab"}
+					</Button>
 					{heldOrders.map((_held, i) => (
 						<button
 							type="button"
@@ -811,8 +894,8 @@ export function POSTerminal({
 				</div>
 			)}
 
-			{/* Pickup/Delivery bar (Terminal 3 only) */}
-			{isBeverageTerminal && (
+			{/* Order type bar */}
+			{(
 				<div className="flex flex-wrap items-end gap-2 border-border border-b bg-muted/30 px-3 py-2 md:gap-3 md:px-4">
 					<div className="flex items-center gap-0.5 rounded-lg border border-border bg-background p-0.5">
 						<Button
@@ -842,6 +925,22 @@ export function POSTerminal({
 							<Truck className="size-3" />
 							<span className="xs:inline hidden">Delivery</span>
 						</Button>
+					</div>
+
+					<div className="flex items-center gap-1 rounded-md border p-1">
+						<span className="px-1 text-[10px] text-muted-foreground uppercase">Course</span>
+						{[1, 2, 3, 4].map((course) => (
+							<Button
+								key={course}
+								type="button"
+								size="sm"
+								variant={selectedCourse === course ? "default" : "ghost"}
+								className="h-7 px-2 text-xs"
+								onClick={() => setSelectedCourse(course)}
+							>
+								{course}
+							</Button>
+						))}
 					</div>
 
 					{(orderMode === "pickup" || orderMode === "delivery") && (
@@ -944,6 +1043,27 @@ export function POSTerminal({
 				</div>
 			)}
 
+			{/* Course selector (visible on all terminals for dine-in) */}
+			{!isBeverageTerminal && (
+				<div className="flex items-center gap-2 border-border border-b bg-muted/20 px-3 py-1.5">
+					<span className="text-[10px] text-muted-foreground uppercase">Course</span>
+					<div className="flex items-center gap-0.5 rounded-md border p-0.5">
+						{[1, 2, 3, 4].map((course) => (
+							<Button
+								key={course}
+								type="button"
+								size="sm"
+								variant={selectedCourse === course ? "default" : "ghost"}
+								className="h-6 w-6 p-0 text-xs"
+								onClick={() => setSelectedCourse(course)}
+							>
+								{course}
+							</Button>
+						))}
+					</div>
+				</div>
+			)}
+
 			{/* Main area: product grid + cart */}
 			<div className="flex flex-1 overflow-hidden">
 				<div className="flex-1 overflow-y-auto p-2 sm:p-3">
@@ -951,7 +1071,9 @@ export function POSTerminal({
 						products={products}
 						isLoading={isLoading}
 						onProductTap={handleProductTap}
+						onProductLongPress={handleProductLongPress}
 						cart={cart}
+						eightySixedIds={eightySixedIds}
 					/>
 				</div>
 				<div className="hidden h-full w-72 shrink-0 border-border border-l md:block lg:w-80 xl:w-96">
@@ -1010,6 +1132,12 @@ export function POSTerminal({
 			)}
 
 			{/* Dialogs */}
+			<TabListDialog
+				open={tabDialogOpen}
+				onClose={() => setTabDialogOpen(false)}
+				onSelectTab={(name) => setTabName(name)}
+			/>
+
 			<PaymentDialog
 				open={paymentOpen}
 				onClose={() => setPaymentOpen(false)}

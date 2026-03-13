@@ -5,7 +5,9 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 import { createAuditLog } from "../lib/audit";
+import { printService } from "../lib/print-service";
 import { emitKitchenEvent } from "../lib/kitchen-events";
+import { emitPosEvent } from "../lib/pos-events";
 import { requireOrganizationId } from "../lib/org-context";
 
 async function nextInvoiceNumber(orgId: string): Promise<string> {
@@ -278,6 +280,7 @@ const checkout = permissionProcedure("orders.create")
 						.optional(),
 					modifiers: z.array(z.object({ name: z.string(), price: z.number() })),
 					notes: z.string().nullable().optional(),
+					courseNumber: z.number().int().min(1).default(1),
 				}),
 			),
 			payments: z
@@ -300,6 +303,8 @@ const checkout = permissionProcedure("orders.create")
 			registerId: z.string().uuid(),
 			tableId: z.string().uuid().nullable().optional(),
 			notes: z.string().nullable().optional(),
+			tabName: z.string().nullable().optional(),
+			tipAmount: z.number().min(0).default(0),
 			discountTotal: z.number().min(0).default(0),
 			customerId: z.string().uuid().nullable().optional(),
 			customerName: z.string().nullable().optional(),
@@ -318,6 +323,8 @@ const checkout = permissionProcedure("orders.create")
 			registerId,
 			tableId,
 			notes,
+			tabName,
+			tipAmount,
 			discountTotal,
 			customerId,
 			customerName,
@@ -344,12 +351,13 @@ const checkout = permissionProcedure("orders.create")
 			taxTotal += lineTax;
 		}
 		const grossTotal = subtotal + taxTotal;
+		const totalWithTip = grossTotal - discountTotal + tipAmount;
 		if (discountTotal > grossTotal + 0.01) {
 			throw new ORPCError("BAD_REQUEST", {
 				message: `Discount (${discountTotal.toFixed(2)}) cannot exceed subtotal + tax (${grossTotal.toFixed(2)})`,
 			});
 		}
-		const total = Math.max(0, grossTotal - discountTotal);
+		const total = Math.max(0, totalWithTip);
 
 		// Validate payment sum covers order total
 		const paymentSum = payments.reduce((s, p) => s + p.amount, 0);
@@ -408,6 +416,8 @@ const checkout = permissionProcedure("orders.create")
 					subtotal: subtotal.toFixed(2),
 					taxTotal: taxTotal.toFixed(2),
 					discountTotal: discountTotal.toFixed(2),
+					tipAmount: tipAmount.toFixed(2),
+					tabName: tabName ?? null,
 					total: total.toFixed(2),
 					notes: notes ?? null,
 				})
@@ -420,13 +430,15 @@ const checkout = permissionProcedure("orders.create")
 			const createdOrder = orderRows[0]!;
 
 			// Insert line items with snapshots
-			for (const item of items) {
+			const lineItemIdByIndex = new Map<number, string>();
+			for (let _itemIdx = 0; _itemIdx < items.length; _itemIdx++) {
+				const item = items[_itemIdx]!;
 				const modifierTotal = item.modifiers.reduce((s, m) => s + m.price, 0);
 				const lineTotal = (item.unitPrice + modifierTotal) * item.quantity;
 				const taxAmount = lineTotal * item.taxRate;
 
 				// Insert the main line item
-				await tx.insert(schema.orderLineItem).values({
+				const [lineItemRow] = await tx.insert(schema.orderLineItem).values({
 					orderId: createdOrder.id,
 					productId: item.productId,
 					productNameSnapshot: item.productName,
@@ -437,7 +449,9 @@ const checkout = permissionProcedure("orders.create")
 					total: lineTotal.toFixed(2),
 					modifiersSnapshot: item.modifiers,
 					notes: item.notes ?? null,
-				});
+					courseNumber: item.courseNumber ?? 1,
+				}).returning({ id: schema.orderLineItem.id });
+				if (lineItemRow) lineItemIdByIndex.set(_itemIdx, lineItemRow.id);
 
 				// If combo product, also insert component line items for reporting
 				if (
@@ -467,6 +481,7 @@ const checkout = permissionProcedure("orders.create")
 			// Insert payments
 			// Allocate payment amounts sequentially against remaining balance
 			let remaining = total;
+			let tipRemaining = tipAmount;
 			let totalCashAllocated = 0;
 			for (const pmt of payments) {
 				const remainingBefore = remaining;
@@ -483,6 +498,8 @@ const checkout = permissionProcedure("orders.create")
 				if (pmt.method === "cash") {
 					totalCashAllocated += allocated;
 				}
+				const tipAllocated = Math.min(tipRemaining, allocated);
+				tipRemaining -= tipAllocated;
 
 				await tx.insert(schema.payment).values({
 					orderId: createdOrder.id,
@@ -490,6 +507,7 @@ const checkout = permissionProcedure("orders.create")
 					amount: allocated.toFixed(2),
 					tendered: tendered?.toFixed(2) ?? null,
 					changeGiven: changeGiven.toFixed(2),
+					tipAmount: tipAllocated.toFixed(2),
 					reference: pmt.reference ?? null,
 					status: "completed",
 				});
@@ -517,7 +535,8 @@ const checkout = permissionProcedure("orders.create")
 			const ticketId = ticketRows[0]!.id;
 
 			// Create kitchen items
-			for (const item of items) {
+			for (let _kitIdx = 0; _kitIdx < items.length; _kitIdx++) {
+				const item = items[_kitIdx]!;
 				// Build modifiers array: combo components first (as isComponent entries), then selected modifiers
 				const kitchenMods: Array<{
 					name: string;
@@ -535,7 +554,7 @@ const checkout = permissionProcedure("orders.create")
 				];
 				await tx.insert(schema.kitchenOrderItem).values({
 					ticketId,
-					orderLineItemId: null,
+					orderLineItemId: lineItemIdByIndex.get(_kitIdx) ?? null,
 					productName: item.productName,
 					quantity: item.quantity,
 					modifiers:
@@ -566,11 +585,22 @@ const checkout = permissionProcedure("orders.create")
 			if (userRows.length > 0) userName = userRows[0]!.name;
 
 			return {
+				organizationId,
+				locationId,
+				printedItems: items.map((item) => ({
+					name: item.productName,
+					quantity: item.quantity,
+					courseNumber: item.courseNumber,
+					notes: item.notes ?? null,
+					modifiers: item.modifiers.map((m) => m.name),
+					reportingCategoryName: item.department ?? null,
+				})),
 				order: {
 					id: createdOrder.id,
 					orderNumber: createdOrder.orderNumber,
 					dailyNumber: dailyNum,
 					total: Number(createdOrder.total),
+					tipAmount,
 					createdAt: createdOrder.createdAt,
 					userName,
 				},
@@ -630,6 +660,27 @@ const checkout = permissionProcedure("orders.create")
 			orderId: result.order.id,
 		});
 
+		try {
+			const printTargets = await printService.dispatch({
+				type: "kitchen_ticket",
+				organizationId: result.organizationId,
+				locationId: result.locationId,
+				orderId: result.order.id,
+				orderNumber: result.order.orderNumber,
+				station: "kitchen",
+				items: result.printedItems,
+				timestamp: new Date(),
+			});
+			emitKitchenEvent({
+				type: "ticket:printed",
+				ticketId: result.ticketId,
+				orderId: result.order.id,
+				targets: printTargets.map((t) => t.printerName),
+			});
+		} catch (err) {
+			console.error("[pos] Print dispatch failed:", err);
+		}
+
 		return result;
 	});
 
@@ -687,9 +738,55 @@ const lookupBarcode = permissionProcedure("orders.create")
 		});
 	});
 
+
+// ── toggle86 (mark item as unavailable / available) ─────────────────────
+const toggle86 = permissionProcedure("orders.update")
+	.input(
+		z.object({
+			productId: z.string().uuid(),
+			locationId: z.string().uuid(),
+			isAvailable: z.boolean(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const { productId, locationId, isAvailable } = input;
+
+		// Upsert productLocation row
+		await db
+			.insert(schema.productLocation)
+			.values({ productId, locationId, isAvailable })
+			.onConflictDoUpdate({
+				target: [schema.productLocation.productId, schema.productLocation.locationId],
+				set: { isAvailable },
+			});
+
+		// Get product name for the broadcast
+		const productRows = await db
+			.select({ name: schema.product.name })
+			.from(schema.product)
+			.where(eq(schema.product.id, productId))
+			.limit(1);
+		const productName = productRows[0]?.name ?? "Unknown";
+
+		// Audit log
+		await createAuditLog({
+			userId: context.session.user.id,
+			entityType: "product_location",
+			entityId: productId,
+			actionType: "update",
+			afterData: { productId, locationId, isAvailable, productName },
+			locationId,
+		});
+
+		emitPosEvent({ type: "product:86", productId, locationId, isAvailable, productName });
+
+		return { productId, locationId, isAvailable, productName };
+	});
+
 export const posRouter = {
 	getProducts,
 	getModifiers,
 	checkout,
 	lookupBarcode,
+	toggle86,
 };

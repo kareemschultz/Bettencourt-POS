@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle2, ChefHat, Clock, Wifi } from "lucide-react";
-import { useEffect } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { orpc } from "@/utils/orpc";
 
 function getTimeSince(date: string | Date) {
@@ -43,26 +43,20 @@ const statusConfig: Record<
 	},
 };
 
-function useKitchenSSE() {
+function useKitchenRealtime() {
 	const queryClient = useQueryClient();
 	const queryKey = orpc.kitchen.getActiveTickets.queryOptions({
 		input: {},
 	}).queryKey;
 
-	useEffect(() => {
-		const es = new EventSource("/api/kitchen/events");
-
-		es.onmessage = () => {
-			// Any kitchen event → invalidate to re-fetch fresh data
+	const ws = useWebSocket({
+		channels: ["pos:kds"],
+		onMessage: () => {
 			queryClient.invalidateQueries({ queryKey });
-		};
+		},
+	});
 
-		es.onerror = () => {
-			// EventSource auto-reconnects; no action needed
-		};
-
-		return () => es.close();
-	}, [queryClient, queryKey]);
+	return ws.status;
 }
 
 export default function KitchenPage() {
@@ -70,12 +64,12 @@ export default function KitchenPage() {
 
 	const { data: orders = [], isLoading } = useQuery({
 		...orpc.kitchen.getActiveTickets.queryOptions({ input: {} }),
-		// Fallback polling in case SSE disconnects
+		// Fallback polling in case WebSocket disconnects
 		refetchInterval: 15000,
 	});
 
-	// Subscribe to SSE for instant updates
-	useKitchenSSE();
+	// Subscribe to WebSocket for instant updates
+	const realtimeStatus = useKitchenRealtime();
 
 	const updateStatus = useMutation(
 		orpc.kitchen.updateItemStatus.mutationOptions({
@@ -101,7 +95,7 @@ export default function KitchenPage() {
 						Kitchen Display
 					</h1>
 					<p className="flex items-center gap-1.5 text-muted-foreground text-sm">
-						<Wifi className="size-3.5 text-emerald-500" /> Live updates via SSE
+						<Wifi className={`size-3.5 ${realtimeStatus === "open" ? "text-emerald-500" : "text-amber-500"}`} /> Live updates via WebSocket
 					</p>
 				</div>
 				<div
