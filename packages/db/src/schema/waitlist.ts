@@ -15,8 +15,10 @@ export const waitlistEntry = pgTable(
 		id: uuid("id").primaryKey().defaultRandom(),
 		organizationId: uuid("organization_id")
 			.notNull()
-			.references(() => organization.id),
-		locationId: uuid("location_id").references(() => location.id),
+			.references(() => organization.id, { onDelete: "cascade" }),
+		locationId: uuid("location_id").references(() => location.id, {
+			onDelete: "set null",
+		}),
 		customerName: text("customer_name").notNull(),
 		customerPhone: text("customer_phone"),
 		partySize: integer("party_size").notNull().default(1),

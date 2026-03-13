@@ -17,7 +17,7 @@ export const customerFeedback = pgTable(
 		id: uuid("id").primaryKey().defaultRandom(),
 		organizationId: uuid("organization_id")
 			.notNull()
-			.references(() => organization.id),
+			.references(() => organization.id, { onDelete: "cascade" }),
 		orderId: uuid("order_id").references(() => order.id),
 		customerId: uuid("customer_id").references(() => customer.id),
 		rating: integer("rating").notNull(), // 1-5

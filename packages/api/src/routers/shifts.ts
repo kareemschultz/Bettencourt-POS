@@ -104,7 +104,7 @@ const update = permissionProcedure("settings.update")
 				.regex(/^\d{2}:\d{2}$/)
 				.optional(),
 			notes: z.string().optional().nullable(),
-			isActive: z.string().optional(),
+			isActive: z.boolean().optional(),
 		}),
 	)
 	.handler(async ({ input }) => {

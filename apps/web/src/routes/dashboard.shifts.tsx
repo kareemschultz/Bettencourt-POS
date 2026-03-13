@@ -70,7 +70,7 @@ type ShiftRow = {
 	startTime: string;
 	endTime: string;
 	notes: string | null;
-	isActive: string;
+	isActive: boolean;
 };
 
 export default function ShiftsPage() {
