@@ -31,6 +31,7 @@ import { quotationsRouter } from "./quotations";
 import { reconciliationRouter } from "./reconciliation";
 import { recurringRouter } from "./recurring";
 import { reportsRouter } from "./reports";
+import { reservationsRouter } from "./reservations";
 import { settingsRouter } from "./settings";
 import { splitBillRouter } from "./split-bill";
 import { printersRouter } from "./printers";
@@ -76,6 +77,7 @@ export const appRouter = {
 	splitBill: splitBillRouter,
 	tables: tablesRouter,
 	printers: printersRouter,
+	reservations: reservationsRouter,
 	onlineOrder: onlineOrderRouter,
 	locations: locationsRouter,
 	webhooks: webhooksRouter,

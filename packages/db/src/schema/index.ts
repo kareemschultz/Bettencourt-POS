@@ -10,6 +10,7 @@ export * from "./organization";
 export * from "./permissions";
 export * from "./printer";
 export * from "./product";
+export * from "./reservation";
 export * from "./production";
 export * from "./webhook";
 export * from "./invoice";
