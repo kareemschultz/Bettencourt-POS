@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/karetech/projects/bettencourt/Bettencourt-POS/.claude/hooks/post-commit-docs.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
