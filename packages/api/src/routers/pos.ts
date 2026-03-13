@@ -5,8 +5,9 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 import { createAuditLog } from "../lib/audit";
-import { printService } from "../../../server/services/print-service";
+import { printService } from "../lib/print-service";
 import { emitKitchenEvent } from "../lib/kitchen-events";
+import { emitPosEvent } from "../lib/pos-events";
 import { requireOrganizationId } from "../lib/org-context";
 
 async function nextInvoiceNumber(orgId: string): Promise<string> {
@@ -655,22 +656,26 @@ const checkout = permissionProcedure("orders.create")
 			orderId: result.order.id,
 		});
 
-		const printTargets = await printService.dispatch({
-			type: "kitchen_ticket",
-			organizationId: result.organizationId,
-			locationId: result.locationId,
-			orderId: result.order.id,
-			orderNumber: result.order.orderNumber,
-			station: "kitchen",
-			items: result.printedItems,
-			timestamp: new Date(),
-		});
-		emitKitchenEvent({
-			type: "ticket:printed",
-			ticketId: result.ticketId,
-			orderId: result.order.id,
-			targets: printTargets.map((t) => t.printerName),
-		});
+		try {
+			const printTargets = await printService.dispatch({
+				type: "kitchen_ticket",
+				organizationId: result.organizationId,
+				locationId: result.locationId,
+				orderId: result.order.id,
+				orderNumber: result.order.orderNumber,
+				station: "kitchen",
+				items: result.printedItems,
+				timestamp: new Date(),
+			});
+			emitKitchenEvent({
+				type: "ticket:printed",
+				ticketId: result.ticketId,
+				orderId: result.order.id,
+				targets: printTargets.map((t) => t.printerName),
+			});
+		} catch (err) {
+			console.error("[pos] Print dispatch failed:", err);
+		}
 
 		return result;
 	});
@@ -729,9 +734,55 @@ const lookupBarcode = permissionProcedure("orders.create")
 		});
 	});
 
+
+// ── toggle86 (mark item as unavailable / available) ─────────────────────
+const toggle86 = permissionProcedure("orders.update")
+	.input(
+		z.object({
+			productId: z.string().uuid(),
+			locationId: z.string().uuid(),
+			isAvailable: z.boolean(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const { productId, locationId, isAvailable } = input;
+
+		// Upsert productLocation row
+		await db
+			.insert(schema.productLocation)
+			.values({ productId, locationId, isAvailable })
+			.onConflictDoUpdate({
+				target: [schema.productLocation.productId, schema.productLocation.locationId],
+				set: { isAvailable },
+			});
+
+		// Get product name for the broadcast
+		const productRows = await db
+			.select({ name: schema.product.name })
+			.from(schema.product)
+			.where(eq(schema.product.id, productId))
+			.limit(1);
+		const productName = productRows[0]?.name ?? "Unknown";
+
+		// Audit log
+		await createAuditLog({
+			userId: context.session.user.id,
+			entityType: "product_location",
+			entityId: productId,
+			actionType: "update",
+			afterData: { productId, locationId, isAvailable, productName },
+			locationId,
+		});
+
+		emitPosEvent({ type: "product:86", productId, locationId, isAvailable, productName });
+
+		return { productId, locationId, isAvailable, productName };
+	});
+
 export const posRouter = {
 	getProducts,
 	getModifiers,
 	checkout,
 	lookupBarcode,
+	toggle86,
 };

@@ -47,9 +47,10 @@ import {
 } from "@/components/ui/tooltip";
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { useSupervisorOverride } from "@/hooks/use-supervisor-override";
+import { useWebSocket } from "@/hooks/use-websocket";
 import type { CartItem, Product } from "@/lib/types";
 import { formatGYD } from "@/lib/types";
-import { orpc } from "@/utils/orpc";
+import { orpc, queryClient } from "@/utils/orpc";
 import { CartPanel } from "./cart-panel";
 import { DiscountDialog } from "./discount-dialog";
 import { ItemNotesDialog } from "./item-notes-dialog";
@@ -147,6 +148,68 @@ export function POSTerminal({
 
 	// Resolve effective location from the active dashboard location context/prop.
 	const effectiveLocationId = propLocationId ?? undefined;
+
+	// ── 86 system ────────────────────────────────────────────────────────
+	const [eightySixedIds, setEightySixedIds] = useState<Set<string>>(new Set());
+
+	useWebSocket({
+		channels: ["pos:86"],
+		onMessage: (event) => {
+			try {
+				const msg = JSON.parse(event.data);
+				if (msg.channel === "pos:86" && msg.event === "product:toggled") {
+					const { productId, isAvailable } = msg.payload as {
+						productId: string;
+						isAvailable: boolean;
+					};
+					setEightySixedIds((prev) => {
+						const next = new Set(prev);
+						if (isAvailable) next.delete(productId);
+						else next.add(productId);
+						return next;
+					});
+					queryClient.invalidateQueries({ queryKey: ["pos", "getProducts"] });
+				}
+			} catch {
+				// Ignore malformed messages
+			}
+		},
+	});
+
+	const toggle86Mutation = useMutation(
+		orpc.pos.toggle86.mutationOptions({
+			onSuccess: (result) => {
+				setEightySixedIds((prev) => {
+					const next = new Set(prev);
+					if (result.isAvailable) {
+						next.delete(result.productId);
+						toast.success(`${result.productName} is back on the menu`);
+					} else {
+						next.add(result.productId);
+						toast.info(`${result.productName} has been 86'd`);
+					}
+					return next;
+				});
+				queryClient.invalidateQueries({ queryKey: ["pos", "getProducts"] });
+			},
+			onError: (err) => {
+				toast.error(`Failed to update availability: ${err.message}`);
+			},
+		}),
+	);
+
+	const handleProductLongPress = useCallback(
+		(product: Product) => {
+			if (!effectiveLocationId) return;
+			const isCurrently86 = eightySixedIds.has(product.id);
+			toggle86Mutation.mutate({
+				productId: product.id,
+				locationId: effectiveLocationId,
+				isAvailable: isCurrently86,
+			});
+		},
+		[effectiveLocationId, eightySixedIds, toggle86Mutation],
+	);
 
 	// Fetch products via oRPC (filtered by location; skip register filter when override active)
 	const { data: posData, isLoading } = useQuery(
@@ -987,7 +1050,9 @@ export function POSTerminal({
 						products={products}
 						isLoading={isLoading}
 						onProductTap={handleProductTap}
+						onProductLongPress={handleProductLongPress}
 						cart={cart}
+						eightySixedIds={eightySixedIds}
 					/>
 				</div>
 				<div className="hidden h-full w-72 shrink-0 border-border border-l md:block lg:w-80 xl:w-96">

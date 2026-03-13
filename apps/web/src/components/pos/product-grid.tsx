@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { Ban, Loader2 } from "lucide-react";
 import type { CartItem, Product } from "@/lib/types";
 import { formatGYD } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -7,7 +7,9 @@ interface ProductGridProps {
 	products: Product[];
 	isLoading: boolean;
 	onProductTap: (product: Product) => void;
+	onProductLongPress?: (product: Product) => void;
 	cart: CartItem[];
+	eightySixedIds?: Set<string>;
 }
 
 const deptColors: Record<string, string> = {
@@ -41,7 +43,9 @@ export function ProductGrid({
 	products,
 	isLoading,
 	onProductTap,
+	onProductLongPress,
 	cart,
+	eightySixedIds,
 }: ProductGridProps) {
 	if (isLoading) {
 		return (
@@ -66,36 +70,79 @@ export function ProductGrid({
 					.filter((item) => item.product.id === product.id)
 					.reduce((sum, item) => sum + item.quantity, 0);
 
-				const colorClass =
-					deptColors[product.department_name || ""] ||
-					"bg-secondary border-border";
+				const is86 = eightySixedIds?.has(product.id) ?? false;
+				const colorClass = is86
+					? "bg-muted border-muted-foreground/20 dark:bg-muted/30"
+					: deptColors[product.department_name || ""] ||
+						"bg-secondary border-border";
+
+				let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
 				return (
 					<button
 						key={product.id}
-						onClick={() => onProductTap(product)}
+						onClick={() => {
+							if (!is86) onProductTap(product);
+						}}
+						onPointerDown={() => {
+							if (onProductLongPress) {
+								longPressTimer = setTimeout(() => {
+									onProductLongPress(product);
+									longPressTimer = null;
+								}, 600);
+							}
+						}}
+						onPointerUp={() => {
+							if (longPressTimer) {
+								clearTimeout(longPressTimer);
+								longPressTimer = null;
+							}
+						}}
+						onPointerLeave={() => {
+							if (longPressTimer) {
+								clearTimeout(longPressTimer);
+								longPressTimer = null;
+							}
+						}}
 						className={cn(
 							"relative flex flex-col items-start gap-0.5 rounded-lg border p-2.5 text-left",
 							"min-h-[68px] touch-manipulation select-none transition-all",
 							"hover:shadow-md hover:brightness-105 active:scale-[0.97] sm:min-h-[76px] sm:gap-1 sm:p-3",
 							colorClass,
-							qty > 0 && "ring-2 ring-primary ring-offset-1",
+							qty > 0 && !is86 && "ring-2 ring-primary ring-offset-1",
+							is86 && "cursor-not-allowed opacity-50 grayscale hover:shadow-none hover:brightness-100 active:scale-100",
 						)}
 					>
-						{qty > 0 && (
+						{is86 && (
+							<span className="absolute inset-0 flex items-center justify-center">
+								<Ban className="h-8 w-8 text-destructive/60" />
+							</span>
+						)}
+						{qty > 0 && !is86 && (
 							<span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary font-bold text-[10px] text-primary-foreground sm:h-6 sm:w-6 sm:text-xs">
 								{qty}
 							</span>
 						)}
-						<span className="line-clamp-2 font-medium text-foreground text-xs leading-tight sm:text-sm">
+						<span className={cn(
+							"line-clamp-2 font-medium text-xs leading-tight sm:text-sm",
+							is86 ? "text-muted-foreground line-through" : "text-foreground",
+						)}>
 							{product.name}
 						</span>
-						<span className="font-bold text-foreground text-sm sm:text-base">
+						<span className={cn(
+							"font-bold text-sm sm:text-base",
+							is86 ? "text-muted-foreground" : "text-foreground",
+						)}>
 							{formatGYD(product.price)}
 						</span>
 						{product.department_name && (
 							<span className="text-[9px] text-muted-foreground sm:text-[10px]">
 								{product.department_name}
+							</span>
+						)}
+						{is86 && (
+							<span className="absolute right-1 bottom-1 rounded bg-destructive/80 px-1 py-0.5 font-bold text-[8px] text-destructive-foreground">
+								86
 							</span>
 						)}
 					</button>

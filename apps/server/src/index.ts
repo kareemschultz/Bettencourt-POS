@@ -1,5 +1,6 @@
 import { createContext } from "@Bettencourt-POS/api/context";
 import { onKitchenEvent } from "@Bettencourt-POS/api/lib/kitchen-events";
+import { onPosEvent } from "@Bettencourt-POS/api/lib/pos-events";
 import {
 	hasPermission,
 	loadUserPermissions,
@@ -295,6 +296,21 @@ onKitchenEvent((event) => {
 		event: event.type,
 		payload: event,
 		source: "kitchen-events",
+	});
+});
+
+// Bridge POS events (86, order, table) into WebSocket feed
+onPosEvent((event) => {
+	const channelMap: Record<string, string> = {
+		"product:86": "pos:86",
+		"order:created": "pos:orders",
+		"table:status_changed": "pos:tables",
+	};
+	publishPosEvent({
+		channel: channelMap[event.type] as "pos:86" | "pos:orders" | "pos:tables",
+		event: event.type === "product:86" ? "product:toggled" : event.type,
+		payload: event,
+		source: "pos-events",
 	});
 });
 
