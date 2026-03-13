@@ -119,7 +119,7 @@ const getSummary = permissionProcedure("orders.read").handler(async () => {
 		db.execute(
 			sql`SELECT COUNT(*)::int as cnt
 				FROM stock_alert
-				WHERE acknowledged = false
+				WHERE acknowledged_at IS NULL
 					AND alert_type IN ('low_stock', 'out_of_stock')`,
 		),
 	]);
