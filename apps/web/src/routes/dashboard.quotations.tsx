@@ -535,7 +535,7 @@ export default function QuotationsPage() {
 																	Duplicate
 																</DropdownMenuItem>
 															)}
-															<DropdownMenuItem onClick={() => openQuotationPdf(q, docSettings ?? {})}>
+															<DropdownMenuItem onClick={async () => { const r = await openQuotationPdf(q, docSettings ?? {}); if (r === "popup_blocked") toast.error("Allow popups to open the PDF"); }}>
 																<Printer className="mr-2 size-3.5" />
 																Print / Save PDF
 															</DropdownMenuItem>
@@ -602,9 +602,10 @@ export default function QuotationsPage() {
 											variant="outline"
 											size="sm"
 											type="button"
-											onClick={() =>
-												openQuotationPdf(selectedQuotation, docSettings ?? {})
-											}
+											onClick={async () => {
+												const r = await openQuotationPdf(selectedQuotation, docSettings ?? {});
+												if (r === "popup_blocked") toast.error("Allow popups to open the PDF");
+											}}
 											className="no-print gap-1.5"
 										>
 											<Printer className="size-4" />

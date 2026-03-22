@@ -468,7 +468,7 @@ export default function CreditNotesPage() {
 																Issue
 															</DropdownMenuItem>
 														)}
-														<DropdownMenuItem onClick={() => openCreditNotePdf(cn)}>
+														<DropdownMenuItem onClick={async () => { const r = await openCreditNotePdf(cn); if (r === "popup_blocked") toast.error("Allow popups to open the PDF"); }}>
 															<FileDown className="mr-2 size-3.5" />
 															Print / Save PDF
 														</DropdownMenuItem>

@@ -686,7 +686,7 @@ export default function VendorBillsPage() {
 																</DropdownMenuItem>
 															)}
 															<DropdownMenuItem
-																onClick={() => openVendorBillPdf(bill)}
+																onClick={async () => { const r = await openVendorBillPdf(bill); if (r === "popup_blocked") toast.error("Allow popups to open the PDF"); }}
 															>
 																<FileDown className="mr-2 size-3.5" />
 																Print / Save PDF

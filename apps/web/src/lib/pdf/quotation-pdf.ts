@@ -45,16 +45,15 @@ export async function openQuotationPdf(
 	// Open window synchronously (inside user-gesture context) before any await.
 	// Browsers block window.open() called after an await as an untrusted popup.
 	const win = window.open("about:blank", "_blank");
+	if (!win) return "popup_blocked";
 	const logoBase64 = await fetchLogoBase64();
 	const html = buildQuotationHtml(quotation, settings, logoBase64);
 	const blob = new Blob([html], { type: "text/html" });
 	const url = URL.createObjectURL(blob);
-	if (win) {
-		win.location.href = url;
-	} else {
-		window.open(url, "_blank");
-	}
+	if (!win) return "popup_blocked";
+	win.location.href = url;
 	setTimeout(() => URL.revokeObjectURL(url), 15_000);
+	return "ok";
 }
 
 async function fetchLogoBase64(): Promise<string> {
