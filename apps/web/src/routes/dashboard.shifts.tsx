@@ -85,7 +85,7 @@ export default function ShiftsPage() {
 	);
 
 	const { data: settings } = useQuery(
-		orpc.settings.getTeam.queryOptions({ input: {} }),
+		orpc.settings.getUsers.queryOptions({ input: {} }),
 	);
 	const team = (settings ?? []) as Array<{
 		id: string;

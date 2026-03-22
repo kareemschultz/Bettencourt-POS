@@ -16,8 +16,7 @@ import {
 	UtensilsCrossed,
 	X,
 } from "lucide-react";
-import { useCallback, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,7 +40,6 @@ type KioskView = "welcome" | "menu" | "cart" | "confirm" | "success";
 // ── Component ────────────────────────────────────────────────────────────
 
 export default function KioskPage() {
-	const { t } = useTranslation();
 	const [searchParams] = useSearchParams();
 	const tableId = searchParams.get("tableId");
 	const [view, setView] = useState<KioskView>("welcome");
@@ -69,7 +67,7 @@ export default function KioskPage() {
 		orpc.onlineOrder.placeOrder.mutationOptions({
 			onSuccess: (data) => {
 				setOrderNumber(
-					data.orderNumber ?? Math.floor(Math.random() * 900) + 100,
+					Number(data.orderNumber) || Math.floor(Math.random() * 900) + 100,
 				);
 				setCart([]);
 				setView("success");
@@ -143,7 +141,7 @@ export default function KioskPage() {
 					<div className="rounded-full bg-primary/10 p-6">
 						<UtensilsCrossed className="size-16 text-primary" />
 					</div>
-					<h1 className="font-bold text-5xl">{t("kiosk.welcome")}</h1>
+					<h1 className="font-bold text-5xl">Welcome</h1>
 					<p className="max-w-md text-muted-foreground text-xl">
 						Bettencourt's Food Inc.
 					</p>
@@ -158,7 +156,7 @@ export default function KioskPage() {
 					className="min-h-[72px] min-w-[280px] gap-3 text-xl"
 					onClick={() => setView("menu")}
 				>
-					{t("kiosk.startOrder")}
+					Start Order
 					<ChevronRight className="size-6" />
 				</Button>
 			</div>
@@ -171,21 +169,21 @@ export default function KioskPage() {
 			<div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-background p-8">
 				<div className="flex flex-col items-center gap-4 text-center">
 					<CheckCircle2 className="size-24 text-green-500" />
-					<h1 className="font-bold text-4xl">{t("kiosk.thankYou")}</h1>
+					<h1 className="font-bold text-4xl">Thank You!</h1>
 					<p className="text-muted-foreground text-xl">
-						{t("kiosk.orderPlaced")}
+						Your order has been placed!
 					</p>
 					{orderNumber && (
 						<div className="rounded-xl border-2 border-primary bg-primary/5 px-8 py-4">
 							<p className="text-muted-foreground text-sm">
-								{t("kiosk.orderNumber", { number: orderNumber })}
+								Order #{orderNumber}
 							</p>
 						</div>
 					)}
 					<p className="text-muted-foreground">
-						{t("kiosk.orderBeingPrepared")}
+						Your order is being prepared
 					</p>
-					<p className="text-muted-foreground">{t("kiosk.callWhenReady")}</p>
+					<p className="text-muted-foreground">We'll call your name when it's ready</p>
 				</div>
 				<Button
 					variant="outline"
@@ -197,7 +195,7 @@ export default function KioskPage() {
 					}}
 				>
 					<ArrowLeft className="size-5" />
-					{t("kiosk.backToMenu")}
+					Back to Menu
 				</Button>
 			</div>
 		);
@@ -216,9 +214,9 @@ export default function KioskPage() {
 						className="min-h-[48px] gap-2"
 					>
 						<ArrowLeft className="size-5" />
-						{t("kiosk.backToMenu")}
+						Back to Menu
 					</Button>
-					<h1 className="font-bold text-2xl">{t("kiosk.viewOrder")}</h1>
+					<h1 className="font-bold text-2xl">View Order</h1>
 				</div>
 
 				{/* Cart Items */}
@@ -226,9 +224,9 @@ export default function KioskPage() {
 					{cart.length === 0 ? (
 						<div className="flex h-full flex-col items-center justify-center gap-4 text-center text-muted-foreground">
 							<ShoppingCart className="size-16" />
-							<p className="text-xl">{t("kiosk.emptyOrder")}</p>
+							<p className="text-xl">Your order is empty</p>
 							<Button onClick={() => setView("menu")} size="lg">
-								{t("kiosk.backToMenu")}
+								Back to Menu
 							</Button>
 						</div>
 					) : (
@@ -287,7 +285,7 @@ export default function KioskPage() {
 					<div className="border-t bg-background p-6">
 						<div className="mx-auto max-w-2xl">
 							<div className="mb-4 flex items-center justify-between font-bold text-2xl">
-								<span>{t("kiosk.total")}</span>
+								<span>Total</span>
 								<span>{formatGYD(cartTotal)}</span>
 							</div>
 							<Button
@@ -301,7 +299,7 @@ export default function KioskPage() {
 								) : (
 									<CheckCircle2 className="size-5" />
 								)}
-								{t("kiosk.placeOrder")}
+								Place Order
 							</Button>
 						</div>
 					</div>
@@ -337,7 +335,7 @@ export default function KioskPage() {
 							{cartCount}
 						</Badge>
 					)}
-					<span className="hidden sm:inline">{t("kiosk.viewOrder")}</span>
+					<span className="hidden sm:inline">View Order</span>
 					{cartCount > 0 && (
 						<span className="font-semibold">{formatGYD(cartTotal)}</span>
 					)}

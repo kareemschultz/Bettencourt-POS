@@ -11,6 +11,18 @@
  *   await client.print({ connectionType: "network", address: "192.168.1.100:9100", text: "..." });
  */
 
+// WebUSB types — included in Chrome's Web API but not in TypeScript's default lib
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type USBDevice = any;
+declare global {
+	interface Navigator {
+		usb: {
+			getDevices(): Promise<USBDevice[]>;
+			requestDevice(options: { filters: { classCode?: number }[] }): Promise<USBDevice>;
+		};
+	}
+}
+
 import { buildEscPosPayload } from "./esc-pos";
 
 export type PrintRequest = {
@@ -60,8 +72,8 @@ async function getUsbDevice(): Promise<USBDevice> {
 	}
 
 	// Find the printer interface (class 7)
-	const iface = cachedUsbDevice.configuration?.interfaces.find((i) =>
-		i.alternates.some((a) => a.interfaceClass === 7),
+	const iface = cachedUsbDevice.configuration?.interfaces.find((i: USBDevice) =>
+		i.alternates.some((a: USBDevice) => a.interfaceClass === 7),
 	);
 
 	if (iface) {
@@ -75,11 +87,11 @@ async function printViaUsb(data: Uint8Array): Promise<void> {
 	const device = await getUsbDevice();
 
 	// Find the bulk OUT endpoint
-	const iface = device.configuration?.interfaces.find((i) =>
-		i.alternates.some((a) => a.interfaceClass === 7),
+	const iface = device.configuration?.interfaces.find((i: USBDevice) =>
+		i.alternates.some((a: USBDevice) => a.interfaceClass === 7),
 	);
-	const alt = iface?.alternates.find((a) => a.interfaceClass === 7);
-	const endpoint = alt?.endpoints.find((e) => e.direction === "out");
+	const alt = iface?.alternates.find((a: USBDevice) => a.interfaceClass === 7);
+	const endpoint = alt?.endpoints.find((e: USBDevice) => e.direction === "out");
 
 	if (!endpoint) {
 		throw new Error("No output endpoint found on USB printer");

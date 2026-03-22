@@ -113,6 +113,11 @@ export function PaymentDialog({
 		setGiftCardApplied(false);
 	}
 
+	const computedTip =
+		tipPercent !== null ? Number((total * tipPercent).toFixed(2)) : Number(customTip) || 0;
+	const tipAmount = Math.max(0, computedTip);
+	const totalWithTip = total + tipAmount;
+
 	async function handleCashPayment() {
 		const tendered = Number(cashTendered) || 0;
 		if (tendered < totalWithTip) return;
@@ -225,11 +230,6 @@ export function PaymentDialog({
 			setProcessing(false);
 		}
 	}
-
-	const computedTip =
-		tipPercent !== null ? Number((total * tipPercent).toFixed(2)) : Number(customTip) || 0;
-	const tipAmount = Math.max(0, computedTip);
-	const totalWithTip = total + tipAmount;
 
 	// GYD quick amounts
 	const quickCashAmounts = [

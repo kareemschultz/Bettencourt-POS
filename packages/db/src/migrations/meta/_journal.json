@@ -71,6 +71,20 @@
       "when": 1773414096955,
       "tag": "0014_gap_analysis_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1773420000000,
+      "tag": "0014_pricelists_and_kiosk",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1773420001000,
+      "tag": "0015_schema_fixes",
+      "breakpoints": true
     }
   ]
 }

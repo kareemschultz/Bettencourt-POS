@@ -102,7 +102,7 @@ export default function FeedbackPage() {
 		}),
 	);
 
-	const rows = feedbacks as FeedbackRow[];
+	const rows = feedbacks as unknown as FeedbackRow[];
 	const stats = summary as Summary | undefined;
 
 	function renderStars(rating: number) {

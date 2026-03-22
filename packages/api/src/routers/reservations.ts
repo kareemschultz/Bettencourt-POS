@@ -1,7 +1,6 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
-import { ORPCError } from "@orpc/server";
-import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 import { requireOrganizationId } from "../lib/org-context";

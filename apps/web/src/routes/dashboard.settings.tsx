@@ -29,7 +29,6 @@ import {
 	X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
 	AlertDialog,
@@ -4180,7 +4179,7 @@ function LoadingCard() {
 // ── Language Tab ──────────────────────────────────────────────────────
 
 function LanguageTab() {
-	const { i18n } = useTranslation();
+	const currentLang = "en";
 
 	return (
 		<Card>
@@ -4193,16 +4192,16 @@ function LanguageTab() {
 			<CardContent>
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 					{SUPPORTED_LANGUAGES.map((lang) => {
-						const isActive = i18n.language === lang.code;
+						const isActive = currentLang === lang.code;
 						return (
 							<button
 								key={lang.code}
 								type="button"
-								onClick={() => i18n.changeLanguage(lang.code)}
+								disabled={lang.code !== "en"}
 								className={`flex min-h-[64px] items-center gap-3 rounded-lg border p-4 text-left transition-colors ${
 									isActive
 										? "border-primary bg-primary/5 ring-2 ring-primary"
-										: "border-border hover:border-primary/50 hover:bg-muted"
+										: "border-border opacity-50 cursor-not-allowed"
 								}`}
 							>
 								<span className="text-2xl">{lang.flag}</span>
@@ -4218,8 +4217,7 @@ function LanguageTab() {
 					})}
 				</div>
 				<p className="mt-4 text-muted-foreground text-xs">
-					Language preference is saved to your browser and applies to all POS
-					screens.
+					Multi-language support coming soon. English is currently active.
 				</p>
 			</CardContent>
 		</Card>

@@ -4,7 +4,6 @@
  */
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
-import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";

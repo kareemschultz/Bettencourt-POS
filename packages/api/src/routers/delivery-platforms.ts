@@ -63,12 +63,14 @@ const ingestOrder = permissionProcedure("orders.create")
 			})
 			.returning();
 
+		if (!order) throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "Order creation failed" });
+
 		// Insert line items
 		for (const item of input.items) {
 			await db.insert(schema.orderLineItem).values({
 				orderId: order.id,
 				productId: item.productId ?? null,
-				productName: item.name,
+				productNameSnapshot: item.name,
 				quantity: item.quantity,
 				unitPrice: item.unitPrice,
 				total: (Number(item.unitPrice) * item.quantity).toFixed(2),

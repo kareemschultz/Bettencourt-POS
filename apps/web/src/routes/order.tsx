@@ -177,9 +177,8 @@ export default function OnlineOrderPage() {
 
 		placeOrderMutation.mutate({
 			customerName: customerName.trim() || (tableName ? `Table ${tableName}` : "Guest"),
-			customerPhone: customerPhone.trim() || undefined,
-			orderType,
-			tableId: tableId || undefined,
+			customerPhone: customerPhone.trim() || "N/A",
+			orderType: (orderType === "dine_in" ? "pickup" : orderType) as "delivery" | "pickup",
 			deliveryAddress:
 				orderType === "delivery" ? deliveryAddress.trim() : undefined,
 			items: cart.map((item) => ({

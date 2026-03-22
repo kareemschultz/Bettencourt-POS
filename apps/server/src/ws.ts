@@ -100,5 +100,5 @@ export function wsHandler(c: Context) {
 		onClose(_event, ws) {
 			clientChannels.delete(ws.raw as WebSocket);
 		},
-	})) as Response;
+	})) as unknown as Response;
 }

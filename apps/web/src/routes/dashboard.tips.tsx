@@ -214,7 +214,7 @@ export default function TipsReportPage() {
 									<XAxis dataKey="name" tick={{ fontSize: 12 }} />
 									<YAxis tick={{ fontSize: 12 }} />
 									<RechartsTooltip
-										formatter={(value: number) => formatGYD(value)}
+										formatter={(value: number | undefined) => [formatGYD(value ?? 0), "Tips"] as [string, string]}
 									/>
 									<Bar dataKey="tips" name="Tips" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
 								</BarChart>

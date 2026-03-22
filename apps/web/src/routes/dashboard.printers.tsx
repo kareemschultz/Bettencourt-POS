@@ -44,7 +44,7 @@ export default function PrintersPage() {
 	);
 
 	const { data: categories = [] } = useQuery(
-		orpc.products.getCategories.queryOptions({ input: {} }),
+		orpc.categories.list.queryOptions({ input: {} }),
 	);
 
 	const createMutation = useMutation(

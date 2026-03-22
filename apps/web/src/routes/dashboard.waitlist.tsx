@@ -92,7 +92,7 @@ export default function WaitlistPage() {
 		}),
 	);
 
-	const rows = entries as WaitlistRow[];
+	const rows = entries as unknown as WaitlistRow[];
 	const waiting = rows.filter((r) => r.status === "waiting").length;
 	const totalGuests = rows
 		.filter((r) => r.status === "waiting")

@@ -59,9 +59,10 @@ export default function PricelistsPage() {
 		}),
 	);
 
-	const { data: customers = [] } = useQuery(
+	const { data: customersData } = useQuery(
 		orpc.customers.list.queryOptions({ input: {} }),
 	);
+	const customers = customersData?.customers ?? [];
 
 	const createMutation = useMutation(
 		orpc.pricelists.createPricelist.mutationOptions({
