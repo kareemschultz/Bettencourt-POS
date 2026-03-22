@@ -873,6 +873,7 @@ async function seed() {
 					shifts: ["create", "read"],
 					users: [],
 					audit: [],
+					customers: ["read"],
 				},
 			},
 			{
@@ -926,6 +927,7 @@ async function seed() {
 					audit: ["read"],
 					invoices: ["create", "read", "update", "delete"],
 					quotations: ["create", "read", "update", "delete"],
+					customers: ["read"],
 				},
 			},
 		])

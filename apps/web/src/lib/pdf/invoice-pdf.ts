@@ -58,20 +58,20 @@ type LineItem = {
 export async function openInvoicePdf(
 	invoice: InvoicePdfRow,
 	settings: DocSettings = {},
-) {
+): Promise<"ok" | "popup_blocked"> {
 	// Open window synchronously (inside user-gesture context) before any await.
 	// Browsers block window.open() called after an await as an untrusted popup.
 	const win = window.open("about:blank", "_blank");
+	if (!win) {
+		return "popup_blocked";
+	}
 	const logoBase64 = await fetchLogoBase64();
 	const html = buildInvoiceHtml(invoice, settings, logoBase64);
 	const blob = new Blob([html], { type: "text/html" });
 	const url = URL.createObjectURL(blob);
-	if (win) {
-		win.location.href = url;
-	} else {
-		window.open(url, "_blank");
-	}
+	win.location.href = url;
 	setTimeout(() => URL.revokeObjectURL(url), 15_000);
+	return "ok";
 }
 
 async function fetchLogoBase64(): Promise<string> {
@@ -141,7 +141,7 @@ function buildInvoiceHtml(
       <td>${escHtml(item.description)}</td>
       <td class="right">${item.quantity}</td>
       <td class="right">${fmtGYD(item.unitPrice)}</td>
-      ${invoice.taxMode === "line" ? `<td class="right">${item.taxExempt ? "Exempt" : `${invoice.taxRate ?? "16.5"}%`}</td>` : ""}
+      ${invoice.taxMode === "line" ? `<td class="right">${item.taxExempt ? "Exempt" : `${invoice.taxRate ?? "14"}%`}</td>` : ""}
       <td class="right">${fmtGYD(item.total)}</td>
     </tr>`,
 		)
@@ -335,7 +335,7 @@ function buildInvoiceHtml(
     <div class="totals-table">
       <div class="totals-row"><span class="label">Subtotal</span><span class="amount">${fmtGYD(subtotal)}</span></div>
       ${discountAmt > 0 ? `<div class="totals-row discount"><span class="label">Discount${invoice.discountType === "percent" ? ` (${invoice.discountValue}%)` : ""}</span><span class="amount">-${fmtGYD(discountAmt)}</span></div>` : ""}
-      ${taxAmt > 0 ? `<div class="totals-row"><span class="label">VAT (${invoice.taxRate ?? "16.5"}%)</span><span class="amount">${fmtGYD(taxAmt)}</span></div>` : ""}
+      ${taxAmt > 0 ? `<div class="totals-row"><span class="label">VAT (${invoice.taxRate ?? "14"}%)</span><span class="amount">${fmtGYD(taxAmt)}</span></div>` : ""}
       <div class="totals-row separator grand"><span class="label">Total</span><span class="amount">${fmtGYD(total)}</span></div>
       ${paid > 0 ? `<div class="totals-row"><span class="label" style="color:#16a34a">Amount Paid</span><span class="amount" style="color:#16a34a">-${fmtGYD(paid)}</span></div>` : ""}
       <div class="totals-row balance${isFullyPaid ? " paid" : ""}">

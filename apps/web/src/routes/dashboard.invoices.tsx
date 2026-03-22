@@ -91,7 +91,7 @@ interface InvoiceForm {
 	items: LineItem[];
 	discountType: "percent" | "fixed";
 	discountValue: string;
-	taxMode: "invoice" | "line";
+	taxMode: "invoice" | "line" | "incl";
 	taxRate: string;
 	paymentTerms: string;
 	preparedBy: string;
@@ -109,12 +109,12 @@ const emptyForm: InvoiceForm = {
 	department: "",
 	issuedDate: "",
 	dueDate: "",
-	notes: "",
+	notes: "Payment due within 30 days from date of invoice.",
 	items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
 	discountType: "percent",
 	discountValue: "0",
 	taxMode: "invoice",
-	taxRate: "16.5",
+	taxRate: "14",
 	paymentTerms: "due_on_receipt",
 	preparedBy: "",
 	customInvoiceNumber: "",
@@ -384,8 +384,8 @@ export default function InvoicesPage() {
 		setAgencyOpen(false);
 		setForm({
 			...emptyForm,
-			taxRate: String(docSettings?.defaultTaxRate ?? "16.5"),
-			taxMode: (docSettings?.defaultTaxMode as "invoice" | "line") ?? "invoice",
+			taxRate: String(docSettings?.defaultTaxRate ?? "14"),
+			taxMode: (docSettings?.defaultTaxMode as "invoice" | "line" | "incl") ?? "invoice",
 			discountType:
 				(docSettings?.defaultDiscountType as "percent" | "fixed") ?? "percent",
 			paymentTerms: docSettings?.defaultPaymentTerms ?? "due_on_receipt",
@@ -414,9 +414,9 @@ export default function InvoicesPage() {
 				: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
 			discountType: (inv.discountType as "percent" | "fixed") ?? "percent",
 			discountValue: inv.discountValue ?? "0",
-			taxMode: (inv.taxMode as "invoice" | "line") ?? "invoice",
+			taxMode: (inv.taxMode as "invoice" | "line" | "incl") ?? "invoice",
 			customInvoiceNumber: inv.invoiceNumber,
-			taxRate: inv.taxRate ?? "16.5",
+			taxRate: inv.taxRate ?? "14",
 			paymentTerms: inv.paymentTerms ?? "due_on_receipt",
 			preparedBy: inv.preparedBy ?? "",
 		});
@@ -461,8 +461,11 @@ export default function InvoicesPage() {
 				? (subtotal * Number(form.discountValue || 0)) / 100
 				: Number(form.discountValue || 0);
 		const taxableBase = subtotal - discountAmt;
-		const taxAmt = (Number(form.taxRate || 0) / 100) * taxableBase;
-		const total = taxableBase + taxAmt;
+		const rate = Number(form.taxRate || 0);
+		const taxAmt = form.taxMode === "incl"
+			? taxableBase * (rate / (100 + rate))
+			: taxableBase * (rate / 100);
+		const total = form.taxMode === "incl" ? taxableBase : taxableBase + taxAmt;
 		const userId = session?.user?.id ?? "";
 
 		const sharedFields = {
@@ -519,8 +522,11 @@ export default function InvoicesPage() {
 			? (subtotal * Number(form.discountValue || 0)) / 100
 			: Number(form.discountValue || 0);
 	const formTaxableBase = subtotal - formDiscountAmt;
-	const formTaxAmt = (Number(form.taxRate || 0) / 100) * formTaxableBase;
-	const formTotal = formTaxableBase + formTaxAmt;
+	const formRate = Number(form.taxRate || 0);
+	const formTaxAmt = form.taxMode === "incl"
+		? formTaxableBase * (formRate / (100 + formRate))
+		: formTaxableBase * (formRate / 100);
+	const formTotal = form.taxMode === "incl" ? formTaxableBase : formTaxableBase + formTaxAmt;
 
 	return (
 		<div className="flex flex-col gap-6 p-4 md:p-6">
@@ -779,8 +785,8 @@ export default function InvoicesPage() {
 																		items: (inv.items as LineItem[]) ?? [],
 																		discountType: (inv.discountType as "percent" | "fixed") ?? "percent",
 																		discountValue: inv.discountValue ?? "0",
-																		taxMode: (inv.taxMode as "invoice" | "line") ?? "invoice",
-																		taxRate: inv.taxRate ?? "16.5",
+																		taxMode: (inv.taxMode as "invoice" | "line" | "incl") ?? "invoice",
+																		taxRate: inv.taxRate ?? "14",
 																		paymentTerms: inv.paymentTerms ?? "due_on_receipt",
 																		preparedBy: inv.preparedBy ?? "",
 																		customInvoiceNumber: "",
@@ -795,9 +801,10 @@ export default function InvoicesPage() {
 																Duplicate Invoice
 															</DropdownMenuItem>
 															<DropdownMenuItem
-																onClick={(e) => {
+																onClick={async (e) => {
 																	e.stopPropagation();
-																	openInvoicePdf(inv, docSettings as DocSettings ?? {});
+																	const r = await openInvoicePdf(inv, (docSettings ?? {}) as DocSettings);
+																	if (r === "popup_blocked") toast.error("Allow popups to open the PDF");
 																}}
 															>
 																<Printer className="mr-2 size-3.5" />
@@ -855,9 +862,10 @@ export default function InvoicesPage() {
 											<Button
 												variant="outline"
 												size="sm"
-												onClick={() =>
-													openInvoicePdf(selectedInvoice, docSettings ?? {})
-												}
+												onClick={async () => {
+													const r = await openInvoicePdf(selectedInvoice, docSettings ?? {});
+													if (r === "popup_blocked") toast.error("Allow popups to open the PDF");
+												}}
 												className="no-print gap-1.5"
 											>
 												<Printer className="size-4" />
@@ -1487,7 +1495,7 @@ export default function InvoicesPage() {
 						{/* Tax/Discount Settings */}
 						<div className="flex flex-wrap items-center gap-3 rounded-md bg-muted/40 p-2 text-sm">
 							<div className="flex items-center gap-1.5">
-								<span className="text-muted-foreground text-xs">Tax:</span>
+								<span className="text-muted-foreground text-xs">VAT:</span>
 								<Input
 									className="h-7 w-16 text-xs"
 									type="number"
@@ -1500,6 +1508,22 @@ export default function InvoicesPage() {
 									}
 								/>
 								<span className="text-xs">%</span>
+								<div className="flex overflow-hidden rounded border text-xs">
+									<button
+										type="button"
+										className={`px-2 py-1 transition-colors ${form.taxMode !== "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+										onClick={() => setForm((f) => ({ ...f, taxMode: "invoice" }))}
+									>
+										Excl.
+									</button>
+									<button
+										type="button"
+										className={`px-2 py-1 transition-colors ${form.taxMode === "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+										onClick={() => setForm((f) => ({ ...f, taxMode: "incl" }))}
+									>
+										Incl.
+									</button>
+								</div>
 							</div>
 							<div className="flex items-center gap-1.5">
 								<span className="text-muted-foreground text-xs">Discount:</span>
@@ -1575,7 +1599,7 @@ export default function InvoicesPage() {
 							)}
 							{formTaxAmt > 0 && (
 								<div className="flex justify-between text-muted-foreground">
-									<span>VAT ({form.taxRate}%)</span>
+									<span>VAT {form.taxRate}%{form.taxMode === "incl" ? " (incl.)" : ""}</span>
 									<span className="font-mono">{formatGYD(formTaxAmt)}</span>
 								</div>
 							)}

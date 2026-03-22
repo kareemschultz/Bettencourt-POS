@@ -75,7 +75,7 @@ interface QuotationForm {
 	items: LineItem[];
 	discountType: "percent" | "fixed";
 	discountValue: string;
-	taxMode: "invoice" | "line";
+	taxMode: "invoice" | "line" | "incl";
 	taxRate: string;
 	termsAndConditions: string;
 	preparedBy: string;
@@ -88,12 +88,12 @@ const emptyForm: QuotationForm = {
 	customerPhone: "",
 	customerId: "",
 	validUntil: "",
-	notes: "",
+	notes: "This quotation is valid for 30 days from the date of issue.",
 	items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
 	discountType: "percent",
 	discountValue: "0",
 	taxMode: "invoice",
-	taxRate: "16.5",
+	taxRate: "14",
 	termsAndConditions: "",
 	preparedBy: "",
 	department: "",
@@ -264,8 +264,8 @@ export default function QuotationsPage() {
 		setEditingId(null);
 		setForm({
 			...emptyForm,
-			taxRate: String(docSettings?.defaultTaxRate ?? "16.5"),
-			taxMode: (docSettings?.defaultTaxMode as "invoice" | "line") ?? "invoice",
+			taxRate: String(docSettings?.defaultTaxRate ?? "14"),
+			taxMode: (docSettings?.defaultTaxMode as "invoice" | "line" | "incl") ?? "invoice",
 			discountType:
 				(docSettings?.defaultDiscountType as "percent" | "fixed") ?? "percent",
 			termsAndConditions: docSettings?.defaultQuotationTerms ?? "",
@@ -287,8 +287,8 @@ export default function QuotationsPage() {
 				: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
 			discountType: (q.discountType as "percent" | "fixed") ?? "percent",
 			discountValue: q.discountValue ?? "0",
-			taxMode: (q.taxMode as "invoice" | "line") ?? "invoice",
-			taxRate: q.taxRate ?? "16.5",
+			taxMode: (q.taxMode as "invoice" | "line" | "incl") ?? "invoice",
+			taxRate: q.taxRate ?? "14",
 			termsAndConditions: q.termsAndConditions ?? "",
 			preparedBy: q.preparedBy ?? "",
 			department: q.department ?? "",
@@ -334,8 +334,11 @@ export default function QuotationsPage() {
 				? (subtotal * Number(form.discountValue || 0)) / 100
 				: Number(form.discountValue || 0);
 		const taxableBase = subtotal - discountAmt;
-		const taxAmt = (Number(form.taxRate || 0) / 100) * taxableBase;
-		const total = taxableBase + taxAmt;
+		const rate = Number(form.taxRate || 0);
+		const taxAmt = form.taxMode === "incl"
+			? taxableBase * (rate / (100 + rate))
+			: taxableBase * (rate / 100);
+		const total = form.taxMode === "incl" ? taxableBase : taxableBase + taxAmt;
 		const userId = session?.user?.id ?? "";
 
 		const sharedFields = {
@@ -372,8 +375,11 @@ export default function QuotationsPage() {
 			? (subtotal * Number(form.discountValue || 0)) / 100
 			: Number(form.discountValue || 0);
 	const formTaxableBase = subtotal - formDiscountAmt;
-	const formTaxAmt = (Number(form.taxRate || 0) / 100) * formTaxableBase;
-	const formTotal = formTaxableBase + formTaxAmt;
+	const formRate = Number(form.taxRate || 0);
+	const formTaxAmt = form.taxMode === "incl"
+		? formTaxableBase * (formRate / (100 + formRate))
+		: formTaxableBase * (formRate / 100);
+	const formTotal = form.taxMode === "incl" ? formTaxableBase : formTaxableBase + formTaxAmt;
 
 	return (
 		<div className="flex flex-col gap-6 p-4 md:p-6">
@@ -950,21 +956,27 @@ export default function QuotationsPage() {
 								/>
 							</div>
 							<div className="flex flex-col gap-1.5">
-								<Label className="text-xs">Tax Mode</Label>
-								<Select
-									value={form.taxMode}
-									onValueChange={(v) =>
-										setForm((f) => ({ ...f, taxMode: v as "invoice" | "line" }))
-									}
-								>
-									<SelectTrigger>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="invoice">Whole invoice</SelectItem>
-										<SelectItem value="line">Per line item</SelectItem>
-									</SelectContent>
-								</Select>
+								<Label className="text-xs">VAT Mode</Label>
+								<div className="flex overflow-hidden rounded border text-xs">
+									<button
+										type="button"
+										className={`flex-1 px-2 py-1.5 transition-colors ${form.taxMode !== "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+										onClick={() =>
+											setForm((f) => ({ ...f, taxMode: "invoice" }))
+										}
+									>
+										Excl.
+									</button>
+									<button
+										type="button"
+										className={`flex-1 px-2 py-1.5 transition-colors ${form.taxMode === "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+										onClick={() =>
+											setForm((f) => ({ ...f, taxMode: "incl" }))
+										}
+									>
+										Incl.
+									</button>
+								</div>
 							</div>
 							<div className="flex flex-col gap-1.5">
 								<Label className="text-xs">Discount Type</Label>
@@ -1031,7 +1043,7 @@ export default function QuotationsPage() {
 							)}
 							{formTaxAmt > 0 && (
 								<div className="flex w-64 justify-between text-muted-foreground">
-									<span>VAT ({form.taxRate}%)</span>
+									<span>VAT {form.taxRate}%{form.taxMode === "incl" ? " (incl.)" : ""}</span>
 									<span className="font-mono">{formatGYD(formTaxAmt)}</span>
 								</div>
 							)}
