@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://pos.karetechsolutions.com/logo.png" alt="Bettencourt's POS" width="120" />
+  <img src="apps/web/public/images/bettencourts-logo.png" alt="Bettencourt's Food Inc." width="160" />
 </p>
 
 <h1 align="center">Bettencourt's POS</h1>
