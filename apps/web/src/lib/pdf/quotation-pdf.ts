@@ -60,7 +60,13 @@ async function fetchLogoBase64(): Promise<string> {
 	try {
 		const resp = await fetch("/images/bettencourts-logo.png");
 		const buf = await resp.arrayBuffer();
-		const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+		const b64 = (() => {
+		const bytes = new Uint8Array(buf);
+		let binary = "";
+		for (let i = 0; i < bytes.length; i += 8192)
+			binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+		return btoa(binary);
+	})();
 		return `data:image/png;base64,${b64}`;
 	} catch {
 		return "";
