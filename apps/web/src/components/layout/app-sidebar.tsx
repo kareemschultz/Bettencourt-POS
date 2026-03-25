@@ -49,9 +49,11 @@ import { orpc } from "@/utils/orpc";
 
 interface AppSidebarProps {
 	user: AppUser;
+	organizationName?: string;
+	organizationSubtitle?: string;
 }
 
-export function AppSidebar({ user }: AppSidebarProps) {
+export function AppSidebar({ user, organizationName = "Bettencourt's", organizationSubtitle = "Food Inc." }: AppSidebarProps) {
 	const location = useLocation();
 	const pathname = location.pathname;
 	const navigate = useNavigate();
@@ -155,9 +157,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
 									/>
 								</div>
 								<div className="flex flex-col gap-0.5 leading-none">
-									<span className="font-semibold">{"Bettencourt's"}</span>
+									<span className="font-semibold">{organizationName}</span>
 									<span className="text-sidebar-muted-foreground text-xs">
-										Food Inc.
+										{organizationSubtitle}
 									</span>
 								</div>
 							</Link>

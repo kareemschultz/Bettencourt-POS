@@ -109,7 +109,7 @@ const emptyForm: InvoiceForm = {
 	department: "",
 	issuedDate: "",
 	dueDate: "",
-	notes: "Payment due within 30 days from date of invoice.",
+	notes: "This invoice is valid for 30 days from the date of issue.",
 	items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
 	discountType: "percent",
 	discountValue: "0",

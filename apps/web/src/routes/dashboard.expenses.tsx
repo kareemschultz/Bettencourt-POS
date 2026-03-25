@@ -203,7 +203,7 @@ export default function ExpensesPage() {
 	const [newCategoryName, setNewCategoryName] = useState("");
 	const [viewingExpense, setViewingExpense] = useState<ExpenseRow | null>(null);
 	const [categoryFilter, setCategoryFilter] = useState("all");
-	const [receiptUploading, setReceiptUploading] = useState(false);
+	
 
 	// Funding source state
 	const [fundingSourceFilter, setFundingSourceFilter] = useState("all");
@@ -446,7 +446,7 @@ export default function ExpensesPage() {
 	const getSourceColor = (id: string | null | undefined): string =>
 		id ? (fundingSourceColorMap.get(id) ?? "#64748b") : "#64748b";
 	const getSourceName = (id: string | null | undefined): string =>
-		id ? (fundingSources.find((f) => f.id === id)?.name ?? "Unknown") : "General Cash";
+		id ? (fundingSources.find((f) => f.id === id)?.name ?? "Unknown") : "Unassigned";
 
 	const filtered = expenses
 		.filter((e) => supplierFilter === "all" || e.supplier_id === supplierFilter)
@@ -1578,13 +1578,13 @@ export default function ExpensesPage() {
 					}
 				}}
 			>
-				<DialogContent className="sm:max-w-md">
+				<DialogContent className="flex flex-col sm:max-w-md max-h-[90vh]">
 					<DialogHeader>
 						<DialogTitle>
 							{editingId ? "Edit Expense" : "Record Expense"}
 						</DialogTitle>
 					</DialogHeader>
-					<div className="flex flex-col gap-4 py-2">
+					<div className="flex flex-col gap-4 py-2 overflow-y-auto flex-1 min-h-0 pr-1">
 						<div className="flex flex-col gap-1.5">
 							<Label>Amount (GYD)</Label>
 							<Input
@@ -1699,7 +1699,7 @@ export default function ExpensesPage() {
 									<SelectValue placeholder="Select funding source (optional)" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="none">General Cash</SelectItem>
+									<SelectItem value="none">Unassigned</SelectItem>
 									{fundingSources.map((fs) => (
 										<SelectItem key={fs.id} value={fs.id}>
 											{fs.name}
@@ -1787,79 +1787,6 @@ export default function ExpensesPage() {
 									setForm((f) => ({ ...f, notes: e.target.value }))
 								}
 							/>
-						</div>
-						<div className="flex flex-col gap-1.5">
-							<Label>Department (optional)</Label>
-							<Input
-								placeholder="e.g. Kitchen, Front of House, Admin"
-								value={form.department}
-								onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
-							/>
-						</div>
-						<div className="flex flex-col gap-1.5">
-							<Label>
-								Receipt Photo{" "}
-								<span className="text-muted-foreground text-xs">(optional)</span>
-							</Label>
-							{form.receiptPhotoUrl ? (
-								<div className="flex items-start gap-3">
-									<img
-										src={form.receiptPhotoUrl}
-										alt="Receipt"
-										className="h-24 w-24 rounded border object-cover"
-									/>
-									<Button
-										type="button"
-										size="sm"
-										variant="ghost"
-										className="text-destructive hover:text-destructive"
-										onClick={() =>
-											setForm((f) => ({ ...f, receiptPhotoUrl: "" }))
-										}
-									>
-										Remove
-									</Button>
-								</div>
-							) : (
-								<label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed bg-muted/30 p-6 text-muted-foreground text-sm hover:bg-muted/50">
-									<input
-										type="file"
-										accept="image/jpeg,image/png,image/webp"
-										className="hidden"
-										disabled={receiptUploading}
-										onChange={async (e) => {
-											const file = e.target.files?.[0];
-											if (!file) return;
-											setReceiptUploading(true);
-											try {
-												const fd = new FormData();
-												fd.append("file", file);
-												const res = await fetch("/api/uploads/receipt", {
-													method: "POST",
-													body: fd,
-													credentials: "include",
-												});
-												if (!res.ok) {
-													const err = (await res.json()) as { error?: string };
-													toast.error(err.error ?? "Upload failed");
-													return;
-												}
-												const { url } = (await res.json()) as { url: string };
-												setForm((f) => ({ ...f, receiptPhotoUrl: url }));
-											} catch {
-												toast.error("Upload failed");
-											} finally {
-												setReceiptUploading(false);
-											}
-										}}
-									/>
-									{receiptUploading ? (
-										<span>Uploading…</span>
-									) : (
-										<span>Click to upload receipt photo (JPEG / PNG / WebP, max 5 MB)</span>
-									)}
-								</label>
-							)}
 						</div>
 					</div>
 					<DialogFooter>

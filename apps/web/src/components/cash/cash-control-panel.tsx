@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, DollarSign, Printer, Unlock } from "lucide-react";
+import { ArrowDown, ArrowUp, DollarSign, Pencil, Printer, Unlock } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +47,7 @@ interface CashControlPanelProps {
 	sessions: CashSession[];
 	openSession: CashSession | null;
 	locationId: string;
+	registerId?: string;
 	organizationName?: string;
 }
 
@@ -54,6 +55,7 @@ export function CashControlPanel({
 	sessions,
 	openSession,
 	locationId,
+	registerId = "c0000000-0000-4000-8000-000000000001",
 	organizationName = "Bettencourt's Diner",
 }: CashControlPanelProps) {
 	const queryClient = useQueryClient();
@@ -62,6 +64,7 @@ export function CashControlPanel({
 	const [dropDialog, setDropDialog] = useState(false);
 	const [payoutDialog, setPayoutDialog] = useState(false);
 	const [noSaleDialog, setNoSaleDialog] = useState(false);
+	const [editFloatDialog, setEditFloatDialog] = useState(false);
 	const [amount, setAmount] = useState("");
 	const [reason, setReason] = useState("");
 	const [dateFrom, setDateFrom] = useState("");
@@ -78,6 +81,9 @@ export function CashControlPanel({
 				invalidateCash();
 				toast.success("Shift opened");
 			},
+			onError: (err: Error) => {
+				toast.error(err.message || "Failed to open shift");
+			},
 		}),
 	);
 
@@ -88,6 +94,9 @@ export function CashControlPanel({
 				setAmount("");
 				invalidateCash();
 				toast.success("Shift closed");
+			},
+			onError: (err: Error) => {
+				toast.error(err.message || "Failed to close shift");
 			},
 		}),
 	);
@@ -101,6 +110,9 @@ export function CashControlPanel({
 				invalidateCash();
 				toast.success("Cash drop recorded");
 			},
+			onError: (err: Error) => {
+				toast.error(err.message || "Failed to record drop");
+			},
 		}),
 	);
 
@@ -113,6 +125,9 @@ export function CashControlPanel({
 				invalidateCash();
 				toast.success("Payout recorded");
 			},
+			onError: (err: Error) => {
+				toast.error(err.message || "Failed to record payout");
+			},
 		}),
 	);
 
@@ -124,6 +139,23 @@ export function CashControlPanel({
 				invalidateCash();
 				toast.success("No-sale event recorded");
 			},
+			onError: (err: Error) => {
+				toast.error(err.message || "Failed to log no-sale");
+			},
+		}),
+	);
+
+	const updateSessionMutation = useMutation(
+		orpc.cash.updateSession.mutationOptions({
+			onSuccess: () => {
+				setEditFloatDialog(false);
+				setAmount("");
+				invalidateCash();
+				toast.success("Opening float updated");
+			},
+			onError: (err: Error) => {
+				toast.error(err.message || "Failed to update float");
+			},
 		}),
 	);
 
@@ -131,7 +163,15 @@ export function CashControlPanel({
 		openShiftMutation.mutate({
 			openingFloat: String(Number(amount) || 0),
 			locationId,
-			registerId: "c0000000-0000-4000-8000-000000000001",
+			registerId,
+		});
+	}
+
+	function handleEditFloat() {
+		if (!openSession) return;
+		updateSessionMutation.mutate({
+			sessionId: openSession.id,
+			openingFloat: String(Number(amount) || 0),
 		});
 	}
 
@@ -175,7 +215,8 @@ export function CashControlPanel({
 		closeShiftMutation.isPending ||
 		dropMutation.isPending ||
 		payoutMutation.isPending ||
-		noSaleMutation.isPending;
+		noSaleMutation.isPending ||
+		updateSessionMutation.isPending;
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -202,7 +243,20 @@ export function CashControlPanel({
 									</p>
 								</div>
 								<div>
-									<p className="text-muted-foreground text-sm">Opening Float</p>
+									<div className="flex items-center gap-2">
+										<p className="text-muted-foreground text-sm">Opening Float</p>
+										<Button
+											variant="ghost"
+											size="sm"
+											className="h-5 w-5 p-0"
+											onClick={() => {
+												setAmount("");
+												setEditFloatDialog(true);
+											}}
+										>
+											<Pencil className="size-3" />
+										</Button>
+									</div>
 									<p className="font-medium font-mono">
 										{formatGYD(Number(openSession.openingFloat))}
 									</p>
@@ -522,6 +576,30 @@ export function CashControlPanel({
 					<DialogFooter>
 						<Button onClick={handleNoSale} disabled={isLoading}>
 							{isLoading ? "Logging..." : "Log No Sale"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog open={editFloatDialog} onOpenChange={setEditFloatDialog}>
+				<DialogContent className="max-w-sm">
+					<DialogHeader>
+						<DialogTitle>Edit Opening Float</DialogTitle>
+					</DialogHeader>
+					<div className="flex flex-col gap-3 py-2">
+						<Label>New Opening Float Amount (GYD)</Label>
+						<Input
+							type="number"
+							step="1"
+							value={amount}
+							onChange={(e) => setAmount(e.target.value)}
+							placeholder={openSession?.openingFloat ?? "0"}
+							className="h-11 text-base"
+						/>
+					</div>
+					<DialogFooter>
+						<Button onClick={handleEditFloat} disabled={isLoading}>
+							{isLoading ? "Saving..." : "Save"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

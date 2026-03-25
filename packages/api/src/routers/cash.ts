@@ -1544,6 +1544,53 @@ const getDailyExpenseSummary = permissionProcedure("shifts.read")
     };
   });
 
+// ── updateSession ───────────────────────────────────────────────────────
+const updateSession = permissionProcedure("shifts.update")
+  .input(
+    z.object({
+      sessionId: z.string().uuid(),
+      openingFloat: z.string().optional(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
+    const orgId = requireOrganizationId(context);
+    const existing = await db
+      .select({ id: schema.cashSession.id, status: schema.cashSession.status })
+      .from(schema.cashSession)
+      .innerJoin(
+        schema.location,
+        eq(schema.cashSession.locationId, schema.location.id),
+      )
+      .where(
+        and(
+          eq(schema.cashSession.id, input.sessionId),
+          eq(schema.location.organizationId, orgId),
+        ),
+      )
+      .limit(1);
+
+    if (existing.length === 0) {
+      throw new ORPCError("NOT_FOUND", { message: "Cash session not found" });
+    }
+    if (existing[0]?.status !== "open") {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Only open sessions can be edited",
+      });
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (input.openingFloat !== undefined) {
+      updates.openingFloat = input.openingFloat;
+    }
+
+    await db
+      .update(schema.cashSession)
+      .set(updates)
+      .where(eq(schema.cashSession.id, input.sessionId));
+
+    return { status: "updated" };
+  });
+
 export const cashRouter = {
   getSessions,
   openSession,
@@ -1584,4 +1631,6 @@ export const cashRouter = {
   deleteFundingSource,
   getExpensesByFundingSource,
   getDailyExpenseSummary,
+  // Session editing
+  updateSession,
 };

@@ -865,7 +865,12 @@ const getDocumentSettings = permissionProcedure("settings.read")
 		if (rows.length === 0) {
 			const inserted = await db
 				.insert(schema.invoiceDocumentSettings)
-				.values({ organizationId: orgId })
+				.values({
+					organizationId: orgId,
+					invoiceFooterNote: "Payment is due within 30 days of the invoice date.",
+					quotationFooterNote: "This quotation is valid for 30 days from the date of issue.",
+					defaultQuotationTerms: "Valid for 30 days",
+				})
 				.returning();
 			return inserted[0]!;
 		}
