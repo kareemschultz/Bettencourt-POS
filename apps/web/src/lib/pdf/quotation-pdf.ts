@@ -22,6 +22,7 @@ export type QuotationPdfRow = {
 	notes?: string | null;
 	preparedBy?: string | null;
 	parentQuotationId?: string | null;
+	brand?: string | null;
 };
 
 export type QuotationDocSettings = {
@@ -46,7 +47,7 @@ export async function openQuotationPdf(
 	// Browsers block window.open() called after an await as an untrusted popup.
 	const win = window.open("about:blank", "_blank");
 	if (!win) return "popup_blocked";
-	const logoBase64 = await fetchLogoBase64();
+	const logoBase64 = await fetchLogoBase64(quotation.brand);
 	const html = buildQuotationHtml(quotation, settings, logoBase64);
 	const blob = new Blob([html], { type: "text/html" });
 	const url = URL.createObjectURL(blob);
@@ -56,9 +57,13 @@ export async function openQuotationPdf(
 	return "ok";
 }
 
-async function fetchLogoBase64(): Promise<string> {
+async function fetchLogoBase64(brand?: string | null): Promise<string> {
+	const path = brand === "home_style"
+		? "/images/bettencourts-home-style-logo.png"
+		: "/images/bettencourts-logo.png";
 	try {
-		const resp = await fetch("/images/bettencourts-logo.png");
+		const resp = await fetch(path);
+		if (!resp.ok) throw new Error("not found");
 		const buf = await resp.arrayBuffer();
 		const b64 = (() => {
 		const bytes = new Uint8Array(buf);
@@ -112,6 +117,10 @@ function buildQuotationHtml(
 				: "This quotation has expired";
 	}
 
+	const isHomeStyle = quot.brand === "home_style";
+	const companyName = isHomeStyle ? "Bettencourt's Home Style" : "Bettencourt's Food Inc.";
+	const companyTagline = isHomeStyle ? "" : "A true Guyanese Gem";
+
 	const logoHtml = logo
 		? `<img src="${logo}" class="logo" alt="Bettencourt's Logo" />`
 		: "";
@@ -150,7 +159,7 @@ function buildQuotationHtml(
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>${escHtml(quot.quotationNumber)} — Bettencourt's Food Inc.</title>
+<title>${escHtml(quot.quotationNumber)} — ${companyName}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; color: #1e293b; }
@@ -222,8 +231,8 @@ function buildQuotationHtml(
     <div class="logo-area">
       ${logoHtml}
       <div>
-        <div class="company-name">Bettencourt's Food Inc.</div>
-        <div class="company-sub">Georgetown, Guyana${settings.companyTin ? `<br>TIN: ${escHtml(settings.companyTin)}` : ""}</div>
+        <div class="company-name">${companyName}</div>
+        <div class="company-sub">Georgetown, Guyana${companyTagline ? `<br>${companyTagline}` : ""}${settings.companyTin ? `<br>TIN: ${escHtml(settings.companyTin)}` : ""}</div>
       </div>
     </div>
     <div style="text-align:right">
@@ -285,7 +294,7 @@ function buildQuotationHtml(
       <div class="sig-line"></div>
       <div class="sig-label">
         <strong>Authorized By</strong>
-        Bettencourt's Food Inc. &nbsp;·&nbsp; Date: _______________
+        ${companyName} &nbsp;·&nbsp; Date: _______________
       </div>
     </div>
     <div class="sig-box">
@@ -298,7 +307,7 @@ function buildQuotationHtml(
   </div>
 
   <div class="footer">
-    Bettencourt's Food Inc. &nbsp;&bull;&nbsp; This is a quotation only — not a tax invoice
+    ${companyName} &nbsp;&bull;&nbsp; This is a quotation only — not a tax invoice
     ${settings.quotationFooterNote ? ` &nbsp;&bull;&nbsp; ${escHtml(settings.quotationFooterNote)}` : ""}
     <br>Generated ${new Date().toLocaleString("en-GY")}
   </div>

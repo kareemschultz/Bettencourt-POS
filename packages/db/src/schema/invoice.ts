@@ -85,6 +85,7 @@ export const invoice = pgTable(
       .notNull()
       .default("16.5"),
     paymentTerms: text("payment_terms").notNull().default("due_on_receipt"),
+    brand: text("brand").notNull().default("foods_inc"),
     preparedBy: text("prepared_by"),
     department: text("department"),
     createdBy: text("created_by")
@@ -162,6 +163,7 @@ export const quotation = pgTable(
       (): AnyPgColumn => quotation.id,
       { onDelete: "set null" },
     ),
+    brand: text("brand").notNull().default("foods_inc"),
     preparedBy: text("prepared_by"),
     department: text("department"),
     createdBy: text("created_by")

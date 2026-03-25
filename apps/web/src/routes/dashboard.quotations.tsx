@@ -80,6 +80,7 @@ interface QuotationForm {
 	termsAndConditions: string;
 	preparedBy: string;
 	department: string;
+	brand: "foods_inc" | "home_style";
 }
 
 const emptyForm: QuotationForm = {
@@ -97,6 +98,7 @@ const emptyForm: QuotationForm = {
 	termsAndConditions: "",
 	preparedBy: "",
 	department: "",
+	brand: "foods_inc",
 };
 
 const QUOT_STATUS_FILTERS = ["All", "Draft", "Sent", "Accepted", "Rejected", "Converted", "Expired"] as const;
@@ -124,6 +126,7 @@ type QuotationRow = {
 	preparedBy: string | null;
 	parentQuotationId: string | null;
 	department?: string | null;
+	brand?: string | null;
 };
 
 export default function QuotationsPage() {
@@ -292,6 +295,7 @@ export default function QuotationsPage() {
 			termsAndConditions: q.termsAndConditions ?? "",
 			preparedBy: q.preparedBy ?? "",
 			department: q.department ?? "",
+			brand: (q.brand === "home_style" ? "home_style" : "foods_inc"),
 		});
 		setDialogOpen(true);
 	}
@@ -359,6 +363,7 @@ export default function QuotationsPage() {
 			termsAndConditions: form.termsAndConditions || undefined,
 			preparedBy: form.preparedBy || undefined,
 			department: form.department || undefined,
+			brand: form.brand,
 		};
 
 		if (editingId) {
@@ -849,7 +854,28 @@ export default function QuotationsPage() {
 							</div>
 						</div>
 
-						{/* Department */}
+						{/* Company Brand */}
+						<div className="flex flex-col gap-1.5">
+							<Label>Company Brand</Label>
+							<div className="flex gap-2">
+								<button
+									type="button"
+									className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${form.brand === "foods_inc" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
+									onClick={() => setForm(f => ({ ...f, brand: "foods_inc" }))}
+								>
+									Bettencourt's Food Inc.
+								</button>
+								<button
+									type="button"
+									className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${form.brand === "home_style" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
+									onClick={() => setForm(f => ({ ...f, brand: "home_style" }))}
+								>
+									Bettencourt's Home Style
+								</button>
+							</div>
+						</div>
+
+												{/* Department */}
 						<div className="flex flex-col gap-1.5">
 							<Label>Department (optional)</Label>
 							<Input

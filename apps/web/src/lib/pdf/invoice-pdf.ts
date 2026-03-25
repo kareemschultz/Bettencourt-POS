@@ -36,6 +36,7 @@ export type InvoicePdfRow = {
 	notes?: string | null;
 	preparedBy?: string | null;
 	payments?: InvoicePaymentEntry[];
+	brand?: string | null;
 };
 
 export type DocSettings = {
@@ -65,7 +66,7 @@ export async function openInvoicePdf(
 	if (!win) {
 		return "popup_blocked";
 	}
-	const logoBase64 = await fetchLogoBase64();
+	const logoBase64 = await fetchLogoBase64(invoice.brand);
 	const html = buildInvoiceHtml(invoice, settings, logoBase64);
 	const blob = new Blob([html], { type: "text/html" });
 	const url = URL.createObjectURL(blob);
@@ -74,9 +75,13 @@ export async function openInvoicePdf(
 	return "ok";
 }
 
-async function fetchLogoBase64(): Promise<string> {
+async function fetchLogoBase64(brand?: string | null): Promise<string> {
+	const path = brand === "home_style"
+		? "/images/bettencourts-home-style-logo.png"
+		: "/images/bettencourts-logo.png";
 	try {
-		const resp = await fetch("/images/bettencourts-logo.png");
+		const resp = await fetch(path);
+		if (!resp.ok) throw new Error("not found");
 		const buf = await resp.arrayBuffer();
 		const b64 = (() => {
 		const bytes = new Uint8Array(buf);
@@ -125,6 +130,10 @@ function buildInvoiceHtml(
 	const paid = Number(invoice.amountPaid);
 	const balance = total - paid;
 	const isFullyPaid = balance <= 0.005;
+
+	const isHomeStyle = invoice.brand === "home_style";
+	const companyName = isHomeStyle ? "Bettencourt's Home Style" : "Bettencourt's Food Inc.";
+	const companyTagline = isHomeStyle ? "" : "A true Guyanese Gem";
 
 	const issuedStr = invoice.issuedDate
 		? new Date(invoice.issuedDate).toLocaleDateString("en-GY")
@@ -218,7 +227,7 @@ function buildInvoiceHtml(
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>${escHtml(invoice.invoiceNumber)} — Bettencourt's Food Inc.</title>
+<title>${escHtml(invoice.invoiceNumber)} — ${companyName}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; color: #1e293b; }
@@ -292,8 +301,8 @@ function buildInvoiceHtml(
     <div class="logo-area">
       ${logoHtml}
       <div>
-        <div class="company-name">Bettencourt's Food Inc.</div>
-        <div class="company-sub">Georgetown, Guyana${settings.companyTin ? `<br>TIN: ${escHtml(settings.companyTin)}` : ""}</div>
+        <div class="company-name">${companyName}</div>
+        <div class="company-sub">Georgetown, Guyana${companyTagline ? `<br>${companyTagline}` : ""}${settings.companyTin ? `<br>TIN: ${escHtml(settings.companyTin)}` : ""}</div>
       </div>
     </div>
     <div>

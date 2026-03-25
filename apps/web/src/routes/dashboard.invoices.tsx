@@ -96,6 +96,7 @@ interface InvoiceForm {
 	paymentTerms: string;
 	preparedBy: string;
 	customInvoiceNumber: string;
+	brand: "foods_inc" | "home_style";
 }
 
 const emptyForm: InvoiceForm = {
@@ -118,6 +119,7 @@ const emptyForm: InvoiceForm = {
 	paymentTerms: "due_on_receipt",
 	preparedBy: "",
 	customInvoiceNumber: "",
+	brand: "foods_inc",
 };
 
 type InvoiceRow = {
@@ -150,6 +152,7 @@ type InvoiceRow = {
 	taxRate?: string | null;
 	paymentTerms?: string | null;
 	preparedBy?: string | null;
+	brand?: string | null;
 };
 
 interface RecordPaymentForm {
@@ -419,6 +422,7 @@ export default function InvoicesPage() {
 			taxRate: inv.taxRate ?? "14",
 			paymentTerms: inv.paymentTerms ?? "due_on_receipt",
 			preparedBy: inv.preparedBy ?? "",
+			brand: ((inv as { brand?: string | null }).brand === "home_style" ? "home_style" : "foods_inc"),
 		});
 		setDialogOpen(true);
 	}
@@ -490,6 +494,7 @@ export default function InvoicesPage() {
 			taxRate: form.taxRate,
 			paymentTerms: form.paymentTerms,
 			preparedBy: form.preparedBy || undefined,
+			brand: form.brand,
 		};
 
 		if (editingId) {
@@ -791,6 +796,7 @@ export default function InvoicesPage() {
 																		preparedBy: inv.preparedBy ?? "",
 																		customInvoiceNumber: "",
 																		department: (inv as InvoiceRow & { department?: string | null }).department ?? "",
+																		brand: ((inv as { brand?: string | null }).brand === "home_style" ? "home_style" : "foods_inc"),
 																	});
 																	setAgencyOpen(!!(inv.agencyName));
 																	setEditingId(null);
@@ -1400,6 +1406,25 @@ export default function InvoicesPage() {
 								</Collapsible>
 							</div>
 							<div className="col-span-2 flex flex-col gap-1.5">
+								<Label>Company Brand</Label>
+								<div className="flex gap-2">
+									<button
+										type="button"
+										className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${form.brand === "foods_inc" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
+										onClick={() => setForm((f) => ({ ...f, brand: "foods_inc" }))}
+									>
+										Bettencourt's Food Inc.
+									</button>
+									<button
+										type="button"
+										className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${form.brand === "home_style" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
+										onClick={() => setForm((f) => ({ ...f, brand: "home_style" }))}
+									>
+										Bettencourt's Home Style
+									</button>
+								</div>
+							</div>
+														<div className="col-span-2 flex flex-col gap-1.5">
 								<Label>Department (optional)</Label>
 								<Input
 									placeholder="e.g. Kitchen, Front of House, Admin"
