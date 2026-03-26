@@ -44,6 +44,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -219,6 +220,10 @@ export default function ExpensesPage() {
 		id: string;
 		name: string;
 	} | null>(null);
+
+	// Supplier manage state
+	const [manageSuppliersOpen, setManageSuppliersOpen] = useState(false);
+	const [newSupplierName, setNewSupplierName] = useState("");
 
 	// Daily summary state
 	const [viewMode, setViewMode] = useState<"table" | "daily">("table");
@@ -416,6 +421,24 @@ export default function ExpensesPage() {
 			},
 			onError: (err) =>
 				toast.error(err.message || "Failed to delete funding source"),
+		}),
+	);
+
+	function invalidateSuppliers() {
+		queryClient.invalidateQueries({
+			queryKey: orpc.settings.getSuppliers.queryOptions({ input: {} }).queryKey,
+		});
+	}
+
+	const createSupplierMut = useMutation(
+		orpc.settings.createSupplier.mutationOptions({
+			onSuccess: () => {
+				invalidateSuppliers();
+				setNewSupplierName("");
+				toast.success("Supplier added");
+			},
+			onError: (err) =>
+				toast.error(err.message || "Failed to add supplier"),
 		}),
 	);
 
@@ -1598,7 +1621,16 @@ export default function ExpensesPage() {
 							/>
 						</div>
 						<div className="flex flex-col gap-1.5">
-							<Label>Supplier</Label>
+							<div className="flex items-center justify-between">
+								<Label>Supplier</Label>
+								<button
+									type="button"
+									className="text-muted-foreground text-xs underline-offset-2 hover:text-foreground hover:underline"
+									onClick={() => setManageSuppliersOpen(true)}
+								>
+									Add Supplier
+								</button>
+							</div>
 							<Popover open={supplierPopoverOpen} onOpenChange={setSupplierPopoverOpen}>
 								<PopoverTrigger asChild>
 									<Button
@@ -2067,6 +2099,50 @@ export default function ExpensesPage() {
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+
+
+			{/* Manage Suppliers Dialog */}
+			<Dialog
+				open={manageSuppliersOpen}
+				onOpenChange={(open) => {
+					setManageSuppliersOpen(open);
+					if (!open) setNewSupplierName("");
+				}}
+			>
+				<DialogContent className="sm:max-w-sm">
+					<DialogHeader>
+						<DialogTitle>Add Supplier</DialogTitle>
+						<DialogDescription>
+							Quickly add a new supplier. You can add full details later in Inventory → Suppliers.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="flex flex-col gap-4 py-2">
+						<div className="flex gap-2">
+							<Input
+								placeholder="Supplier name (e.g. D'Aguiar Bros)"
+								value={newSupplierName}
+								autoFocus
+								onChange={(e) => setNewSupplierName(e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter" && newSupplierName.trim()) {
+										createSupplierMut.mutate({ name: newSupplierName.trim() });
+									}
+								}}
+							/>
+							<Button
+								onClick={() => {
+									if (!newSupplierName.trim()) return;
+									createSupplierMut.mutate({ name: newSupplierName.trim() });
+								}}
+								disabled={!newSupplierName.trim() || createSupplierMut.isPending}
+							>
+								<Plus className="size-4" />
+								Add
+							</Button>
+						</div>
+					</div>
+				</DialogContent>
+			</Dialog>
 
 			{/* Manage Funding Sources Dialog */}
 			<Dialog
