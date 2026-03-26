@@ -177,7 +177,7 @@ const create = permissionProcedure("invoices.create")
         discountType: input.discountType ?? "percent",
         discountValue: input.discountValue ?? "0",
         taxMode: input.taxMode ?? "invoice",
-        taxRate: input.taxRate ?? "16.5",
+        taxRate: input.taxRate ?? "14",
         paymentTerms: input.paymentTerms ?? "due_on_receipt",
         preparedBy: input.preparedBy ?? null,
         department: input.department ?? null,

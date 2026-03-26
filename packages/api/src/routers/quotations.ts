@@ -183,7 +183,7 @@ const create = permissionProcedure("quotations.create")
 				discountType: input.discountType ?? "percent",
 				discountValue: input.discountValue ?? "0",
 				taxMode: input.taxMode ?? "invoice",
-				taxRate: input.taxRate ?? "16.5",
+				taxRate: input.taxRate ?? "14",
 				termsAndConditions: input.termsAndConditions ?? null,
 				parentQuotationId: input.parentQuotationId ?? null,
 				preparedBy: input.preparedBy ?? null,

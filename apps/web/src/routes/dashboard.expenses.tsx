@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+	Building2,
 	CalendarDays,
 	Check,
+	ChevronDown,
 	ChevronsUpDown,
 	Download,
 	Layers,
@@ -750,24 +752,30 @@ export default function ExpensesPage() {
 							</SelectContent>
 						</Select>
 					)}
-					<Button
-						size="sm"
-						variant="outline"
-						className="gap-1"
-						onClick={() => setManageFundingSourcesOpen(true)}
-					>
-						<Wallet className="size-4" />
-						Funding Sources
-					</Button>
-					<Button
-						size="sm"
-						variant="outline"
-						className="gap-1"
-						onClick={() => setManageCategoriesOpen(true)}
-					>
-						<Settings2 className="size-4" />
-						Categories
-					</Button>
+					<DropdownMenu>
+						<DropdownMenuTrigger
+							className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm hover:bg-accent hover:text-accent-foreground"
+						>
+							<Settings2 className="size-4" />
+							Manage
+							<ChevronDown className="size-3.5 opacity-60" />
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end" className="w-48">
+							<DropdownMenuItem onClick={() => setManageFundingSourcesOpen(true)}>
+								<Wallet className="mr-2 size-4" />
+								Funding Sources
+							</DropdownMenuItem>
+							<DropdownMenuItem onClick={() => setManageCategoriesOpen(true)}>
+								<Settings2 className="mr-2 size-4" />
+								Categories
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem onClick={() => setManageSuppliersOpen(true)}>
+								<Building2 className="mr-2 size-4" />
+								Add Supplier
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 					<Button
 						size="sm"
 						variant="outline"
