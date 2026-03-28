@@ -444,6 +444,29 @@ const initiateHandoff = permissionProcedure("shifts.create")
   .handler(async ({ input, context }) => {
     const orgId = requireOrganizationId(context);
     const fromUserId = context.session.user.id;
+    if (input.toUserId === fromUserId) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Cannot hand off a session to yourself",
+      });
+    }
+
+    // Ensure the receiving user belongs to the same organization
+    const recipientMember = await db
+      .select({ userId: schema.member.userId })
+      .from(schema.member)
+      .where(
+        and(
+          eq(schema.member.organizationId, orgId),
+          eq(schema.member.userId, input.toUserId),
+        ),
+      )
+      .limit(1);
+    if (recipientMember.length === 0) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Selected handoff recipient is not in your organization",
+      });
+    }
+
     const variance = Number(input.countedAmount) - Number(input.expectedAmount);
     const scopedSession = await db
       .select({ id: schema.cashSession.id })
@@ -491,8 +514,13 @@ const acceptHandoff = permissionProcedure("shifts.update")
   )
   .handler(async ({ input, context }) => {
     const orgId = requireOrganizationId(context);
+    const actorId = context.session.user.id;
     const scoped = await db
-      .select({ id: schema.shiftHandoff.id })
+      .select({
+        id: schema.shiftHandoff.id,
+        toUserId: schema.shiftHandoff.toUserId,
+        status: schema.shiftHandoff.status,
+      })
       .from(schema.shiftHandoff)
       .innerJoin(
         schema.cashSession,
@@ -514,6 +542,19 @@ const acceptHandoff = permissionProcedure("shifts.update")
         message: "Handoff is outside your organization scope",
       });
     }
+
+    const handoff = scoped[0]!;
+    if (handoff.status !== "pending") {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Only pending handoffs can be accepted",
+      });
+    }
+    if (handoff.toUserId !== actorId) {
+      throw new ORPCError("FORBIDDEN", {
+        message: "Only the assigned recipient can accept this handoff",
+      });
+    }
+
     await db
       .update(schema.shiftHandoff)
       .set({ status: "accepted" })

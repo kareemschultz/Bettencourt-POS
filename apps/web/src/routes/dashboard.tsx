@@ -189,11 +189,11 @@ export default function DashboardLayout() {
 			email: userProfile.email,
 			role: mapRoleToSidebarRole(userProfile.roleName),
 			organization_id: userProfile.organizationId ?? null,
-			location_id: null,
+			location_id: selectedLocationId ?? null,
 			custom_role_id: userProfile.roleId,
 			permissions: userProfile.permissions,
 		};
-	}, [session, userProfile]);
+	}, [session, userProfile, selectedLocationId]);
 
 	const resolvedLandingRoute = useMemo<WorkspaceRoute>(() => {
 		if (!user) return "/dashboard";
