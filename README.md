@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/React_Router-v7-CA4245?style=flat-square&logo=reactrouter&logoColor=white" />
   <img src="https://img.shields.io/badge/Hono-4.x-E36002?style=flat-square&logo=hono&logoColor=white" />
   <img src="https://img.shields.io/badge/Drizzle_ORM-0.45-C5F74F?style=flat-square&logo=drizzle&logoColor=black" />
-  <img src="https://img.shields.io/badge/Bun-1.1+-F9F1E1?style=flat-square&logo=bun&logoColor=black" />
+  <img src="https://img.shields.io/badge/Bun-1.3+-F9F1E1?style=flat-square&logo=bun&logoColor=black" />
   <img src="https://img.shields.io/badge/PostgreSQL-15+-4169E1?style=flat-square&logo=postgresql&logoColor=white" />
   <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white" />
   <img src="https://img.shields.io/badge/TypeScript-Strict-3178C6?style=flat-square&logo=typescript&logoColor=white" />
@@ -53,9 +53,9 @@
 Bettencourt's POS is a full-stack, type-safe point-of-sale platform purpose-built for a Guyanese restaurant. It handles everything from table-side ordering and kitchen display through to accounting, inventory, and payroll — replacing off-the-shelf software that couldn't handle GYD currency, local tax rules, or the restaurant's specific workflow.
 
 **Key numbers:**
-- 59 frontend pages across 8 modules
+- 68 frontend route files across 8 modules
 - 44 API routers with end-to-end type safety (oRPC)
-- 20 database schema files covering 78+ tables
+- 20 database schema files
 - 202 commits from conception to production
 
 ---
@@ -131,7 +131,7 @@ Bettencourt's POS is a full-stack, type-safe point-of-sale platform purpose-buil
 | **Authentication** | Better Auth | latest |
 | **ORM** | Drizzle ORM | 0.45 |
 | **Database** | PostgreSQL | 15+ |
-| **Runtime** | Bun | 1.1+ |
+| **Runtime** | Bun | 1.3+ |
 | **Monorepo** | Turborepo | latest |
 | **Containerization** | Docker + Docker Compose | — |
 | **Reverse Proxy** | Pangolin (Cloudflare Tunnel alternative) | — |
@@ -146,7 +146,7 @@ Bettencourt-POS/
 ├── apps/
 │   ├── web/                     # React SPA (React Router v7, flat file routes)
 │   │   └── src/
-│   │       ├── routes/          # 59 page components (dashboard.*.tsx)
+│   │       ├── routes/          # 68 route files (dashboard.*.tsx + public routes)
 │   │       ├── components/      # Shared UI components
 │   │       │   ├── pos/         # POS-specific components
 │   │       │   ├── kds/         # Kitchen Display System
@@ -164,11 +164,11 @@ Bettencourt-POS/
 │   ├── auth/                    # Better Auth configuration
 │   ├── db/                      # Drizzle schema + migrations + seed
 │   │   └── src/
-│   │       ├── schema/          # 20 schema files / 78+ tables
+│   │       ├── schema/          # 20 schema files
 │   │       ├── migrations/      # SQL migration files
 │   │       └── seed.ts          # Comprehensive demo seed (7,000+ lines)
 │   ├── env/                     # Zod-validated environment variables
-│   └── catalog/                 # Shared dependency version catalog
+│   └── config/                  # Shared tooling/config package
 ├── docs/                        # Developer and client documentation
 ├── docker-compose.prod.yml      # Production compose file
 ├── Dockerfile                   # Multi-stage build (distroless runner)
@@ -179,7 +179,7 @@ Bettencourt-POS/
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) ≥ 1.1
+- [Bun](https://bun.sh) ≥ 1.3
 - [Docker](https://docker.com) + Docker Compose (for the database and production)
 - PostgreSQL 15+ (or use the Docker database container)
 
@@ -247,6 +247,8 @@ All variables live in `apps/server/.env`. See `apps/server/.env.example` for a f
 | `bun run check-types` | TypeScript strict type check across all packages |
 | `bun run check` | Biome lint + format check |
 
+> If you see `turbo: command not found` or `biome: command not found`, run `bun install` first to install workspace binaries.
+
 ### Database (run from `packages/db/`)
 
 | Script | Description |
@@ -262,7 +264,7 @@ All variables live in `apps/server/.env`. See `apps/server/.env.example` for a f
 
 ## Database
 
-The schema spans **20 files and 78+ tables** covering:
+The schema spans **20 files** covering:
 
 - Orders, line items, payments, modifiers, discounts
 - Products, categories, modifiers, barcodes, menu schedules
