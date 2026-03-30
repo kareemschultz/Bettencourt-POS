@@ -892,7 +892,7 @@ export default function QuotationsPage() {
 						</div>
 						<div className="grid grid-cols-2 gap-3">
 							<div className="col-span-2 flex flex-col gap-1.5">
-								<Label>Agency / Organization (optional)</Label>
+								<Label>Customer / Agency (optional)</Label>
 								<Input
 									placeholder="e.g. Ministry of Home Affairs"
 									value={form.agencyName}

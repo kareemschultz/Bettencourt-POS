@@ -1377,14 +1377,14 @@ export default function InvoicesPage() {
 											className="flex w-full items-center gap-2 rounded-md py-1.5 text-left text-muted-foreground text-sm hover:text-foreground transition-colors"
 										>
 											<Building2 className="size-3.5" />
-											Agency / Organization Details
+											Customer / Agency Details
 											<ChevronDown className={`ml-auto size-3 transition-transform ${agencyOpen ? "rotate-180" : ""}`} />
 										</button>
 									</CollapsibleTrigger>
 									<CollapsibleContent>
 										<div className="grid grid-cols-2 gap-3 pt-2">
 											<div className="col-span-2 flex flex-col gap-1.5">
-												<Label>Agency / Organization</Label>
+												<Label>Customer / Agency</Label>
 												<Input
 													placeholder="e.g. Ministry of Home Affairs"
 													value={form.agencyName}

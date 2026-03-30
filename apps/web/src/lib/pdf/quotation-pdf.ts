@@ -255,9 +255,10 @@ function buildQuotationHtml(
   <div class="bill-to-section">
     <div class="bill-col">
       <div class="section-label">Prepared For</div>
-      <div class="customer-name">${escHtml(quot.customerName)}</div>
+      ${quot.agencyName
+        ? `<div class="customer-name">${escHtml(quot.agencyName)}</div><div class="customer-sub">${escHtml(quot.customerName)}</div>`
+        : `<div class="customer-name">${escHtml(quot.customerName)}</div>`}
       ${quot.contactPersonPosition ? `<div class="customer-sub">${escHtml(quot.contactPersonPosition)}</div>` : ""}
-      ${quot.agencyName ? `<div class="customer-sub" style="font-weight:600;color:#1e293b">${escHtml(quot.agencyName)}</div>` : ""}
       ${quot.customerPhone ? `<div class="customer-sub">${escHtml(quot.customerPhone)}</div>` : ""}
       ${quot.customerAddress ? `<div class="customer-sub">${escHtml(quot.customerAddress)}</div>` : ""}
     </div>

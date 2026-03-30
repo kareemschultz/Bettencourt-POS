@@ -321,9 +321,10 @@ function buildInvoiceHtml(
   <div class="bill-to-section">
     <div class="bill-col">
       <div class="section-label">Bill To</div>
-      <div class="customer-name">${escHtml(invoice.customerName)}</div>
+      ${invoice.agencyName
+        ? `<div class="customer-name">${escHtml(invoice.agencyName)}</div><div class="customer-sub">${escHtml(invoice.customerName)}</div>`
+        : `<div class="customer-name">${escHtml(invoice.customerName)}</div>`}
       ${invoice.contactPersonPosition ? `<div class="customer-sub">${escHtml(invoice.contactPersonPosition)}</div>` : ""}
-      ${invoice.agencyName ? `<div class="customer-sub" style="font-weight:600;color:#1e293b">${escHtml(invoice.agencyName)}</div>` : ""}
       ${invoice.customerPhone ? `<div class="customer-sub">${escHtml(invoice.customerPhone)}</div>` : ""}
       ${invoice.customerAddress ? `<div class="customer-sub">${escHtml(invoice.customerAddress)}</div>` : ""}
     </div>
