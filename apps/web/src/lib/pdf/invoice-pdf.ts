@@ -76,9 +76,11 @@ export async function openInvoicePdf(
 }
 
 async function fetchLogoBase64(brand?: string | null): Promise<string> {
-	const path = brand === "home_style"
-		? "/images/bettencourts-home-style-logo.png"
+	const isHomeStyle = brand === "home_style";
+	const path = isHomeStyle
+		? "/images/bettencourts-home-style-logo.jpg"
 		: "/images/bettencourts-logo.png";
+	const mime = isHomeStyle ? "image/jpeg" : "image/png";
 	try {
 		const resp = await fetch(path);
 		if (!resp.ok) throw new Error("not found");
@@ -90,7 +92,7 @@ async function fetchLogoBase64(brand?: string | null): Promise<string> {
 			binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
 		return btoa(binary);
 	})();
-		return `data:image/png;base64,${b64}`;
+		return `data:${mime};base64,${b64}`;
 	} catch {
 		return "";
 	}

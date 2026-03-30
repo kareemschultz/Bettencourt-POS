@@ -88,6 +88,7 @@ interface InvoiceForm {
 	issuedDate: string;
 	dueDate: string;
 	notes: string;
+	noteMode: "preset" | "custom";
 	items: LineItem[];
 	discountType: "percent" | "fixed";
 	discountValue: string;
@@ -98,6 +99,15 @@ interface InvoiceForm {
 	customInvoiceNumber: string;
 	brand: "foods_inc" | "home_style";
 }
+
+const PREDEFINED_NOTES_INV = [
+	"This invoice is valid for 30 days from the date of issue.",
+	"All prices are in Guyanese dollars (GYD) and exclude VAT.",
+	"A 10% service charge applies to all catering orders.",
+	"Please confirm your order at least 48 hours in advance.",
+	"Payment due upon receipt of this invoice.",
+	"Prices subject to change without prior notice.",
+];
 
 const emptyForm: InvoiceForm = {
 	customerName: "",
@@ -111,6 +121,7 @@ const emptyForm: InvoiceForm = {
 	issuedDate: "",
 	dueDate: "",
 	notes: "This invoice is valid for 30 days from the date of issue.",
+	noteMode: "preset",
 	items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
 	discountType: "percent",
 	discountValue: "0",
@@ -423,6 +434,7 @@ export default function InvoicesPage() {
 			paymentTerms: inv.paymentTerms ?? "due_on_receipt",
 			preparedBy: inv.preparedBy ?? "",
 			brand: ((inv as { brand?: string | null }).brand === "home_style" ? "home_style" : "foods_inc"),
+		noteMode: (inv.notes && !PREDEFINED_NOTES_INV.includes(inv.notes) ? "custom" : "preset"),
 		});
 		setDialogOpen(true);
 	}
@@ -1636,14 +1648,37 @@ export default function InvoicesPage() {
 
 						<div className="flex flex-col gap-1.5">
 							<Label>Notes</Label>
-							<Textarea
-								placeholder="Optional notes..."
-								value={form.notes}
-								onChange={(e) =>
-									setForm((f) => ({ ...f, notes: e.target.value }))
-								}
-								className="h-16 resize-none"
-							/>
+							<Select
+								value={form.noteMode === "custom" ? "__custom__" : form.notes}
+								onValueChange={(v) => {
+									if (v === "__custom__") {
+										setForm((f) => ({ ...f, noteMode: "custom", notes: "" }));
+									} else {
+										setForm((f) => ({ ...f, noteMode: "preset", notes: v }));
+									}
+								}}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="Select a note..." />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="">No note</SelectItem>
+									{PREDEFINED_NOTES_INV.map((n) => (
+										<SelectItem key={n} value={n}>{n}</SelectItem>
+									))}
+									<SelectItem value="__custom__">Custom note...</SelectItem>
+								</SelectContent>
+							</Select>
+							{form.noteMode === "custom" && (
+								<Textarea
+									placeholder="Write your custom note..."
+									value={form.notes}
+									onChange={(e) =>
+										setForm((f) => ({ ...f, notes: e.target.value }))
+									}
+									className="h-16 resize-none"
+								/>
+							)}
 						</div>
 					</div>
 					<DialogFooter>
