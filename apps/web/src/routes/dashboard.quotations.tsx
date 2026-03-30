@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	ArrowRightLeft,
+	ChevronDown,
 	Copy,
 	Edit2,
 	FileText,
@@ -55,6 +56,11 @@ import { openQuotationPdf } from "@/lib/pdf/quotation-pdf";
 import { statusBadgeClass } from "@/lib/status-colors";
 import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { CustomerCombobox, type CustomerHit } from "@/components/ui/customer-combobox";
 import { orpc } from "@/utils/orpc";
 
@@ -159,6 +165,7 @@ export default function QuotationsPage() {
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [form, setForm] = useState<QuotationForm>(emptyForm);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const [taxSettingsOpen, setTaxSettingsOpen] = useState(false);
 
 	const { data: userProfile } = useQuery(
 		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
@@ -1031,43 +1038,56 @@ export default function QuotationsPage() {
 							</Button>
 						</div>
 
-						{/* Tax / Discount Settings */}
-						<div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/30 p-3">
-							<div className="flex flex-col gap-1.5">
-								<Label className="text-xs">Tax Rate (%)</Label>
-								<Input
-									type="number"
-									min={0}
-									step="0.5"
-									value={form.taxRate}
-									onChange={(e) =>
-										setForm((f) => ({ ...f, taxRate: e.target.value }))
-									}
-								/>
-							</div>
-							<div className="flex flex-col gap-1.5">
-								<Label className="text-xs">VAT Mode</Label>
-								<div className="flex overflow-hidden rounded border text-xs">
+						{/* Tax & Discount Settings */}
+						<div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3">
+							<Collapsible open={taxSettingsOpen} onOpenChange={setTaxSettingsOpen}>
+								<CollapsibleTrigger asChild>
 									<button
 										type="button"
-										className={`flex-1 px-2 py-1.5 transition-colors ${form.taxMode !== "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-										onClick={() =>
-											setForm((f) => ({ ...f, taxMode: "invoice" }))
-										}
+										className="flex w-full items-center gap-2 text-left text-muted-foreground text-xs hover:text-foreground transition-colors"
 									>
-										Excl.
+										<span className="font-medium text-foreground">VAT: {form.taxRate}% · {form.taxMode === "incl" ? "Incl." : "Excl."}</span>
+										<span className="text-muted-foreground">(tap to change)</span>
+										<ChevronDown className={`ml-auto size-3 transition-transform ${taxSettingsOpen ? "rotate-180" : ""}`} />
 									</button>
-									<button
-										type="button"
-										className={`flex-1 px-2 py-1.5 transition-colors ${form.taxMode === "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-										onClick={() =>
-											setForm((f) => ({ ...f, taxMode: "incl" }))
-										}
-									>
-										Incl.
-									</button>
-								</div>
-							</div>
+								</CollapsibleTrigger>
+								<CollapsibleContent>
+									<div className="grid grid-cols-2 gap-3 pt-3">
+										<div className="flex flex-col gap-1.5">
+											<Label className="text-xs">Tax Rate (%)</Label>
+											<Input
+												type="number"
+												min={0}
+												step="0.5"
+												value={form.taxRate}
+												onChange={(e) =>
+													setForm((f) => ({ ...f, taxRate: e.target.value }))
+												}
+											/>
+										</div>
+										<div className="flex flex-col gap-1.5">
+											<Label className="text-xs">VAT Mode</Label>
+											<div className="flex overflow-hidden rounded border text-xs">
+												<button
+													type="button"
+													className={`flex-1 px-2 py-1.5 transition-colors ${form.taxMode !== "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+													onClick={() => setForm((f) => ({ ...f, taxMode: "invoice" }))}
+												>
+													Excl.
+												</button>
+												<button
+													type="button"
+													className={`flex-1 px-2 py-1.5 transition-colors ${form.taxMode === "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+													onClick={() => setForm((f) => ({ ...f, taxMode: "incl" }))}
+												>
+													Incl.
+												</button>
+											</div>
+										</div>
+									</div>
+								</CollapsibleContent>
+							</Collapsible>
+							<div className="grid grid-cols-2 gap-3 border-t border-border pt-2">
 							<div className="flex flex-col gap-1.5">
 								<Label className="text-xs">Discount Type</Label>
 								<Select
@@ -1109,6 +1129,7 @@ export default function QuotationsPage() {
 										setForm((f) => ({ ...f, preparedBy: e.target.value }))
 									}
 								/>
+							</div>
 							</div>
 						</div>
 

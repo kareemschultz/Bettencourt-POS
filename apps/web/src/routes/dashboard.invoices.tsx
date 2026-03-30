@@ -196,6 +196,7 @@ export default function InvoicesPage() {
 	const [form, setForm] = useState<InvoiceForm>(emptyForm);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [agencyOpen, setAgencyOpen] = useState(false);
+	const [taxSettingsOpen, setTaxSettingsOpen] = useState(false);
 	const [paymentForm, setPaymentForm] = useState({
 		amountPaid: "",
 		chequeNumber: "",
@@ -1530,38 +1531,53 @@ export default function InvoicesPage() {
 						</div>
 
 						{/* Tax/Discount Settings */}
-						<div className="flex flex-wrap items-center gap-3 rounded-md bg-muted/40 p-2 text-sm">
-							<div className="flex items-center gap-1.5">
-								<span className="text-muted-foreground text-xs">VAT:</span>
-								<Input
-									className="h-7 w-16 text-xs"
-									type="number"
-									min="0"
-									max="100"
-									step="0.1"
-									value={form.taxRate}
-									onChange={(e) =>
-										setForm((f) => ({ ...f, taxRate: e.target.value }))
-									}
-								/>
-								<span className="text-xs">%</span>
-								<div className="flex overflow-hidden rounded border text-xs">
+						<div className="flex flex-col gap-2 rounded-md bg-muted/40 p-2 text-sm">
+							<Collapsible open={taxSettingsOpen} onOpenChange={setTaxSettingsOpen}>
+								<CollapsibleTrigger asChild>
 									<button
 										type="button"
-										className={`px-2 py-1 transition-colors ${form.taxMode !== "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-										onClick={() => setForm((f) => ({ ...f, taxMode: "invoice" }))}
+										className="flex w-full items-center gap-2 text-left text-xs hover:text-foreground transition-colors"
 									>
-										Excl.
+										<span className="font-medium text-foreground">VAT: {form.taxRate}% · {form.taxMode === "incl" ? "Incl." : "Excl."}</span>
+										<span className="text-muted-foreground">(tap to change)</span>
+										<ChevronDown className={`ml-auto size-3 transition-transform ${taxSettingsOpen ? "rotate-180" : ""}`} />
 									</button>
-									<button
-										type="button"
-										className={`px-2 py-1 transition-colors ${form.taxMode === "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-										onClick={() => setForm((f) => ({ ...f, taxMode: "incl" }))}
-									>
-										Incl.
-									</button>
-								</div>
-							</div>
+								</CollapsibleTrigger>
+								<CollapsibleContent>
+									<div className="flex items-center gap-1.5 pt-2">
+										<span className="text-muted-foreground text-xs">VAT:</span>
+										<Input
+											className="h-7 w-16 text-xs"
+											type="number"
+											min="0"
+											max="100"
+											step="0.1"
+											value={form.taxRate}
+											onChange={(e) =>
+												setForm((f) => ({ ...f, taxRate: e.target.value }))
+											}
+										/>
+										<span className="text-xs">%</span>
+										<div className="flex overflow-hidden rounded border text-xs">
+											<button
+												type="button"
+												className={`px-2 py-1 transition-colors ${form.taxMode !== "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+												onClick={() => setForm((f) => ({ ...f, taxMode: "invoice" }))}
+											>
+												Excl.
+											</button>
+											<button
+												type="button"
+												className={`px-2 py-1 transition-colors ${form.taxMode === "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+												onClick={() => setForm((f) => ({ ...f, taxMode: "incl" }))}
+											>
+												Incl.
+											</button>
+										</div>
+									</div>
+								</CollapsibleContent>
+							</Collapsible>
+							<div className="flex flex-wrap items-center gap-3">
 							<div className="flex items-center gap-1.5">
 								<span className="text-muted-foreground text-xs">Discount:</span>
 								<Select
@@ -1612,6 +1628,7 @@ export default function InvoicesPage() {
 										<SelectItem value="net_60">Net 60</SelectItem>
 									</SelectContent>
 								</Select>
+							</div>
 							</div>
 						</div>
 
