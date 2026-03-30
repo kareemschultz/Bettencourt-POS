@@ -125,7 +125,7 @@ const emptyForm: InvoiceForm = {
 	items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
 	discountType: "percent",
 	discountValue: "0",
-	taxMode: "invoice",
+	taxMode: "incl",
 	taxRate: "14",
 	paymentTerms: "due_on_receipt",
 	preparedBy: "",
@@ -399,7 +399,7 @@ export default function InvoicesPage() {
 		setForm({
 			...emptyForm,
 			taxRate: String(docSettings?.defaultTaxRate ?? "14"),
-			taxMode: (docSettings?.defaultTaxMode as "invoice" | "line" | "incl") ?? "invoice",
+			taxMode: (docSettings?.defaultTaxMode as "invoice" | "line" | "incl") ?? "incl",
 			discountType:
 				(docSettings?.defaultDiscountType as "percent" | "fixed") ?? "percent",
 			paymentTerms: docSettings?.defaultPaymentTerms ?? "due_on_receipt",

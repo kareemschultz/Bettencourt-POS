@@ -110,7 +110,7 @@ const emptyForm: QuotationForm = {
 	items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
 	discountType: "percent",
 	discountValue: "0",
-	taxMode: "invoice",
+	taxMode: "incl",
 	taxRate: "14",
 	termsAndConditions: "",
 	preparedBy: "",
@@ -288,7 +288,7 @@ export default function QuotationsPage() {
 		setForm({
 			...emptyForm,
 			taxRate: String(docSettings?.defaultTaxRate ?? "14"),
-			taxMode: (docSettings?.defaultTaxMode as "invoice" | "line" | "incl") ?? "invoice",
+			taxMode: (docSettings?.defaultTaxMode as "invoice" | "line" | "incl") ?? "incl",
 			discountType:
 				(docSettings?.defaultDiscountType as "percent" | "fixed") ?? "percent",
 			termsAndConditions: docSettings?.defaultQuotationTerms ?? "",

@@ -353,7 +353,6 @@ function buildInvoiceHtml(
     <div class="totals-table">
       <div class="totals-row"><span class="label">Subtotal</span><span class="amount">${fmtGYD(subtotal)}</span></div>
       ${discountAmt > 0 ? `<div class="totals-row discount"><span class="label">Discount${invoice.discountType === "percent" ? ` (${invoice.discountValue}%)` : ""}</span><span class="amount">-${fmtGYD(discountAmt)}</span></div>` : ""}
-      ${taxAmt > 0 ? `<div class="totals-row"><span class="label">VAT (${invoice.taxRate ?? "14"}%)</span><span class="amount">${fmtGYD(taxAmt)}</span></div>` : ""}
       <div class="totals-row separator grand"><span class="label">Total</span><span class="amount">${fmtGYD(total)}</span></div>
       ${paid > 0 ? `<div class="totals-row"><span class="label" style="color:#16a34a">Amount Paid</span><span class="amount" style="color:#16a34a">-${fmtGYD(paid)}</span></div>` : ""}
       <div class="totals-row balance${isFullyPaid ? " paid" : ""}">

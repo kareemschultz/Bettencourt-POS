@@ -288,7 +288,6 @@ function buildQuotationHtml(
     <div class="totals-table">
       <div class="totals-row"><span class="label">Subtotal</span><span class="amount">${fmtGYD(subtotal)}</span></div>
       ${discountAmt > 0 ? `<div class="totals-row discount"><span class="label">Discount${quot.discountType === "percent" ? ` (${quot.discountValue}%)` : ""}</span><span class="amount">-${fmtGYD(discountAmt)}</span></div>` : ""}
-      ${taxAmt > 0 ? `<div class="totals-row"><span class="label">VAT (${quot.taxRate ?? "16.5"}%)</span><span class="amount">${fmtGYD(taxAmt)}</span></div>` : ""}
       <div class="totals-row separator grand"><span class="label">Quotation Total</span><span class="amount">${fmtGYD(total)}</span></div>
     </div>
   </div>
