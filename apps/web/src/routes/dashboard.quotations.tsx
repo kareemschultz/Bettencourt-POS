@@ -70,6 +70,9 @@ interface QuotationForm {
 	customerAddress: string;
 	customerPhone: string;
 	customerId: string;
+	agencyName: string;
+	contactPersonName: string;
+	contactPersonPosition: string;
 	validUntil: string;
 	notes: string;
 	noteMode: "preset" | "custom";
@@ -98,6 +101,9 @@ const emptyForm: QuotationForm = {
 	customerAddress: "",
 	customerPhone: "",
 	customerId: "",
+	agencyName: "",
+	contactPersonName: "",
+	contactPersonPosition: "",
 	validUntil: "",
 	notes: "This quotation is valid for 30 days from the date of issue.",
 	noteMode: "preset",
@@ -121,6 +127,9 @@ type QuotationRow = {
 	customerAddress: string | null;
 	customerPhone: string | null;
 	customerId: string | null;
+	agencyName: string | null;
+	contactPersonName: string | null;
+	contactPersonPosition: string | null;
 	items: unknown;
 	subtotal: string;
 	taxTotal: string;
@@ -294,6 +303,9 @@ export default function QuotationsPage() {
 			customerAddress: q.customerAddress ?? "",
 			customerPhone: q.customerPhone ?? "",
 			customerId: "",
+			agencyName: q.agencyName ?? "",
+			contactPersonName: q.contactPersonName ?? "",
+			contactPersonPosition: q.contactPersonPosition ?? "",
 			validUntil: q.validUntil ? (q.validUntil.split("T")[0] ?? "") : "",
 			notes: q.notes ?? "",
 			items: Array.isArray(q.items)
@@ -362,6 +374,9 @@ export default function QuotationsPage() {
 			customerAddress: form.customerAddress || undefined,
 			customerPhone: form.customerPhone || undefined,
 			customerId: form.customerId || undefined,
+			agencyName: form.agencyName || undefined,
+			contactPersonName: form.contactPersonName || undefined,
+			contactPersonPosition: form.contactPersonPosition || undefined,
 			validUntil: form.validUntil || undefined,
 			notes: form.notes || undefined,
 			items: form.items,
@@ -641,7 +656,17 @@ export default function QuotationsPage() {
 											{selectedQuotation.customerPhone}
 										</p>
 									)}
-									{selectedQuotation.customerAddress && (
+									{selectedQuotation.contactPersonPosition && (
+										<p className="text-muted-foreground text-xs">
+											{selectedQuotation.contactPersonPosition}
+										</p>
+									)}
+								{selectedQuotation.agencyName && (
+										<p className="text-muted-foreground font-medium">
+											{selectedQuotation.agencyName}
+										</p>
+									)}
+								{selectedQuotation.customerAddress && (
 										<p className="text-muted-foreground">
 											{selectedQuotation.customerAddress}
 										</p>
@@ -862,6 +887,32 @@ export default function QuotationsPage() {
 									onChange={(e) =>
 										setForm((f) => ({ ...f, customerAddress: e.target.value }))
 									}
+								/>
+							</div>
+						</div>
+						<div className="grid grid-cols-2 gap-3">
+							<div className="col-span-2 flex flex-col gap-1.5">
+								<Label>Agency / Organization (optional)</Label>
+								<Input
+									placeholder="e.g. Ministry of Home Affairs"
+									value={form.agencyName}
+									onChange={(e) => setForm(f => ({ ...f, agencyName: e.target.value }))}
+								/>
+							</div>
+							<div className="flex flex-col gap-1.5">
+								<Label>Order Placed By (optional)</Label>
+								<Input
+									placeholder="Name of person who placed the order"
+									value={form.contactPersonName}
+									onChange={(e) => setForm(f => ({ ...f, contactPersonName: e.target.value }))}
+								/>
+							</div>
+							<div className="flex flex-col gap-1.5">
+								<Label>Position / Title (optional)</Label>
+								<Input
+									placeholder="e.g. Permanent Secretary"
+									value={form.contactPersonPosition}
+									onChange={(e) => setForm(f => ({ ...f, contactPersonPosition: e.target.value }))}
 								/>
 							</div>
 						</div>

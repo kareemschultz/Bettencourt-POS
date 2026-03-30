@@ -23,6 +23,9 @@ export type QuotationPdfRow = {
 	preparedBy?: string | null;
 	parentQuotationId?: string | null;
 	brand?: string | null;
+	agencyName?: string | null;
+	contactPersonName?: string | null;
+	contactPersonPosition?: string | null;
 };
 
 export type QuotationDocSettings = {
@@ -253,12 +256,15 @@ function buildQuotationHtml(
     <div class="bill-col">
       <div class="section-label">Prepared For</div>
       <div class="customer-name">${escHtml(quot.customerName)}</div>
+      ${quot.contactPersonPosition ? `<div class="customer-sub">${escHtml(quot.contactPersonPosition)}</div>` : ""}
+      ${quot.agencyName ? `<div class="customer-sub" style="font-weight:600;color:#1e293b">${escHtml(quot.agencyName)}</div>` : ""}
       ${quot.customerPhone ? `<div class="customer-sub">${escHtml(quot.customerPhone)}</div>` : ""}
       ${quot.customerAddress ? `<div class="customer-sub">${escHtml(quot.customerAddress)}</div>` : ""}
     </div>
     <div class="bill-col">
       ${validityNote ? `<div class="section-label">Validity</div><div class="validity-note${validityNote.includes("expired") ? " validity-expired" : ""}">${escHtml(validityNote)}</div>` : ""}
-      ${quot.preparedBy ? `<div class="section-label" style="margin-top:12px">Prepared By</div><div class="customer-name">${escHtml(quot.preparedBy)}</div>` : ""}
+      ${quot.contactPersonName ? `<div class="section-label" style="margin-top:12px">Order Placed By</div><div class="customer-name">${escHtml(quot.contactPersonName)}</div>` : ""}
+      ${quot.preparedBy ? `<div class="section-label" style="margin-top:${quot.contactPersonName ? "8px" : "12px"}">Prepared By</div><div class="customer-name">${escHtml(quot.preparedBy)}</div>` : ""}
     </div>
   </div>
 

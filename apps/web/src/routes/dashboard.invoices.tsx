@@ -1394,9 +1394,9 @@ export default function InvoicesPage() {
 												/>
 											</div>
 											<div className="flex flex-col gap-1.5">
-												<Label>Contact Person</Label>
+												<Label>Order Placed By</Label>
 												<Input
-													placeholder="Name of person ordering"
+													placeholder="Name of person who placed the order"
 													value={form.contactPersonName}
 													onChange={(e) =>
 														setForm((f) => ({ ...f, contactPersonName: e.target.value }))
