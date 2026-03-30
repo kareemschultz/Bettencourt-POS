@@ -1048,15 +1048,19 @@ Create professional price quotations for catering, events, or corporate orders. 
 ### Creating a Quotation
 
 1. Click **New Quotation**
-2. Enter customer name, phone, address, and **Valid Until** date
-3. (Optional) open **Agency / Organization** and set a **Department**
-4. Add line items (description, quantity, unit price — totals auto-calculate)
-5. In the **Tax & Discount** box, set:
+2. Enter **Customer Name** — for government/agency orders, enter the contact person's name (e.g. "The Permanent Secretary")
+3. Enter **Phone**, **Valid Until** date, and **Address**
+4. (Optional) fill in the agency fields:
+   - **Agency / Organization** — the ministry or company (e.g. "Ministry of Home Affairs")
+   - **Order Placed By** — name of the person who placed the order (shown on PDF so you know who to call)
+   - **Position / Title** — their role (e.g. "Procurement Officer")
+5. (Optional) set a **Department** for internal tracking
+6. Add line items (description, quantity, unit price — totals auto-calculate)
+7. In the **Tax & Discount** box, set:
    - Tax Rate (%) and Tax Mode (whole invoice or per-line)
    - Discount type (percent or fixed GYD amount) and value
-6. Enter **Terms & Conditions** (appears on the PDF)
-7. Add **Notes** and your name in **Prepared By**
-8. Click **Create**
+8. Add **Notes**, **Terms & Conditions**, and your name in **Prepared By**
+9. Click **Create**
 
 ### More Actions Menu (click ••• on any quotation row)
 
@@ -1097,13 +1101,17 @@ Four cards show at a glance:
 ### Creating an Invoice
 
 1. Click **New Invoice**
-2. Enter customer details (name, phone, address)
-3. Set **Issued Date** and **Due Date**
-4. (Optional) set a custom invoice number and open **Agency / Organization**
-5. Add line items
-6. Set Tax Rate, Discount, **Payment Terms** (Due on Receipt / Net 15 / Net 30 / Net 60), and **Department**
-7. Enter your name in **Prepared By** (optional)
-8. Click **Create**
+2. Enter **Customer Name** — for agency orders, enter the contact person's name
+3. Enter **Phone**, **Address**, **Issued Date**, and **Due Date**
+4. (Optional) fill in the agency fields:
+   - **Agency / Organization** — ministry or company name
+   - **Order Placed By** — the specific person who placed the order (printed on invoice so you know who to follow up with)
+   - **Position / Title** — their role or title
+5. (Optional) set a custom invoice number and **Department**
+6. Add line items
+7. Set Tax Rate, Discount, and **Payment Terms** (Due on Receipt / Net 15 / Net 30 / Net 60)
+8. Enter your name in **Prepared By** (optional)
+9. Click **Create**
 
 You can edit the invoice number later while editing the invoice.
 

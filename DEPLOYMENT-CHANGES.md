@@ -97,3 +97,37 @@ The container auto-connects to all required networks via the compose file. No ma
 - **Reverse proxy**: Pangolin + Traefik + Gerbil stack (API at `http://172.20.0.6:3003/v1/`)
 - **Pangolin API key**: stored in Vault at `secret/pangolin/api_key`
 - **Domain**: `karetechsolutions.com` managed via Pangolin (domainId: `domain1`)
+
+---
+
+## Update: 2026-03-30 — Agency/Contact Fields for Government Orders
+
+**Problem**: When government agencies (e.g. Ministry of Home Affairs) placed orders, the printed quotation/invoice only had a customer name and address. When staff called to follow up, no one at the agency knew who had placed the order.
+
+**Solution**: Added three optional fields to both Quotations and Invoices:
+- **Agency / Organization** — the ministry or company name
+- **Order Placed By** — the specific person who placed the order
+- **Position / Title** — their role/title
+
+These fields were already in the database schema (`agency_name`, `contact_person_name`, `contact_person_position`) but were not wired up in the form or PDF.
+
+**Files Changed**:
+- `apps/web/src/lib/pdf/quotation-pdf.ts` — added fields to type, updated PDF "Prepared For" section to display them
+- `apps/web/src/lib/pdf/invoice-pdf.ts` — already rendered these fields; no change needed
+- `apps/web/src/routes/dashboard.quotations.tsx` — added form inputs, QuotationForm/QuotationRow types, openEdit, sharedFields
+- `apps/web/src/routes/dashboard.invoices.tsx` — updated "Contact Person" label to "Order Placed By" for clarity
+
+**PDF Output** (both Quotation and Invoice):
+```
+Prepared For / Bill To
+[Contact Person Name]         ← the specific person
+[Their Position/Title]        ← their title
+[Agency / Organization]       ← ministry or company (bold)
+[Phone]
+[Address]
+
+                   Order Placed By
+                   [Contact Name]
+```
+
+**No database migration needed** — columns were already present.
