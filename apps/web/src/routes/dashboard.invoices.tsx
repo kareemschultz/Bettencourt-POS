@@ -1649,10 +1649,12 @@ export default function InvoicesPage() {
 						<div className="flex flex-col gap-1.5">
 							<Label>Notes</Label>
 							<Select
-								value={form.noteMode === "custom" ? "__custom__" : form.notes}
+								value={form.noteMode === "custom" ? "__custom__" : (form.notes || "__none__")}
 								onValueChange={(v) => {
 									if (v === "__custom__") {
 										setForm((f) => ({ ...f, noteMode: "custom", notes: "" }));
+									} else if (v === "__none__") {
+										setForm((f) => ({ ...f, noteMode: "preset", notes: "" }));
 									} else {
 										setForm((f) => ({ ...f, noteMode: "preset", notes: v }));
 									}
@@ -1662,7 +1664,7 @@ export default function InvoicesPage() {
 									<SelectValue placeholder="Select a note..." />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="">No note</SelectItem>
+									<SelectItem value="__none__">No note</SelectItem>
 									{PREDEFINED_NOTES_INV.map((n) => (
 										<SelectItem key={n} value={n}>{n}</SelectItem>
 									))}
