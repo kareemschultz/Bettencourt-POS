@@ -1,6 +1,7 @@
 import type { RouterClient } from "@orpc/server";
 
 import { protectedProcedure, publicProcedure } from "../index";
+import { agenciesRouter } from "./agencies";
 import { analyticsRouter } from "./analytics";
 import { auditRouter } from "./audit";
 import { budgetsRouter } from "./budgets";
@@ -72,6 +73,7 @@ export const appRouter = {
 	dashboard: dashboardRouter,
 	timeclock: timeclockRouter,
 	customers: customersRouter,
+	agencies: agenciesRouter,
 	loyalty: loyaltyRouter,
 	discounts: discountsRouter,
 	floorPlan: floorPlanRouter,

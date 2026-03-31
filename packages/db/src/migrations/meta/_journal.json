@@ -85,6 +85,13 @@
       "when": 1773420001000,
       "tag": "0015_schema_fixes",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1774920491029,
+      "tag": "0012_smart_zzzax",
+      "breakpoints": true
     }
   ]
 }

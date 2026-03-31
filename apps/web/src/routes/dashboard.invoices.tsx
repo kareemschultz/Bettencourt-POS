@@ -64,6 +64,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { authClient } from "@/lib/auth-client";
 import { openInvoicePdf, type DocSettings } from "@/lib/pdf/invoice-pdf";
+import { AgencyCombobox, type AgencyHit } from "@/components/ui/agency-combobox";
 import { CustomerCombobox, type CustomerHit } from "@/components/ui/customer-combobox";
 import { ProductCombobox } from "@/components/ui/product-combobox";
 import { formatGYD } from "@/lib/types";
@@ -239,6 +240,10 @@ export default function InvoicesPage() {
 	);
 	const invoices = (raw as unknown as { invoices: InvoiceRow[]; total: number })
 		.invoices;
+
+	const upsertAgencyMut = useMutation(
+		orpc.agencies.create.mutationOptions({}),
+	);
 
 	const createMut = useMutation(
 		orpc.invoices.create.mutationOptions({
@@ -518,6 +523,17 @@ export default function InvoicesPage() {
 				...sharedFields,
 				createdBy: userId,
 				invoiceNumber: form.customInvoiceNumber.trim() || undefined,
+			});
+		}
+
+		// Best-effort: save agency to directory so it auto-fills next time
+		if (form.customerType === "agency" && form.agencyName.trim()) {
+			upsertAgencyMut.mutate({
+				name: form.agencyName.trim(),
+				supervisorName: form.contactPersonName || undefined,
+				supervisorPosition: form.contactPersonPosition || undefined,
+				phone: form.customerPhone || undefined,
+				address: form.customerAddress || undefined,
 			});
 		}
 	}
@@ -812,6 +828,7 @@ export default function InvoicesPage() {
 																		customInvoiceNumber: "",
 																		department: (inv as InvoiceRow & { department?: string | null }).department ?? "",
 																		brand: ((inv as { brand?: string | null }).brand === "home_style" ? "home_style" : "foods_inc"),
+																		noteMode: "preset" as const,
 																	});
 																	setEditingId(null);
 																	setDialogOpen(true);
@@ -1387,7 +1404,7 @@ export default function InvoicesPage() {
 										<CustomerCombobox
 											value={form.customerName}
 											onChange={(name) => setForm(f => ({ ...f, customerName: name, customerId: "" }))}
-											onSelect={(c: CustomerHit) => setForm(f => ({ ...f, customerName: c.name, customerPhone: c.phone ?? f.customerPhone, customerId: c.id }))}
+											onSelect={(c: CustomerHit) => setForm(f => ({ ...f, customerName: c.name, customerPhone: c.phone ?? f.customerPhone, customerAddress: c.address ?? f.customerAddress, customerId: c.id }))}
 										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
@@ -1411,7 +1428,18 @@ export default function InvoicesPage() {
 								<div className="grid grid-cols-2 gap-3">
 									<div className="col-span-2 flex flex-col gap-1.5">
 										<Label className="text-xs">Agency / Ministry Name *</Label>
-										<Input placeholder="e.g. Ministry of Home Affairs" value={form.agencyName} onChange={(e) => setForm(f => ({ ...f, agencyName: e.target.value }))} />
+										<AgencyCombobox
+											value={form.agencyName}
+											onChange={(name) => setForm(f => ({ ...f, agencyName: name }))}
+											onSelect={(hit: AgencyHit) => setForm(f => ({
+												...f,
+												agencyName: hit.name,
+												customerName: hit.supervisorName ?? f.customerName,
+												contactPersonPosition: hit.supervisorPosition ?? f.contactPersonPosition,
+												customerPhone: hit.phone ?? f.customerPhone,
+												customerAddress: hit.address ?? f.customerAddress,
+											}))}
+										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Supervisor Name</Label>

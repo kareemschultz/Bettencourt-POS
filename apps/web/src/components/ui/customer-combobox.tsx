@@ -25,6 +25,7 @@ export type CustomerHit = {
 	id: string;
 	name: string;
 	phone?: string | null;
+	address?: string | null;
 };
 
 interface Props {

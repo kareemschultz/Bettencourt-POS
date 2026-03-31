@@ -85,6 +85,7 @@ const create = permissionProcedure("customers.create")
 			name: z.string().min(1),
 			phone: z.string().min(1).optional(),
 			email: z.string().email().optional(),
+			address: z.string().optional(),
 			notes: z.string().optional(),
 		}),
 	)
@@ -117,6 +118,7 @@ const create = permissionProcedure("customers.create")
 				name: input.name,
 				phone: input.phone ?? null,
 				email: input.email ?? null,
+				address: input.address ?? null,
 				notes: input.notes ?? null,
 			})
 			.returning();
@@ -132,6 +134,7 @@ const update = permissionProcedure("customers.update")
 			name: z.string().min(1).optional(),
 			phone: z.string().optional(),
 			email: z.string().email().nullable().optional(),
+			address: z.string().nullable().optional(),
 			notes: z.string().nullable().optional(),
 		}),
 	)
@@ -178,7 +181,8 @@ const update = permissionProcedure("customers.update")
 		if (input.name !== undefined) updates.name = input.name;
 		if (input.phone !== undefined) updates.phone = input.phone;
 		if (input.email !== undefined) updates.email = input.email;
-		if (input.notes !== undefined) updates.notes = input.notes;
+		if (input.address !== undefined) updates.address = input.address;
+			if (input.notes !== undefined) updates.notes = input.notes;
 
 		await db
 			.update(schema.customer)
@@ -204,6 +208,7 @@ const search = permissionProcedure("customers.read")
 				id: schema.customer.id,
 				name: schema.customer.name,
 				phone: schema.customer.phone,
+				address: schema.customer.address,
 				totalSpent: schema.customer.totalSpent,
 				visitCount: schema.customer.visitCount,
 			})

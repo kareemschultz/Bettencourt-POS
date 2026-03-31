@@ -51,10 +51,11 @@ interface CustomerForm {
 	name: string;
 	phone: string;
 	email: string;
+	address: string;
 	notes: string;
 }
 
-const emptyForm: CustomerForm = { name: "", phone: "", email: "", notes: "" };
+const emptyForm: CustomerForm = { name: "", phone: "", email: "", address: "", notes: "" };
 
 export default function CustomersPage() {
 	const queryClient = useQueryClient();
@@ -131,6 +132,7 @@ export default function CustomersPage() {
 		name: string;
 		phone: string | null;
 		email: string | null;
+		address: string | null;
 		notes: string | null;
 	}) {
 		setEditingId(c.id);
@@ -138,6 +140,7 @@ export default function CustomersPage() {
 			name: c.name,
 			phone: c.phone || "",
 			email: c.email || "",
+			address: c.address || "",
 			notes: c.notes || "",
 		});
 		setDialogOpen(true);
@@ -154,6 +157,7 @@ export default function CustomersPage() {
 				name: form.name,
 				phone: form.phone || undefined,
 				email: form.email || undefined,
+				address: form.address || undefined,
 				notes: form.notes || undefined,
 			});
 		} else {
@@ -161,6 +165,7 @@ export default function CustomersPage() {
 				name: form.name,
 				phone: form.phone || undefined,
 				email: form.email || undefined,
+				address: form.address || undefined,
 				notes: form.notes || undefined,
 			});
 		}
@@ -373,6 +378,14 @@ export default function CustomersPage() {
 								value={form.email}
 								onChange={(e) => setForm({ ...form, email: e.target.value })}
 								placeholder="customer@example.com"
+							/>
+						</div>
+						<div>
+							<Label>Address</Label>
+							<Input
+								value={form.address}
+								onChange={(e) => setForm({ ...form, address: e.target.value })}
+								placeholder="Street, area, city"
 							/>
 						</div>
 						<div>

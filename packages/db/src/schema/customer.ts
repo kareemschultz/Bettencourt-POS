@@ -25,6 +25,7 @@ export const customer = pgTable(
 		name: text("name").notNull(),
 		phone: text("phone"),
 		email: text("email"),
+		address: text("address"),
 		notes: text("notes"),
 		totalSpent: numeric("total_spent", { precision: 12, scale: 2 })
 			.notNull()
