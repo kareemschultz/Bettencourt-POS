@@ -1608,7 +1608,7 @@ export default function InvoicesPage() {
 								/>
 							</div>
 							<div className="flex items-center gap-1.5">
-								<span className="text-muted-foreground text-xs">Terms:</span>
+								<span className="text-muted-foreground text-xs">Payment Terms:</span>
 								<Select
 									value={form.paymentTerms}
 									onValueChange={(v) =>
