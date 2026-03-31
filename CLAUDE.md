@@ -33,9 +33,12 @@ Brand is stored per-quotation/invoice and controls which logo appears on PDFs.
 - `openQuotationPdf()` / `openInvoicePdf()` must be called synchronously (before any await) to avoid popup blockers
 
 ## Key Domain Concepts
-- **Government agency orders**: Use `agencyName` + `contactPersonName` + `contactPersonPosition` fields on quotations/invoices. These identify the specific person who placed the order so staff know who to call for follow-up.
+- **Government agency orders**: Toggle `customerType` state (`"individual"` | `"agency"`) in forms. Agency mode shows `agencyName` + `contactPersonName` + `contactPersonPosition` + `orderPlacedBy` fields. These map to DB columns (no new migration needed — columns existed). Auto-detected on edit: if `agencyName` is set → agency mode.
+- **Product combobox in line items**: `apps/web/src/components/ui/product-combobox.tsx`. Queries `orpc.products.list` with `{ search }`. `onSelect` callback fills description + unitPrice. Free text always allowed. Only `isActive = true` products shown.
+- **VAT default**: 14% inclusive. Stored in `invoice_document_settings` table (`default_tax_rate`, `default_tax_mode`). `openCreate()` reads from `docSettings` API — change DB record to change the default for new documents.
 - **Tax modes**: `invoice` (flat rate on total), `line` (per-line item), `incl` (price includes tax)
 - **Discount types**: `percent` or `fixed` (GYD)
+- **Notes vs Terms & Conditions**: Notes = operational/delivery instructions shown at bottom of PDF (e.g. "Delivery in 2 working days"). Terms & Conditions = legal/payment terms block printed below signature line (e.g. "Payment due within 30 days"). Both are optional free text. Quotations have both; invoices have Notes only.
 - **Quotation statuses**: draft → sent → accepted/rejected → converted/expired
 - **Invoice statuses**: draft → sent → partial → paid / overdue
 
@@ -54,3 +57,5 @@ See `DEPLOYMENT-CHANGES.md` for full infrastructure notes.
 - [2026-03-05] Dockerfile: Builder must use `node:22-slim + bun` (NOT `oven/bun`) — React Router's `writeBundle` hook requires `react-dom/server.renderToPipeableStream` which Bun's runtime doesn't export
 - [2026-03-05] Bun workspace symlinks break across Docker stages — copy only `dist/` + `public/` + a fresh externals `node_modules/` to the production stage
 - [2026-03-30] Agency fields (`agency_name`, `contact_person_name`, `contact_person_position`) were in the DB schema from day one but not wired to forms/PDFs — always check schema for existing columns before adding migrations
+- [2026-03-30] VAT default lives in `invoice_document_settings` table, NOT in `emptyForm` JS defaults — `openCreate()` overrides emptyForm with `docSettings` from API. Fix defaults at the DB source, not in code.
+- [2026-03-30] Postgres numeric columns (e.g. `default_tax_rate = 14`) may return "14.00" as string. Always `parseFloat(String(value))` before displaying percentages to avoid trailing zeros.

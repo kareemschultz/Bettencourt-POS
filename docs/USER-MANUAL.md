@@ -1048,19 +1048,25 @@ Create professional price quotations for catering, events, or corporate orders. 
 ### Creating a Quotation
 
 1. Click **New Quotation**
-2. Enter **Customer Name** — for government/agency orders, enter the contact person's name (e.g. "The Permanent Secretary")
-3. Enter **Phone**, **Valid Until** date, and **Address**
-4. (Optional) fill in the agency fields:
-   - **Agency / Organization** — the ministry or company (e.g. "Ministry of Home Affairs")
-   - **Order Placed By** — name of the person who placed the order (shown on PDF so you know who to call)
-   - **Position / Title** — their role (e.g. "Procurement Officer")
-5. (Optional) set a **Department** for internal tracking
-6. Add line items (description, quantity, unit price — totals auto-calculate)
-7. In the **Tax & Discount** box, set:
-   - Tax Rate (%) and Tax Mode (whole invoice or per-line)
-   - Discount type (percent or fixed GYD amount) and value
-8. Add **Notes**, **Terms & Conditions**, and your name in **Prepared By**
-9. Click **Create**
+2. In the **From** section, choose the brand (Food Inc or Home Style), enter your name in **Prepared By**, and select a **Department** if needed
+3. In the **Bill To** section, choose whether you're quoting an **Individual** customer or an **Agency/Ministry**:
+
+   **Individual:**
+   - Type the customer name — a dropdown will suggest existing customers as you type. You can select one to auto-fill the phone number, or type a new name freely for walk-in/one-time customers
+   - Enter **Phone**, **Valid Until** date, and **Address**
+
+   **Agency/Ministry:**
+   - **Agency/Ministry Name** — the ministry or company (e.g. "Ministry of Home Affairs")
+   - **Supervisor Name** — the person who approved the order (e.g. "Permanent Secretary Jane Doe")
+   - **Position/Title** — their role (e.g. "Permanent Secretary")
+   - **Order Placed By** — the person who contacted you to place the order (printed on PDF so staff know who to call)
+   - **Phone**, **Address**, **Valid Until**
+
+4. Add **Line Items** — click in the Description cell and start typing to search your product catalog. Select a product to auto-fill the description and price. You can also type any custom description freely
+5. In the **Tax & Discount** section (click to expand), the default is **14% VAT Inclusive** — change only if needed
+6. Add any **Notes** from the dropdown of presets (or type a custom note)
+7. Expand **Terms & Conditions** to add legal or payment terms if required
+8. Click **Create**
 
 ### More Actions Menu (click ••• on any quotation row)
 
@@ -1101,19 +1107,26 @@ Four cards show at a glance:
 ### Creating an Invoice
 
 1. Click **New Invoice**
-2. Enter **Customer Name** — for agency orders, enter the contact person's name
-3. Enter **Phone**, **Address**, **Issued Date**, and **Due Date**
-4. (Optional) fill in the agency fields:
-   - **Agency / Organization** — ministry or company name
-   - **Order Placed By** — the specific person who placed the order (printed on invoice so you know who to follow up with)
-   - **Position / Title** — their role or title
-5. (Optional) set a custom invoice number and **Department**
-6. Add line items
-7. Set Tax Rate, Discount, and **Payment Terms** (Due on Receipt / Net 15 / Net 30 / Net 60)
-8. Enter your name in **Prepared By** (optional)
-9. Click **Create**
+2. Set the **Invoice Number** (auto-generated, editable)
+3. In the **From** section, choose the brand (Food Inc or Home Style), enter your name in **Prepared By**, and select a **Department** if needed
+4. In the **Bill To** section, choose **Individual** or **Agency/Ministry**:
 
-You can edit the invoice number later while editing the invoice.
+   **Individual:**
+   - Type the customer name — existing customers appear as a dropdown suggestion. Select to auto-fill phone, or type freely for new customers
+   - Enter **Phone**, **Address**, **Due Date**
+
+   **Agency/Ministry:**
+   - **Agency/Ministry Name** — the ministry or company
+   - **Supervisor Name** — the person who approved the order
+   - **Position/Title** — their role
+   - **Order Placed By** — who contacted you to place the order (helps staff know who to follow up with for payment)
+   - **Phone**, **Address**, **Due Date**
+
+5. Add **Line Items** — type in the Description cell to search your product catalog. Select a product to auto-fill description and price, or type custom items freely
+6. The **VAT** section (click to expand) defaults to **14% Inclusive** — expand to change rate, mode, or add a discount
+7. Set **Payment Terms** (Due on Receipt / Net 15 / Net 30 / Net 60)
+8. Add any **Notes** from the dropdown
+9. Click **Create**
 
 ### Recording a Payment
 

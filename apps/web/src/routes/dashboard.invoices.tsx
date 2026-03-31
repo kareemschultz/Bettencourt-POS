@@ -15,6 +15,7 @@ import {
 	Search,
 	Send,
 	Trash2,
+	User,
 	X,
 } from "lucide-react";
 import { useState } from "react";
@@ -64,6 +65,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { authClient } from "@/lib/auth-client";
 import { openInvoicePdf, type DocSettings } from "@/lib/pdf/invoice-pdf";
 import { CustomerCombobox, type CustomerHit } from "@/components/ui/customer-combobox";
+import { ProductCombobox } from "@/components/ui/product-combobox";
 import { formatGYD } from "@/lib/types";
 import { statusBadgeClass } from "@/lib/status-colors";
 import { todayGY } from "@/lib/utils";
@@ -77,6 +79,7 @@ interface LineItem {
 }
 
 interface InvoiceForm {
+	customerType: "individual" | "agency";
 	customerName: string;
 	customerAddress: string;
 	customerPhone: string;
@@ -110,6 +113,7 @@ const PREDEFINED_NOTES_INV = [
 ];
 
 const emptyForm: InvoiceForm = {
+	customerType: "individual",
 	customerName: "",
 	customerAddress: "",
 	customerPhone: "",
@@ -195,7 +199,6 @@ export default function InvoicesPage() {
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [form, setForm] = useState<InvoiceForm>(emptyForm);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
-	const [agencyOpen, setAgencyOpen] = useState(false);
 	const [taxSettingsOpen, setTaxSettingsOpen] = useState(false);
 	const [paymentForm, setPaymentForm] = useState({
 		amountPaid: "",
@@ -396,7 +399,6 @@ export default function InvoicesPage() {
 
 	function openCreate() {
 		setEditingId(null);
-		setAgencyOpen(false);
 		setForm({
 			...emptyForm,
 			taxRate: String(docSettings?.defaultTaxRate ?? "14"),
@@ -410,9 +412,8 @@ export default function InvoicesPage() {
 
 	function openEdit(inv: InvoiceRow) {
 		setEditingId(inv.id);
-		const hasAgencyData = !!(inv as { agencyName?: string | null }).agencyName;
-		setAgencyOpen(hasAgencyData);
 		setForm({
+			customerType: (inv as { agencyName?: string | null }).agencyName ? "agency" : "individual",
 			customerName: inv.customerName,
 			customerAddress: inv.customerAddress ?? "",
 			customerPhone: inv.customerPhone ?? "",
@@ -790,6 +791,7 @@ export default function InvoicesPage() {
 																onClick={(e) => {
 																	e.stopPropagation();
 																	setForm({
+																		customerType: inv.agencyName ? "agency" : "individual",
 																		customerName: inv.customerName,
 																		customerAddress: inv.customerAddress ?? "",
 																		customerPhone: inv.customerPhone ?? "",
@@ -811,7 +813,6 @@ export default function InvoicesPage() {
 																		department: (inv as InvoiceRow & { department?: string | null }).department ?? "",
 																		brand: ((inv as { brand?: string | null }).brand === "home_style" ? "home_style" : "foods_inc"),
 																	});
-																	setAgencyOpen(!!(inv.agencyName));
 																	setEditingId(null);
 																	setDialogOpen(true);
 																}}
@@ -1293,7 +1294,7 @@ export default function InvoicesPage() {
 					</DialogHeader>
 					<div className="flex flex-col gap-4 py-2">
 						<div className="grid grid-cols-2 gap-3">
-							<div className="flex flex-col gap-1.5">
+							<div className="col-span-2 flex flex-col gap-1.5">
 								<Label>
 									Invoice Number
 									{!editingId && (
@@ -1313,138 +1314,135 @@ export default function InvoicesPage() {
 									}
 								/>
 							</div>
-							<div className="col-span-2 flex flex-col gap-1.5">
-								<Label>Customer Name *</Label>
-								<CustomerCombobox
-									value={form.customerName}
-									onChange={(name) =>
-										setForm((f) => ({ ...f, customerName: name, customerId: "" }))
-									}
-									onSelect={(c: CustomerHit) =>
-										setForm((f) => ({
-											...f,
-											customerName: c.name,
-											customerPhone: c.phone ?? f.customerPhone,
-											customerId: c.id,
-										}))
-									}
-								/>
+						</div>
+
+						{/* Document Header */}
+						<div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3">
+							<Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">From</Label>
+							<div className="flex gap-2">
+								<button
+									type="button"
+									className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${form.brand === "foods_inc" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
+									onClick={() => setForm((f) => ({ ...f, brand: "foods_inc" }))}
+								>
+									Bettencourt's Food Inc.
+								</button>
+								<button
+									type="button"
+									className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${form.brand === "home_style" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
+									onClick={() => setForm((f) => ({ ...f, brand: "home_style" }))}
+								>
+									Bettencourt's Home Style
+								</button>
 							</div>
-							<div className="flex flex-col gap-1.5">
-								<Label>Phone</Label>
-								<Input
-									placeholder="Phone number"
-									value={form.customerPhone}
-									onChange={(e) =>
-										setForm((f) => ({ ...f, customerPhone: e.target.value }))
-									}
-								/>
+							<div className="grid grid-cols-2 gap-3">
+								<div className="flex flex-col gap-1.5">
+									<Label className="text-xs">Prepared By</Label>
+									<Input
+										placeholder="Your name"
+										value={form.preparedBy}
+										onChange={(e) => setForm((f) => ({ ...f, preparedBy: e.target.value }))}
+									/>
+								</div>
+								<div className="flex flex-col gap-1.5">
+									<Label className="text-xs">Department (optional)</Label>
+									<Input
+										placeholder="e.g. Kitchen, Catering, Admin"
+										value={form.department}
+										onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
+									/>
+								</div>
 							</div>
-							<div className="flex flex-col gap-1.5">
-								<Label>Issued Date</Label>
-								<Input
-									type="date"
-									value={form.issuedDate}
-									onChange={(e) =>
-										setForm((f) => ({ ...f, issuedDate: e.target.value }))
-									}
-								/>
-							</div>
-							<div className="flex flex-col gap-1.5">
-								<Label>Due Date</Label>
-								<Input
-									type="date"
-									value={form.dueDate}
-									onChange={(e) =>
-										setForm((f) => ({ ...f, dueDate: e.target.value }))
-									}
-								/>
-							</div>
-							<div className="col-span-2 flex flex-col gap-1.5">
-								<Label>Address</Label>
-								<Input
-									placeholder="Customer address"
-									value={form.customerAddress}
-									onChange={(e) =>
-										setForm((f) => ({ ...f, customerAddress: e.target.value }))
-									}
-								/>
-							</div>
-							<div className="col-span-2">
-								<Collapsible open={agencyOpen} onOpenChange={setAgencyOpen}>
-									<CollapsibleTrigger asChild>
-										<button
-											type="button"
-											className="flex w-full items-center gap-2 rounded-md py-1.5 text-left text-muted-foreground text-sm hover:text-foreground transition-colors"
-										>
-											<Building2 className="size-3.5" />
-											Customer / Agency Details
-											<ChevronDown className={`ml-auto size-3 transition-transform ${agencyOpen ? "rotate-180" : ""}`} />
-										</button>
-									</CollapsibleTrigger>
-									<CollapsibleContent>
-										<div className="grid grid-cols-2 gap-3 pt-2">
-											<div className="col-span-2 flex flex-col gap-1.5">
-												<Label>Customer / Agency</Label>
-												<Input
-													placeholder="e.g. Ministry of Home Affairs"
-													value={form.agencyName}
-													onChange={(e) =>
-														setForm((f) => ({ ...f, agencyName: e.target.value }))
-													}
-												/>
-											</div>
-											<div className="flex flex-col gap-1.5">
-												<Label>Order Placed By</Label>
-												<Input
-													placeholder="Name of person who placed the order"
-													value={form.contactPersonName}
-													onChange={(e) =>
-														setForm((f) => ({ ...f, contactPersonName: e.target.value }))
-													}
-												/>
-											</div>
-											<div className="flex flex-col gap-1.5">
-												<Label>Position / Title</Label>
-												<Input
-													placeholder="e.g. Senior Manager (Finance)"
-													value={form.contactPersonPosition}
-													onChange={(e) =>
-														setForm((f) => ({ ...f, contactPersonPosition: e.target.value }))
-													}
-												/>
-											</div>
-										</div>
-									</CollapsibleContent>
-								</Collapsible>
-							</div>
-							<div className="col-span-2 flex flex-col gap-1.5">
-								<Label>Company Brand</Label>
-								<div className="flex gap-2">
+						</div>
+
+						{/* Customer / Agency Section */}
+						<div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3">
+							{/* Toggle */}
+							<div className="flex items-center justify-between">
+								<Label className="text-xs font-medium">Bill To</Label>
+								<div className="flex overflow-hidden rounded border text-xs">
 									<button
 										type="button"
-										className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${form.brand === "foods_inc" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
-										onClick={() => setForm((f) => ({ ...f, brand: "foods_inc" }))}
+										className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${form.customerType === "individual" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`}
+										onClick={() => setForm(f => ({ ...f, customerType: "individual", agencyName: "" }))}
 									>
-										Bettencourt's Food Inc.
+										<User className="size-3" />
+										Individual
 									</button>
 									<button
 										type="button"
-										className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${form.brand === "home_style" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
-										onClick={() => setForm((f) => ({ ...f, brand: "home_style" }))}
+										className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${form.customerType === "agency" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`}
+										onClick={() => setForm(f => ({ ...f, customerType: "agency" }))}
 									>
-										Bettencourt's Home Style
+										<Building2 className="size-3" />
+										Agency / Ministry
 									</button>
 								</div>
 							</div>
-														<div className="col-span-2 flex flex-col gap-1.5">
-								<Label>Department (optional)</Label>
-								<Input
-									placeholder="e.g. Kitchen, Front of House, Admin"
-									value={form.department}
-									onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
-								/>
-							</div>
+
+							{form.customerType === "individual" ? (
+								<div className="grid grid-cols-2 gap-3">
+									<div className="col-span-2 flex flex-col gap-1.5">
+										<Label className="text-xs">Customer Name *</Label>
+										<CustomerCombobox
+											value={form.customerName}
+											onChange={(name) => setForm(f => ({ ...f, customerName: name, customerId: "" }))}
+											onSelect={(c: CustomerHit) => setForm(f => ({ ...f, customerName: c.name, customerPhone: c.phone ?? f.customerPhone, customerId: c.id }))}
+										/>
+									</div>
+									<div className="flex flex-col gap-1.5">
+										<Label className="text-xs">Phone</Label>
+										<Input placeholder="Phone number" value={form.customerPhone} onChange={(e) => setForm(f => ({ ...f, customerPhone: e.target.value }))} />
+									</div>
+									<div className="flex flex-col gap-1.5">
+										<Label className="text-xs">Issued Date</Label>
+										<Input type="date" value={form.issuedDate} onChange={(e) => setForm(f => ({ ...f, issuedDate: e.target.value }))} />
+									</div>
+									<div className="flex flex-col gap-1.5">
+										<Label className="text-xs">Due Date</Label>
+										<Input type="date" value={form.dueDate} onChange={(e) => setForm(f => ({ ...f, dueDate: e.target.value }))} />
+									</div>
+									<div className="col-span-2 flex flex-col gap-1.5">
+										<Label className="text-xs">Address</Label>
+										<Input placeholder="Customer address" value={form.customerAddress} onChange={(e) => setForm(f => ({ ...f, customerAddress: e.target.value }))} />
+									</div>
+								</div>
+							) : (
+								<div className="grid grid-cols-2 gap-3">
+									<div className="col-span-2 flex flex-col gap-1.5">
+										<Label className="text-xs">Agency / Ministry Name *</Label>
+										<Input placeholder="e.g. Ministry of Home Affairs" value={form.agencyName} onChange={(e) => setForm(f => ({ ...f, agencyName: e.target.value }))} />
+									</div>
+									<div className="flex flex-col gap-1.5">
+										<Label className="text-xs">Supervisor Name</Label>
+										<Input placeholder="e.g. John Smith" value={form.customerName} onChange={(e) => setForm(f => ({ ...f, customerName: e.target.value }))} />
+									</div>
+									<div className="flex flex-col gap-1.5">
+										<Label className="text-xs">Position / Title</Label>
+										<Input placeholder="e.g. Permanent Secretary" value={form.contactPersonPosition} onChange={(e) => setForm(f => ({ ...f, contactPersonPosition: e.target.value }))} />
+									</div>
+									<div className="flex flex-col gap-1.5">
+										<Label className="text-xs">Order Placed By</Label>
+										<Input placeholder="Name of person who called" value={form.contactPersonName} onChange={(e) => setForm(f => ({ ...f, contactPersonName: e.target.value }))} />
+									</div>
+									<div className="flex flex-col gap-1.5">
+										<Label className="text-xs">Phone</Label>
+										<Input placeholder="Phone number" value={form.customerPhone} onChange={(e) => setForm(f => ({ ...f, customerPhone: e.target.value }))} />
+									</div>
+									<div className="col-span-2 flex flex-col gap-1.5">
+										<Label className="text-xs">Address</Label>
+										<Input placeholder="Agency address" value={form.customerAddress} onChange={(e) => setForm(f => ({ ...f, customerAddress: e.target.value }))} />
+									</div>
+									<div className="flex flex-col gap-1.5">
+										<Label className="text-xs">Issued Date</Label>
+										<Input type="date" value={form.issuedDate} onChange={(e) => setForm(f => ({ ...f, issuedDate: e.target.value }))} />
+									</div>
+									<div className="flex flex-col gap-1.5">
+										<Label className="text-xs">Due Date</Label>
+										<Input type="date" value={form.dueDate} onChange={(e) => setForm(f => ({ ...f, dueDate: e.target.value }))} />
+									</div>
+								</div>
+							)}
 						</div>
 
 						{/* Line Items */}
@@ -1467,13 +1465,15 @@ export default function InvoicesPage() {
 										{form.items.map((item, i) => (
 											<TableRow key={i}>
 												<TableCell className="p-1">
-													<Input
-														className="h-8 text-xs"
-														placeholder="Description"
+													<ProductCombobox
+														className="h-8"
 														value={item.description}
-														onChange={(e) =>
-															updateItem(i, "description", e.target.value)
-														}
+														onChange={(desc) => updateItem(i, "description", desc)}
+														onSelect={(product) => {
+															updateItem(i, "description", product.name);
+															updateItem(i, "unitPrice", Number(product.price));
+														}}
+														placeholder="Description or search product..."
 													/>
 												</TableCell>
 												<TableCell className="p-1">
@@ -1538,8 +1538,7 @@ export default function InvoicesPage() {
 										type="button"
 										className="flex w-full items-center gap-2 text-left text-xs hover:text-foreground transition-colors"
 									>
-										<span className="font-medium text-foreground">VAT: {form.taxRate}% · {form.taxMode === "incl" ? "Incl." : "Excl."}</span>
-										<span className="text-muted-foreground">(tap to change)</span>
+										<span className="font-medium text-foreground">VAT: {parseFloat(String(form.taxRate))}% · {form.taxMode === "incl" ? "Incl." : "Excl."}</span>
 										<ChevronDown className={`ml-auto size-3 transition-transform ${taxSettingsOpen ? "rotate-180" : ""}`} />
 									</button>
 								</CollapsibleTrigger>

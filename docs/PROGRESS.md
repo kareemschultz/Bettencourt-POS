@@ -539,3 +539,21 @@ Full accounting and billing suite integrated into the existing POS:
 - `bun run build` (web + server): pass
 - Docker rebuilt and deployed: pass
 - Pushed to GitHub: commit 25eda8a
+
+---
+
+## Plan #13 — Quotation & Invoice Form UX Overhaul (COMPLETE — 2026-03-30)
+
+### What was built
+
+| Task | Status | Details |
+|------|--------|---------|
+| Customer/Agency toggle | Done | "Bill To" section has Individual vs Agency/Ministry mode. Individual: CustomerCombobox + phone. Agency: agency name, supervisor, position, order placed by, phone, address. Auto-detected on edit. |
+| Product picker in line items | Done | Description field is now a searchable ProductCombobox. Queries `orpc.products.list` (name + SKU, case-insensitive). Auto-fills description + unit price on select. Free text still works. Only active products shown. |
+| Form restructuring | Done | Forms reorganized into clear cards: "From" (brand + prepared by + dept), "Bill To" (toggle), Line Items, Tax/Discount (collapsible), Notes, Terms & Conditions (quotation only, collapsible). |
+| VAT default — 14% inclusive | Done | `invoice_document_settings` table updated: `default_tax_rate = 14`, `default_tax_mode = 'incl'`. Display label fixed: `parseFloat()` strips trailing zeros ("14%" not "14.00%"). "Tax Rate (%)" renamed to "VAT Rate". |
+| New component: ProductCombobox | Done | `apps/web/src/components/ui/product-combobox.tsx` -- debounced search, Popover+Command dropdown, onSelect auto-fill, same pattern as CustomerCombobox. |
+
+### Verification
+- Docker container `kt-bettencourt-pos` rebuilt and deployed
+- Live at https://pos.karetechsolutions.com
