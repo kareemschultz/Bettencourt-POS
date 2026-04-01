@@ -441,8 +441,8 @@ function buildInvoiceHtml(
   .print-btn:hover { background: #f1f5f9; }
 
   @media print {
-    @page { margin: 15mm; size: A4; }
-    body { background: white; padding: 0; }
+    @page { margin: 0; size: A4; }
+    body { background: white; padding: 15mm; }
     .wrapper { margin: 0; max-width: 100%; box-shadow: none; padding: 0; }
     .print-bar { display: none; }
     /* Tighten section gaps so short invoices fit on one page */
@@ -556,7 +556,7 @@ function buildInvoiceHtml(
   </div>
 
   <div id="footer">
-    ${escHtml(companyName)} &nbsp;&bull;&nbsp; ${settings.invoiceFooterNote ? escHtml(settings.invoiceFooterNote) + " &nbsp;&bull;&nbsp; " : ""}Generated ${new Date().toLocaleString("en-GY")}
+    ${escHtml(companyName)}${settings.invoiceFooterNote ? ` &nbsp;&bull;&nbsp; ${escHtml(settings.invoiceFooterNote)}` : ""}
   </div>
 
 </div>
