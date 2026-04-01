@@ -129,7 +129,27 @@ function esc(str: string | null | undefined): string {
 // Shared cell/header styles
 const TH = `padding:7px 10px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;color:#475569;text-transform:uppercase;background:#f8fafc;border-bottom:2px solid #e2e8f0`;
 const TH_R = `padding:7px 10px;text-align:right;font-size:9px;font-weight:700;letter-spacing:.08em;color:#475569;text-transform:uppercase;background:#f8fafc;border-bottom:2px solid #e2e8f0`;
-const TD = `padding:8px 10px;border-bottom:1px solid #f1f5f9;font-size:11.5px;vertical-align:middle`;
+const TD = `padding:8px 10px;border-bottom:1px solid #f1f5f9;font-size:11.5px;vertical-align:top`;
+
+// Render description as individual line items (split on newlines)
+function formatDescLines(desc: string): string {
+	if (!desc) return "<span style='color:#94a3b8'>—</span>";
+	const lines = desc
+		.split(/\n/)
+		.map((l) => l.trim().replace(/,\s*$/, ""))
+		.filter(Boolean);
+	if (lines.length <= 1)
+		return `<span style="font-size:11px;color:#334155">${esc(desc.trim())}</span>`;
+	return lines
+		.map(
+			(l) =>
+				`<div style="display:flex;gap:6px;align-items:baseline;margin-bottom:3px">` +
+				`<span style="color:#b8862d;font-size:9px;flex-shrink:0;margin-top:1px">▪</span>` +
+				`<span style="font-size:11px;color:#334155">${esc(l)}</span>` +
+				`</div>`,
+		)
+		.join("");
+}
 
 function buildReportHtml(opts: ExpenseReportOptions, logo: string): string {
 	const { rows, groups, period, getSourceName, preparedBy } = opts;
@@ -229,7 +249,7 @@ function buildReportHtml(opts: ExpenseReportOptions, logo: string): string {
   col.c-amt     { width: 108px; }
   col.c-auth    { width: 68px; }
   tbody tr:nth-child(even) td { background: #f8fafc; }
-  .desc-cell { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  td { vertical-align: top; }
   .sticky-actions { position: sticky; top: 0; z-index: 10; background: #1e293b; display: flex; gap: 10px; padding: 10px 32px; border-bottom: 2px solid #334155; }
   @media print {
     @page { margin: 8mm 8mm; size: A4 landscape; }
@@ -397,12 +417,12 @@ function expenseRow(
     </td>
     <td style="${TD};max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(e.supplier_name ?? "")}">${esc(e.supplier_name ?? "—")}</td>
     <td style="${TD};white-space:nowrap">
-      <span style="display:inline-flex;align-items:center;gap:5px">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>
-        <span style="font-size:11px">${esc(e.category)}</span>
+      <span style="display:inline-flex;align-items:center;background:${color}18;border:1px solid ${color}44;border-radius:12px;padding:2px 8px 2px 6px;gap:5px">
+        <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${color};flex-shrink:0"></span>
+        <span style="font-size:10.5px;font-weight:600;color:${color}">${esc(e.category)}</span>
       </span>
     </td>
-    <td style="${TD};color:#475569"><div class="desc-cell">${esc(e.description)}</div></td>
+    <td style="${TD};color:#475569">${formatDescLines(e.description)}</td>
     <td style="${TD};white-space:nowrap;color:#64748b;font-size:10.5px">${esc(fmtPayment(e.payment_method))}</td>
     <td style="${TD};white-space:nowrap;color:#64748b;font-size:10.5px">${esc(e.reference_number ?? "—")}</td>
     <td style="${TD};text-align:right;font-weight:700;white-space:nowrap;color:#1e293b">${fmtGYD(e.amount)}</td>
