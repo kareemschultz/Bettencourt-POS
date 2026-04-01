@@ -252,8 +252,8 @@ export default function BudgetsPage() {
 		setForm({
 			name: budget.name,
 			period: budget.period as "monthly" | "quarterly" | "annually",
-			startDate: budget.startDate ? (budget.startDate.split("T")[0] ?? "") : "",
-			endDate: budget.endDate ? (budget.endDate.split("T")[0] ?? "") : "",
+			startDate: budget.startDate ? (new Date(budget.startDate).toISOString().split("T")[0] ?? "") : "",
+			endDate: budget.endDate ? (new Date(budget.endDate).toISOString().split("T")[0] ?? "") : "",
 			categories: Array.isArray(budget.categories) ? budget.categories : [],
 		});
 		setDialogOpen(true);

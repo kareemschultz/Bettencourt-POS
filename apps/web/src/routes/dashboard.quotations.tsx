@@ -325,7 +325,7 @@ export default function QuotationsPage() {
 			agencyName: q.agencyName ?? "",
 			contactPersonName: q.contactPersonName ?? "",
 			contactPersonPosition: q.contactPersonPosition ?? "",
-			validUntil: q.validUntil ? (q.validUntil.split("T")[0] ?? "") : "",
+			validUntil: q.validUntil ? (new Date(q.validUntil).toISOString().split("T")[0] ?? "") : "",
 			notes: q.notes ?? "",
 			items: Array.isArray(q.items)
 				? (q.items as LineItem[])

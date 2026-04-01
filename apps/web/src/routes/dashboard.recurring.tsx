@@ -297,9 +297,9 @@ export default function RecurringPage() {
       name: t.name,
       type: t.type,
       frequency: t.frequency,
-      startDate: t.startDate ? (t.startDate.split("T")[0] ?? "") : "",
-      nextRunDate: t.nextRunDate ? (t.nextRunDate.split("T")[0] ?? "") : "",
-      endDate: t.endDate ? (t.endDate.split("T")[0] ?? "") : "",
+      startDate: t.startDate ? (new Date(t.startDate).toISOString().split("T")[0] ?? "") : "",
+      nextRunDate: t.nextRunDate ? (new Date(t.nextRunDate).toISOString().split("T")[0] ?? "") : "",
+      endDate: t.endDate ? (new Date(t.endDate).toISOString().split("T")[0] ?? "") : "",
       remainingCycles:
         t.remainingCycles === null || t.remainingCycles === undefined
           ? ""

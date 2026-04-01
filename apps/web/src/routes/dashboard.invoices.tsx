@@ -427,8 +427,8 @@ export default function InvoicesPage() {
 			contactPersonName: (inv as { contactPersonName?: string | null }).contactPersonName ?? "",
 			contactPersonPosition: (inv as { contactPersonPosition?: string | null }).contactPersonPosition ?? "",
 			department: (inv as { department?: string | null }).department ?? "",
-			issuedDate: inv.issuedDate ? (inv.issuedDate.split("T")[0] ?? "") : "",
-			dueDate: inv.dueDate ? (inv.dueDate.split("T")[0] ?? "") : "",
+			issuedDate: inv.issuedDate ? (new Date(inv.issuedDate).toISOString().split("T")[0] ?? "") : "",
+			dueDate: inv.dueDate ? (new Date(inv.dueDate).toISOString().split("T")[0] ?? "") : "",
 			notes: inv.notes ?? "",
 			items: Array.isArray(inv.items)
 				? (inv.items as LineItem[])
