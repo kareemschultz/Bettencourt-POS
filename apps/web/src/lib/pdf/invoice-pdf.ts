@@ -216,9 +216,18 @@ function buildInvoiceHtml(
     </div>`
 			: "";
 
-	const clientNameLine = invoice.agencyName
-		? `<p class="client-primary">${escHtml(invoice.agencyName)}</p><p>${escHtml(invoice.customerName)}</p>`
-		: `<p class="client-primary">${escHtml(invoice.customerName)}</p>`;
+	const clientPrimaryName = invoice.agencyName
+		? escHtml(invoice.agencyName)
+		: escHtml(invoice.customerName);
+
+	const clientSubLines = [
+		invoice.agencyName ? escHtml(invoice.customerName) : null,
+		invoice.contactPersonName
+			? `${escHtml(invoice.contactPersonName)}${invoice.contactPersonPosition ? `, ${escHtml(invoice.contactPersonPosition)}` : ""}`
+			: invoice.contactPersonPosition ? escHtml(invoice.contactPersonPosition) : null,
+		invoice.customerPhone ? escHtml(invoice.customerPhone) : null,
+		invoice.customerAddress ? escHtml(invoice.customerAddress) : null,
+	].filter(Boolean).join("<br>");
 
 	// Notes shown above the totals left-column (mirrors IN public_notes placement)
 	const notesBlock = invoice.notes
@@ -232,226 +241,174 @@ function buildInvoiceHtml(
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${escHtml(invoice.invoiceNumber)} — ${companyName}</title>
 <style>
-  :root {
-    --primary: #b8862d;
-    --secondary: #7d5518;
-    --line-height: 1.6;
-  }
-
+  :root { --primary: #b8862d; --secondary: #7d5518; --line-height: 1.6; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
-    font-size: 14px;
+    font-size: 13px;
     background: #dde0e3;
     color: #333;
     -webkit-font-smoothing: antialiased;
-    padding: 24px 16px 48px;
+    padding: 28px 16px 48px;
   }
 
   .wrapper {
     max-width: 794px;
     margin: 0 auto;
     background: white;
-    padding: 48px 52px 52px;
+    padding: 44px 52px 52px;
     box-shadow: 0 2px 14px rgba(0,0,0,0.18);
   }
 
-  /* ── 3-COLUMN HEADER (Business: 1.8fr 1fr 1fr, grey company text) ── */
-  .header-container {
+  /* ── HEADER: logo+company LEFT | doc-title + entity box RIGHT ── */
+  .header {
     display: grid;
-    grid-template-columns: 1.8fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
     align-items: start;
-    gap: 20px;
-    width: 100%;
-    margin-bottom: 2rem;
+    margin-bottom: 2.4rem;
   }
 
-  .company-logo-container { justify-self: start; }
-  .company-logo { max-width: 160px; max-height: 64px; width: auto; height: auto; display: block; }
+  .company-logo { max-width: 180px; max-height: 72px; width: auto; height: auto; display: block; margin-bottom: 12px; }
+  .company-name { font-size: 1em; font-weight: 700; color: #222; margin-bottom: 3px; }
+  .company-sub  { font-size: 0.82em; color: #aaa; line-height: var(--line-height); }
 
-  /* Company details — grey (Business: #b1b1b1) */
-  #company-details {
-    display: flex;
-    flex-direction: column;
-    color: #b1b1b1;
-    line-height: var(--line-height);
-    text-align: left;
-    font-size: 0.88em;
-  }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; }
 
-  /* Company address — lighter grey */
-  #company-address {
-    display: flex;
-    flex-direction: column;
-    color: #b1b1b1;
-    line-height: var(--line-height);
-    text-align: left;
-    font-size: 0.88em;
-  }
-
-  /* ── CLIENT + ENTITY WRAPPER (grid, margin-bottom 2rem) ── */
-  .client-and-entity-wrapper {
-    display: grid;
-    grid-template-columns: 2fr 1.5fr;
-    align-items: start;
-    margin-bottom: 2rem;
-    gap: 20px;
-  }
-
-  /* LEFT: client-details — "issued to" label + client name in PRIMARY (120%) */
-  #client-details {
-    display: flex;
-    flex-direction: column;
-    line-height: var(--line-height);
-    font-size: 0.9em;
-    color: #555;
-  }
-  .entity-issued-to {
-    margin-top: 0;
-    font-size: 0.78em;
-    font-weight: 700;
-    color: #888;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-  /* Second child = client name in primary color at 120% (Business signature) */
-  #client-details .client-primary {
+  .doc-title {
+    font-size: 2.6em;
+    font-weight: 900;
+    letter-spacing: 0.08em;
     color: var(--primary);
-    font-size: 1.2em;
-    font-weight: 600;
+    text-align: right;
+    margin-bottom: 14px;
+    line-height: 1;
   }
 
-  /* RIGHT: entity-details — PRIMARY background, border-radius 1rem, white text */
+  /* Entity details box */
   #entity-details {
-    background-color: var(--primary);
-    border-radius: 1rem;
     width: 100%;
-    color: white;
+    background: var(--primary);
+    border-radius: 12px;
     border-collapse: separate;
     border-spacing: 0;
+    color: white;
   }
+  #entity-details tr:first-child th,
+  #entity-details tr:first-child td { padding-top: 14px; }
+  #entity-details tr:last-child th,
+  #entity-details tr:last-child td { padding-bottom: 14px; }
   #entity-details th {
-    font-weight: normal;
-    padding: 0.5rem 12px 0.5rem 1.2rem;
+    font-weight: 400;
+    padding: 4px 8px 4px 16px;
+    font-size: 0.82em;
+    opacity: 0.85;
     white-space: nowrap;
-    font-size: 0.88em;
-    opacity: 0.9;
+    text-align: left;
   }
   #entity-details td {
+    padding: 4px 16px 4px 8px;
+    font-size: 0.82em;
+    font-weight: 700;
     text-align: right;
-    padding: 0.5rem 1.2rem 0.5rem 10px;
-    font-size: 0.88em;
-    font-weight: 600;
+    white-space: nowrap;
   }
-  #entity-details tr:last-child th,
-  #entity-details tr:last-child td { padding-bottom: 0; }
 
-  /* ── ITEMS TABLE (Business: secondary-color header, rounded top corners 10px) ── */
+  /* ── BILL TO: full-width section below header ── */
+  .bill-to {
+    margin-bottom: 2rem;
+    padding-bottom: 1.4rem;
+    border-bottom: 1px solid #ebebeb;
+  }
+  .bill-to-label {
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #aaa;
+    margin-bottom: 6px;
+  }
+  .client-name {
+    font-size: 1.15em;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 3px;
+  }
+  .client-sub { font-size: 0.86em; color: #555; line-height: var(--line-height); }
+
+  /* ── ITEMS TABLE ── */
   .items-table {
-    margin-top: 2.5rem;
-    margin-bottom: 5px;
-    min-width: 100%;
+    width: 100%;
     table-layout: fixed;
     border-collapse: collapse;
     overflow-wrap: break-word;
+    margin-bottom: 4px;
   }
-  .items-table thead {
-    text-align: left;
-    background: var(--secondary);
-  }
-  .items-table thead th {
-    padding: 1rem;
-    color: white;
-    font-weight: 600;
-    font-size: 0.88em;
-  }
-  .items-table thead th.left-radius { border-top-left-radius: 10px; }
-  .items-table thead th.right-radius { text-align: right; border-top-right-radius: 10px; }
-
+  .items-table thead { background: var(--secondary); text-align: left; }
+  .items-table thead th { padding: 11px 12px; color: white; font-weight: 600; font-size: 0.82em; }
+  .items-table thead th:first-child { border-top-left-radius: 8px; }
+  .items-table thead th.right-th { text-align: right; }
+  .items-table thead th.right-radius { text-align: right; border-top-right-radius: 8px; }
   .items-table tbody td {
-    padding: 1rem;
-    font-size: 0.88em;
+    padding: 11px 12px;
+    font-size: 0.86em;
     color: #444;
     vertical-align: top;
+    background: #f8f8f8;
+    border-bottom: 1px solid #efefef;
   }
   .items-table tbody td.right-td { text-align: right; font-variant-numeric: tabular-nums; }
-  /* Business: odd + even both use #F7F7F7 (light grey for all rows) */
-  .items-table tbody tr td { background: #F7F7F7; }
-  .items-table tbody tr:nth-child(even) td { background: #f7f7f7; }
 
-  /* ── TABLE TOTALS (Business: 2fr 1fr, gap 80px, outstanding in secondary-color) ── */
+  /* ── TABLE TOTALS ── */
   #table-totals {
-    margin-top: 0;
     display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 80px;
-    padding-top: 0.5rem;
+    grid-template-columns: 1fr 220px;
+    gap: 40px;
+    padding-top: 8px;
     padding-bottom: 0.8rem;
-    overflow: visible;
   }
-
-  .totals-left {
-    font-size: 0.82em;
-    color: #666;
-    line-height: var(--line-height);
-  }
-
+  .totals-left { font-size: 0.82em; color: #666; line-height: var(--line-height); }
   .totals-right { display: flex; flex-direction: column; }
   .t-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    margin-top: 0.75rem;
-    font-size: 0.88em;
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 0.86em;
     color: #555;
+    border-bottom: 1px solid #f0f0f0;
   }
-  .t-row .amt { text-align: right; padding-right: 17px; font-variant-numeric: tabular-nums; }
-  .t-row .lbl { padding-left: 7px; }
+  .t-row:last-of-type { border-bottom: none; }
+  .t-row .lbl { color: #777; }
+  .t-row .amt { font-variant-numeric: tabular-nums; }
+  .t-row.sep { font-weight: 700; color: #222; }
+  .t-row.sep .lbl { color: #222; }
   .t-row.discount .amt { color: #dc2626; }
   .t-row.paid-row .amt { color: #16a34a; }
-  .t-row.sep { font-weight: bold; color: #333; }
 
-  /* Outstanding row — full secondary-color box (Business signature) */
-  .outstanding-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    margin-top: 0.75rem;
-  }
-  .outstanding-label {
-    background-color: var(--secondary);
+  .balance-due-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    background: var(--secondary);
     color: white;
-    font-size: 1.05em;
-    font-weight: bold;
-    padding: 1rem;
-    border-top-left-radius: 7px;
-    border-bottom-left-radius: 7px;
-    white-space: nowrap;
-    padding-left: 10px;
-  }
-  .outstanding-value {
-    background-color: var(--secondary);
-    color: white;
-    font-size: 1.05em;
-    font-weight: bold;
-    padding: 1rem 17px;
-    border-top-right-radius: 7px;
-    border-bottom-right-radius: 7px;
-    text-align: right;
+    font-weight: 700;
+    font-size: 0.92em;
+    padding: 11px 14px;
+    border-radius: 8px;
     font-variant-numeric: tabular-nums;
-    white-space: nowrap;
   }
-  .outstanding-label.paid,
-  .outstanding-value.paid { background-color: #16a34a; }
+  .balance-due-row.paid { background: #16a34a; }
 
   /* ── NOTES ── */
-  .notes-left { font-size: 0.85em; line-height: 1.6; }
+  .notes-left { font-size: 0.82em; line-height: var(--line-height); }
   .notes-label { font-weight: bold; color: #dc2626; font-style: italic; }
-  .notes-text { color: #dc2626; font-style: italic; font-weight: 500; }
+  .notes-text  { color: #dc2626; font-style: italic; font-weight: 500; }
 
   /* ── PAYMENT HISTORY ── */
   .history-section { padding-top: 12px; border-top: 1px solid #ebebeb; margin-top: 8px; }
-  .section-label { font-size: 0.78em; font-weight: 700; letter-spacing: 0.1em; color: #888; text-transform: uppercase; margin-bottom: 8px; }
+  .section-label { font-size: 0.72em; font-weight: 700; letter-spacing: 0.1em; color: #888; text-transform: uppercase; margin-bottom: 8px; }
   .history-table { width: 100%; border-collapse: collapse; }
   .history-table th { padding: 5px 8px; font-size: 0.78em; font-weight: 700; color: #888; border-bottom: 1px solid #ebebeb; text-align: left; }
   .history-table th.right-th { text-align: right; }
@@ -474,13 +431,8 @@ function buildInvoiceHtml(
   .cheques-section strong { color: #333; }
   .credit-terms { margin-top: 3px; color: #888; }
 
-  /* ── FOOTER (Business: margin-top 30px, plain text) ── */
-  #footer {
-    margin-top: 30px;
-    font-size: 0.78em;
-    color: #aaa;
-    text-align: center;
-  }
+  /* ── FOOTER ── */
+  #footer { margin-top: 30px; font-size: 0.72em; color: #aaa; text-align: center; }
 
   /* ── PRINT BAR (screen only) ── */
   .print-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #1e293b; color: white; display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
@@ -508,52 +460,46 @@ function buildInvoiceHtml(
 
 <div class="wrapper">
 
-  <!-- 3-COLUMN HEADER: Logo LEFT | Company Details (grey) CENTER | Address (grey) RIGHT -->
-  <div class="header-container">
-    <div class="company-logo-container">${logoHtml}</div>
-    <div id="company-details">
-      <span>${escHtml(companyName)}</span>
-      <span>Georgetown, Guyana</span>
-      ${settings.companyTin ? `<span>TIN: ${escHtml(settings.companyTin)}</span>` : ""}
+  <!-- HEADER: logo+company LEFT | INVOICE title + entity box RIGHT -->
+  <div class="header">
+    <div>
+      ${logoHtml}
+      <div class="company-name">${escHtml(companyName)}</div>
+      <div class="company-sub">
+        Georgetown, Guyana<br>
+        ${settings.companyTin ? `TIN: ${escHtml(settings.companyTin)}` : ""}
+      </div>
     </div>
-    <div id="company-address">
-      <span>Georgetown</span>
-      <span>Demerara-Mahaica</span>
-      <span>Guyana</span>
+    <div class="header-right">
+      <div class="doc-title">INVOICE</div>
+      <table id="entity-details" cellspacing="0">
+        <tr><th>Invoice #</th><td>${escHtml(invoice.invoiceNumber)}</td></tr>
+        <tr><th>Invoice Date</th><td>${issuedStr}</td></tr>
+        ${dueStr ? `<tr><th>Due Date</th><td>${dueStr}</td></tr>` : ""}
+        <tr><th>Terms</th><td>${escHtml(TERMS_LABEL[invoice.paymentTerms ?? "due_on_receipt"] ?? invoice.paymentTerms ?? "Due on Receipt")}</td></tr>
+        <tr><th>Invoice Total</th><td>${fmtGYD(total)}</td></tr>
+        <tr><th>Balance Due</th><td>${fmtGYD(Math.max(balance, 0))}</td></tr>
+      </table>
     </div>
   </div>
 
-  <!-- CLIENT LEFT | GOLD ENTITY-DETAILS BOX RIGHT -->
-  <div class="client-and-entity-wrapper">
-    <div id="client-details">
-      <p class="entity-issued-to">Invoice issued to:</p>
-      ${clientNameLine}
-      ${invoice.contactPersonName ? `<p>${escHtml(invoice.contactPersonName)}${invoice.contactPersonPosition ? `, ${escHtml(invoice.contactPersonPosition)}` : ""}</p>` : invoice.contactPersonPosition ? `<p>${escHtml(invoice.contactPersonPosition)}</p>` : ""}
-      ${invoice.customerPhone ? `<p>${escHtml(invoice.customerPhone)}</p>` : ""}
-      ${invoice.customerAddress ? `<p>${escHtml(invoice.customerAddress)}</p>` : ""}
-      ${invoice.preparedBy ? `<p style="margin-top:8px;font-size:0.82em;color:#888">Prepared by: ${escHtml(invoice.preparedBy)}</p>` : ""}
-    </div>
-
-    <table id="entity-details" cellspacing="0">
-      <tr><th>Invoice #</th><td>${escHtml(invoice.invoiceNumber)}</td></tr>
-      <tr><th>Date</th><td>${issuedStr}</td></tr>
-      ${dueStr ? `<tr><th>Due Date</th><td>${dueStr}</td></tr>` : ""}
-      <tr><th>Terms</th><td>${escHtml(TERMS_LABEL[invoice.paymentTerms ?? "due_on_receipt"] ?? invoice.paymentTerms ?? "Due on Receipt")}</td></tr>
-      <tr><th>Total</th><td>${fmtGYD(total)}</td></tr>
-      <tr><th>Balance Due</th><td>${fmtGYD(Math.max(balance, 0))}</td></tr>
-      <tr><th>Status</th><td>${escHtml(invoice.status.toUpperCase())}</td></tr>
-    </table>
+  <!-- BILL TO -->
+  <div class="bill-to">
+    <div class="bill-to-label">Bill To</div>
+    <div class="client-name">${clientPrimaryName}</div>
+    ${clientSubLines ? `<div class="client-sub">${clientSubLines}</div>` : ""}
+    ${invoice.preparedBy ? `<p style="margin-top:8px;font-size:0.82em;color:#888">Prepared by: ${escHtml(invoice.preparedBy)}</p>` : ""}
   </div>
 
-  <!-- ITEMS TABLE: secondary-gold header, rounded corners, grey rows -->
+  <!-- ITEMS TABLE -->
   <table class="items-table">
     <thead>
       <tr>
-        <th class="left-radius">Item / Description</th>
-        <th style="width:58px;text-align:right">Qty</th>
-        <th style="width:110px;text-align:right">Unit Cost</th>
+        <th>Item / Description</th>
+        <th class="right-th" style="width:52px">Qty</th>
+        <th class="right-th" style="width:106px">Unit Cost</th>
         ${taxColHeader}
-        <th class="right-radius" style="width:120px">Line Total</th>
+        <th class="right-radius" style="width:116px">Line Total</th>
       </tr>
     </thead>
     <tbody>${itemRows}</tbody>
@@ -570,9 +516,9 @@ function buildInvoiceHtml(
       ${taxAmt > 0 ? `<div class="t-row"><span class="lbl">Tax</span><span class="amt">${fmtGYD(taxAmt)}</span></div>` : ""}
       <div class="t-row sep"><span class="lbl">Total</span><span class="amt">${fmtGYD(total)}</span></div>
       ${paid > 0 ? `<div class="t-row paid-row"><span class="lbl">Amount Paid</span><span class="amt">-${fmtGYD(paid)}</span></div>` : ""}
-      <div class="outstanding-row">
-        <div class="outstanding-label${isFullyPaid ? " paid" : ""}">Balance Due</div>
-        <div class="outstanding-value${isFullyPaid ? " paid" : ""}">${fmtGYD(Math.max(balance, 0))}</div>
+      <div class="balance-due-row${isFullyPaid ? " paid" : ""}">
+        <span>Balance Due</span>
+        <span>${fmtGYD(Math.max(balance, 0))}</span>
       </div>
     </div>
   </div>

@@ -154,9 +154,18 @@ function buildQuotationHtml(
 		? `<div class="notes-left"><span class="notes-label">Notes:</span> <span class="notes-text">${escHtml(quot.notes)}</span></div>`
 		: "";
 
-	const clientNameLine = quot.agencyName
-		? `<p class="client-primary">${escHtml(quot.agencyName)}</p><p>${escHtml(quot.customerName)}</p>`
-		: `<p class="client-primary">${escHtml(quot.customerName)}</p>`;
+	const clientPrimaryName = quot.agencyName
+		? escHtml(quot.agencyName)
+		: escHtml(quot.customerName);
+
+	const clientSubLines = [
+		quot.agencyName ? escHtml(quot.customerName) : null,
+		quot.contactPersonName
+			? `${escHtml(quot.contactPersonName)}${quot.contactPersonPosition ? `, ${escHtml(quot.contactPersonPosition)}` : ""}`
+			: quot.contactPersonPosition ? escHtml(quot.contactPersonPosition) : null,
+		quot.customerPhone ? escHtml(quot.customerPhone) : null,
+		quot.customerAddress ? escHtml(quot.customerAddress) : null,
+	].filter(Boolean).join("<br>");
 
 	return `<!DOCTYPE html>
 <html lang="en">
@@ -165,93 +174,43 @@ function buildQuotationHtml(
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${escHtml(quot.quotationNumber)} — ${companyName}</title>
 <style>
-  :root {
-    --primary: #b8862d;
-    --secondary: #7d5518;
-    --line-height: 1.6;
-  }
-
+  :root { --primary: #b8862d; --secondary: #7d5518; --line-height: 1.6; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
-    font-size: 14px;
+    font-size: 13px;
     background: #dde0e3;
     color: #333;
     -webkit-font-smoothing: antialiased;
-    padding: 24px 16px 48px;
+    padding: 28px 16px 48px;
   }
 
   .wrapper {
     max-width: 794px;
     margin: 0 auto;
     background: white;
-    padding: 48px 52px 52px;
+    padding: 44px 52px 52px;
     box-shadow: 0 2px 14px rgba(0,0,0,0.18);
   }
 
-  /* ── 3-COLUMN HEADER ── */
-  .header-container {
+  /* ── HEADER: logo+company LEFT | doc-title + entity box RIGHT ── */
+  .header {
     display: grid;
-    grid-template-columns: 1.8fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
     align-items: start;
-    gap: 20px;
-    width: 100%;
-    margin-bottom: 2rem;
+    margin-bottom: 2.4rem;
   }
 
-  .company-logo-container { justify-self: start; }
-  .company-logo { max-width: 160px; max-height: 64px; width: auto; height: auto; display: block; }
+  .company-logo { max-width: 180px; max-height: 72px; width: auto; height: auto; display: block; margin-bottom: 12px; }
+  .company-name { font-size: 1em; font-weight: 700; color: #222; margin-bottom: 3px; }
+  .company-sub  { font-size: 0.82em; color: #aaa; line-height: var(--line-height); }
 
-  #company-details {
-    display: flex;
-    flex-direction: column;
-    color: #b1b1b1;
-    line-height: var(--line-height);
-    text-align: left;
-    font-size: 0.88em;
-  }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; }
 
-  #company-address {
-    display: flex;
-    flex-direction: column;
-    color: #b1b1b1;
-    line-height: var(--line-height);
-    text-align: left;
-    font-size: 0.88em;
-  }
-
-  /* ── CLIENT + ENTITY WRAPPER ── */
-  .client-and-entity-wrapper {
-    display: grid;
-    grid-template-columns: 2fr 1.5fr;
-    align-items: start;
-    margin-bottom: 2rem;
-    gap: 20px;
-  }
-
-  #client-details {
-    display: flex;
-    flex-direction: column;
-    line-height: var(--line-height);
-    font-size: 0.9em;
-    color: #555;
-  }
-  .entity-issued-to { margin-top: 0; font-size: 0.78em; font-weight: 700; color: #888; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
-  #client-details .client-primary { color: var(--primary); font-size: 1.2em; font-weight: 600; }
-
-  /* QUOTATION badge in header area (above entity box) */
-  .quotation-badge-wrapper { text-align: right; margin-bottom: 6px; }
-  .quotation-badge {
-    display: inline-block;
-    border: 2px solid var(--primary);
-    border-radius: 6px;
-    padding: 4px 12px;
-    font-size: 1.1em;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    color: var(--primary);
-  }
+  /* Quotation badge (above doc-title) */
+  .quotation-badge-wrapper { text-align: right; margin-bottom: 8px; }
   .revision-tag {
     display: inline-block;
     background: #f59e0b22;
@@ -262,105 +221,141 @@ function buildQuotationHtml(
     font-size: 0.78em;
     font-weight: 700;
     letter-spacing: 0.06em;
-    margin-left: 6px;
     vertical-align: middle;
   }
 
+  .doc-title {
+    font-size: 2.6em;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    color: var(--primary);
+    text-align: right;
+    margin-bottom: 14px;
+    line-height: 1;
+  }
+
+  /* Entity details box */
   #entity-details {
-    background-color: var(--primary);
-    border-radius: 1rem;
-    min-width: 220px;
-    color: white;
+    width: 100%;
+    background: var(--primary);
+    border-radius: 12px;
     border-collapse: separate;
     border-spacing: 0;
-    flex-shrink: 0;
+    color: white;
   }
+  #entity-details tr:first-child th,
+  #entity-details tr:first-child td { padding-top: 14px; }
+  #entity-details tr:last-child th,
+  #entity-details tr:last-child td { padding-bottom: 14px; }
   #entity-details th {
-    font-weight: normal;
-    padding: 0.5rem 12px 0.5rem 1.2rem;
+    font-weight: 400;
+    padding: 4px 8px 4px 16px;
+    font-size: 0.82em;
+    opacity: 0.85;
     white-space: nowrap;
-    font-size: 0.88em;
-    opacity: 0.9;
+    text-align: left;
   }
   #entity-details td {
+    padding: 4px 16px 4px 8px;
+    font-size: 0.82em;
+    font-weight: 700;
     text-align: right;
-    padding: 0.5rem 1.2rem 0.5rem 10px;
-    font-size: 0.88em;
-    font-weight: 600;
+    white-space: nowrap;
   }
-  #entity-details tr:last-child th,
-  #entity-details tr:last-child td { padding-bottom: 0; }
+
+  /* ── BILL TO: full-width section below header ── */
+  .bill-to {
+    margin-bottom: 2rem;
+    padding-bottom: 1.4rem;
+    border-bottom: 1px solid #ebebeb;
+  }
+  .bill-to-label {
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #aaa;
+    margin-bottom: 6px;
+  }
+  .client-name {
+    font-size: 1.15em;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 3px;
+  }
+  .client-sub { font-size: 0.86em; color: #555; line-height: var(--line-height); }
 
   /* ── ITEMS TABLE ── */
   .items-table {
-    margin-top: 2.5rem;
-    margin-bottom: 5px;
-    min-width: 100%;
+    width: 100%;
     table-layout: fixed;
     border-collapse: collapse;
     overflow-wrap: break-word;
+    margin-bottom: 4px;
   }
-  .items-table thead { text-align: left; background: var(--secondary); }
-  .items-table thead th { padding: 1rem; color: white; font-weight: 600; font-size: 0.88em; }
-  .items-table thead th.left-radius { border-top-left-radius: 10px; }
-  .items-table thead th.right-radius { text-align: right; border-top-right-radius: 10px; }
-  .items-table tbody td { padding: 1rem; font-size: 0.88em; color: #444; vertical-align: top; }
+  .items-table thead { background: var(--secondary); text-align: left; }
+  .items-table thead th { padding: 11px 12px; color: white; font-weight: 600; font-size: 0.82em; }
+  .items-table thead th:first-child { border-top-left-radius: 8px; }
+  .items-table thead th.right-th { text-align: right; }
+  .items-table thead th.right-radius { text-align: right; border-top-right-radius: 8px; }
+  .items-table tbody td {
+    padding: 11px 12px;
+    font-size: 0.86em;
+    color: #444;
+    vertical-align: top;
+    background: #f8f8f8;
+    border-bottom: 1px solid #efefef;
+  }
   .items-table tbody td.right-td { text-align: right; font-variant-numeric: tabular-nums; }
-  .items-table tbody tr td { background: #F7F7F7; }
 
   /* ── TABLE TOTALS ── */
   #table-totals {
-    margin-top: 0;
     display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 80px;
-    padding-top: 0.5rem;
+    grid-template-columns: 1fr 220px;
+    gap: 40px;
+    padding-top: 8px;
     padding-bottom: 0.8rem;
-    overflow: visible;
   }
-
   .totals-left { font-size: 0.82em; color: #666; line-height: var(--line-height); }
   .totals-right { display: flex; flex-direction: column; }
-  .t-row { display: grid; grid-template-columns: 1fr 1fr; margin-top: 0.75rem; font-size: 0.88em; color: #555; }
-  .t-row .amt { text-align: right; padding-right: 17px; font-variant-numeric: tabular-nums; }
-  .t-row .lbl { padding-left: 7px; }
+  .t-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 0.86em;
+    color: #555;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .t-row:last-of-type { border-bottom: none; }
+  .t-row .lbl { color: #777; }
+  .t-row .amt { font-variant-numeric: tabular-nums; }
+  .t-row.sep { font-weight: 700; color: #222; }
+  .t-row.sep .lbl { color: #222; }
   .t-row.discount .amt { color: #dc2626; }
-  .t-row.sep { font-weight: bold; color: #333; }
 
-  .outstanding-row { display: grid; grid-template-columns: 1fr 1fr; margin-top: 0.75rem; }
-  .outstanding-label {
-    background-color: var(--secondary);
+  .balance-due-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    background: var(--secondary);
     color: white;
-    font-size: 1.05em;
-    font-weight: bold;
-    padding: 1rem;
-    border-top-left-radius: 7px;
-    border-bottom-left-radius: 7px;
-    white-space: nowrap;
-    padding-left: 10px;
-  }
-  .outstanding-value {
-    background-color: var(--secondary);
-    color: white;
-    font-size: 1.05em;
-    font-weight: bold;
-    padding: 1rem 17px;
-    border-top-right-radius: 7px;
-    border-bottom-right-radius: 7px;
-    text-align: right;
+    font-weight: 700;
+    font-size: 0.92em;
+    padding: 11px 14px;
+    border-radius: 8px;
     font-variant-numeric: tabular-nums;
-    white-space: nowrap;
   }
+
+  /* ── NOTES ── */
+  .notes-left { font-size: 0.82em; line-height: var(--line-height); }
+  .notes-label { font-weight: bold; color: #dc2626; font-style: italic; }
+  .notes-text  { color: #dc2626; font-style: italic; font-weight: 500; }
 
   /* ── T&C ── */
   .tc-section { padding-top: 12px; border-top: 1px solid #ebebeb; margin-top: 8px; }
-  .section-label { font-size: 0.78em; font-weight: 700; letter-spacing: 0.1em; color: #888; text-transform: uppercase; margin-bottom: 8px; }
+  .section-label { font-size: 0.72em; font-weight: 700; letter-spacing: 0.1em; color: #888; text-transform: uppercase; margin-bottom: 8px; }
   .tc-text { font-size: 0.85em; color: #666; line-height: 1.7; white-space: pre-wrap; }
-
-  /* ── NOTES ── */
-  .notes-left { font-size: 0.85em; line-height: 1.6; }
-  .notes-label { font-weight: bold; color: #dc2626; font-style: italic; }
-  .notes-text { color: #dc2626; font-style: italic; font-weight: 500; }
 
   /* ── SIGNATURES ── */
   .sig-section { display: flex; justify-content: space-between; gap: 48px; padding-top: 20px; border-top: 1px solid #ebebeb; margin-top: 8px; }
@@ -374,9 +369,9 @@ function buildQuotationHtml(
   .credit-terms { margin-top: 3px; color: #888; }
 
   /* ── FOOTER ── */
-  #footer { margin-top: 30px; font-size: 0.78em; color: #aaa; text-align: center; }
+  #footer { margin-top: 30px; font-size: 0.72em; color: #aaa; text-align: center; }
 
-  /* ── PRINT BAR ── */
+  /* ── PRINT BAR (screen only) ── */
   .print-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #1e293b; color: white; display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
   .print-bar span { opacity: 0.7; font-size: 12px; }
   .print-btn { background: white; color: #1e293b; border: none; border-radius: 6px; padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
@@ -402,57 +397,46 @@ function buildQuotationHtml(
 
 <div class="wrapper">
 
-  <!-- 3-COLUMN HEADER -->
-  <div class="header-container">
-    <div class="company-logo-container">${logoHtml}</div>
-    <div id="company-details">
-      <span>${escHtml(companyName)}</span>
-      <span>Georgetown, Guyana</span>
-      ${settings.companyTin ? `<span>TIN: ${escHtml(settings.companyTin)}</span>` : ""}
-    </div>
-    <div id="company-address">
-      <span>Georgetown</span>
-      <span>Demerara-Mahaica</span>
-      <span>Guyana</span>
-    </div>
-  </div>
-
-  <!-- CLIENT LEFT | GOLD QUOTATION BOX RIGHT -->
-  <div class="client-and-entity-wrapper">
-    <div id="client-details">
-      <p class="entity-issued-to">Quotation prepared for:</p>
-      ${clientNameLine}
-      ${quot.contactPersonName ? `<p>${escHtml(quot.contactPersonName)}${quot.contactPersonPosition ? `, ${escHtml(quot.contactPersonPosition)}` : ""}</p>` : quot.contactPersonPosition ? `<p>${escHtml(quot.contactPersonPosition)}</p>` : ""}
-      ${quot.customerPhone ? `<p>${escHtml(quot.customerPhone)}</p>` : ""}
-      ${quot.customerAddress ? `<p>${escHtml(quot.customerAddress)}</p>` : ""}
-      ${quot.preparedBy ? `<p style="margin-top:8px;font-size:0.82em;color:#888">Prepared by: ${escHtml(quot.preparedBy)}</p>` : ""}
-    </div>
-
+  <!-- HEADER: logo+company LEFT | badge + QUOTATION title + entity box RIGHT -->
+  <div class="header">
     <div>
-      <div class="quotation-badge-wrapper">
-        <span class="quotation-badge">QUOTATION</span>
-        ${isRevision ? `<span class="revision-tag">REVISION</span>` : ""}
+      ${logoHtml}
+      <div class="company-name">${escHtml(companyName)}</div>
+      <div class="company-sub">
+        Georgetown, Guyana<br>
+        ${settings.companyTin ? `TIN: ${escHtml(settings.companyTin)}` : ""}
       </div>
+    </div>
+    <div class="header-right">
+      ${isRevision ? `<div class="quotation-badge-wrapper"><span class="revision-tag">REVISION</span></div>` : ""}
+      <div class="doc-title">QUOTATION</div>
       <table id="entity-details" cellspacing="0">
         <tr><th>Quotation #</th><td>${escHtml(quot.quotationNumber)}</td></tr>
         <tr><th>Date</th><td>${createdStr}</td></tr>
         ${validStr ? `<tr><th>Valid Until</th><td>${validStr}</td></tr>` : ""}
         ${validityNote ? `<tr><th>Validity</th><td>${escHtml(validityNote)}</td></tr>` : ""}
         <tr><th>Total</th><td>${fmtGYD(total)}</td></tr>
-        <tr><th>Status</th><td>${escHtml(quot.status.toUpperCase())}</td></tr>
       </table>
     </div>
+  </div>
+
+  <!-- BILL TO -->
+  <div class="bill-to">
+    <div class="bill-to-label">Prepared For</div>
+    <div class="client-name">${clientPrimaryName}</div>
+    ${clientSubLines ? `<div class="client-sub">${clientSubLines}</div>` : ""}
+    ${quot.preparedBy ? `<p style="margin-top:8px;font-size:0.82em;color:#888">Prepared by: ${escHtml(quot.preparedBy)}</p>` : ""}
   </div>
 
   <!-- ITEMS TABLE -->
   <table class="items-table">
     <thead>
       <tr>
-        <th class="left-radius">Item / Description</th>
-        <th style="width:58px;text-align:right">Qty</th>
-        <th style="width:110px;text-align:right">Unit Cost</th>
+        <th>Item / Description</th>
+        <th class="right-th" style="width:52px">Qty</th>
+        <th class="right-th" style="width:106px">Unit Cost</th>
         ${taxColHeader}
-        <th class="right-radius" style="width:120px">Line Total</th>
+        <th class="right-radius" style="width:116px">Line Total</th>
       </tr>
     </thead>
     <tbody>${itemRows}</tbody>
@@ -466,10 +450,11 @@ function buildQuotationHtml(
     <div class="totals-right">
       <div class="t-row"><span class="lbl">Subtotal</span><span class="amt">${fmtGYD(subtotal)}</span></div>
       ${discountAmt > 0 ? `<div class="t-row discount"><span class="lbl">Discount${quot.discountType === "percent" ? ` (${quot.discountValue}%)` : ""}</span><span class="amt">-${fmtGYD(discountAmt)}</span></div>` : ""}
+      ${taxAmt > 0 ? `<div class="t-row sep"><span class="lbl">Total (before tax)</span><span class="amt">${fmtGYD(subtotal - discountAmt)}</span></div>` : ""}
       ${taxAmt > 0 ? `<div class="t-row"><span class="lbl">Tax</span><span class="amt">${fmtGYD(taxAmt)}</span></div>` : ""}
-      <div class="outstanding-row">
-        <div class="outstanding-label">Quotation Total</div>
-        <div class="outstanding-value">${fmtGYD(total)}</div>
+      <div class="balance-due-row">
+        <span>Total</span>
+        <span>${fmtGYD(total)}</span>
       </div>
     </div>
   </div>
