@@ -1030,7 +1030,7 @@ export default function QuotationsPage() {
 											<TableRow key={i}>
 												<TableCell className="p-1">
 													<ProductCombobox
-														className="h-8"
+														className="h-8 w-full"
 														value={item.description}
 														onChange={(desc) => updateItem(i, "description", desc)}
 														onSelect={(product) => {
@@ -1045,7 +1045,7 @@ export default function QuotationsPage() {
 														className="h-8 text-xs"
 														type="number"
 														min={1}
-														value={item.quantity}
+														value={item.quantity || ""}
 														onChange={(e) =>
 															updateItem(i, "quantity", Number(e.target.value))
 														}
@@ -1057,7 +1057,7 @@ export default function QuotationsPage() {
 														type="number"
 														min={0}
 														step="0.01"
-														value={item.unitPrice}
+														value={item.unitPrice || ""}
 														onChange={(e) =>
 															updateItem(i, "unitPrice", Number(e.target.value))
 														}
