@@ -62,6 +62,7 @@ const emptyProduct = {
 export default function ProductsPage() {
 	const [search, setSearch] = useState("");
 	const [deptFilter, setDeptFilter] = useState("all");
+	const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [form, setForm] = useState(emptyProduct);
@@ -82,7 +83,7 @@ export default function ProductsPage() {
 	const orgId = userProfile?.organizationId;
 
 	const { data: products = [] } = useQuery(
-		orpc.products.list.queryOptions({ input: {} }),
+		orpc.products.list.queryOptions({ input: { includeInactive: true } }),
 	);
 	const { data: departments = [] } = useQuery(
 		orpc.categories.list.queryOptions({ input: {} }),
@@ -92,7 +93,7 @@ export default function ProductsPage() {
 		orpc.products.create.mutationOptions({
 			onSuccess: () => {
 				queryClient.invalidateQueries({
-					queryKey: orpc.products.list.queryOptions({ input: {} }).queryKey,
+					queryKey: orpc.products.list.queryOptions({ input: { includeInactive: true } }).queryKey,
 				});
 				setDialogOpen(false);
 			},
@@ -104,7 +105,7 @@ export default function ProductsPage() {
 		orpc.products.update.mutationOptions({
 			onSuccess: () => {
 				queryClient.invalidateQueries({
-					queryKey: orpc.products.list.queryOptions({ input: {} }).queryKey,
+					queryKey: orpc.products.list.queryOptions({ input: { includeInactive: true } }).queryKey,
 				});
 				setDialogOpen(false);
 			},
@@ -116,7 +117,7 @@ export default function ProductsPage() {
 		orpc.products.delete.mutationOptions({
 			onSuccess: () => {
 				queryClient.invalidateQueries({
-					queryKey: orpc.products.list.queryOptions({ input: {} }).queryKey,
+					queryKey: orpc.products.list.queryOptions({ input: { includeInactive: true } }).queryKey,
 				});
 				setDeleteTarget(null);
 			},
@@ -131,7 +132,11 @@ export default function ProductsPage() {
 			p.sku?.toLowerCase().includes(search.toLowerCase());
 		const matchDept =
 			deptFilter === "all" || p.reportingCategoryId === deptFilter;
-		return matchSearch && matchDept;
+		const matchStatus =
+			statusFilter === "all" ||
+			(statusFilter === "active" && p.isActive !== false) ||
+			(statusFilter === "inactive" && p.isActive === false);
+		return matchSearch && matchDept && matchStatus;
 	});
 
 	function openAdd() {
@@ -259,6 +264,16 @@ export default function ProductsPage() {
 								{d.name}
 							</SelectItem>
 						))}
+					</SelectContent>
+				</Select>
+				<Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+					<SelectTrigger className="w-36">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="all">All Status</SelectItem>
+						<SelectItem value="active">Active</SelectItem>
+						<SelectItem value="inactive">Inactive</SelectItem>
 					</SelectContent>
 				</Select>
 			</div>

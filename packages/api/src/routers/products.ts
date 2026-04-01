@@ -14,13 +14,17 @@ const list = permissionProcedure("products.read")
 			.object({
 				departmentId: z.string().uuid().optional(),
 				search: z.string().optional(),
+				includeInactive: z.boolean().optional(),
 			})
 			.optional(),
 	)
 	.handler(async ({ input: rawInput, context }) => {
 		const input = rawInput ?? {};
 		const orgId = requireOrganizationId(context);
-		const conditions = [eq(schema.product.isActive, true)];
+		const conditions: ReturnType<typeof eq>[] = [];
+		if (!input.includeInactive) {
+			conditions.push(eq(schema.product.isActive, true));
+		}
 
 		conditions.push(eq(schema.product.organizationId, orgId));
 		if (input.departmentId) {
