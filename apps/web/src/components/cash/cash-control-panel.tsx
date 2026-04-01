@@ -26,6 +26,9 @@ import { printCashSessionReport } from "@/lib/pdf/cash-session-pdf";
 import { formatGYD } from "@/lib/types";
 import { orpc } from "@/utils/orpc";
 
+const GYD_DENOMINATIONS = [5000, 1000, 500, 100, 20] as const;
+type DenomMap = Record<number, number>;
+
 interface CashSession {
 	id: string;
 	registerId: string;
@@ -69,6 +72,14 @@ export function CashControlPanel({
 	const [reason, setReason] = useState("");
 	const [dateFrom, setDateFrom] = useState("");
 	const [dateTo, setDateTo] = useState("");
+	const [denomCounts, setDenomCounts] = useState<DenomMap>(() =>
+		Object.fromEntries(GYD_DENOMINATIONS.map((d) => [d, 0])),
+	);
+
+	const totalDenomAmount = Object.entries(denomCounts).reduce(
+		(sum, [denom, qty]) => sum + Number(denom) * qty,
+		0,
+	);
 
 	const invalidateCash = () =>
 		queryClient.invalidateQueries({ queryKey: ["cash"] });
@@ -81,8 +92,17 @@ export function CashControlPanel({
 				invalidateCash();
 				toast.success("Shift opened");
 			},
-			onError: (err: Error) => {
-				toast.error(err.message || "Failed to open shift");
+			onError: (err: unknown) => {
+				const orpcErr = err as { code?: string; message?: string };
+				if (orpcErr?.code === "CONFLICT") {
+					toast.error(
+						"A shift is already open for this register. Please close the existing shift first.",
+					);
+				} else {
+					toast.error(
+						(orpcErr?.message as string) || "Failed to open shift",
+					);
+				}
 			},
 		}),
 	);
@@ -91,12 +111,13 @@ export function CashControlPanel({
 		orpc.cash.closeSession.mutationOptions({
 			onSuccess: () => {
 				setCloseShiftDialog(false);
-				setAmount("");
+				setDenomCounts(Object.fromEntries(GYD_DENOMINATIONS.map((d) => [d, 0])));
 				invalidateCash();
 				toast.success("Shift closed");
 			},
-			onError: (err: Error) => {
-				toast.error(err.message || "Failed to close shift");
+			onError: (err: unknown) => {
+				const orpcErr = err as { message?: string };
+				toast.error(orpcErr?.message || "Failed to close shift");
 			},
 		}),
 	);
@@ -179,7 +200,7 @@ export function CashControlPanel({
 		if (!openSession) return;
 		closeShiftMutation.mutate({
 			sessionId: openSession.id,
-			actualCash: String(Number(amount) || 0),
+			actualCash: String(totalDenomAmount),
 			expectedCash: openSession.expectedCash || openSession.openingFloat,
 		});
 	}
@@ -470,21 +491,65 @@ export function CashControlPanel({
 				</DialogContent>
 			</Dialog>
 
-			<Dialog open={closeShiftDialog} onOpenChange={setCloseShiftDialog}>
-				<DialogContent className="max-w-sm">
+			<Dialog
+				open={closeShiftDialog}
+				onOpenChange={(open) => {
+					if (!open) {
+						setDenomCounts(Object.fromEntries(GYD_DENOMINATIONS.map((d) => [d, 0])));
+					}
+					setCloseShiftDialog(open);
+				}}
+			>
+				<DialogContent className="max-w-md">
 					<DialogHeader>
 						<DialogTitle>Close Shift</DialogTitle>
 					</DialogHeader>
 					<div className="flex flex-col gap-3 py-2">
-						<Label>Cash Count (GYD)</Label>
-						<Input
-							type="number"
-							step="1"
-							value={amount}
-							onChange={(e) => setAmount(e.target.value)}
-							placeholder="0"
-							className="h-11 text-base"
-						/>
+						<Label>Cash Count by Denomination</Label>
+						<div className="rounded-md border">
+							<table className="w-full text-sm">
+								<thead>
+									<tr className="border-b bg-muted/50">
+										<th className="px-3 py-2 text-left font-medium">Denomination</th>
+										<th className="px-3 py-2 text-center font-medium">Qty</th>
+										<th className="px-3 py-2 text-right font-medium">Subtotal</th>
+									</tr>
+								</thead>
+								<tbody>
+									{GYD_DENOMINATIONS.map((denom) => (
+										<tr key={denom} className="border-b last:border-0">
+											<td className="px-3 py-2 font-medium">
+												GYD {denom.toLocaleString()}
+											</td>
+											<td className="px-3 py-2">
+												<Input
+													type="number"
+													min={0}
+													className="mx-auto h-8 w-20 text-center"
+													value={denomCounts[denom] || ""}
+													placeholder="0"
+													onChange={(e) => {
+														const qty = Math.max(0, parseInt(e.target.value) || 0);
+														setDenomCounts((prev) => ({ ...prev, [denom]: qty }));
+													}}
+												/>
+											</td>
+											<td className="px-3 py-2 text-right tabular-nums">
+												{(denom * (denomCounts[denom] || 0)).toLocaleString()}
+											</td>
+										</tr>
+									))}
+								</tbody>
+								<tfoot>
+									<tr className="bg-muted/50 font-semibold">
+										<td className="px-3 py-2" colSpan={2}>Total Cash Count</td>
+										<td className="px-3 py-2 text-right tabular-nums">
+											GYD {totalDenomAmount.toLocaleString()}
+										</td>
+									</tr>
+								</tfoot>
+							</table>
+						</div>
 					</div>
 					<DialogFooter>
 						<Button

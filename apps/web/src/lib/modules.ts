@@ -185,6 +185,7 @@ export const MODULES: ModuleDefinition[] = [
 				module: "orders",
 				roles: ["executive", "admin"],
 				pageTitle: "Tables",
+				hidden: true,
 			},
 			{
 				title: "Reservations",
@@ -193,6 +194,7 @@ export const MODULES: ModuleDefinition[] = [
 				module: "orders",
 				roles: ["executive", "admin"],
 				pageTitle: "Reservations",
+				hidden: true,
 			},
 			{
 				title: "Customers",
@@ -568,6 +570,7 @@ export const MODULES: ModuleDefinition[] = [
 				module: "reports",
 				roles: ["executive", "admin"],
 				pageTitle: "Tips Report",
+				hidden: true,
 			},
 			{
 				title: "Void & Comp Report",
