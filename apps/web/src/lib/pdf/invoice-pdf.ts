@@ -76,12 +76,14 @@ export async function openInvoicePdf(
 	const blob = new Blob([html], { type: "text/html" });
 	const url = URL.createObjectURL(blob);
 	win.location.href = url;
-	// After load, replace blob URL with clean path so Safari's print
-	// header shows pos.karetechsolutions.com instead of blob:...uuid
-	win.addEventListener("load", () => {
-		try { win.history.replaceState({}, win.document.title, "/invoice-preview"); } catch {}
+	// Revoke the blob URL after the window has loaded it — no replaceState
+	// needed here because the HTML template itself runs history.replaceState
+	// in its own <script> tag (runs in the new window's context, not cross-origin).
+	const onLoad = () => {
 		setTimeout(() => URL.revokeObjectURL(url), 1_000);
-	});
+		win.removeEventListener("load", onLoad);
+	};
+	win.addEventListener("load", onLoad);
 	return "ok";
 }
 
@@ -565,6 +567,13 @@ function buildInvoiceHtml(
   </div>
 
 </div>
+
+<script>
+  // Replace the blob:// URL with a clean path before the browser shows it
+  // in the address bar or print footer. Running inside the document itself
+  // avoids cross-origin restrictions from the parent window.
+  try { history.replaceState({}, document.title, "/invoice-preview"); } catch (e) {}
+</script>
 </body>
 </html>`;
 }

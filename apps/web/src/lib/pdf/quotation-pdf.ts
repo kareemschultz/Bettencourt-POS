@@ -57,10 +57,11 @@ export async function openQuotationPdf(
 	const blob = new Blob([html], { type: "text/html" });
 	const url = URL.createObjectURL(blob);
 	win.location.href = url;
-	win.addEventListener("load", () => {
-		try { win.history.replaceState({}, win.document.title, "/quotation-preview"); } catch {}
+	const onLoad = () => {
 		setTimeout(() => URL.revokeObjectURL(url), 1_000);
-	});
+		win.removeEventListener("load", onLoad);
+	};
+	win.addEventListener("load", onLoad);
 	return "ok";
 }
 
@@ -496,6 +497,10 @@ function buildQuotationHtml(
   </div>
 
 </div>
+
+<script>
+  try { history.replaceState({}, document.title, "/quotation-preview"); } catch (e) {}
+</script>
 </body>
 </html>`;
 }
