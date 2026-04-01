@@ -165,6 +165,16 @@ export function AgencyCombobox({
 					)}
 				</div>
 
+				<button
+					type="button"
+					onMouseDown={(e) => e.preventDefault()}
+					onClick={openCreateModal}
+					className="mt-0.5 flex items-center gap-1 text-[11px] text-primary hover:underline"
+				>
+					<Building2 className="size-3" />
+					New agency
+				</button>
+
 				{open && (results as AgencyHit[]).length > 0 && (
 					<div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg">
 						<Command>

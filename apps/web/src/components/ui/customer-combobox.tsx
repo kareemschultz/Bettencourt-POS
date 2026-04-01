@@ -162,6 +162,16 @@ export function CustomerCombobox({
 					)}
 				</div>
 
+				<button
+					type="button"
+					onMouseDown={(e) => e.preventDefault()}
+					onClick={openCreateModal}
+					className="mt-0.5 flex items-center gap-1 text-[11px] text-primary hover:underline"
+				>
+					<UserPlus className="size-3" />
+					New customer
+				</button>
+
 				{open && (results as CustomerHit[]).length > 0 && (
 					<div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg">
 						<Command>

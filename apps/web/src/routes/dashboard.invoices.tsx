@@ -129,7 +129,7 @@ const emptyForm: InvoiceForm = {
 	noteMode: "preset",
 	items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
 	discountType: "percent",
-	discountValue: "0",
+	discountValue: "",
 	taxMode: "incl",
 	taxRate: "14",
 	paymentTerms: "due_on_receipt",
@@ -434,7 +434,7 @@ export default function InvoicesPage() {
 				? (inv.items as LineItem[])
 				: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
 			discountType: (inv.discountType as "percent" | "fixed") ?? "percent",
-			discountValue: inv.discountValue ?? "0",
+			discountValue: inv.discountValue ?? "",
 			taxMode: (inv.taxMode as "invoice" | "line" | "incl") ?? "invoice",
 			customInvoiceNumber: inv.invoiceNumber,
 			taxRate: inv.taxRate ?? "14",
@@ -820,7 +820,7 @@ export default function InvoicesPage() {
 																		notes: inv.notes ?? "",
 																		items: (inv.items as LineItem[]) ?? [],
 																		discountType: (inv.discountType as "percent" | "fixed") ?? "percent",
-																		discountValue: inv.discountValue ?? "0",
+																		discountValue: inv.discountValue ?? "",
 																		taxMode: (inv.taxMode as "invoice" | "line" | "incl") ?? "invoice",
 																		taxRate: inv.taxRate ?? "14",
 																		paymentTerms: inv.paymentTerms ?? "due_on_receipt",
@@ -1629,7 +1629,7 @@ export default function InvoicesPage() {
 									type="number"
 									min="0"
 									step="0.01"
-									value={form.discountValue}
+									value={form.discountValue === "0" ? "" : form.discountValue}
 									onChange={(e) =>
 										setForm((f) => ({ ...f, discountValue: e.target.value }))
 									}

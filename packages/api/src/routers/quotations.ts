@@ -174,16 +174,16 @@ const create = permissionProcedure("quotations.create")
 				contactPersonPosition: input.contactPersonPosition ?? null,
 				items: input.items,
 				subtotal: input.subtotal,
-				taxTotal: input.taxTotal ?? "0",
+				taxTotal: input.taxTotal || "0",
 				total: input.total,
 				status: "draft",
 				validUntil: input.validUntil ? new Date(input.validUntil) : null,
 				notes: input.notes ?? null,
 				createdBy: context.session.user.id,
 				discountType: input.discountType ?? "percent",
-				discountValue: input.discountValue ?? "0",
+				discountValue: input.discountValue || "0",
 				taxMode: input.taxMode ?? "invoice",
-				taxRate: input.taxRate ?? "14",
+				taxRate: input.taxRate || "14",
 				termsAndConditions: input.termsAndConditions ?? null,
 				parentQuotationId: input.parentQuotationId ?? null,
 				preparedBy: input.preparedBy ?? null,
@@ -258,15 +258,15 @@ const update = permissionProcedure("quotations.update")
 		if (input.notes !== undefined) updates.notes = input.notes;
 		if (input.items !== undefined) updates.items = input.items;
 		if (input.subtotal !== undefined) updates.subtotal = input.subtotal;
-		if (input.taxTotal !== undefined) updates.taxTotal = input.taxTotal;
+		if (input.taxTotal !== undefined) updates.taxTotal = input.taxTotal || "0";
 		if (input.total !== undefined) updates.total = input.total;
 		if (input.status !== undefined) updates.status = input.status;
 		if (input.discountType !== undefined)
 			updates.discountType = input.discountType;
 		if (input.discountValue !== undefined)
-			updates.discountValue = input.discountValue;
+			updates.discountValue = input.discountValue || "0";
 		if (input.taxMode !== undefined) updates.taxMode = input.taxMode;
-		if (input.taxRate !== undefined) updates.taxRate = input.taxRate;
+		if (input.taxRate !== undefined) updates.taxRate = input.taxRate || "14";
 		if (input.termsAndConditions !== undefined)
 			updates.termsAndConditions = input.termsAndConditions;
 		if (input.preparedBy !== undefined) updates.preparedBy = input.preparedBy;

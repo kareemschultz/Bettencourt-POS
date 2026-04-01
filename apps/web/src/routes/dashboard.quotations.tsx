@@ -121,7 +121,7 @@ const emptyForm: QuotationForm = {
 	noteMode: "preset",
 	items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
 	discountType: "percent",
-	discountValue: "0",
+	discountValue: "",
 	taxMode: "incl",
 	taxRate: "14",
 	termsAndConditions: "",
@@ -331,7 +331,7 @@ export default function QuotationsPage() {
 				? (q.items as LineItem[])
 				: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
 			discountType: (q.discountType as "percent" | "fixed") ?? "percent",
-			discountValue: q.discountValue ?? "0",
+			discountValue: q.discountValue ?? "",
 			taxMode: (q.taxMode as "invoice" | "line" | "incl") ?? "invoice",
 			taxRate: q.taxRate ?? "14",
 			termsAndConditions: q.termsAndConditions ?? "",
@@ -1169,7 +1169,7 @@ export default function QuotationsPage() {
 									type="number"
 									min={0}
 									step="0.01"
-									value={form.discountValue}
+									value={form.discountValue === "0" ? "" : form.discountValue}
 									onChange={(e) =>
 										setForm((f) => ({ ...f, discountValue: e.target.value }))
 									}

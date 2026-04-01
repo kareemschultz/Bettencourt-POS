@@ -167,7 +167,7 @@ const create = permissionProcedure("invoices.create")
         contactPersonPosition: input.contactPersonPosition ?? null,
         items: input.items,
         subtotal: input.subtotal,
-        taxTotal: input.taxTotal ?? "0",
+        taxTotal: input.taxTotal || "0",
         total: input.total,
         status: "draft",
         issuedDate: input.issuedDate ? new Date(input.issuedDate) : null,
@@ -175,9 +175,9 @@ const create = permissionProcedure("invoices.create")
         notes: input.notes ?? null,
         createdBy,
         discountType: input.discountType ?? "percent",
-        discountValue: input.discountValue ?? "0",
+        discountValue: input.discountValue || "0",
         taxMode: input.taxMode ?? "invoice",
-        taxRate: input.taxRate ?? "14",
+        taxRate: input.taxRate || "14",
         paymentTerms: input.paymentTerms ?? "due_on_receipt",
         preparedBy: input.preparedBy ?? null,
         department: input.department ?? null,
@@ -255,15 +255,15 @@ const update = permissionProcedure("invoices.update")
     if (input.notes !== undefined) updates.notes = input.notes;
     if (input.items !== undefined) updates.items = input.items;
     if (input.subtotal !== undefined) updates.subtotal = input.subtotal;
-    if (input.taxTotal !== undefined) updates.taxTotal = input.taxTotal;
+    if (input.taxTotal !== undefined) updates.taxTotal = input.taxTotal || "0";
     if (input.total !== undefined) updates.total = input.total;
     if (input.status !== undefined) updates.status = input.status;
     if (input.discountType !== undefined)
       updates.discountType = input.discountType;
     if (input.discountValue !== undefined)
-      updates.discountValue = input.discountValue;
+      updates.discountValue = input.discountValue || "0";
     if (input.taxMode !== undefined) updates.taxMode = input.taxMode;
-    if (input.taxRate !== undefined) updates.taxRate = input.taxRate;
+    if (input.taxRate !== undefined) updates.taxRate = input.taxRate || "14";
     if (input.paymentTerms !== undefined)
       updates.paymentTerms = input.paymentTerms;
     if (input.preparedBy !== undefined) updates.preparedBy = input.preparedBy;
