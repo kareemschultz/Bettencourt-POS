@@ -1,6 +1,11 @@
 // ── Invoice PDF Builder ─────────────────────────────────────────────────
 // Generates a professional Blob URL HTML document for invoice printing.
 // Opens in a new tab — does NOT use window.print() on the current page.
+// Layout mirrors the Invoice Ninja "Business" template (ID 5):
+//   - 3-col header (1fr auto 1fr), grey company details in centre/right
+//   - client-details LEFT (client name in gold at 120%), gold entity-details box RIGHT
+//   - Secondary-gold table header with rounded top corners
+//   - 2fr/1fr totals grid, secondary-gold outstanding row
 
 export type InvoicePaymentEntry = {
 	datePaid: string;
@@ -135,7 +140,6 @@ function buildInvoiceHtml(
 
 	const isHomeStyle = invoice.brand === "home_style";
 	const companyName = isHomeStyle ? "Bettencourt's Home Style" : "Bettencourt's Food Inc.";
-	const companyTagline = isHomeStyle ? "" : "A true Guyanese Gem";
 
 	const issuedStr = invoice.issuedDate
 		? new Date(invoice.issuedDate).toLocaleDateString("en-GY")
@@ -145,21 +149,21 @@ function buildInvoiceHtml(
 		: null;
 
 	const logoHtml = logo
-		? `<img src="${logo}" class="logo" alt="Bettencourt's Logo" />`
+		? `<img class="company-logo" src="${logo}" alt="${escHtml(companyName)} logo">`
 		: "";
 
 	const taxColHeader =
-		invoice.taxMode === "line" ? "<th class='right'>Tax</th>" : "";
+		invoice.taxMode === "line" ? "<th>Tax</th>" : "";
 
 	const itemRows = items
 		.map(
 			(item) => `
     <tr>
       <td>${escHtml(item.description)}</td>
-      <td class="right">${item.quantity}</td>
-      <td class="right">${fmtGYD(item.unitPrice)}</td>
-      ${invoice.taxMode === "line" ? `<td class="right">${item.taxExempt ? "Exempt" : `${invoice.taxRate ?? "14"}%`}</td>` : ""}
-      <td class="right">${fmtGYD(item.total)}</td>
+      <td class="right-td">${item.quantity}</td>
+      <td class="right-td">${fmtGYD(item.unitPrice)}</td>
+      ${invoice.taxMode === "line" ? `<td class="right-td">${item.taxExempt ? "Exempt" : `${invoice.taxRate ?? "14"}%`}</td>` : ""}
+      <td class="right-td">${fmtGYD(item.total)}</td>
     </tr>`,
 		)
 		.join("");
@@ -176,14 +180,11 @@ function buildInvoiceHtml(
 		invoice.payments && invoice.payments.length > 0
 			? `
   <div class="history-section">
-    <div class="history-title">Payment History</div>
+    <div class="section-label">Payment History</div>
     <table class="history-table">
       <thead>
         <tr>
-          <th>Date</th>
-          <th>Method</th>
-          <th>Reference</th>
-          <th class="right">Amount</th>
+          <th>Date</th><th>Method</th><th>Reference</th><th class="right-th">Amount</th>
         </tr>
       </thead>
       <tbody>
@@ -194,7 +195,7 @@ function buildInvoiceHtml(
           <td${p.isReversal ? ' class="reversal"' : ""}>${new Date(p.datePaid).toLocaleDateString("en-GY")}${p.isReversal ? " (Reversal)" : ""}</td>
           <td>${escHtml(METHOD_LABEL[p.paymentMethod] ?? p.paymentMethod)}${p.chequeNumber ? ` #${escHtml(p.chequeNumber)}` : ""}</td>
           <td>${p.referenceNumber ? escHtml(p.referenceNumber) : "—"}</td>
-          <td class="right${p.isReversal ? " reversal" : ""}">${p.isReversal ? "-" : ""}${fmtGYD(Math.abs(Number(p.amount)))}</td>
+          <td class="right-td${p.isReversal ? " reversal" : ""}">${p.isReversal ? "-" : ""}${fmtGYD(Math.abs(Number(p.amount)))}</td>
         </tr>`,
 					)
 					.join("")}
@@ -207,7 +208,7 @@ function buildInvoiceHtml(
 		settings.bankName || settings.paymentInstructions
 			? `
     <div class="payment-section">
-      <div class="payment-title">Payment Instructions</div>
+      <div class="section-label">Payment Instructions</div>
       ${settings.bankName ? `<div class="payment-detail"><strong>Bank:</strong> ${escHtml(settings.bankName)}${settings.bankBranch ? ` (${escHtml(settings.bankBranch)})` : ""}</div>` : ""}
       ${settings.bankAccount ? `<div class="payment-detail"><strong>Account:</strong> ${escHtml(settings.bankAccount)}</div>` : ""}
       <div class="payment-detail"><strong>Reference:</strong> ${escHtml(invoice.invoiceNumber)}</div>
@@ -215,14 +216,14 @@ function buildInvoiceHtml(
     </div>`
 			: "";
 
-	const statusBadgeColor =
-		invoice.status === "paid"
-			? "#16a34a"
-			: invoice.status === "cancelled"
-				? "#94a3b8"
-				: invoice.status === "overdue"
-					? "#dc2626"
-					: "#0ea5e9";
+	const clientNameLine = invoice.agencyName
+		? `<p class="client-primary">${escHtml(invoice.agencyName)}</p><p>${escHtml(invoice.customerName)}</p>`
+		: `<p class="client-primary">${escHtml(invoice.customerName)}</p>`;
+
+	// Notes shown above the totals left-column (mirrors IN public_notes placement)
+	const notesBlock = invoice.notes
+		? `<div class="notes-left"><span class="notes-label">Notes:</span> <span class="notes-text">${escHtml(invoice.notes)}</span></div>`
+		: "";
 
 	return `<!DOCTYPE html>
 <html lang="en">
@@ -231,93 +232,260 @@ function buildInvoiceHtml(
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${escHtml(invoice.invoiceNumber)} — ${companyName}</title>
 <style>
+  :root {
+    --primary: #b8862d;
+    --secondary: #7d5518;
+    --line-height: 1.6;
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { padding-top: 52px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; color: #1e293b; }
-  .wrapper { max-width: 794px; margin: 24px auto; box-shadow: 0 8px 32px rgba(0,0,0,0.12); border-radius: 8px; overflow: hidden; background: white; border-top: 8px solid #b8862d; }
 
-  /* TOP HEADER: 3-column grid */
-  .top-header { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 20px; padding: 28px 36px; border-bottom: 2px solid #b8862d; }
-  .logo-col .logo { height: 64px; width: auto; border-radius: 4px; }
-  .co-info { text-align: center; }
-  .co-name { font-size: 16px; font-weight: 700; color: #1e293b; }
-  .co-sub { font-size: 10.5px; color: #64748b; margin-top: 4px; line-height: 1.5; }
-  .doc-col { text-align: right; }
-  .doc-type { font-size: 28px; font-weight: 800; letter-spacing: 0.12em; color: #b8862d; }
-  .doc-number { font-family: 'Courier New', monospace; font-size: 12px; margin-top: 4px; color: #475569; }
-  .doc-terms { font-size: 10.5px; color: #64748b; margin-top: 3px; }
+  body {
+    padding-top: 52px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
+    font-size: 14px;
+    background: #f1f5f9;
+    color: #333;
+    -webkit-font-smoothing: antialiased;
+  }
 
-  /* BILL-TO + META BOX row */
-  .bill-meta { display: grid; grid-template-columns: 1fr auto; gap: 32px; padding: 22px 36px; border-bottom: 1px solid #e2e8f0; align-items: start; }
-  .bill-to .bill-label { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
-  .bill-to .cust-name { font-size: 14px; font-weight: 600; color: #1e293b; }
-  .bill-to .cust-sub { font-size: 11px; color: #475569; margin-top: 3px; line-height: 1.5; }
-  .bill-to .prepared-label { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; color: #64748b; text-transform: uppercase; margin-top: 12px; margin-bottom: 4px; }
+  .wrapper {
+    max-width: 800px;
+    margin: 24px auto;
+    background: white;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    padding: 28px 36px 24px;
+  }
 
-  .meta-box { background: #b8862d; border-radius: 6px; min-width: 240px; overflow: hidden; }
-  .meta-box table { width: 100%; border-collapse: collapse; }
-  .meta-box td { padding: 7px 12px; font-size: 11px; color: white; }
-  .meta-box td:last-child { text-align: right; font-family: 'Courier New', monospace; font-variant-numeric: tabular-nums; }
-  .meta-box tr + tr td { border-top: 1px solid rgba(255,255,255,0.15); }
-  .meta-box .balance-row td { background: rgba(0,0,0,0.2); font-size: 14px; font-weight: 800; }
-  .meta-box .status-row td { background: rgba(0,0,0,0.12); font-size: 10px; letter-spacing: 0.08em; }
+  /* ── 3-COLUMN HEADER (Business: 1fr auto 1fr, grey company text) ── */
+  .header-container {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: start;
+    gap: 1rem;
+    width: 100%;
+    margin-bottom: 2rem;
+  }
 
-  /* ITEMS TABLE */
-  .items-table { width: 100%; border-collapse: collapse; }
-  .items-table thead tr { background: #b8862d; }
-  .items-table th { padding: 10px 16px; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: white; text-transform: uppercase; text-align: left; white-space: nowrap; }
-  .items-table th.right { text-align: right; }
-  .items-table td { padding: 11px 16px; font-size: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; color: #334155; }
-  .items-table td.right { text-align: right; font-variant-numeric: tabular-nums; font-family: 'Courier New', monospace; }
-  .items-table tbody tr:nth-child(even) { background: #fafaf9; }
-  .items-table tbody tr:last-child td { border-bottom: none; }
+  .company-logo-container { justify-self: start; }
+  .company-logo { max-width: 160px; max-height: 64px; width: auto; height: auto; display: block; }
 
-  /* TOTALS */
-  .totals-wrapper { padding: 20px 36px; display: flex; justify-content: flex-end; border-top: 2px solid #e2e8f0; }
-  .totals-table { min-width: 300px; }
-  .total-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 12px; color: #475569; }
-  .total-row .amt { font-family: 'Courier New', monospace; font-variant-numeric: tabular-nums; }
-  .total-row.sep { border-top: 1px solid #cbd5e1; margin-top: 8px; padding-top: 12px; font-size: 14px; font-weight: 700; color: #1e293b; }
-  .total-row.discount .amt { color: #dc2626; }
-  .total-row.paid-row .amt { color: #16a34a; }
-  .total-row.balance { background: #b8862d; color: white; padding: 9px 12px; border-radius: 4px; margin-top: 6px; font-size: 14px; font-weight: 800; }
-  .total-row.balance .amt { color: white; font-family: 'Courier New', monospace; }
-  .total-row.balance.paid { background: #16a34a; }
+  /* Company details — grey (Business: #AAA9A9) */
+  #company-details {
+    justify-self: center;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    color: #aaa9a9;
+    line-height: var(--line-height);
+    text-align: center;
+    font-size: 0.88em;
+  }
 
-  /* PAYMENT HISTORY */
-  .history-section { padding: 16px 36px; border-top: 1px solid #e2e8f0; }
-  .history-title { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: #475569; text-transform: uppercase; margin-bottom: 10px; }
+  /* Company address — lighter grey (Business: #b1b1b1) */
+  #company-address {
+    justify-self: end;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    color: #b1b1b1;
+    line-height: var(--line-height);
+    text-align: right;
+    font-size: 0.88em;
+  }
+
+  /* ── CLIENT + ENTITY WRAPPER (Business: flex space-between, margin-bottom 2rem) ── */
+  .client-and-entity-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    gap: 1.5rem;
+  }
+
+  /* LEFT: client-details — "issued to" label + client name in PRIMARY (120%) */
+  #client-details {
+    display: flex;
+    flex-direction: column;
+    line-height: var(--line-height);
+    font-size: 0.9em;
+    color: #555;
+  }
+  .entity-issued-to {
+    font-size: 0.82em;
+    color: #888;
+    margin-bottom: 4px;
+  }
+  /* Second child = client name in primary color at 120% (Business signature) */
+  #client-details .client-primary {
+    color: var(--primary);
+    font-size: 1.2em;
+    font-weight: 600;
+  }
+
+  /* RIGHT: entity-details — PRIMARY background, border-radius 1rem, white text */
+  #entity-details {
+    background-color: var(--primary);
+    padding: 1.2rem;
+    border-radius: 1rem;
+    min-width: 220px;
+    color: white;
+    border-collapse: collapse;
+    flex-shrink: 0;
+  }
+  #entity-details th {
+    font-weight: normal;
+    padding-bottom: 0.5rem;
+    padding-right: 12px;
+    white-space: nowrap;
+    font-size: 0.88em;
+    opacity: 0.9;
+  }
+  #entity-details td {
+    text-align: right;
+    padding-left: 10px;
+    font-size: 0.88em;
+    font-weight: 600;
+    padding-bottom: 0.5rem;
+  }
+  #entity-details tr:last-child th,
+  #entity-details tr:last-child td { padding-bottom: 0; }
+
+  /* ── ITEMS TABLE (Business: secondary-color header, rounded top corners 10px) ── */
+  .items-table {
+    margin-top: 0.5rem;
+    margin-bottom: 5px;
+    min-width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    overflow-wrap: break-word;
+  }
+  .items-table thead {
+    text-align: left;
+    background: var(--secondary);
+  }
+  .items-table thead th {
+    padding: 1rem;
+    color: white;
+    font-weight: 600;
+    font-size: 0.88em;
+  }
+  .items-table thead th.left-radius { border-top-left-radius: 10px; }
+  .items-table thead th.right-radius { text-align: right; border-top-right-radius: 10px; }
+
+  .items-table tbody td {
+    padding: 1rem;
+    font-size: 0.88em;
+    color: #444;
+    vertical-align: top;
+  }
+  .items-table tbody td.right-td { text-align: right; font-variant-numeric: tabular-nums; }
+  /* Business: odd + even both use #F7F7F7 (light grey for all rows) */
+  .items-table tbody tr td { background: #F7F7F7; }
+  .items-table tbody tr:nth-child(even) td { background: #f7f7f7; }
+
+  /* ── TABLE TOTALS (Business: 2fr 1fr, gap 80px, outstanding in secondary-color) ── */
+  #table-totals {
+    margin-top: 0;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 80px;
+    padding-top: 0.5rem;
+    padding-bottom: 0.8rem;
+    overflow: visible;
+  }
+
+  .totals-left {
+    font-size: 0.82em;
+    color: #666;
+    line-height: var(--line-height);
+  }
+
+  .totals-right { display: flex; flex-direction: column; }
+  .t-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 0.75rem;
+    font-size: 0.88em;
+    color: #555;
+  }
+  .t-row .amt { text-align: right; padding-right: 17px; font-variant-numeric: tabular-nums; }
+  .t-row .lbl { padding-left: 7px; }
+  .t-row.discount .amt { color: #dc2626; }
+  .t-row.paid-row .amt { color: #16a34a; }
+  .t-row.sep { font-weight: bold; color: #333; }
+
+  /* Outstanding row — full secondary-color box (Business signature) */
+  .outstanding-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 0.75rem;
+  }
+  .outstanding-label {
+    background-color: var(--secondary);
+    color: white;
+    font-size: 1.05em;
+    font-weight: bold;
+    padding: 1rem;
+    border-top-left-radius: 7px;
+    border-bottom-left-radius: 7px;
+    white-space: nowrap;
+    padding-left: 10px;
+  }
+  .outstanding-value {
+    background-color: var(--secondary);
+    color: white;
+    font-size: 1.05em;
+    font-weight: bold;
+    padding: 1rem 17px;
+    border-top-right-radius: 7px;
+    border-bottom-right-radius: 7px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .outstanding-label.paid,
+  .outstanding-value.paid { background-color: #16a34a; }
+
+  /* ── NOTES ── */
+  .notes-left { font-size: 0.85em; line-height: 1.6; }
+  .notes-label { font-weight: bold; color: #dc2626; font-style: italic; }
+  .notes-text { color: #dc2626; font-style: italic; font-weight: 500; }
+
+  /* ── PAYMENT HISTORY ── */
+  .history-section { padding-top: 12px; border-top: 1px solid #ebebeb; margin-top: 8px; }
+  .section-label { font-size: 0.78em; font-weight: 700; letter-spacing: 0.1em; color: #888; text-transform: uppercase; margin-bottom: 8px; }
   .history-table { width: 100%; border-collapse: collapse; }
-  .history-table th { padding: 6px 10px; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #64748b; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; text-align: left; }
-  .history-table th.right { text-align: right; }
-  .history-table td { padding: 7px 10px; font-size: 11px; border-bottom: 1px solid #f1f5f9; color: #334155; }
-  .history-table td.right { text-align: right; font-family: 'Courier New', monospace; }
+  .history-table th { padding: 5px 8px; font-size: 0.78em; font-weight: 700; color: #888; border-bottom: 1px solid #ebebeb; text-align: left; }
+  .history-table th.right-th { text-align: right; }
+  .history-table td { padding: 6px 8px; font-size: 0.85em; border-bottom: 1px solid #f5f5f5; color: #444; }
+  .history-table td.right-td { text-align: right; font-variant-numeric: tabular-nums; }
   .history-table td.reversal { color: #dc2626; font-style: italic; }
 
-  /* PAYMENT INSTRUCTIONS */
-  .payment-section { padding: 18px 36px; background: #f8fafc; border-top: 1px solid #e2e8f0; }
-  .payment-title { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: #475569; text-transform: uppercase; margin-bottom: 10px; }
-  .payment-detail { font-size: 11px; color: #334155; margin-top: 3px; }
+  /* ── PAYMENT INSTRUCTIONS ── */
+  .payment-section { padding-top: 12px; border-top: 1px solid #ebebeb; margin-top: 8px; font-size: 0.85em; color: #555; line-height: var(--line-height); }
+  .payment-detail { margin-top: 2px; }
 
-  /* NOTES */
-  .notes-section { padding: 16px 36px; font-size: 12px; border-top: 1px solid #e2e8f0; line-height: 1.6; }
-  .notes-section .notes-label { font-weight: 700; color: #dc2626; font-style: italic; }
-  .notes-section .notes-text { color: #dc2626; font-style: italic; font-weight: 500; }
-
-  /* SIGNATURES */
-  .sig-section { display: flex; justify-content: space-between; gap: 48px; padding: 24px 36px; border-top: 1px solid #e2e8f0; }
+  /* ── SIGNATURES ── */
+  .sig-section { display: flex; justify-content: space-between; gap: 48px; padding-top: 20px; border-top: 1px solid #ebebeb; margin-top: 8px; }
   .sig-block { flex: 1; }
-  .sig-line { border-bottom: 1px solid #334155; margin-bottom: 6px; height: 32px; }
-  .sig-label { font-size: 11px; color: #475569; font-weight: 600; }
+  .sig-line { border-bottom: 1px solid #555; height: 28px; margin-bottom: 4px; }
+  .sig-label { font-size: 0.85em; color: #555; font-weight: 600; }
 
-  /* CHEQUES + CREDIT */
-  .cheques-section { padding: 10px 36px 14px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #334155; }
-  .cheques-section strong { color: #1e293b; }
-  .credit-terms { font-size: 10px; color: #64748b; margin-top: 4px; }
+  /* ── CHEQUES + CREDIT ── */
+  .cheques-section { padding-top: 10px; border-top: 1px solid #ebebeb; margin-top: 8px; font-size: 0.82em; color: #555; line-height: 1.5; }
+  .cheques-section strong { color: #333; }
+  .credit-terms { margin-top: 3px; color: #888; }
 
-  /* FOOTER */
-  .footer { padding: 10px 36px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+  /* ── FOOTER (Business: margin-top 30px, plain text) ── */
+  #footer {
+    margin-top: 30px;
+    font-size: 0.78em;
+    color: #aaa;
+    text-align: center;
+  }
 
-  /* PRINT BAR */
+  /* ── PRINT BAR (screen only) ── */
   .print-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #1e293b; color: white; display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
   .print-bar span { opacity: 0.7; font-size: 12px; }
   .print-btn { background: white; color: #1e293b; border: none; border-radius: 6px; padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
@@ -326,12 +494,13 @@ function buildInvoiceHtml(
   @media print {
     @page { margin: 15mm; size: A4; }
     body { background: white; padding-top: 0; }
-    .wrapper { margin: 0; max-width: 100%; box-shadow: none; border-radius: 0; }
+    .wrapper { margin: 0; max-width: 100%; box-shadow: none; padding: 0; }
     .print-bar { display: none; }
   }
 </style>
 </head>
 <body>
+
 <div class="print-bar">
   <span>Bettencourt's POS — Document Preview</span>
   <button class="print-btn" onclick="window.print()">
@@ -339,70 +508,74 @@ function buildInvoiceHtml(
     Print / Save as PDF
   </button>
 </div>
+
 <div class="wrapper">
 
-  <!-- TOP HEADER: Logo | Company Info | INVOICE -->
-  <div class="top-header">
-    <div class="logo-col">${logoHtml}</div>
-    <div class="co-info">
-      <div class="co-name">${escHtml(companyName)}</div>
-      <div class="co-sub">Georgetown, Guyana${settings.companyTin ? `<br>TIN: ${escHtml(settings.companyTin)}` : ""}</div>
+  <!-- 3-COLUMN HEADER: Logo LEFT | Company Details (grey) CENTER | Address (grey) RIGHT -->
+  <div class="header-container">
+    <div class="company-logo-container">${logoHtml}</div>
+    <div id="company-details">
+      <span>${escHtml(companyName)}</span>
+      <span>Georgetown, Guyana</span>
+      ${settings.companyTin ? `<span>TIN: ${escHtml(settings.companyTin)}</span>` : ""}
     </div>
-    <div class="doc-col">
-      <div class="doc-type">INVOICE</div>
-      <div class="doc-number">${escHtml(invoice.invoiceNumber)}</div>
-      <div class="doc-terms">Terms: ${escHtml(TERMS_LABEL[invoice.paymentTerms ?? "due_on_receipt"] ?? invoice.paymentTerms ?? "Due on Receipt")}</div>
-    </div>
-  </div>
-
-  <!-- BILL-TO + META BOX -->
-  <div class="bill-meta">
-    <div class="bill-to">
-      <div class="bill-label">Invoice issued to:</div>
-      ${invoice.agencyName
-        ? `<div class="cust-name">${escHtml(invoice.agencyName)}</div><div class="cust-sub">${escHtml(invoice.customerName)}</div>`
-        : `<div class="cust-name">${escHtml(invoice.customerName)}</div>`}
-      ${invoice.contactPersonName ? `<div class="cust-sub">${escHtml(invoice.contactPersonName)}${invoice.contactPersonPosition ? `, ${escHtml(invoice.contactPersonPosition)}` : ""}</div>` : invoice.contactPersonPosition ? `<div class="cust-sub">${escHtml(invoice.contactPersonPosition)}</div>` : ""}
-      ${invoice.customerPhone ? `<div class="cust-sub">${escHtml(invoice.customerPhone)}</div>` : ""}
-      ${invoice.customerAddress ? `<div class="cust-sub">${escHtml(invoice.customerAddress)}</div>` : ""}
-      ${invoice.preparedBy ? `<div class="prepared-label">Prepared By</div><div class="cust-sub">${escHtml(invoice.preparedBy)}</div>` : ""}
-    </div>
-    <div class="meta-box">
-      <table>
-        <tr><td>Invoice Number</td><td>${escHtml(invoice.invoiceNumber)}</td></tr>
-        <tr><td>Invoice Date</td><td>${issuedStr}</td></tr>
-        ${dueStr ? `<tr><td>Due Date</td><td>${dueStr}</td></tr>` : ""}
-        <tr><td>Invoice Total</td><td>${fmtGYD(total)}</td></tr>
-        <tr class="balance-row"><td>Balance Due</td><td>${fmtGYD(Math.max(balance, 0))}</td></tr>
-        <tr class="status-row"><td>Status</td><td>${escHtml(invoice.status.toUpperCase())}</td></tr>
-      </table>
+    <div id="company-address">
+      <span>Georgetown</span>
+      <span>Demerara-Mahaica</span>
+      <span>Guyana</span>
     </div>
   </div>
 
-  <!-- ITEMS TABLE -->
+  <!-- CLIENT LEFT | GOLD ENTITY-DETAILS BOX RIGHT -->
+  <div class="client-and-entity-wrapper">
+    <div id="client-details">
+      <p class="entity-issued-to">Invoice issued to:</p>
+      ${clientNameLine}
+      ${invoice.contactPersonName ? `<p>${escHtml(invoice.contactPersonName)}${invoice.contactPersonPosition ? `, ${escHtml(invoice.contactPersonPosition)}` : ""}</p>` : invoice.contactPersonPosition ? `<p>${escHtml(invoice.contactPersonPosition)}</p>` : ""}
+      ${invoice.customerPhone ? `<p>${escHtml(invoice.customerPhone)}</p>` : ""}
+      ${invoice.customerAddress ? `<p>${escHtml(invoice.customerAddress)}</p>` : ""}
+      ${invoice.preparedBy ? `<p style="margin-top:8px;font-size:0.82em;color:#888">Prepared by: ${escHtml(invoice.preparedBy)}</p>` : ""}
+    </div>
+
+    <table id="entity-details" cellspacing="0">
+      <tr><th>Invoice #</th><td>${escHtml(invoice.invoiceNumber)}</td></tr>
+      <tr><th>Date</th><td>${issuedStr}</td></tr>
+      ${dueStr ? `<tr><th>Due Date</th><td>${dueStr}</td></tr>` : ""}
+      <tr><th>Terms</th><td>${escHtml(TERMS_LABEL[invoice.paymentTerms ?? "due_on_receipt"] ?? invoice.paymentTerms ?? "Due on Receipt")}</td></tr>
+      <tr><th>Total</th><td>${fmtGYD(total)}</td></tr>
+      <tr><th>Balance Due</th><td>${fmtGYD(Math.max(balance, 0))}</td></tr>
+      <tr><th>Status</th><td>${escHtml(invoice.status.toUpperCase())}</td></tr>
+    </table>
+  </div>
+
+  <!-- ITEMS TABLE: secondary-gold header, rounded corners, grey rows -->
   <table class="items-table">
     <thead>
       <tr>
-        <th>Item / Description</th>
-        <th class="right" style="width:60px">Qty</th>
-        <th class="right" style="width:110px">Unit Cost</th>
+        <th class="left-radius">Item / Description</th>
+        <th style="width:58px;text-align:right">Qty</th>
+        <th style="width:110px;text-align:right">Unit Cost</th>
         ${taxColHeader}
-        <th class="right" style="width:120px">Line Total</th>
+        <th class="right-radius" style="width:120px">Line Total</th>
       </tr>
     </thead>
     <tbody>${itemRows}</tbody>
   </table>
 
-  <!-- TOTALS -->
-  <div class="totals-wrapper">
-    <div class="totals-table">
-      <div class="total-row"><span>Subtotal</span><span class="amt">${fmtGYD(subtotal)}</span></div>
-      ${discountAmt > 0 ? `<div class="total-row discount"><span>Discount${invoice.discountType === "percent" ? ` (${invoice.discountValue}%)` : ""}</span><span class="amt">-${fmtGYD(discountAmt)}</span></div>` : ""}
-      ${taxAmt > 0 ? `<div class="total-row"><span>Tax</span><span class="amt">${fmtGYD(taxAmt)}</span></div>` : ""}
-      <div class="total-row sep"><span>Total</span><span class="amt">${fmtGYD(total)}</span></div>
-      ${paid > 0 ? `<div class="total-row paid-row"><span>Amount Paid</span><span class="amt">-${fmtGYD(paid)}</span></div>` : ""}
-      <div class="total-row balance${isFullyPaid ? " paid" : ""}">
-        <span>Balance Due</span><span class="amt">${fmtGYD(Math.max(balance, 0))}</span>
+  <!-- TABLE TOTALS: Notes LEFT | Amounts RIGHT -->
+  <div id="table-totals">
+    <div class="totals-left">
+      ${notesBlock}
+    </div>
+    <div class="totals-right">
+      <div class="t-row"><span class="lbl">Subtotal</span><span class="amt">${fmtGYD(subtotal)}</span></div>
+      ${discountAmt > 0 ? `<div class="t-row discount"><span class="lbl">Discount${invoice.discountType === "percent" ? ` (${invoice.discountValue}%)` : ""}</span><span class="amt">-${fmtGYD(discountAmt)}</span></div>` : ""}
+      ${taxAmt > 0 ? `<div class="t-row"><span class="lbl">Tax</span><span class="amt">${fmtGYD(taxAmt)}</span></div>` : ""}
+      <div class="t-row sep"><span class="lbl">Total</span><span class="amt">${fmtGYD(total)}</span></div>
+      ${paid > 0 ? `<div class="t-row paid-row"><span class="lbl">Amount Paid</span><span class="amt">-${fmtGYD(paid)}</span></div>` : ""}
+      <div class="outstanding-row">
+        <div class="outstanding-label${isFullyPaid ? " paid" : ""}">Balance Due</div>
+        <div class="outstanding-value${isFullyPaid ? " paid" : ""}">${fmtGYD(Math.max(balance, 0))}</div>
       </div>
     </div>
   </div>
@@ -411,18 +584,10 @@ function buildInvoiceHtml(
 
   ${paymentBlock}
 
-  ${invoice.notes ? `<div class="notes-section"><span class="notes-label">Notes:</span> <span class="notes-text">${escHtml(invoice.notes)}</span></div>` : ""}
-
   <!-- SIGNATURES -->
   <div class="sig-section">
-    <div class="sig-block">
-      <div class="sig-line"></div>
-      <div class="sig-label">Received by</div>
-    </div>
-    <div class="sig-block">
-      <div class="sig-line"></div>
-      <div class="sig-label">Authorized by</div>
-    </div>
+    <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Received by</div></div>
+    <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Authorized by</div></div>
   </div>
 
   <!-- CHEQUES + CREDIT TERMS -->
@@ -431,8 +596,8 @@ function buildInvoiceHtml(
     <div class="credit-terms">Credit period: All invoices are due 30 days from date of issue &nbsp;&bull;&nbsp; 10% service charge will be applied to balance due for late payments.</div>
   </div>
 
-  <div class="footer">
-    ${escHtml(companyName)} &nbsp;&bull;&nbsp; ${settings.invoiceFooterNote ? escHtml(settings.invoiceFooterNote) + " &nbsp;&bull;&nbsp; " : ""}Generated ${new Date().toLocaleString("en-GY")}${invoice.preparedBy ? ` &nbsp;&bull;&nbsp; Prepared by: ${escHtml(invoice.preparedBy)}` : ""}
+  <div id="footer">
+    ${escHtml(companyName)} &nbsp;&bull;&nbsp; ${settings.invoiceFooterNote ? escHtml(settings.invoiceFooterNote) + " &nbsp;&bull;&nbsp; " : ""}Generated ${new Date().toLocaleString("en-GY")}
   </div>
 
 </div>
