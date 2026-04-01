@@ -168,7 +168,7 @@ function buildQuotationHtml(
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { padding-top: 52px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; color: #1e293b; }
-  .wrapper { max-width: 794px; margin: 24px auto; box-shadow: 0 8px 32px rgba(0,0,0,0.12); border-radius: 8px; overflow: hidden; background: white; border-top: 5px solid #b8862d; }
+  .wrapper { max-width: 794px; margin: 24px auto; box-shadow: 0 8px 32px rgba(0,0,0,0.12); border-radius: 8px; overflow: hidden; background: white; border-top: 8px solid #b8862d; }
 
   .header { background: #ffffff; color: #1e293b; padding: 24px 36px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid #e2e8f0; }
   .logo-area { display: flex; align-items: center; gap: 14px; }
@@ -178,7 +178,7 @@ function buildQuotationHtml(
 
   /* Quotation stamp badge */
   .stamp-badge { border: 2.5px solid #b8862d; border-radius: 6px; padding: 6px 16px; display: inline-block; text-align: center; }
-  .stamp-text { font-size: 22px; font-weight: 800; letter-spacing: 0.18em; color: #1e293b; }
+  .stamp-text { font-size: 22px; font-weight: 800; letter-spacing: 0.18em; color: #b8862d; }
   .doc-number { font-family: 'Courier New', monospace; font-size: 12px; margin-top: 4px; color: #475569; text-align: right; }
   .doc-meta { font-size: 11px; margin-top: 3px; color: #64748b; text-align: right; }
   .revision-badge { display: inline-block; background: #f59e0b22; color: #b45309; border: 1px solid #f59e0b55; border-radius: 99px; padding: 2px 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; margin-top: 6px; }
@@ -232,9 +232,9 @@ function buildQuotationHtml(
   .print-btn { background: white; color: #1e293b; border: none; border-radius: 6px; padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
   .print-btn:hover { background: #f1f5f9; }
   @media print {
-    @page { margin: 0; size: A4; }
+    @page { margin: 15mm; size: A4; }
     body { background: white; }
-    .wrapper { margin: 0; box-shadow: none; border-radius: 0; }
+    .wrapper { margin: 0; max-width: 100%; box-shadow: none; border-radius: 0; }
     .print-bar { display: none; }
     body { padding-top: 0; }
   }
