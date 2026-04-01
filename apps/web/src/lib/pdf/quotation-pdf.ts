@@ -57,7 +57,10 @@ export async function openQuotationPdf(
 	const blob = new Blob([html], { type: "text/html" });
 	const url = URL.createObjectURL(blob);
 	win.location.href = url;
-	setTimeout(() => URL.revokeObjectURL(url), 15_000);
+	win.addEventListener("load", () => {
+		try { win.history.replaceState({}, win.document.title, "/quotation-preview"); } catch {}
+		setTimeout(() => URL.revokeObjectURL(url), 1_000);
+	});
 	return "ok";
 }
 
@@ -378,7 +381,7 @@ function buildQuotationHtml(
   .print-btn:hover { background: #f1f5f9; }
 
   @media print {
-    @page { margin: 0; size: A4; }
+    @page { margin: 0; size: auto; }
     body { background: white; padding: 15mm; }
     .wrapper { margin: 0; max-width: 100%; box-shadow: none; padding: 0; }
     .print-bar { display: none; }

@@ -76,7 +76,12 @@ export async function openInvoicePdf(
 	const blob = new Blob([html], { type: "text/html" });
 	const url = URL.createObjectURL(blob);
 	win.location.href = url;
-	setTimeout(() => URL.revokeObjectURL(url), 15_000);
+	// After load, replace blob URL with clean path so Safari's print
+	// header shows pos.karetechsolutions.com instead of blob:...uuid
+	win.addEventListener("load", () => {
+		try { win.history.replaceState({}, win.document.title, "/invoice-preview"); } catch {}
+		setTimeout(() => URL.revokeObjectURL(url), 1_000);
+	});
 	return "ok";
 }
 
@@ -441,7 +446,7 @@ function buildInvoiceHtml(
   .print-btn:hover { background: #f1f5f9; }
 
   @media print {
-    @page { margin: 0; size: A4; }
+    @page { margin: 0; size: auto; }
     body { background: white; padding: 15mm; }
     .wrapper { margin: 0; max-width: 100%; box-shadow: none; padding: 0; }
     .print-bar { display: none; }
