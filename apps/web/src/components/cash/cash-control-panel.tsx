@@ -82,7 +82,9 @@ export function CashControlPanel({
 	);
 
 	const invalidateCash = () =>
-		queryClient.invalidateQueries({ queryKey: ["cash"] });
+		queryClient.invalidateQueries({
+			queryKey: orpc.cash.getSessions.queryOptions({ input: {} }).queryKey,
+		});
 
 	const openShiftMutation = useMutation(
 		orpc.cash.openSession.mutationOptions({
