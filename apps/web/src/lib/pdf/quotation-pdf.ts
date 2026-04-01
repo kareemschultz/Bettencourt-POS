@@ -168,20 +168,20 @@ function buildQuotationHtml(
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { padding-top: 52px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; color: #1e293b; }
-  .wrapper { max-width: 794px; margin: 24px auto; box-shadow: 0 8px 32px rgba(0,0,0,0.12); border-radius: 8px; overflow: hidden; background: white; }
+  .wrapper { max-width: 794px; margin: 24px auto; box-shadow: 0 8px 32px rgba(0,0,0,0.12); border-radius: 8px; overflow: hidden; background: white; border-top: 5px solid #b8862d; }
 
-  .header { background: #1e293b; color: white; padding: 28px 36px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-  .logo-area { display: flex; align-items: center; gap: 16px; }
-  .logo { height: 56px; width: auto; border-radius: 6px; }
-  .company-name { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
-  .company-sub { font-size: 11px; opacity: 0.7; margin-top: 3px; line-height: 1.5; }
+  .header { background: #ffffff; color: #1e293b; padding: 24px 36px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid #e2e8f0; }
+  .logo-area { display: flex; align-items: center; gap: 14px; }
+  .logo { height: 56px; width: auto; border-radius: 4px; }
+  .company-name { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: #1e293b; }
+  .company-sub { font-size: 10.5px; color: #64748b; margin-top: 3px; line-height: 1.5; }
 
   /* Quotation stamp badge */
-  .stamp-badge { border: 2.5px solid rgba(255,255,255,0.8); border-radius: 6px; padding: 6px 16px; display: inline-block; text-align: center; }
-  .stamp-text { font-size: 22px; font-weight: 800; letter-spacing: 0.18em; }
-  .doc-number { font-family: 'Courier New', monospace; font-size: 13px; margin-top: 6px; opacity: 0.85; text-align: right; }
-  .doc-meta { font-size: 11px; margin-top: 3px; opacity: 0.7; text-align: right; }
-  .revision-badge { display: inline-block; background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b55; border-radius: 99px; padding: 2px 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; margin-top: 6px; }
+  .stamp-badge { border: 2.5px solid #b8862d; border-radius: 6px; padding: 6px 16px; display: inline-block; text-align: center; }
+  .stamp-text { font-size: 22px; font-weight: 800; letter-spacing: 0.18em; color: #1e293b; }
+  .doc-number { font-family: 'Courier New', monospace; font-size: 12px; margin-top: 4px; color: #475569; text-align: right; }
+  .doc-meta { font-size: 11px; margin-top: 3px; color: #64748b; text-align: right; }
+  .revision-badge { display: inline-block; background: #f59e0b22; color: #b45309; border: 1px solid #f59e0b55; border-radius: 99px; padding: 2px 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; margin-top: 6px; }
 
   .bill-to-section { padding: 24px 36px; display: flex; gap: 48px; border-bottom: 1px solid #e2e8f0; }
   .bill-col { flex: 1; }
@@ -217,10 +217,15 @@ function buildQuotationHtml(
   .sig-label { font-size: 10px; color: #64748b; line-height: 1.5; }
   .sig-label strong { color: #1e293b; display: block; margin-bottom: 2px; }
 
-  .notes-section { padding: 16px 36px; font-size: 12px; color: #475569; border-top: 1px solid #e2e8f0; line-height: 1.6; }
-  .notes-section strong { color: #1e293b; }
+  .notes-section { padding: 16px 36px; font-size: 12px; border-top: 1px solid #e2e8f0; line-height: 1.6; }
+  .notes-section .notes-label { font-weight: 700; color: #dc2626; font-style: italic; }
+  .notes-section .notes-text { color: #dc2626; font-style: italic; font-weight: 500; }
 
-  .footer { padding: 14px 36px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; background: #f8fafc; }
+  .cheques-section { padding: 10px 36px 14px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #334155; }
+  .cheques-section strong { color: #1e293b; }
+  .credit-terms { font-size: 10px; color: #64748b; margin-top: 4px; }
+
+  .footer { padding: 10px 36px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
 
   .print-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #1e293b; color: white; display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
   .print-bar span { opacity: 0.7; font-size: 12px; }
@@ -307,30 +312,34 @@ function buildQuotationHtml(
 
   ${tcBlock}
 
-  ${quot.notes ? `<div class="notes-section"><strong>Notes:</strong> ${escHtml(quot.notes)}</div>` : ""}
+  ${quot.notes ? `<div class="notes-section"><span class="notes-label">Notes:</span> <span class="notes-text">${escHtml(quot.notes)}</span></div>` : ""}
 
   <!-- Signature Section -->
   <div class="sig-section">
     <div class="sig-box">
       <div class="sig-line"></div>
       <div class="sig-label">
-        <strong>Authorized By</strong>
-        ${companyName} &nbsp;·&nbsp; Date: _______________
+        <strong>Received by</strong>
+        Date: _______________
       </div>
     </div>
     <div class="sig-box">
       <div class="sig-line"></div>
       <div class="sig-label">
-        <strong>Accepted By</strong>
-        Customer Signature &nbsp;·&nbsp; Date: _______________
+        <strong>Authorized by</strong>
+        Date: _______________
       </div>
     </div>
   </div>
 
+  <!-- Cheques payable + credit terms -->
+  <div class="cheques-section">
+    <div>All cheques are to be made payable to: <strong>${escHtml(companyName)}</strong></div>
+    <div class="credit-terms">This is a quotation only — not a tax invoice &nbsp;&bull;&nbsp; Credit period: All invoices are due 30 days from date of issue &nbsp;&bull;&nbsp; 10% service charge will be applied to balance due for late payments.</div>
+  </div>
+
   <div class="footer">
-    ${companyName} &nbsp;&bull;&nbsp; This is a quotation only — not a tax invoice
-    ${settings.quotationFooterNote ? ` &nbsp;&bull;&nbsp; ${escHtml(settings.quotationFooterNote)}` : ""}
-    <br>Generated ${new Date().toLocaleString("en-GY")}
+    ${escHtml(companyName)}${settings.quotationFooterNote ? ` &nbsp;&bull;&nbsp; ${escHtml(settings.quotationFooterNote)}` : ""} &nbsp;&bull;&nbsp; Generated ${new Date().toLocaleString("en-GY")}
   </div>
 </div>
 </body>

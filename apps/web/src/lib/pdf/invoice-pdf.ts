@@ -233,17 +233,17 @@ function buildInvoiceHtml(
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { padding-top: 52px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; color: #1e293b; }
-  .wrapper { max-width: 794px; margin: 24px auto; box-shadow: 0 8px 32px rgba(0,0,0,0.12); border-radius: 8px; overflow: hidden; background: white; }
+  .wrapper { max-width: 794px; margin: 24px auto; box-shadow: 0 8px 32px rgba(0,0,0,0.12); border-radius: 8px; overflow: hidden; background: white; border-top: 5px solid #b8862d; }
 
-  .header { background: #1e293b; color: white; padding: 28px 36px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-  .logo-area { display: flex; align-items: center; gap: 16px; }
-  .logo { height: 56px; width: auto; border-radius: 6px; }
-  .company-name { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
-  .company-sub { font-size: 11px; opacity: 0.7; margin-top: 3px; line-height: 1.5; }
-  .doc-type { font-size: 28px; font-weight: 800; letter-spacing: 0.12em; text-align: right; }
-  .doc-number { font-family: 'Courier New', monospace; font-size: 13px; margin-top: 5px; opacity: 0.85; text-align: right; }
-  .doc-meta { font-size: 11px; margin-top: 3px; opacity: 0.7; text-align: right; }
-  .status-pill { display: inline-block; background: ${statusBadgeColor}22; color: ${statusBadgeColor}; border: 1px solid ${statusBadgeColor}44; border-radius: 99px; padding: 2px 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 6px; }
+  .header { background: #ffffff; color: #1e293b; padding: 24px 36px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid #e2e8f0; }
+  .logo-area { display: flex; align-items: center; gap: 14px; }
+  .logo { height: 56px; width: auto; border-radius: 4px; }
+  .company-name { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: #1e293b; }
+  .company-sub { font-size: 10.5px; color: #64748b; margin-top: 3px; line-height: 1.5; }
+  .doc-type { font-size: 26px; font-weight: 800; letter-spacing: 0.14em; text-align: right; color: #1e293b; }
+  .doc-number { font-family: 'Courier New', monospace; font-size: 12px; margin-top: 4px; color: #475569; text-align: right; }
+  .doc-meta { font-size: 11px; margin-top: 3px; color: #64748b; text-align: right; }
+  .status-pill { display: inline-block; background: ${statusBadgeColor}18; color: ${statusBadgeColor}; border: 1px solid ${statusBadgeColor}44; border-radius: 99px; padding: 2px 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 6px; }
 
   .bill-to-section { padding: 24px 36px; display: flex; gap: 48px; border-bottom: 1px solid #e2e8f0; }
   .bill-col { flex: 1; }
@@ -284,10 +284,20 @@ function buildInvoiceHtml(
   .history-table td.right { text-align: right; font-family: 'Courier New', monospace; }
   .history-table td.reversal { color: #dc2626; font-style: italic; }
 
-  .notes-section { padding: 16px 36px; font-size: 12px; color: #475569; border-top: 1px solid #e2e8f0; line-height: 1.6; }
-  .notes-section strong { color: #1e293b; }
+  .notes-section { padding: 16px 36px; font-size: 12px; border-top: 1px solid #e2e8f0; line-height: 1.6; }
+  .notes-section .notes-label { font-weight: 700; color: #dc2626; font-style: italic; }
+  .notes-section .notes-text { color: #dc2626; font-style: italic; font-weight: 500; }
 
-  .footer { padding: 14px 36px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; background: #f8fafc; }
+  .signature-section { padding: 24px 36px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; gap: 48px; }
+  .sig-block { flex: 1; }
+  .sig-line { border-bottom: 1px solid #334155; margin-bottom: 6px; height: 32px; }
+  .sig-label { font-size: 11px; color: #475569; font-weight: 600; }
+
+  .cheques-section { padding: 10px 36px 14px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #334155; }
+  .cheques-section strong { color: #1e293b; }
+  .credit-terms { font-size: 10px; color: #64748b; margin-top: 4px; }
+
+  .footer { padding: 10px 36px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
 
   .print-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #1e293b; color: white; display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
   .print-bar span { opacity: 0.7; font-size: 12px; }
@@ -379,13 +389,28 @@ function buildInvoiceHtml(
 
   ${paymentBlock}
 
-  ${invoice.notes ? `<div class="notes-section"><strong>Notes:</strong> ${escHtml(invoice.notes)}</div>` : ""}
+  ${invoice.notes ? `<div class="notes-section"><span class="notes-label">Notes:</span> <span class="notes-text">${escHtml(invoice.notes)}</span></div>` : ""}
+
+  <!-- Signature lines -->
+  <div class="signature-section">
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-label">Received by</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-label">Authorized by</div>
+    </div>
+  </div>
+
+  <!-- Cheques payable + credit terms -->
+  <div class="cheques-section">
+    <div>All cheques are to be made payable to: <strong>${escHtml(companyName)}</strong></div>
+    <div class="credit-terms">Credit period: All invoices are due 30 days from date of issue &nbsp;&bull;&nbsp; 10% service charge will be applied to balance due for late payments.</div>
+  </div>
 
   <div class="footer">
-    Bettencourt's Food Inc. &nbsp;&bull;&nbsp; Thank you for your business
-    ${settings.invoiceFooterNote ? ` &nbsp;&bull;&nbsp; ${escHtml(settings.invoiceFooterNote)}` : ""}
-    <br>Generated ${new Date().toLocaleString("en-GY")}
-    ${invoice.preparedBy ? ` &nbsp;&bull;&nbsp; Prepared by: ${escHtml(invoice.preparedBy)}` : ""}
+    ${escHtml(companyName)} &nbsp;&bull;&nbsp; ${settings.invoiceFooterNote ? escHtml(settings.invoiceFooterNote) + " &nbsp;&bull;&nbsp; " : ""}Generated ${new Date().toLocaleString("en-GY")}${invoice.preparedBy ? ` &nbsp;&bull;&nbsp; Prepared by: ${escHtml(invoice.preparedBy)}` : ""}
   </div>
 </div>
 </body>
