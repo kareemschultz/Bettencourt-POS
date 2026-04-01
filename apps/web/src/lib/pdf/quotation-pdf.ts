@@ -378,10 +378,25 @@ function buildQuotationHtml(
   .print-btn:hover { background: #f1f5f9; }
 
   @media print {
-    @page { margin: 18mm 15mm; size: A4; }
+    @page { margin: 15mm; size: A4; }
     body { background: white; padding: 0; }
     .wrapper { margin: 0; max-width: 100%; box-shadow: none; padding: 0; }
     .print-bar { display: none; }
+    .header { margin-bottom: 1rem; }
+    .doc-title { font-size: 2em; margin-bottom: 8px; }
+    #entity-details tr:first-child th,
+    #entity-details tr:first-child td { padding-top: 10px; }
+    #entity-details tr:last-child th,
+    #entity-details tr:last-child td { padding-bottom: 10px; }
+    #entity-details th, #entity-details td { padding-top: 3px; padding-bottom: 3px; }
+    .bill-to { margin-bottom: 0.9rem; padding-bottom: 0.7rem; }
+    .items-table thead th { padding: 8px 10px; }
+    .items-table tbody td { padding: 8px 10px; }
+    #table-totals { padding-top: 4px; padding-bottom: 4px; gap: 24px; }
+    .t-row { padding: 3px 0; }
+    .balance-due-row { padding: 9px 12px; margin-top: 6px; }
+    .sig-section { padding-top: 12px; margin-top: 6px; }
+    #footer { margin-top: 14px; }
   }
 </style>
 </head>
