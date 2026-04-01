@@ -52,7 +52,8 @@ export interface ExpenseReportEntry {
 	amount: string;
 	category: string;
 	description: string;
-	created_at: string;
+	expense_date: string;   // date the expense occurred (YYYY-MM-DD)
+	created_at: string;     // audit: when the entry was recorded
 	supplier_name: string | null;
 	payment_method: string | null;
 	reference_number: string | null;
@@ -305,7 +306,7 @@ function buildReportHtml(opts: ExpenseReportOptions, logo: string): string {
       <thead>
         <tr>
           ${sourceHeader}
-          <th style="${TH}">Date</th>
+          <th style="${TH}">Expense Date</th>
           <th style="${TH}">Supplier</th>
           <th style="${TH}">Category</th>
           <th style="${TH}">Description</th>
@@ -359,7 +360,15 @@ function expenseRow(
 	color: string,
 	sourceName?: string,
 ): string {
-	const date = new Date(e.created_at).toLocaleString("en-GY", {
+	// Expense date: when the expense actually occurred (user-supplied)
+	const expenseDateFmt = new Date(e.expense_date + "T12:00:00").toLocaleDateString("en-GY", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	});
+
+	// Entry date: when the record was entered into the system (audit trail)
+	const enteredDateFmt = new Date(e.created_at).toLocaleString("en-GY", {
 		timeZone: "America/Guyana",
 		month: "short",
 		day: "numeric",
@@ -368,6 +377,13 @@ function expenseRow(
 		hour12: false,
 	} as Intl.DateTimeFormatOptions);
 
+	// Show "Entered" line only when entry date differs from expense date
+	const enteredDateGYT = new Date(e.created_at).toLocaleDateString("en-CA", { timeZone: "America/Guyana" });
+	const isBackdated = e.expense_date !== enteredDateGYT;
+	const enteredLine = isBackdated
+		? `<div style="font-size:9px;color:#94a3b8;margin-top:2px">Entered: ${esc(enteredDateFmt)}</div>`
+		: "";
+
 	const sourceCell = showSource
 		? `<td style="${TD};white-space:nowrap;color:#64748b;font-size:10.5px">${esc(sourceName ?? "")}</td>`
 		: "";
@@ -375,7 +391,10 @@ function expenseRow(
 	const zebraStyle = "";
 	return `<tr style="${zebraStyle}">
     ${sourceCell}
-    <td style="${TD};white-space:nowrap;color:#64748b">${esc(date)}</td>
+    <td style="${TD};white-space:nowrap;color:#475569">
+      <div style="font-weight:600;font-size:11px">${esc(expenseDateFmt)}</div>
+      ${enteredLine}
+    </td>
     <td style="${TD};max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(e.supplier_name ?? "")}">${esc(e.supplier_name ?? "—")}</td>
     <td style="${TD};white-space:nowrap">
       <span style="display:inline-flex;align-items:center;gap:5px">

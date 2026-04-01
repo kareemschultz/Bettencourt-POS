@@ -74,6 +74,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
 	Table,
 	TableBody,
@@ -136,6 +137,7 @@ const emptyForm = {
 	fundingSourceId: "",
 	department: "",
 	receiptPhotoUrl: "",
+	expenseDate: todayGY(), // defaults to today; user can back-date
 };
 
 type ExpenseRow = {
@@ -143,7 +145,8 @@ type ExpenseRow = {
 	amount: string;
 	category: string;
 	description: string;
-	created_at: string;
+	expense_date: string;   // the date the expense occurred (user-supplied)
+	created_at: string;     // immutable audit: when the entry was entered
 	authorized_by_name: string | null;
 	created_by_name: string | null;
 	supplier_name: string | null;
@@ -159,6 +162,12 @@ export default function ExpensesPage() {
 	const { data: session } = authClient.useSession();
 	const today = todayGY();
 	const queryClient = useQueryClient();
+
+	// Sticky date: when on, the expense date stays locked after each submission
+	// so bulk-entry sessions don't require changing the date on every record.
+	const [stickyDate, setStickyDate] = useState(() => {
+		try { return localStorage.getItem("expense_sticky_date") === "true"; } catch { return false; }
+	});
 	const { data: userProfile } = useQuery(
 		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
 	);
@@ -329,7 +338,13 @@ export default function ExpensesPage() {
 			onSuccess: () => {
 				invalidateExpenses();
 				setDialogOpen(false);
-				setForm(emptyForm);
+				if (stickyDate) {
+					// Persist the submitted date as the locked date for next entry
+					try { localStorage.setItem("expense_locked_date", form.expenseDate); } catch {}
+					setForm({ ...emptyForm, expenseDate: form.expenseDate });
+				} else {
+					setForm(emptyForm);
+				}
 				toast.success("Expense recorded");
 			},
 			onError: (err) => toast.error(err.message || "Failed to save expense"),
@@ -628,7 +643,13 @@ export default function ExpensesPage() {
 
 	function openAdd() {
 		setEditingId(null);
-		setForm(emptyForm);
+		if (stickyDate) {
+			// Use the saved locked date; fall back to form's current date, then today
+			const locked = (() => { try { return localStorage.getItem("expense_locked_date") || form.expenseDate; } catch { return form.expenseDate; } })();
+			setForm({ ...emptyForm, expenseDate: locked || today });
+		} else {
+			setForm(emptyForm);
+		}
 		setDialogOpen(true);
 	}
 
@@ -645,6 +666,7 @@ export default function ExpensesPage() {
 			fundingSourceId: e.funding_source_id ?? "",
 			department: "",
 			receiptPhotoUrl: e.receipt_photo_url ?? "",
+			expenseDate: e.expense_date ?? today,
 		});
 		setDialogOpen(true);
 	}
@@ -670,21 +692,19 @@ export default function ExpensesPage() {
 				notes: form.notes || null,
 				fundingSourceId: form.fundingSourceId || null,
 				receiptPhotoUrl: form.receiptPhotoUrl || null,
+				expenseDate: form.expenseDate || today,
 			});
 		} else {
-			// Duplicate detection: warn if same amount + supplier on same day
+			// Duplicate detection: warn if same amount + supplier on the same expense date
 			const sameDay = expenses.filter((e) => {
-				const eDate = new Date(e.created_at).toLocaleDateString("en-CA", {
-					timeZone: "America/Guyana",
-				});
 				return (
-					eDate === today &&
+					e.expense_date === (form.expenseDate || today) &&
 					e.amount === form.amount &&
 					e.supplier_id === (form.supplierId || null)
 				);
 			});
 			if (sameDay.length > 0) {
-				toast.warning("Similar expense already exists today — double-check before saving");
+				toast.warning("Similar expense already exists for that date — double-check before saving");
 			}
 			createExpense.mutate({
 				amount: form.amount,
@@ -697,6 +717,7 @@ export default function ExpensesPage() {
 				organizationId: orgId,
 				fundingSourceId: form.fundingSourceId || undefined,
 				receiptPhotoUrl: form.receiptPhotoUrl || null,
+				expenseDate: form.expenseDate || today,
 			});
 		}
 	}
@@ -790,7 +811,7 @@ export default function ExpensesPage() {
 								: filtered
 								).map((e) => ({
 									"Funding Source": getSourceName(e.funding_source_id),
-									Date: new Date(e.created_at).toLocaleDateString("en-GY"),
+									Date: new Date(e.expense_date + "T12:00:00").toLocaleDateString("en-GY"),
 									Supplier: e.supplier_name ?? "",
 									Category: e.category,
 									Description: e.description ?? "",
@@ -1313,14 +1334,21 @@ export default function ExpensesPage() {
 															{srcName}
 														</span>
 													</TableCell>
-													<TableCell className="whitespace-nowrap text-muted-foreground text-xs">
-														{new Date(e.created_at).toLocaleString("en-GY", {
-															month: "short",
-															day: "numeric",
-															hour: "2-digit",
-															minute: "2-digit",
-															hour12: false,
-														})}
+													<TableCell className="whitespace-nowrap text-xs">
+														<span className="font-medium text-foreground">
+															{new Date(e.expense_date + "T12:00:00").toLocaleDateString("en-GY", {
+																month: "short",
+																day: "numeric",
+															})}
+														</span>
+														{e.expense_date !== new Date(e.created_at).toLocaleDateString("en-CA", { timeZone: "America/Guyana" }) && (
+															<span
+																className="ml-1 text-muted-foreground text-[10px]"
+																title={"Entered: " + new Date(e.created_at).toLocaleString("en-GY", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+															>
+																(backdated)
+															</span>
+														)}
 													</TableCell>
 													<TableCell>
 														{e.supplier_id ? (
@@ -1605,7 +1633,7 @@ export default function ExpensesPage() {
 					setDialogOpen(open);
 					if (!open) {
 						setEditingId(null);
-						setForm(emptyForm);
+						setForm(stickyDate && !editingId ? { ...emptyForm, expenseDate: form.expenseDate } : emptyForm);
 					}
 				}}
 			>
@@ -1616,6 +1644,43 @@ export default function ExpensesPage() {
 						</DialogTitle>
 					</DialogHeader>
 					<div className="flex flex-col gap-4 py-2 overflow-y-auto flex-1 min-h-0 pr-1">
+						<div className="flex flex-col gap-1.5">
+							<div className="flex items-center justify-between">
+								<Label>Expense Date</Label>
+								{!editingId && (
+									<div className="flex items-center gap-2">
+										<span className="text-xs text-muted-foreground">
+											{stickyDate ? `Locked to ${form.expenseDate || today}` : "Lock date"}
+										</span>
+										<Switch
+											checked={stickyDate}
+											onCheckedChange={(v) => {
+												setStickyDate(v);
+												try {
+													localStorage.setItem("expense_sticky_date", String(v));
+													// When locking, save the currently-selected date as the locked date
+													if (v) localStorage.setItem("expense_locked_date", form.expenseDate || today);
+												} catch {}
+											}}
+										/>
+									</div>
+								)}
+							</div>
+							<Input
+								type="date"
+								max={today}
+								value={form.expenseDate || today}
+								onChange={(e) => {
+									setForm((f) => ({ ...f, expenseDate: e.target.value }));
+									if (stickyDate) try { localStorage.setItem("expense_locked_date", e.target.value); } catch {}
+								}}
+							/>
+							{form.expenseDate && form.expenseDate !== today && (
+								<p className="text-xs text-amber-600 dark:text-amber-400">
+									Back-dated — entry will be recorded as {today}
+								</p>
+							)}
+						</div>
 						<div className="flex flex-col gap-1.5">
 							<Label>Amount (GYD)</Label>
 							<Input
@@ -1863,20 +1928,22 @@ export default function ExpensesPage() {
 						<div className="flex flex-col gap-4 py-2">
 							<div className="grid grid-cols-2 gap-4">
 								<div className="flex flex-col gap-1">
-									<p className="text-muted-foreground text-xs">Date & Time</p>
+									<p className="text-muted-foreground text-xs">Expense Date</p>
 									<p className="font-medium text-sm">
-										{new Date(viewingExpense.created_at).toLocaleString(
+										{new Date(viewingExpense.expense_date + "T12:00:00").toLocaleDateString(
 											"en-GY",
-											{
-												weekday: "short",
-												month: "short",
-												day: "numeric",
-												year: "numeric",
-												hour: "2-digit",
-												minute: "2-digit",
-												hour12: false,
-											},
+											{ weekday: "short", month: "short", day: "numeric", year: "numeric" },
 										)}
+									</p>
+									<p className="text-muted-foreground text-[10px]">
+										Entered:{" "}
+										{new Date(viewingExpense.created_at).toLocaleString("en-GY", {
+											month: "short",
+											day: "numeric",
+											hour: "2-digit",
+											minute: "2-digit",
+											hour12: false,
+										})}
 									</p>
 								</div>
 								<div className="flex flex-col gap-1">

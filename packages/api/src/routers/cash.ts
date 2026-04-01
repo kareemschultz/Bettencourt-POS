@@ -620,6 +620,8 @@ const createExpense = permissionProcedure("shifts.create")
       fundingSourceId: z.string().uuid().optional(),
       billable: z.boolean().optional(),
       customerId: z.string().uuid().nullable().optional(),
+      // expenseDate: the date the expense occurred (YYYY-MM-DD). Defaults to today in GYT.
+      expenseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     }),
   )
   .handler(async ({ input, context }) => {
@@ -643,6 +645,7 @@ const createExpense = permissionProcedure("shifts.create")
         fundingSourceId: input.fundingSourceId ?? null,
         billable: input.billable ?? false,
         customerId: input.customerId ?? null,
+        expenseDate: input.expenseDate ?? undefined, // undefined → DB default (CURRENT_DATE)
       })
       .returning({ id: schema.expense.id });
 
@@ -673,13 +676,13 @@ const getExpenses = permissionProcedure("shifts.read")
 			LEFT JOIN "user" cu ON cu.id = e.created_by
 			LEFT JOIN supplier s ON s.id = e.supplier_id
 			WHERE e.organization_id = ${orgId}::uuid
-				${input.startDate ? sql`AND e.created_at >= ${input.startDate}::timestamptz` : sql``}
-				${input.endDate ? sql`AND e.created_at <= ${input.endDate}::timestamptz` : sql``}
+				${input.startDate ? sql`AND e.expense_date >= ${input.startDate}::date` : sql``}
+				${input.endDate ? sql`AND e.expense_date <= ${input.endDate}::date` : sql``}
 				${input.supplierId ? sql`AND e.supplier_id = ${input.supplierId}::uuid` : sql``}
 				${input.billable !== undefined ? sql`AND e.billable = ${input.billable}` : sql``}
 				${input.invoiceStatus === "uninvoiced" ? sql`AND e.billable = true AND e.invoiced_at IS NULL` : sql``}
 				${input.invoiceStatus === "invoiced" ? sql`AND e.invoiced_at IS NOT NULL` : sql``}
-			ORDER BY e.created_at DESC
+			ORDER BY e.expense_date DESC, e.created_at DESC
 			LIMIT 1000`,
     );
 
@@ -708,8 +711,8 @@ const getExpenseReport = permissionProcedure("shifts.read")
 			FROM expense e
 			LEFT JOIN supplier s ON s.id = e.supplier_id
 			WHERE e.organization_id = ${orgId}::uuid
-				${input.startDate ? sql`AND e.created_at >= ${input.startDate}::timestamptz` : sql``}
-				${input.endDate ? sql`AND e.created_at <= ${input.endDate}::timestamptz` : sql``}
+				${input.startDate ? sql`AND e.expense_date >= ${input.startDate}::date` : sql``}
+				${input.endDate ? sql`AND e.expense_date <= ${input.endDate}::date` : sql``}
 			GROUP BY s.name, e.supplier_id, e.category
 			ORDER BY total DESC`,
     );
@@ -718,8 +721,8 @@ const getExpenseReport = permissionProcedure("shifts.read")
       sql`SELECT SUM(amount::numeric)::text as total
 			FROM expense
 			WHERE organization_id = ${orgId}::uuid
-				${input.startDate ? sql`AND created_at >= ${input.startDate}::timestamptz` : sql``}
-				${input.endDate ? sql`AND created_at <= ${input.endDate}::timestamptz` : sql``}`,
+				${input.startDate ? sql`AND expense_date >= ${input.startDate}::date` : sql``}
+				${input.endDate ? sql`AND expense_date <= ${input.endDate}::date` : sql``}`,
     );
 
     return {
@@ -756,14 +759,14 @@ const getSupplierSpendSummary = permissionProcedure("shifts.read")
         (SELECT description FROM expense
            WHERE supplier_id     = ${supplierId}::uuid
              AND organization_id = ${orgId}::uuid
-             ${startDate ? sql`AND created_at >= ${startDate}::timestamptz` : sql``}
-             ${endDate ? sql`AND created_at <= ${endDate}::timestamptz` : sql``}
+             ${startDate ? sql`AND expense_date >= ${startDate}::date` : sql``}
+             ${endDate ? sql`AND expense_date <= ${endDate}::date` : sql``}
            ORDER BY amount DESC LIMIT 1) AS largest_desc
       FROM expense
       WHERE supplier_id     = ${supplierId}::uuid
         AND organization_id = ${orgId}::uuid
-        ${startDate ? sql`AND created_at >= ${startDate}::timestamptz` : sql``}
-        ${endDate ? sql`AND created_at <= ${endDate}::timestamptz` : sql``}
+        ${startDate ? sql`AND expense_date >= ${startDate}::date` : sql``}
+        ${endDate ? sql`AND expense_date <= ${endDate}::date` : sql``}
     `);
     const period = periodResult.rows[0];
 
@@ -796,8 +799,8 @@ const getSupplierSpendSummary = permissionProcedure("shifts.read")
         FROM expense
         WHERE supplier_id     = ${supplierId}::uuid
           AND organization_id = ${orgId}::uuid
-          AND created_at >= ${prevStart.toISOString()}::timestamptz
-          AND created_at <= ${prevEnd.toISOString()}::timestamptz
+          AND expense_date >= ${prevStart.toISOString().slice(0, 10)}::date
+          AND expense_date <= ${prevEnd.toISOString().slice(0, 10)}::date
       `);
       prevTotal = prevResult.rows[0]?.total ?? "0";
     }
@@ -892,8 +895,8 @@ const getSupplierCategoryBreakdown = permissionProcedure("shifts.read")
       FROM expense
       WHERE supplier_id     = ${supplierId}::uuid
         AND organization_id = ${orgId}::uuid
-        ${startDate ? sql`AND created_at >= ${startDate}::timestamptz` : sql``}
-        ${endDate ? sql`AND created_at <= ${endDate}::timestamptz` : sql``}
+        ${startDate ? sql`AND expense_date >= ${startDate}::date` : sql``}
+        ${endDate ? sql`AND expense_date <= ${endDate}::date` : sql``}
       GROUP BY category
       ORDER BY SUM(amount) DESC
     `);
@@ -1054,6 +1057,7 @@ const updateExpense = permissionProcedure("shifts.update")
       receiptPhotoUrl: z.string().nullable().optional(),
       billable: z.boolean().optional(),
       customerId: z.string().uuid().nullable().optional(),
+      expenseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     }),
   )
   .handler(async ({ input, context }) => {
@@ -1072,6 +1076,7 @@ const updateExpense = permissionProcedure("shifts.update")
         receiptPhotoUrl: input.receiptPhotoUrl ?? null,
         billable: input.billable ?? false,
         customerId: input.customerId ?? null,
+        ...(input.expenseDate ? { expenseDate: input.expenseDate } : {}),
       })
       .where(
         and(
@@ -1270,10 +1275,8 @@ const getExpensesByFundingSource = permissionProcedure("shifts.read")
   )
   .handler(async ({ input, context }) => {
     const orgId = requireOrganizationId(context);
-    const start = new Date(`${input.startDate}T00:00:00-04:00`);
-    const end = new Date(`${input.endDate}T23:59:59-04:00`);
 
-    // Fetch all expenses with a funding source
+    // Fetch all expenses with a funding source, filtered by expense_date
     const withSource = await db
       .select({
         id: schema.expense.id,
@@ -1281,6 +1284,7 @@ const getExpensesByFundingSource = permissionProcedure("shifts.read")
         category: schema.expense.category,
         description: schema.expense.description,
         createdAt: schema.expense.createdAt,
+        expenseDate: schema.expense.expenseDate,
         fundingSourceId: schema.expense.fundingSourceId,
         supplierId: schema.expense.supplierId,
         supplierName: schema.supplier.name,
@@ -1294,13 +1298,13 @@ const getExpensesByFundingSource = permissionProcedure("shifts.read")
         and(
           eq(schema.expense.organizationId, orgId),
           isNotNull(schema.expense.fundingSourceId),
-          gte(schema.expense.createdAt, start),
-          lte(schema.expense.createdAt, end),
+          gte(schema.expense.expenseDate, input.startDate),
+          lte(schema.expense.expenseDate, input.endDate),
         ),
       )
       .orderBy(
         asc(schema.expense.fundingSourceId),
-        asc(schema.expense.createdAt),
+        asc(schema.expense.expenseDate),
       );
 
     // Fetch expenses with no funding source (General Cash)
@@ -1311,6 +1315,7 @@ const getExpensesByFundingSource = permissionProcedure("shifts.read")
         category: schema.expense.category,
         description: schema.expense.description,
         createdAt: schema.expense.createdAt,
+        expenseDate: schema.expense.expenseDate,
         fundingSourceId: schema.expense.fundingSourceId,
         supplierId: schema.expense.supplierId,
         supplierName: schema.supplier.name,
@@ -1324,11 +1329,11 @@ const getExpensesByFundingSource = permissionProcedure("shifts.read")
         and(
           eq(schema.expense.organizationId, orgId),
           isNull(schema.expense.fundingSourceId),
-          gte(schema.expense.createdAt, start),
-          lte(schema.expense.createdAt, end),
+          gte(schema.expense.expenseDate, input.startDate),
+          lte(schema.expense.expenseDate, input.endDate),
         ),
       )
-      .orderBy(asc(schema.expense.createdAt));
+      .orderBy(asc(schema.expense.expenseDate));
 
     // Fetch all funding sources for the org
     const fundingSources = await db
@@ -1430,11 +1435,8 @@ const getDailyExpenseSummary = permissionProcedure("shifts.read")
   .input(z.object({ date: z.string() }))
   .handler(async ({ input, context }) => {
     const orgId = requireOrganizationId(context);
-    const d = new Date(`${input.date}T00:00:00-04:00`);
-    const startOfDay = d;
-    const endOfDay = new Date(d.getTime() + 24 * 60 * 60 * 1000);
 
-    // Fetch all expenses with a funding source for the day
+    // Fetch all expenses with a funding source for the day (filtered by expense_date)
     const withSource = await db
       .select({
         id: schema.expense.id,
@@ -1442,6 +1444,7 @@ const getDailyExpenseSummary = permissionProcedure("shifts.read")
         category: schema.expense.category,
         description: schema.expense.description,
         createdAt: schema.expense.createdAt,
+        expenseDate: schema.expense.expenseDate,
         fundingSourceId: schema.expense.fundingSourceId,
         supplierId: schema.expense.supplierId,
         supplierName: schema.supplier.name,
@@ -1455,8 +1458,7 @@ const getDailyExpenseSummary = permissionProcedure("shifts.read")
         and(
           eq(schema.expense.organizationId, orgId),
           isNotNull(schema.expense.fundingSourceId),
-          gte(schema.expense.createdAt, startOfDay),
-          lte(schema.expense.createdAt, endOfDay),
+          eq(schema.expense.expenseDate, input.date),
         ),
       )
       .orderBy(
@@ -1472,6 +1474,7 @@ const getDailyExpenseSummary = permissionProcedure("shifts.read")
         category: schema.expense.category,
         description: schema.expense.description,
         createdAt: schema.expense.createdAt,
+        expenseDate: schema.expense.expenseDate,
         fundingSourceId: schema.expense.fundingSourceId,
         supplierId: schema.expense.supplierId,
         supplierName: schema.supplier.name,
@@ -1485,8 +1488,7 @@ const getDailyExpenseSummary = permissionProcedure("shifts.read")
         and(
           eq(schema.expense.organizationId, orgId),
           isNull(schema.expense.fundingSourceId),
-          gte(schema.expense.createdAt, startOfDay),
-          lte(schema.expense.createdAt, endOfDay),
+          eq(schema.expense.expenseDate, input.date),
         ),
       )
       .orderBy(asc(schema.expense.createdAt));
@@ -1513,6 +1515,7 @@ const getDailyExpenseSummary = permissionProcedure("shifts.read")
           category: string;
           amount: string;
           description: string;
+          expenseDate: string;
           createdAt: string;
         }[];
       }
@@ -1537,6 +1540,7 @@ const getDailyExpenseSummary = permissionProcedure("shifts.read")
         category: String(row.category),
         amount: String(row.amount),
         description: String(row.description),
+        expenseDate: String(row.expenseDate),
         createdAt: (row.createdAt as Date).toISOString(),
       });
     }
@@ -1552,6 +1556,7 @@ const getDailyExpenseSummary = permissionProcedure("shifts.read")
           category: string;
           amount: string;
           description: string;
+          expenseDate: string;
           createdAt: string;
         }[],
       };
@@ -1563,6 +1568,7 @@ const getDailyExpenseSummary = permissionProcedure("shifts.read")
           category: String(row.category),
           amount: String(row.amount),
           description: String(row.description),
+          expenseDate: String(row.expenseDate),
           createdAt: (row.createdAt as Date).toISOString(),
         });
       }

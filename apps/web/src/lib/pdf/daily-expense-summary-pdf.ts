@@ -16,7 +16,8 @@ export interface DailyExpenseSummaryOptions {
 			category: string;
 			amount: string;
 			description: string;
-			createdAt: string;
+			expenseDate?: string;  // YYYY-MM-DD — when the expense occurred
+			createdAt: string;     // ISO timestamp — when the entry was recorded
 		}>;
 	}>;
 	preparedBy?: string;
@@ -115,15 +116,32 @@ function buildSummaryHtml(
 	const groupSections = groups
 		.map((group) => {
 			const itemRows = group.items
-				.map(
-					(item) => `
+				.map((item) => {
+					// Show "Entered: [date]" when the record was entered on a different day
+					// than the expense date (i.e., backdated entry). Helps accountants
+					// distinguish the period the cost belongs to vs. when it was recorded.
+					const enteredNote = (() => {
+						if (!item.expenseDate) return "";
+						const enteredDateGYT = new Date(item.createdAt).toLocaleDateString("en-CA", { timeZone: "America/Guyana" });
+						if (item.expenseDate === enteredDateGYT) return "";
+						const enteredFmt = new Date(item.createdAt).toLocaleString("en-GY", {
+							timeZone: "America/Guyana",
+							month: "short",
+							day: "numeric",
+							hour: "2-digit",
+							minute: "2-digit",
+							hour12: false,
+						});
+						return `<div style="font-size:9px;color:#f59e0b;margin-top:2px;font-style:italic">&#9432; Entered: ${escHtml(enteredFmt)}</div>`;
+					})();
+					return `
       <tr>
-        <td>${escHtml(item.vendor)}</td>
+        <td>${escHtml(item.vendor)}${enteredNote}</td>
         <td class="cat"><span class="badge">${escHtml(item.category)}</span></td>
         <td>${escHtml(item.description)}</td>
         <td class="right mono">${fmtGYD(Number(item.amount))}</td>
-      </tr>`,
-				)
+      </tr>`;
+				})
 				.join("");
 
 			return `

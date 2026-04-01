@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  date,
   index,
   numeric,
   pgTable,
@@ -197,6 +198,9 @@ export const expense = pgTable(
       onDelete: "set null",
     }),
     invoiceLineId: text("invoice_line_id"),
+    // expenseDate: the date the expense actually occurred (user-supplied, can be back-dated)
+    // createdAt:   immutable audit timestamp — when the entry was entered into the system
+    expenseDate: date("expense_date").notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
