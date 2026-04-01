@@ -99,7 +99,7 @@ export function ProductCombobox({
 			</div>
 
 			{open && (results as ProductHit[]).length > 0 && (
-				<div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg">
+				<div className="absolute z-50 mt-1 min-w-[320px] w-full rounded-md border border-border bg-popover shadow-lg">
 					<Command>
 						<CommandList>
 							<CommandGroup heading="Products">
@@ -136,7 +136,7 @@ export function ProductCombobox({
 				(results as ProductHit[]).length === 0 &&
 				debouncedQuery.length >= 2 &&
 				!isFetching && (
-					<div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md">
+					<div className="absolute z-50 mt-1 min-w-[280px] w-full rounded-md border border-border bg-popover shadow-md">
 						<div className="px-3 py-2.5 text-xs text-muted-foreground">
 							No match —{" "}
 							<span className="font-medium text-foreground">"{query}"</span>{" "}

@@ -241,28 +241,27 @@ function buildInvoiceHtml(
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    padding-top: 52px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
     font-size: 14px;
-    background: #f1f5f9;
+    background: white;
     color: #333;
     -webkit-font-smoothing: antialiased;
+    padding: 52px 2rem 2rem;
   }
 
   .wrapper {
-    max-width: 800px;
-    margin: 24px auto;
+    max-width: 960px;
+    margin: 0 auto;
     background: white;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
-    padding: 28px 36px 24px;
+    padding: 0;
   }
 
-  /* ── 3-COLUMN HEADER (Business: 1fr auto 1fr, grey company text) ── */
+  /* ── 3-COLUMN HEADER (Business: 1.8fr 1fr 1fr, grey company text) ── */
   .header-container {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: 1.8fr 1fr 1fr;
     align-items: start;
-    gap: 1rem;
+    gap: 20px;
     width: 100%;
     margin-bottom: 2rem;
   }
@@ -270,37 +269,33 @@ function buildInvoiceHtml(
   .company-logo-container { justify-self: start; }
   .company-logo { max-width: 160px; max-height: 64px; width: auto; height: auto; display: block; }
 
-  /* Company details — grey (Business: #AAA9A9) */
+  /* Company details — grey (Business: #b1b1b1) */
   #company-details {
-    justify-self: center;
-    align-self: start;
-    display: flex;
-    flex-direction: column;
-    color: #aaa9a9;
-    line-height: var(--line-height);
-    text-align: center;
-    font-size: 0.88em;
-  }
-
-  /* Company address — lighter grey (Business: #b1b1b1) */
-  #company-address {
-    justify-self: end;
-    align-self: start;
     display: flex;
     flex-direction: column;
     color: #b1b1b1;
     line-height: var(--line-height);
-    text-align: right;
+    text-align: left;
     font-size: 0.88em;
   }
 
-  /* ── CLIENT + ENTITY WRAPPER (Business: flex space-between, margin-bottom 2rem) ── */
-  .client-and-entity-wrapper {
+  /* Company address — lighter grey */
+  #company-address {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    flex-direction: column;
+    color: #b1b1b1;
+    line-height: var(--line-height);
+    text-align: left;
+    font-size: 0.88em;
+  }
+
+  /* ── CLIENT + ENTITY WRAPPER (grid, margin-bottom 2rem) ── */
+  .client-and-entity-wrapper {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr;
+    align-items: start;
     margin-bottom: 2rem;
-    gap: 1.5rem;
+    gap: 20px;
   }
 
   /* LEFT: client-details — "issued to" label + client name in PRIMARY (120%) */
@@ -312,8 +307,10 @@ function buildInvoiceHtml(
     color: #555;
   }
   .entity-issued-to {
-    font-size: 0.82em;
-    color: #888;
+    margin-top: 3rem;
+    font-size: 0.88em;
+    font-weight: 700;
+    color: #333;
     margin-bottom: 4px;
   }
   /* Second child = client name in primary color at 120% (Business signature) */
@@ -327,11 +324,10 @@ function buildInvoiceHtml(
   #entity-details {
     background-color: var(--primary);
     border-radius: 1rem;
-    min-width: 220px;
+    width: 100%;
     color: white;
     border-collapse: separate;
     border-spacing: 0;
-    flex-shrink: 0;
   }
   #entity-details th {
     font-weight: normal;
@@ -351,7 +347,7 @@ function buildInvoiceHtml(
 
   /* ── ITEMS TABLE (Business: secondary-color header, rounded top corners 10px) ── */
   .items-table {
-    margin-top: 0.5rem;
+    margin-top: 3.5rem;
     margin-bottom: 5px;
     min-width: 100%;
     table-layout: fixed;
@@ -491,7 +487,7 @@ function buildInvoiceHtml(
 
   @media print {
     @page { margin: 15mm; size: A4; }
-    body { background: white; padding-top: 0; }
+    body { background: white; padding: 0; }
     .wrapper { margin: 0; max-width: 100%; box-shadow: none; padding: 0; }
     .print-bar { display: none; }
   }
