@@ -272,27 +272,25 @@ function buildQuotationHtml(
 
   #entity-details {
     background-color: var(--primary);
-    padding: 1.2rem;
     border-radius: 1rem;
     min-width: 220px;
     color: white;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     flex-shrink: 0;
   }
   #entity-details th {
     font-weight: normal;
-    padding-bottom: 0.5rem;
-    padding-right: 12px;
+    padding: 0.5rem 12px 0.5rem 1.2rem;
     white-space: nowrap;
     font-size: 0.88em;
     opacity: 0.9;
   }
   #entity-details td {
     text-align: right;
-    padding-left: 10px;
+    padding: 0.5rem 1.2rem 0.5rem 10px;
     font-size: 0.88em;
     font-weight: 600;
-    padding-bottom: 0.5rem;
   }
   #entity-details tr:last-child th,
   #entity-details tr:last-child td { padding-bottom: 0; }
