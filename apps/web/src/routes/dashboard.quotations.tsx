@@ -870,7 +870,7 @@ export default function QuotationsPage() {
 					}
 				}}
 			>
-				<DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+				<DialogContent className="max-h-[90vh] w-full max-w-2xl sm:max-w-4xl overflow-y-auto">
 					<DialogHeader>
 						<DialogTitle>
 							{editingId ? "Edit Quotation" : "New Quotation"}

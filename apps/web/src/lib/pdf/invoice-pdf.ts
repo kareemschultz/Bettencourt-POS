@@ -243,17 +243,18 @@ function buildInvoiceHtml(
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
     font-size: 14px;
-    background: white;
+    background: #dde0e3;
     color: #333;
     -webkit-font-smoothing: antialiased;
-    padding: 52px 2rem 2rem;
+    padding: 24px 16px 48px;
   }
 
   .wrapper {
-    max-width: 960px;
+    max-width: 794px;
     margin: 0 auto;
     background: white;
-    padding: 0;
+    padding: 48px 52px 52px;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.18);
   }
 
   /* ── 3-COLUMN HEADER (Business: 1.8fr 1fr 1fr, grey company text) ── */
@@ -307,11 +308,13 @@ function buildInvoiceHtml(
     color: #555;
   }
   .entity-issued-to {
-    margin-top: 3rem;
-    font-size: 0.88em;
+    margin-top: 0;
+    font-size: 0.78em;
     font-weight: 700;
-    color: #333;
-    margin-bottom: 4px;
+    color: #888;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
   }
   /* Second child = client name in primary color at 120% (Business signature) */
   #client-details .client-primary {
@@ -347,7 +350,7 @@ function buildInvoiceHtml(
 
   /* ── ITEMS TABLE (Business: secondary-color header, rounded top corners 10px) ── */
   .items-table {
-    margin-top: 3.5rem;
+    margin-top: 2.5rem;
     margin-bottom: 5px;
     min-width: 100%;
     table-layout: fixed;
@@ -486,7 +489,7 @@ function buildInvoiceHtml(
   .print-btn:hover { background: #f1f5f9; }
 
   @media print {
-    @page { margin: 15mm; size: A4; }
+    @page { margin: 18mm 15mm; size: A4; }
     body { background: white; padding: 0; }
     .wrapper { margin: 0; max-width: 100%; box-shadow: none; padding: 0; }
     .print-bar { display: none; }
