@@ -170,73 +170,92 @@ function buildQuotationHtml(
   body { padding-top: 52px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; color: #1e293b; }
   .wrapper { max-width: 794px; margin: 24px auto; box-shadow: 0 8px 32px rgba(0,0,0,0.12); border-radius: 8px; overflow: hidden; background: white; border-top: 8px solid #b8862d; }
 
-  .header { background: #ffffff; color: #1e293b; padding: 24px 36px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid #e2e8f0; }
-  .logo-area { display: flex; align-items: center; gap: 14px; }
-  .logo { height: 56px; width: auto; border-radius: 4px; }
-  .company-name { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: #1e293b; }
-  .company-sub { font-size: 10.5px; color: #64748b; margin-top: 3px; line-height: 1.5; }
+  /* TOP HEADER: 3-column grid */
+  .top-header { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 20px; padding: 28px 36px; border-bottom: 2px solid #b8862d; }
+  .logo-col .logo { height: 64px; width: auto; border-radius: 4px; }
+  .co-info { text-align: center; }
+  .co-name { font-size: 16px; font-weight: 700; color: #1e293b; }
+  .co-sub { font-size: 10.5px; color: #64748b; margin-top: 4px; line-height: 1.5; }
+  .doc-col { text-align: right; }
 
-  /* Quotation stamp badge */
-  .stamp-badge { border: 2.5px solid #b8862d; border-radius: 6px; padding: 6px 16px; display: inline-block; text-align: center; }
-  .stamp-text { font-size: 22px; font-weight: 800; letter-spacing: 0.18em; color: #b8862d; }
-  .doc-number { font-family: 'Courier New', monospace; font-size: 12px; margin-top: 4px; color: #475569; text-align: right; }
-  .doc-meta { font-size: 11px; margin-top: 3px; color: #64748b; text-align: right; }
+  /* QUOTATION stamp badge (gold bordered) */
+  .stamp-badge { border: 2.5px solid #b8862d; border-radius: 6px; padding: 6px 14px; display: inline-block; }
+  .stamp-text { font-size: 24px; font-weight: 800; letter-spacing: 0.14em; color: #b8862d; }
+  .doc-number { font-family: 'Courier New', monospace; font-size: 12px; margin-top: 5px; color: #475569; }
+  .doc-terms { font-size: 10.5px; color: #64748b; margin-top: 3px; }
   .revision-badge { display: inline-block; background: #f59e0b22; color: #b45309; border: 1px solid #f59e0b55; border-radius: 99px; padding: 2px 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; margin-top: 6px; }
 
-  .bill-to-section { padding: 24px 36px; display: flex; gap: 48px; border-bottom: 1px solid #e2e8f0; }
-  .bill-col { flex: 1; }
-  .section-label { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
-  .customer-name { font-size: 14px; font-weight: 600; }
-  .customer-sub { font-size: 11px; color: #475569; margin-top: 3px; line-height: 1.5; }
-  .validity-note { font-size: 11px; color: #0ea5e9; font-weight: 600; margin-top: 4px; }
-  .validity-expired { color: #dc2626; }
+  /* BILL-TO + META BOX row */
+  .bill-meta { display: grid; grid-template-columns: 1fr auto; gap: 32px; padding: 22px 36px; border-bottom: 1px solid #e2e8f0; align-items: start; }
+  .bill-to .bill-label { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
+  .bill-to .cust-name { font-size: 14px; font-weight: 600; color: #1e293b; }
+  .bill-to .cust-sub { font-size: 11px; color: #475569; margin-top: 3px; line-height: 1.5; }
+  .bill-to .prepared-label { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; color: #64748b; text-transform: uppercase; margin-top: 12px; margin-bottom: 4px; }
 
+  .meta-box { background: #b8862d; border-radius: 6px; min-width: 240px; overflow: hidden; }
+  .meta-box table { width: 100%; border-collapse: collapse; }
+  .meta-box td { padding: 7px 12px; font-size: 11px; color: white; }
+  .meta-box td:last-child { text-align: right; font-family: 'Courier New', monospace; font-variant-numeric: tabular-nums; }
+  .meta-box tr + tr td { border-top: 1px solid rgba(255,255,255,0.15); }
+  .meta-box .total-row td { background: rgba(0,0,0,0.2); font-size: 14px; font-weight: 800; }
+  .meta-box .status-row td { background: rgba(0,0,0,0.12); font-size: 10px; letter-spacing: 0.08em; }
+  .validity-note { font-size: 10.5px; margin-top: 4px; padding: 3px 8px; border-radius: 4px; background: rgba(0,0,0,0.12); color: white; display: inline-block; }
+
+  /* ITEMS TABLE */
   .items-table { width: 100%; border-collapse: collapse; }
-  .items-table thead tr { background: #f8fafc; }
-  .items-table th { padding: 10px 16px; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: #475569; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; text-align: left; white-space: nowrap; }
+  .items-table thead tr { background: #b8862d; }
+  .items-table th { padding: 10px 16px; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: white; text-transform: uppercase; text-align: left; white-space: nowrap; }
   .items-table th.right { text-align: right; }
   .items-table td { padding: 11px 16px; font-size: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; color: #334155; }
   .items-table td.right { text-align: right; font-variant-numeric: tabular-nums; font-family: 'Courier New', monospace; }
-  .items-table tbody tr:hover { background: #f8fafc; }
+  .items-table tbody tr:nth-child(even) { background: #fafaf9; }
   .items-table tbody tr:last-child td { border-bottom: none; }
 
-  .totals-section { padding: 20px 36px; display: flex; justify-content: flex-end; border-top: 2px solid #e2e8f0; }
+  /* TOTALS */
+  .totals-wrapper { padding: 20px 36px; display: flex; justify-content: flex-end; border-top: 2px solid #e2e8f0; }
   .totals-table { min-width: 300px; }
-  .totals-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 12px; color: #475569; }
-  .totals-row .amount { font-family: 'Courier New', monospace; font-variant-numeric: tabular-nums; }
-  .totals-row.separator { border-top: 1px solid #cbd5e1; margin-top: 8px; padding-top: 12px; }
-  .totals-row.grand { font-size: 15px; font-weight: 800; color: #1e293b; }
-  .totals-row.discount .amount { color: #dc2626; }
+  .total-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 12px; color: #475569; }
+  .total-row .amt { font-family: 'Courier New', monospace; font-variant-numeric: tabular-nums; }
+  .total-row.sep { border-top: 1px solid #cbd5e1; margin-top: 8px; padding-top: 12px; font-size: 14px; font-weight: 700; color: #1e293b; }
+  .total-row.discount .amt { color: #dc2626; }
+  .total-row.grand-total { background: #b8862d; color: white; padding: 9px 12px; border-radius: 4px; margin-top: 6px; font-size: 14px; font-weight: 800; }
+  .total-row.grand-total .amt { color: white; font-family: 'Courier New', monospace; }
 
+  /* T&C */
   .tc-section { padding: 18px 36px; border-top: 1px solid #e2e8f0; }
-  .tc-text { font-size: 11px; color: #475569; margin-top: 8px; line-height: 1.7; white-space: pre-wrap; }
+  .tc-label, .section-label { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: #475569; text-transform: uppercase; margin-bottom: 8px; }
+  .tc-text { font-size: 11px; color: #475569; line-height: 1.7; white-space: pre-wrap; }
 
-  .sig-section { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; padding: 36px 36px 28px; border-top: 1px solid #e2e8f0; }
-  .sig-box {}
-  .sig-line { border-bottom: 1.5px solid #334155; padding-bottom: 44px; margin-bottom: 10px; }
-  .sig-label { font-size: 10px; color: #64748b; line-height: 1.5; }
-  .sig-label strong { color: #1e293b; display: block; margin-bottom: 2px; }
-
+  /* NOTES */
   .notes-section { padding: 16px 36px; font-size: 12px; border-top: 1px solid #e2e8f0; line-height: 1.6; }
   .notes-section .notes-label { font-weight: 700; color: #dc2626; font-style: italic; }
   .notes-section .notes-text { color: #dc2626; font-style: italic; font-weight: 500; }
 
+  /* SIGNATURES */
+  .sig-section { display: flex; justify-content: space-between; gap: 48px; padding: 24px 36px; border-top: 1px solid #e2e8f0; }
+  .sig-block { flex: 1; }
+  .sig-line { border-bottom: 1px solid #334155; margin-bottom: 6px; height: 32px; }
+  .sig-label { font-size: 11px; color: #475569; font-weight: 600; }
+
+  /* CHEQUES + CREDIT */
   .cheques-section { padding: 10px 36px 14px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #334155; }
   .cheques-section strong { color: #1e293b; }
   .credit-terms { font-size: 10px; color: #64748b; margin-top: 4px; }
 
+  /* FOOTER */
   .footer { padding: 10px 36px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
 
+  /* PRINT BAR */
   .print-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #1e293b; color: white; display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
   .print-bar span { opacity: 0.7; font-size: 12px; }
   .print-btn { background: white; color: #1e293b; border: none; border-radius: 6px; padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
   .print-btn:hover { background: #f1f5f9; }
+
   @media print {
     @page { margin: 15mm; size: A4; }
-    body { background: white; }
+    body { background: white; padding-top: 0; }
     .wrapper { margin: 0; max-width: 100%; box-shadow: none; border-radius: 0; }
     .print-bar { display: none; }
-    body { padding-top: 0; }
   }
 </style>
 </head>
@@ -249,64 +268,68 @@ function buildQuotationHtml(
   </button>
 </div>
 <div class="wrapper">
-  <!-- Dark header band with stamp -->
-  <div class="header">
-    <div class="logo-area">
-      ${logoHtml}
-      <div>
-        <div class="company-name">${companyName}</div>
-        <div class="company-sub">Georgetown, Guyana${companyTagline ? `<br>${companyTagline}` : ""}${settings.companyTin ? `<br>TIN: ${escHtml(settings.companyTin)}` : ""}</div>
-      </div>
+
+  <!-- TOP HEADER: Logo | Company Info | QUOTATION stamp -->
+  <div class="top-header">
+    <div class="logo-col">${logoHtml}</div>
+    <div class="co-info">
+      <div class="co-name">${escHtml(companyName)}</div>
+      <div class="co-sub">Georgetown, Guyana${settings.companyTin ? `<br>TIN: ${escHtml(settings.companyTin)}` : ""}</div>
     </div>
-    <div style="text-align:right">
-      <div class="stamp-badge">
-        <div class="stamp-text">QUOTATION</div>
-      </div>
+    <div class="doc-col">
+      <div class="stamp-badge"><div class="stamp-text">QUOTATION</div></div>
       <div class="doc-number">${escHtml(quot.quotationNumber)}</div>
-      <div class="doc-meta">Date: ${createdStr}</div>
-      ${validStr ? `<div class="doc-meta">Valid Until: ${validStr}</div>` : ""}
-      ${isRevision ? `<div style="text-align:right"><span class="revision-badge">REVISION</span></div>` : ""}
+      ${isRevision ? `<div style="text-align:right;margin-top:4px"><span class="revision-badge">REVISION</span></div>` : ""}
     </div>
   </div>
 
-  <!-- Bill To / Quote Details -->
-  <div class="bill-to-section">
-    <div class="bill-col">
-      <div class="section-label">Prepared For</div>
+  <!-- BILL-TO + META BOX -->
+  <div class="bill-meta">
+    <div class="bill-to">
+      <div class="bill-label">Quotation prepared for:</div>
       ${quot.agencyName
-        ? `<div class="customer-name">${escHtml(quot.agencyName)}</div><div class="customer-sub">${escHtml(quot.customerName)}</div>`
-        : `<div class="customer-name">${escHtml(quot.customerName)}</div>`}
-      ${quot.contactPersonPosition ? `<div class="customer-sub">${escHtml(quot.contactPersonPosition)}</div>` : ""}
-      ${quot.customerPhone ? `<div class="customer-sub">${escHtml(quot.customerPhone)}</div>` : ""}
-      ${quot.customerAddress ? `<div class="customer-sub">${escHtml(quot.customerAddress)}</div>` : ""}
+        ? `<div class="cust-name">${escHtml(quot.agencyName)}</div><div class="cust-sub">${escHtml(quot.customerName)}</div>`
+        : `<div class="cust-name">${escHtml(quot.customerName)}</div>`}
+      ${quot.contactPersonName ? `<div class="cust-sub">${escHtml(quot.contactPersonName)}${quot.contactPersonPosition ? `, ${escHtml(quot.contactPersonPosition)}` : ""}</div>` : quot.contactPersonPosition ? `<div class="cust-sub">${escHtml(quot.contactPersonPosition)}</div>` : ""}
+      ${quot.customerPhone ? `<div class="cust-sub">${escHtml(quot.customerPhone)}</div>` : ""}
+      ${quot.customerAddress ? `<div class="cust-sub">${escHtml(quot.customerAddress)}</div>` : ""}
+      ${quot.preparedBy ? `<div class="prepared-label">Prepared By</div><div class="cust-sub">${escHtml(quot.preparedBy)}</div>` : ""}
     </div>
-    <div class="bill-col">
-      ${validityNote ? `<div class="section-label">Validity</div><div class="validity-note${validityNote.includes("expired") ? " validity-expired" : ""}">${escHtml(validityNote)}</div>` : ""}
-      ${quot.contactPersonName ? `<div class="section-label" style="margin-top:12px">Order Placed By</div><div class="customer-name">${escHtml(quot.contactPersonName)}</div>` : ""}
-      ${quot.preparedBy ? `<div class="section-label" style="margin-top:${quot.contactPersonName ? "8px" : "12px"}">Prepared By</div><div class="customer-name">${escHtml(quot.preparedBy)}</div>` : ""}
+    <div class="meta-box">
+      <table>
+        <tr><td>Quotation Number</td><td>${escHtml(quot.quotationNumber)}</td></tr>
+        <tr><td>Date</td><td>${createdStr}</td></tr>
+        ${validStr ? `<tr><td>Valid Until</td><td>${validStr}</td></tr>` : ""}
+        <tr class="total-row"><td>Quotation Total</td><td>${fmtGYD(total)}</td></tr>
+        <tr class="status-row"><td>Status</td><td>${escHtml(quot.status.toUpperCase())}</td></tr>
+      </table>
+      ${validityNote ? `<div style="padding:6px 12px 8px"><span class="validity-note">${escHtml(validityNote)}</span></div>` : ""}
     </div>
   </div>
 
-  <!-- Line Items -->
+  <!-- ITEMS TABLE -->
   <table class="items-table">
     <thead>
       <tr>
-        <th>Description</th>
+        <th>Item / Description</th>
         <th class="right" style="width:60px">Qty</th>
-        <th class="right" style="width:110px">Unit Price</th>
+        <th class="right" style="width:110px">Unit Cost</th>
         ${taxColHeader}
-        <th class="right" style="width:120px">Amount</th>
+        <th class="right" style="width:120px">Line Total</th>
       </tr>
     </thead>
     <tbody>${itemRows}</tbody>
   </table>
 
-  <!-- Totals -->
-  <div class="totals-section">
+  <!-- TOTALS -->
+  <div class="totals-wrapper">
     <div class="totals-table">
-      <div class="totals-row"><span class="label">Subtotal</span><span class="amount">${fmtGYD(subtotal)}</span></div>
-      ${discountAmt > 0 ? `<div class="totals-row discount"><span class="label">Discount${quot.discountType === "percent" ? ` (${quot.discountValue}%)` : ""}</span><span class="amount">-${fmtGYD(discountAmt)}</span></div>` : ""}
-      <div class="totals-row separator grand"><span class="label">Quotation Total</span><span class="amount">${fmtGYD(total)}</span></div>
+      <div class="total-row"><span>Subtotal</span><span class="amt">${fmtGYD(subtotal)}</span></div>
+      ${discountAmt > 0 ? `<div class="total-row discount"><span>Discount${quot.discountType === "percent" ? ` (${quot.discountValue}%)` : ""}</span><span class="amt">-${fmtGYD(discountAmt)}</span></div>` : ""}
+      ${taxAmt > 0 ? `<div class="total-row sep"><span>Tax</span><span class="amt">${fmtGYD(taxAmt)}</span></div>` : ""}
+      <div class="total-row grand-total">
+        <span>Quotation Total</span><span class="amt">${fmtGYD(total)}</span>
+      </div>
     </div>
   </div>
 
@@ -314,33 +337,28 @@ function buildQuotationHtml(
 
   ${quot.notes ? `<div class="notes-section"><span class="notes-label">Notes:</span> <span class="notes-text">${escHtml(quot.notes)}</span></div>` : ""}
 
-  <!-- Signature Section -->
+  <!-- SIGNATURES -->
   <div class="sig-section">
-    <div class="sig-box">
+    <div class="sig-block">
       <div class="sig-line"></div>
-      <div class="sig-label">
-        <strong>Received by</strong>
-        Date: _______________
-      </div>
+      <div class="sig-label">Received by</div>
     </div>
-    <div class="sig-box">
+    <div class="sig-block">
       <div class="sig-line"></div>
-      <div class="sig-label">
-        <strong>Authorized by</strong>
-        Date: _______________
-      </div>
+      <div class="sig-label">Authorized by</div>
     </div>
   </div>
 
-  <!-- Cheques payable + credit terms -->
+  <!-- CHEQUES + CREDIT TERMS -->
   <div class="cheques-section">
     <div>All cheques are to be made payable to: <strong>${escHtml(companyName)}</strong></div>
     <div class="credit-terms">This is a quotation only — not a tax invoice &nbsp;&bull;&nbsp; Credit period: All invoices are due 30 days from date of issue &nbsp;&bull;&nbsp; 10% service charge will be applied to balance due for late payments.</div>
   </div>
 
   <div class="footer">
-    ${escHtml(companyName)}${settings.quotationFooterNote ? ` &nbsp;&bull;&nbsp; ${escHtml(settings.quotationFooterNote)}` : ""} &nbsp;&bull;&nbsp; Generated ${new Date().toLocaleString("en-GY")}
+    ${escHtml(companyName)}${settings.quotationFooterNote ? ` &nbsp;&bull;&nbsp; ${escHtml(settings.quotationFooterNote)}` : ""} &nbsp;&bull;&nbsp; Generated ${new Date().toLocaleString("en-GY")}${quot.preparedBy ? ` &nbsp;&bull;&nbsp; Prepared by: ${escHtml(quot.preparedBy)}` : ""}
   </div>
+
 </div>
 </body>
 </html>`;
