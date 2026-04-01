@@ -417,7 +417,8 @@ function buildInvoiceHtml(
 </html>`;
 }
 
-function escHtml(str: string): string {
+function escHtml(str: string | null | undefined): string {
+	if (!str) return "";
 	return str
 		.replace(/&/g, "&amp;")
 		.replace(/</g, "&lt;")
