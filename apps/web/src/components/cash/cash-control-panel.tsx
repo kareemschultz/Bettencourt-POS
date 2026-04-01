@@ -26,7 +26,7 @@ import { printCashSessionReport } from "@/lib/pdf/cash-session-pdf";
 import { formatGYD } from "@/lib/types";
 import { orpc } from "@/utils/orpc";
 
-const GYD_DENOMINATIONS = [5000, 1000, 500, 100, 20] as const;
+const GYD_DENOMINATIONS = [5000, 2000, 1000, 500, 100, 50, 20] as const;
 type DenomMap = Record<number, number>;
 
 interface CashSession {
