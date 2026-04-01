@@ -234,35 +234,36 @@ function buildInvoiceHtml(
 <style>
   :root {
     --primary: #b8862d;
-    --secondary: #7d5518;
+    --secondary: #394e6b;
+    --row-odd: #e8e8e8;
+    --row-even: #f7f7f7;
     --line-height: 1.6;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    padding-top: 52px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
     font-size: 14px;
-    background: #f1f5f9;
+    background: white;
     color: #333;
     -webkit-font-smoothing: antialiased;
+    padding: 52px 2rem 2rem;
   }
 
   .wrapper {
-    max-width: 800px;
-    margin: 24px auto;
+    max-width: 980px;
+    margin: 0 auto;
     background: white;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
-    padding: 28px 36px 24px;
+    padding: 0;
   }
 
   /* ── 3-COLUMN HEADER (Business: 1fr auto 1fr, grey company text) ── */
   .header-container {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: 1.8fr 1fr 1fr;
     align-items: start;
-    gap: 1rem;
+    gap: 20px;
     width: 100%;
     margin-bottom: 2rem;
   }
@@ -272,35 +273,31 @@ function buildInvoiceHtml(
 
   /* Company details — grey (Business: #AAA9A9) */
   #company-details {
-    justify-self: center;
-    align-self: start;
     display: flex;
     flex-direction: column;
-    color: #aaa9a9;
+    color: #b1b1b1;
     line-height: var(--line-height);
-    text-align: center;
+    text-align: left;
     font-size: 0.88em;
   }
 
   /* Company address — lighter grey (Business: #b1b1b1) */
   #company-address {
-    justify-self: end;
-    align-self: start;
     display: flex;
     flex-direction: column;
     color: #b1b1b1;
     line-height: var(--line-height);
-    text-align: right;
+    text-align: left;
     font-size: 0.88em;
   }
 
   /* ── CLIENT + ENTITY WRAPPER (Business: flex space-between, margin-bottom 2rem) ── */
   .client-and-entity-wrapper {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 2fr 1.5fr;
+    align-items: start;
     margin-bottom: 2rem;
-    gap: 1.5rem;
+    gap: 20px;
   }
 
   /* LEFT: client-details — "issued to" label + client name in PRIMARY (120%) */
@@ -309,11 +306,13 @@ function buildInvoiceHtml(
     flex-direction: column;
     line-height: var(--line-height);
     font-size: 0.9em;
-    color: #555;
+    color: var(--primary);
   }
   .entity-issued-to {
-    font-size: 0.82em;
-    color: #888;
+    margin-top: 3rem;
+    font-size: 0.88em;
+    font-weight: 700;
+    color: #333;
     margin-bottom: 4px;
   }
   /* Second child = client name in primary color at 120% (Business signature) */
@@ -326,12 +325,11 @@ function buildInvoiceHtml(
   /* RIGHT: entity-details — PRIMARY background, border-radius 1rem, white text */
   #entity-details {
     background-color: var(--primary);
-    padding: 1.2rem;
+    padding: 0.8rem;
     border-radius: 1rem;
-    min-width: 220px;
+    width: 100%;
     color: white;
     border-collapse: collapse;
-    flex-shrink: 0;
   }
   #entity-details th {
     font-weight: normal;
@@ -342,7 +340,7 @@ function buildInvoiceHtml(
     opacity: 0.9;
   }
   #entity-details td {
-    text-align: right;
+    text-align: left;
     padding-left: 10px;
     font-size: 0.88em;
     font-weight: 600;
@@ -353,7 +351,7 @@ function buildInvoiceHtml(
 
   /* ── ITEMS TABLE (Business: secondary-color header, rounded top corners 10px) ── */
   .items-table {
-    margin-top: 0.5rem;
+    margin-top: 3.5rem;
     margin-bottom: 5px;
     min-width: 100%;
     table-layout: fixed;
@@ -380,18 +378,22 @@ function buildInvoiceHtml(
     vertical-align: top;
   }
   .items-table tbody td.right-td { text-align: right; font-variant-numeric: tabular-nums; }
-  /* Business: odd + even both use #F7F7F7 (light grey for all rows) */
-  .items-table tbody tr td { background: #F7F7F7; }
-  .items-table tbody tr:nth-child(even) td { background: #f7f7f7; }
+  /* Business: alternating light greys */
+  .items-table tbody tr:nth-child(odd) td { background: var(--row-odd); }
+  .items-table tbody tr:nth-child(even) td { background: var(--row-even); }
 
   /* ── TABLE TOTALS (Business: 2fr 1fr, gap 80px, outstanding in secondary-color) ── */
   #table-totals {
-    margin-top: 0;
+    margin-top: 0.25rem;
     display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 80px;
+    grid-template-columns: 3fr 1fr 1fr;
+    gap: 20px;
+    background: var(--row-even);
+    border-bottom-left-radius: 1rem;
+    border-bottom-right-radius: 1rem;
     padding-top: 0.5rem;
     padding-bottom: 0.8rem;
+    padding-left: 1rem;
     overflow: visible;
   }
 
@@ -401,10 +403,10 @@ function buildInvoiceHtml(
     line-height: var(--line-height);
   }
 
-  .totals-right { display: flex; flex-direction: column; }
+  .totals-right { display: flex; flex-direction: column; grid-column: 2 / 4; }
   .t-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr auto;
     margin-top: 0.75rem;
     font-size: 0.88em;
     color: #555;
@@ -416,33 +418,22 @@ function buildInvoiceHtml(
   .t-row.sep { font-weight: bold; color: #333; }
 
   /* Outstanding row — full secondary-color box (Business signature) */
-  .outstanding-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    margin-top: 0.75rem;
-  }
+  .outstanding-row { display: grid; grid-template-columns: 1fr auto; margin-top: 0.75rem; }
   .outstanding-label {
-    background-color: var(--secondary);
-    color: white;
-    font-size: 1.05em;
-    font-weight: bold;
-    padding: 1rem;
-    border-top-left-radius: 7px;
-    border-bottom-left-radius: 7px;
+    color: var(--secondary);
+    font-size: 1.1em;
+    font-weight: 700;
     white-space: nowrap;
-    padding-left: 10px;
+    padding-left: 7px;
   }
   .outstanding-value {
-    background-color: var(--secondary);
-    color: white;
-    font-size: 1.05em;
-    font-weight: bold;
-    padding: 1rem 17px;
-    border-top-right-radius: 7px;
-    border-bottom-right-radius: 7px;
+    color: #d22f27;
+    font-size: 1.1em;
+    font-weight: 700;
     text-align: right;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    padding-right: 17px;
   }
   .outstanding-label.paid,
   .outstanding-value.paid { background-color: #16a34a; }
@@ -493,7 +484,7 @@ function buildInvoiceHtml(
 
   @media print {
     @page { margin: 15mm; size: A4; }
-    body { background: white; padding-top: 0; }
+    body { background: white; padding: 0; }
     .wrapper { margin: 0; max-width: 100%; box-shadow: none; padding: 0; }
     .print-bar { display: none; }
   }
@@ -538,13 +529,12 @@ function buildInvoiceHtml(
     </div>
 
     <table id="entity-details" cellspacing="0">
-      <tr><th>Invoice #</th><td>${escHtml(invoice.invoiceNumber)}</td></tr>
-      <tr><th>Date</th><td>${issuedStr}</td></tr>
+      <tr><th>Invoice Number</th><td>${escHtml(invoice.invoiceNumber)}</td></tr>
+      <tr><th>Invoice Date</th><td>${issuedStr}</td></tr>
       ${dueStr ? `<tr><th>Due Date</th><td>${dueStr}</td></tr>` : ""}
-      <tr><th>Terms</th><td>${escHtml(TERMS_LABEL[invoice.paymentTerms ?? "due_on_receipt"] ?? invoice.paymentTerms ?? "Due on Receipt")}</td></tr>
-      <tr><th>Total</th><td>${fmtGYD(total)}</td></tr>
+      <tr><th>Invoice Total</th><td>${fmtGYD(total)}</td></tr>
       <tr><th>Balance Due</th><td>${fmtGYD(Math.max(balance, 0))}</td></tr>
-      <tr><th>Status</th><td>${escHtml(invoice.status.toUpperCase())}</td></tr>
+      <tr><th>Terms</th><td>${escHtml(TERMS_LABEL[invoice.paymentTerms ?? "due_on_receipt"] ?? invoice.paymentTerms ?? "Due on Receipt")}</td></tr>
     </table>
   </div>
 
