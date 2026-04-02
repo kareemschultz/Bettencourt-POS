@@ -178,7 +178,14 @@ function buildQuotationHtml(
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${escHtml(quot.quotationNumber)} — ${companyName}</title>
 <style>
-  :root { --primary: #b8862d; --secondary: #7d5518; --line-height: 1.6; }
+  :root {
+    --primary: #b8862d;
+    --secondary: #7d5518;
+    --line-height: 1.6;
+    --primary-contrast: #ffffff;
+    --primary-contrast-soft: rgba(255, 255, 255, 0.85);
+    --secondary-contrast: #ffffff;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
@@ -245,7 +252,7 @@ function buildQuotationHtml(
     border-radius: 12px;
     border-collapse: separate;
     border-spacing: 0;
-    color: white;
+    color: var(--primary-contrast);
   }
   #entity-details tr:first-child th,
   #entity-details tr:first-child td { padding-top: 14px; }
@@ -255,7 +262,7 @@ function buildQuotationHtml(
     font-weight: 400;
     padding: 4px 8px 4px 16px;
     font-size: 0.82em;
-    opacity: 0.85;
+    color: var(--primary-contrast-soft);
     white-space: nowrap;
     text-align: left;
   }
@@ -263,6 +270,7 @@ function buildQuotationHtml(
     padding: 4px 16px 4px 8px;
     font-size: 0.82em;
     font-weight: 700;
+    color: var(--primary-contrast);
     text-align: right;
     white-space: nowrap;
   }
@@ -298,7 +306,7 @@ function buildQuotationHtml(
     margin-bottom: 4px;
   }
   .items-table thead { background: var(--secondary); text-align: left; }
-  .items-table thead th { padding: 11px 12px; color: white; font-weight: 600; font-size: 0.82em; }
+  .items-table thead th { padding: 11px 12px; color: var(--secondary-contrast); font-weight: 600; font-size: 0.82em; }
   .items-table thead th:first-child { border-top-left-radius: 8px; }
   .items-table thead th.right-th { text-align: right; }
   .items-table thead th.right-radius { text-align: right; border-top-right-radius: 8px; }
@@ -343,12 +351,32 @@ function buildQuotationHtml(
     align-items: center;
     margin-top: 8px;
     background: var(--secondary);
-    color: white;
+    color: var(--secondary-contrast);
     font-weight: 700;
     font-size: 0.92em;
     padding: 11px 14px;
     border-radius: 8px;
     font-variant-numeric: tabular-nums;
+  }
+
+  body.ink-saver {
+    --primary: #f3f4f6;
+    --secondary: #e5e7eb;
+    --primary-contrast: #0f172a;
+    --primary-contrast-soft: #475569;
+    --secondary-contrast: #0f172a;
+  }
+  body.ink-saver .doc-title,
+  body.ink-saver .client-name { color: #334155; }
+  body.ink-saver #entity-details { box-shadow: inset 0 0 0 1px #cbd5e1; }
+  body.ink-saver .balance-due-row {
+    border: 1px solid #cbd5e1;
+    box-shadow: none;
+  }
+  body.ink-saver .revision-tag {
+    background: #f8fafc;
+    color: #475569;
+    border-color: #cbd5e1;
   }
 
   /* ── NOTES ── */
@@ -378,8 +406,20 @@ function buildQuotationHtml(
   /* ── PRINT BAR (screen only) ── */
   .print-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #1e293b; color: white; display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
   .print-bar span { opacity: 0.7; font-size: 12px; }
+  .print-actions { display: flex; align-items: center; gap: 10px; }
   .print-btn { background: white; color: #1e293b; border: none; border-radius: 6px; padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
   .print-btn:hover { background: #f1f5f9; }
+  .print-btn-toggle {
+    background: transparent;
+    color: white;
+    border: 1px solid rgba(255,255,255,0.24);
+  }
+  .print-btn-toggle:hover { background: rgba(255,255,255,0.08); }
+  .print-btn-toggle.is-active {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #e2e8f0;
+  }
 
   @media print {
     @page { margin: 0; size: auto; }
@@ -408,10 +448,13 @@ function buildQuotationHtml(
 
 <div class="print-bar">
   <span>Bettencourt's POS — Document Preview</span>
-  <button class="print-btn" onclick="window.print()">
-    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-    Print / Save as PDF
-  </button>
+  <div class="print-actions">
+    <button id="ink-saver-toggle" class="print-btn print-btn-toggle" type="button" aria-pressed="false" onclick="toggleInkSaver()">Ink Saver: Off</button>
+    <button class="print-btn" type="button" onclick="window.print()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+      Print / Save as PDF
+    </button>
+  </div>
 </div>
 
 <div class="wrapper">
@@ -499,6 +542,7 @@ function buildQuotationHtml(
 </div>
 
 <script>
+  function toggleInkSaver(){const active=document.body.classList.toggle("ink-saver"),button=document.getElementById("ink-saver-toggle");if(button){button.textContent=active?"Ink Saver: On":"Ink Saver: Off";button.setAttribute("aria-pressed",String(active));button.classList.toggle("is-active",active);}}
   try { history.replaceState({}, document.title, "/quotation-preview"); } catch (e) {}
 </script>
 </body>

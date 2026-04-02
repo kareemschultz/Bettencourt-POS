@@ -146,7 +146,7 @@ function buildInvoiceHtml(
 	const isFullyPaid = balance <= 0.005;
 
 	const isHomeStyle = invoice.brand === "home_style";
-	const companyName = isHomeStyle ? "Bettencourt's Home Style" : "Bettencourt's Food Inc.";
+	const companyName = isHomeStyle ? "Bettencourts Homestyle Diner" : "Bettencourt's Food Inc.";
 
 	const issuedStr = invoice.issuedDate
 		? new Date(invoice.issuedDate).toLocaleDateString("en-GY")
@@ -248,7 +248,14 @@ function buildInvoiceHtml(
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${escHtml(invoice.invoiceNumber)} — ${companyName}</title>
 <style>
-  :root { --primary: #b8862d; --secondary: #7d5518; --line-height: 1.6; }
+  :root {
+    --primary: #b8862d;
+    --secondary: #7d5518;
+    --line-height: 1.6;
+    --primary-contrast: #ffffff;
+    --primary-contrast-soft: rgba(255, 255, 255, 0.85);
+    --secondary-contrast: #ffffff;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
@@ -300,7 +307,7 @@ function buildInvoiceHtml(
     border-radius: 12px;
     border-collapse: separate;
     border-spacing: 0;
-    color: white;
+    color: var(--primary-contrast);
   }
   #entity-details tr:first-child th,
   #entity-details tr:first-child td { padding-top: 14px; }
@@ -310,7 +317,7 @@ function buildInvoiceHtml(
     font-weight: 400;
     padding: 4px 8px 4px 16px;
     font-size: 0.82em;
-    opacity: 0.85;
+    color: var(--primary-contrast-soft);
     white-space: nowrap;
     text-align: left;
   }
@@ -318,6 +325,7 @@ function buildInvoiceHtml(
     padding: 4px 16px 4px 8px;
     font-size: 0.82em;
     font-weight: 700;
+    color: var(--primary-contrast);
     text-align: right;
     white-space: nowrap;
   }
@@ -353,7 +361,7 @@ function buildInvoiceHtml(
     margin-bottom: 4px;
   }
   .items-table thead { background: var(--secondary); text-align: left; }
-  .items-table thead th { padding: 11px 12px; color: white; font-weight: 600; font-size: 0.82em; }
+  .items-table thead th { padding: 11px 12px; color: var(--secondary-contrast); font-weight: 600; font-size: 0.82em; }
   .items-table thead th:first-child { border-top-left-radius: 8px; }
   .items-table thead th.right-th { text-align: right; }
   .items-table thead th.right-radius { text-align: right; border-top-right-radius: 8px; }
@@ -369,13 +377,11 @@ function buildInvoiceHtml(
 
   /* ── TABLE TOTALS ── */
   #table-totals {
-    display: grid;
-    grid-template-columns: 1fr 220px;
-    gap: 40px;
+    display: flex;
+    justify-content: flex-end;
     padding-top: 8px;
     padding-bottom: 0.8rem;
   }
-  .totals-left { font-size: 0.82em; color: #666; line-height: var(--line-height); }
   .totals-right { display: flex; flex-direction: column; }
   .t-row {
     display: flex;
@@ -399,7 +405,7 @@ function buildInvoiceHtml(
     align-items: center;
     margin-top: 8px;
     background: var(--secondary);
-    color: white;
+    color: var(--secondary-contrast);
     font-weight: 700;
     font-size: 0.92em;
     padding: 11px 14px;
@@ -407,6 +413,25 @@ function buildInvoiceHtml(
     font-variant-numeric: tabular-nums;
   }
   .balance-due-row.paid { background: #16a34a; }
+
+  body.ink-saver {
+    --primary: #f3f4f6;
+    --secondary: #e5e7eb;
+    --primary-contrast: #0f172a;
+    --primary-contrast-soft: #475569;
+    --secondary-contrast: #0f172a;
+  }
+  body.ink-saver .doc-title,
+  body.ink-saver .client-name { color: #334155; }
+  body.ink-saver #entity-details { box-shadow: inset 0 0 0 1px #cbd5e1; }
+  body.ink-saver .balance-due-row {
+    border: 1px solid #cbd5e1;
+    box-shadow: none;
+  }
+  body.ink-saver .balance-due-row.paid {
+    background: var(--secondary);
+    color: var(--secondary-contrast);
+  }
 
   /* ── NOTES ── */
   .notes-left { font-size: 0.82em; line-height: var(--line-height); }
@@ -428,15 +453,15 @@ function buildInvoiceHtml(
   .payment-detail { margin-top: 2px; }
 
   /* ── SIGNATURES ── */
-  .sig-section { display: flex; justify-content: space-between; gap: 48px; padding-top: 20px; border-top: 1px solid #ebebeb; margin-top: 8px; }
+  .sig-section { display: flex; justify-content: space-between; gap: 48px; padding-top: 24px; border-top: 1px solid #ccc; margin-top: 12px; }
   .sig-block { flex: 1; }
-  .sig-line { border-bottom: 1px solid #555; height: 28px; margin-bottom: 4px; }
-  .sig-label { font-size: 0.85em; color: #555; font-weight: 600; }
+  .sig-line { border-bottom: 1.5px solid #333; height: 32px; margin-bottom: 6px; }
+  .sig-label { font-size: 0.88em; color: #333; font-weight: 700; }
 
   /* ── CHEQUES + CREDIT ── */
-  .cheques-section { padding-top: 10px; border-top: 1px solid #ebebeb; margin-top: 8px; font-size: 0.82em; color: #555; line-height: 1.5; }
-  .cheques-section strong { color: #333; }
-  .credit-terms { margin-top: 3px; color: #888; }
+  .cheques-section { padding-top: 10px; border-top: 1px solid #ebebeb; margin-top: 8px; font-size: 0.82em; color: #dc2626; line-height: 1.5; }
+  .cheques-section strong { color: #dc2626; }
+  .credit-terms { margin-top: 3px; color: #dc2626; }
 
   /* ── FOOTER ── */
   #footer { margin-top: 30px; font-size: 0.72em; color: #aaa; text-align: center; }
@@ -444,8 +469,20 @@ function buildInvoiceHtml(
   /* ── PRINT BAR (screen only) ── */
   .print-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #1e293b; color: white; display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
   .print-bar span { opacity: 0.7; font-size: 12px; }
+  .print-actions { display: flex; align-items: center; gap: 10px; }
   .print-btn { background: white; color: #1e293b; border: none; border-radius: 6px; padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
   .print-btn:hover { background: #f1f5f9; }
+  .print-btn-toggle {
+    background: transparent;
+    color: white;
+    border: 1px solid rgba(255,255,255,0.24);
+  }
+  .print-btn-toggle:hover { background: rgba(255,255,255,0.08); }
+  .print-btn-toggle.is-active {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #e2e8f0;
+  }
 
   @media print {
     @page { margin: 0; size: auto; }
@@ -463,7 +500,7 @@ function buildInvoiceHtml(
     .bill-to { margin-bottom: 0.9rem; padding-bottom: 0.7rem; }
     .items-table thead th { padding: 8px 10px; }
     .items-table tbody td { padding: 8px 10px; }
-    #table-totals { padding-top: 4px; padding-bottom: 4px; gap: 24px; }
+    #table-totals { padding-top: 4px; padding-bottom: 4px; }
     .t-row { padding: 3px 0; }
     .balance-due-row { padding: 9px 12px; margin-top: 6px; }
     .sig-section { padding-top: 12px; margin-top: 6px; }
@@ -475,10 +512,13 @@ function buildInvoiceHtml(
 
 <div class="print-bar">
   <span>Bettencourt's POS — Document Preview</span>
-  <button class="print-btn" onclick="window.print()">
-    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-    Print / Save as PDF
-  </button>
+  <div class="print-actions">
+    <button id="ink-saver-toggle" class="print-btn print-btn-toggle" type="button" aria-pressed="false" onclick="toggleInkSaver()">Ink Saver: Off</button>
+    <button class="print-btn" type="button" onclick="window.print()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+      Print / Save as PDF
+    </button>
+  </div>
 </div>
 
 <div class="wrapper">
@@ -528,11 +568,8 @@ function buildInvoiceHtml(
     <tbody>${itemRows}</tbody>
   </table>
 
-  <!-- TABLE TOTALS: Notes LEFT | Amounts RIGHT -->
+  <!-- TABLE TOTALS: Amounts right-aligned -->
   <div id="table-totals">
-    <div class="totals-left">
-      ${notesBlock}
-    </div>
     <div class="totals-right">
       <div class="t-row"><span class="lbl">Subtotal</span><span class="amt">${fmtGYD(subtotal)}</span></div>
       ${discountAmt > 0 ? `<div class="t-row discount"><span class="lbl">Discount${invoice.discountType === "percent" ? ` (${invoice.discountValue}%)` : ""}</span><span class="amt">-${fmtGYD(discountAmt)}</span></div>` : ""}
@@ -556,6 +593,8 @@ function buildInvoiceHtml(
     <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Authorized by</div></div>
   </div>
 
+  ${notesBlock}
+
   <!-- CHEQUES + CREDIT TERMS -->
   <div class="cheques-section">
     <div>All cheques are to be made payable to: <strong>${escHtml(companyName)}</strong></div>
@@ -569,6 +608,7 @@ function buildInvoiceHtml(
 </div>
 
 <script>
+  function toggleInkSaver(){const active=document.body.classList.toggle("ink-saver"),button=document.getElementById("ink-saver-toggle");if(button){button.textContent=active?"Ink Saver: On":"Ink Saver: Off";button.setAttribute("aria-pressed",String(active));button.classList.toggle("is-active",active);}}
   // Replace the blob:// URL with a clean path before the browser shows it
   // in the address bar or print footer. Running inside the document itself
   // avoids cross-origin restrictions from the parent window.
