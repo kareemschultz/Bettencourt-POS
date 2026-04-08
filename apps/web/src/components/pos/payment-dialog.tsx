@@ -60,8 +60,6 @@ export function PaymentDialog({
 	const [splitCashAmount, setSplitCashAmount] = useState("");
 	const [processing, setProcessing] = useState(false);
 	const [change, setChange] = useState(0);
-	const [tipPercent, setTipPercent] = useState<number | null>(null);
-	const [customTip, setCustomTip] = useState("");
 
 	// Gift card state
 	const [giftCardCode, setGiftCardCode] = useState("");
@@ -106,17 +104,13 @@ export function PaymentDialog({
 		setSplitCashAmount("");
 		setProcessing(false);
 		setChange(0);
-		setTipPercent(null);
-		setCustomTip("");
 		setGiftCardCode("");
 		setGiftCardData(null);
 		setGiftCardApplied(false);
 	}
 
-	const computedTip =
-		tipPercent !== null ? Number((total * tipPercent).toFixed(2)) : Number(customTip) || 0;
-	const tipAmount = Math.max(0, computedTip);
-	const totalWithTip = total + tipAmount;
+	const tipAmount = 0;
+	const totalWithTip = total;
 
 	async function handleCashPayment() {
 		const tendered = Number(cashTendered) || 0;
@@ -263,40 +257,6 @@ export function PaymentDialog({
 
 				{step === "method" && (
 					<div className="flex flex-col gap-3 py-4">
-						<div className="rounded-lg border bg-muted/20 p-3">
-							<p className="mb-2 font-medium text-sm">Add tip</p>
-							<div className="mb-2 grid grid-cols-4 gap-2">
-								{[0.1, 0.15, 0.18, 0.2].map((pct) => (
-									<Button
-										key={pct}
-										type="button"
-										variant={tipPercent === pct ? "default" : "outline"}
-										className="h-8 text-xs"
-										onClick={() => {
-											setTipPercent(pct);
-											setCustomTip("");
-										}}
-									>
-										{Math.round(pct * 100)}%
-									</Button>
-								))}
-							</div>
-							<div className="flex items-center gap-2">
-								<Input
-									type="number"
-									step="0.01"
-									min="0"
-									placeholder="Custom tip"
-									value={customTip}
-									onChange={(e) => {
-										setTipPercent(null);
-										setCustomTip(e.target.value);
-									}}
-									className="h-8"
-								/>
-								<p className="text-muted-foreground text-xs">Tip: {formatGYD(tipAmount)}</p>
-							</div>
-						</div>
 						<Button
 							variant="outline"
 							className="flex h-16 touch-manipulation items-center justify-start gap-3 px-5 sm:h-14"

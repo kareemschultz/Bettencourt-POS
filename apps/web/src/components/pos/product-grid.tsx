@@ -19,11 +19,11 @@ const deptColors: Record<string, string> = {
 	Beef: "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800",
 	Duck: "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800",
 	Mutton: "bg-rose-50 border-rose-200 dark:bg-rose-950/30 dark:border-rose-800",
-	Veggie:
+	Veg:
 		"bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800",
 	Specials:
 		"bg-violet-50 border-violet-200 dark:bg-violet-950/30 dark:border-violet-800",
-	Pastries:
+	Pastry:
 		"bg-pink-50 border-pink-200 dark:bg-pink-950/30 dark:border-pink-800",
 	Snacks:
 		"bg-yellow-50 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800",
@@ -33,6 +33,8 @@ const deptColors: Record<string, string> = {
 		"bg-stone-50 border-stone-200 dark:bg-stone-950/30 dark:border-stone-800",
 	"Local Juice":
 		"bg-lime-50 border-lime-200 dark:bg-lime-950/30 dark:border-lime-800",
+	Shakes:
+		"bg-indigo-50 border-indigo-200 dark:bg-indigo-950/30 dark:border-indigo-800",
 	"Meat Cookup":
 		"bg-orange-50 border-orange-300 dark:bg-orange-950/40 dark:border-orange-700",
 	Boxes:
