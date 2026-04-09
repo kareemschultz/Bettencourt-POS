@@ -67,12 +67,12 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Sign Windows installer (Authenticode)
-        if: ${{ secrets.WINDOWS_CERT_BASE64 != '' }}
         env:
           WINDOWS_CERT_BASE64: ${{ secrets.WINDOWS_CERT_BASE64 }}
           WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
         shell: pwsh
         run: |
+          if (-not $env:WINDOWS_CERT_BASE64) { Write-Host "No cert configured, skipping Authenticode signing"; exit 0 }
           $certBytes = [Convert]::FromBase64String($env:WINDOWS_CERT_BASE64)
           $certPass = ConvertTo-SecureString $env:WINDOWS_CERT_PASSWORD -AsPlainText -Force
           $pfxPath = "$env:TEMP\codesign.pfx"
