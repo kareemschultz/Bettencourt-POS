@@ -67,7 +67,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Sign Windows installer (Authenticode)
-        if: env.WINDOWS_CERT_BASE64 != ''
+        if: ${{ secrets.WINDOWS_CERT_BASE64 != '' }}
         env:
           WINDOWS_CERT_BASE64: ${{ secrets.WINDOWS_CERT_BASE64 }}
           WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}

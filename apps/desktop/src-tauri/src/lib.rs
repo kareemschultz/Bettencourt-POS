@@ -1,4 +1,4 @@
-use tauri::{Emitter, Manager};
+use tauri::Emitter;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -22,23 +22,22 @@ pub fn run() {
 async fn check_for_update(app: tauri::AppHandle) {
     use tauri_plugin_updater::UpdaterExt;
 
-    match app.updater() {
-        Ok(updater) => {
-            if let Ok(Some(update)) = updater.check().await {
-                // Notify the frontend — the JS side shows the update banner
-                let _ = app.emit("update-available", serde_json::json!({
-                    "version": update.version,
-                    "body": update.body,
-                }));
+    let updater = match app.updater() {
+        Ok(u) => u,
+        Err(_) => return, // Updater not configured — skip silently
+    };
 
-                // Download and install silently; relaunch on next app start
-                if let Ok(mut bytes) = update.download(|_, _| {}, || {}).await {
-                    let _ = update.install(&mut bytes);
-                }
-            }
-        }
-        Err(_) => {
-            // Updater not configured or no endpoint — skip silently
-        }
-    }
+    let update = match updater.check().await {
+        Ok(Some(u)) => u,
+        _ => return, // No update available or check failed
+    };
+
+    // Notify the frontend — JS side shows the update banner
+    let _ = app.emit("update-available", serde_json::json!({
+        "version": update.version,
+        "body": update.body,
+    }));
+
+    // Download and install silently; user restarts via the banner
+    let _ = update.download_and_install(|_, _| {}, || {}).await;
 }
