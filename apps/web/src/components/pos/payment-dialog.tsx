@@ -4,6 +4,7 @@ import {
 	Banknote,
 	Check,
 	CreditCard,
+	Delete,
 	FileText,
 	Gift,
 	Loader2,
