@@ -76,10 +76,10 @@ export default function ProductsPage() {
 		cost: string;
 	} | null>(null);
 	const queryClient = useQueryClient();
-	const { requestOverride, SupervisorDialog } = useSupervisorOverride();
 	const { data: userProfile } = useQuery(
 		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
 	);
+	const { requestOverride, SupervisorDialog } = useSupervisorOverride(userProfile?.permissions);
 	const orgId = userProfile?.organizationId;
 
 	const { data: products = [] } = useQuery(

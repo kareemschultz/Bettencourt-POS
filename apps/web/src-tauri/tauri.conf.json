@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Bettencourt-POS",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.karetech.bettencourt-pos",
   "build": {
     "frontendDist": "../build/client",
     "devUrl": "http://localhost:5173",
@@ -13,8 +13,10 @@
     "windows": [
       {
         "title": "Bettencourt-POS",
-        "width": 800,
-        "height": 600,
+        "width": 1366,
+        "height": 768,
+        "maximized": true,
+        "titleBarStyle": "visible",
         "resizable": true,
         "fullscreen": false
       }

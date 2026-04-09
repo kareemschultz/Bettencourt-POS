@@ -48,6 +48,12 @@ import {
 import { useBarcodeScanner } from "@/hooks/use-barcode-scanner";
 import { useSupervisorOverride } from "@/hooks/use-supervisor-override";
 import { useWebSocket } from "@/hooks/use-websocket";
+import {
+	cacheProducts,
+	getCachedProducts,
+	getOnlineStatus,
+	offlineFetch,
+} from "@/lib/offline";
 import type { CartItem, Product } from "@/lib/types";
 import { formatGYD } from "@/lib/types";
 import { orpc, queryClient } from "@/utils/orpc";
@@ -223,10 +229,46 @@ export function POSTerminal({
 		}),
 	);
 
+	// Offline product fallback state
+	const [offlineProducts, setOfflineProducts] = useState<
+		Record<string, unknown>[]
+	>([]);
+
+	// Cache products to IndexedDB whenever a live fetch succeeds
+	useEffect(() => {
+		if (posData?.products && posData.products.length > 0) {
+			cacheProducts(posData.products as Record<string, unknown>[]).catch(
+				() => {},
+			);
+		}
+	}, [posData?.products]);
+
+	// Load cached products when offline and the live query returns nothing
+	useEffect(() => {
+		if (
+			!getOnlineStatus() &&
+			(!posData?.products || posData.products.length === 0)
+		) {
+			getCachedProducts()
+				.then((cached) => {
+					if (cached.length > 0) {
+						setOfflineProducts(cached);
+						toast.info("Showing cached products — working offline");
+					}
+				})
+				.catch(() => {});
+		}
+	}, [posData?.products]);
+
 	// Map oRPC camelCase response to frontend Product type
 	const departments: { id: string; name: string; pinProtected: boolean }[] =
 		posData?.departments || [];
-	const products: Product[] = (posData?.products || []).map((p) => ({
+	const liveProducts = posData?.products || [];
+	const effectiveProducts =
+		liveProducts.length > 0
+			? liveProducts
+			: (offlineProducts as unknown as typeof liveProducts);
+	const products: Product[] = effectiveProducts.map((p) => ({
 		id: p.id,
 		organization_id: p.organizationId,
 		name: p.name,
@@ -272,7 +314,18 @@ export function POSTerminal({
 				resetPickupFields();
 			},
 			onError: (error) => {
-				toast.error(error.message || "Checkout failed");
+				if (
+					!getOnlineStatus() ||
+					error.message?.includes("fetch") ||
+					error.message?.includes("network")
+				) {
+					toast.error(
+						"Sale failed — check connection and retry. Your cart is still here.",
+						{ duration: 8000 },
+					);
+				} else {
+					toast.error(error.message || "Checkout failed");
+				}
 			},
 		}),
 	);
@@ -434,12 +487,12 @@ export function POSTerminal({
 			? Number.parseInt(estimatedReady, 10) * 60_000
 			: 0;
 
-			checkoutMutation.mutate({
-				items: checkoutItems,
-				payments,
-				registerId: selectedRegister,
-				locationId: effectiveLocationId,
-				orderType: orderMode,
+		const checkoutPayload = {
+			items: checkoutItems,
+			payments,
+			registerId: selectedRegister,
+			locationId: effectiveLocationId,
+			orderType: orderMode,
 			discountTotal: discount,
 			tipAmount: meta?.tipAmount ?? 0,
 			tabName: tabName || selectedCustomer?.name || null,
@@ -447,14 +500,35 @@ export function POSTerminal({
 			customerName: isPickupOrDelivery ? customerName || null : null,
 			customerPhone: isPickupOrDelivery ? customerPhone || null : null,
 			deliveryAddress:
-				orderMode === "delivery"
-					? deliveryAddress || null
-					: null,
+				orderMode === "delivery" ? deliveryAddress || null : null,
 			estimatedReadyAt: isPickupOrDelivery
 				? new Date(Date.now() + estimatedReadyMs).toISOString()
 				: null,
 			fulfillmentStatus: isPickupOrDelivery ? "pending" : "none",
-		});
+		};
+
+		// If offline, queue the sale directly and clear the cart — no receipt until sync
+		if (!getOnlineStatus()) {
+			await offlineFetch("/rpc/pos.checkout", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(checkoutPayload),
+			});
+			setCart([]);
+			setDiscount(0);
+			setDiscountLabel("");
+			setSelectedCustomer(null);
+			setCustomerName("");
+			setCustomerPhone("");
+			setDeliveryAddress("");
+			setTabName("");
+			toast.warning("Sale queued — will sync when back online", {
+				duration: 5000,
+			});
+			return;
+		}
+
+		checkoutMutation.mutate(checkoutPayload);
 	}
 
 	// Keyboard shortcuts (F2=Pay, F3=Hold, F4=Clear, F5=Discount, F8=Reprint, F12=Shortcuts)

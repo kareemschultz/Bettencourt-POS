@@ -547,6 +547,18 @@ export default function ExpensesPage() {
 	];
 
 	// Grouped by category
+	const CATEGORY_COLORS_HEX = [
+		"#6366f1", // indigo
+		"#ec4899", // pink
+		"#f59e0b", // amber
+		"#10b981", // emerald
+		"#ef4444", // red
+		"#8b5cf6", // violet
+		"#0ea5e9", // sky
+		"#f97316", // orange
+		"#14b8a6", // teal
+		"#84cc16", // lime
+	];
 	const expensesByCategory = Object.entries(
 		filtered.reduce<Record<string, typeof filtered>>((acc, e) => {
 			(acc[e.category] ??= []).push(e);
@@ -558,10 +570,10 @@ export default function ExpensesPage() {
 			const tb = b.reduce((s, e) => s + Number(e.amount), 0);
 			return tb - ta;
 		})
-		.map(([name, items]) => ({
+		.map(([name, items], i) => ({
 			id: name,
 			name,
-			color: "#64748b",
+			color: CATEGORY_COLORS_HEX[i % CATEGORY_COLORS_HEX.length]!,
 			items,
 			total: items.reduce((s, e) => s + Number(e.amount), 0),
 		}));

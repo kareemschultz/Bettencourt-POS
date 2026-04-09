@@ -176,10 +176,23 @@ function buildReportHtml(opts: ExpenseReportOptions, logo: string): string {
 		.sort((a, b) => b[1] - a[1])
 		.slice(0, 10);
 
+	const BREAKDOWN_PALETTE = [
+		"#6366f1", // indigo
+		"#ec4899", // pink
+		"#f59e0b", // amber
+		"#10b981", // emerald
+		"#8b5cf6", // violet
+		"#0ea5e9", // sky
+		"#f97316", // orange
+		"#14b8a6", // teal
+		"#84cc16", // lime
+		"#06b6d4", // cyan
+	];
+
 	const catBars = catBreakdown
-		.map(([cat, amt]) => {
+		.map(([cat, amt], i) => {
 			const pct = total > 0 ? (amt / total) * 100 : 0;
-			const color = categoryColor(cat);
+			const color = BREAKDOWN_PALETTE[i % BREAKDOWN_PALETTE.length]!;
 			return `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
       <div style="min-width:175px;max-width:175px;font-size:11px;color:#334155;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(cat)}">${esc(cat)}</div>
