@@ -1,0 +1,110 @@
+name: Desktop Build (Windows)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g. 1.0.1)'
+        required: false
+        default: ''
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.10'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build web app (desktop target — points to production server)
+        run: bun run --filter web build
+        env:
+          VITE_SERVER_URL: https://pos.bettencourtgy.com
+
+      - name: Generate Tauri icons from logo
+        run: |
+          cd apps/desktop
+          bunx tauri icon ../../web/public/images/bettencourts-logo.png
+
+      - name: Bump version in tauri.conf.json (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.version != ''
+        run: |
+          $conf = Get-Content apps/desktop/src-tauri/tauri.conf.json | ConvertFrom-Json
+          $conf.version = "${{ github.event.inputs.version }}"
+          $conf | ConvertTo-Json -Depth 10 | Set-Content apps/desktop/src-tauri/tauri.conf.json
+
+      - name: Build Tauri (Windows installer + updater artifacts)
+        run: |
+          cd apps/desktop
+          bunx tauri build
+        env:
+          # Signing key — generate once with: bunx tauri signer generate -w ~/.tauri/bettencourtgy.key
+          # Add the private key content to repo secret TAURI_SIGNING_PRIVATE_KEY
+          # Add the password to TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Generate latest.json for auto-updater
+        # The updater endpoint (tauri.conf.json) polls this file.
+        # It must be a GitHub Release asset named exactly "latest.json".
+        run: |
+          $version = (Get-Content apps/desktop/src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          $tag = "v$version"
+          $nsis = Get-ChildItem apps/desktop/src-tauri/target/release/bundle/nsis/*.nsis.zip -ErrorAction SilentlyContinue | Select-Object -First 1
+          $sig = if ($nsis) { Get-Content "$($nsis.FullName).sig" -Raw } else { "" }
+          $url = "https://github.com/kareemschultz/Bettencourt-POS/releases/download/$tag/$($nsis.Name)"
+          $json = @{
+            version = $version
+            notes = "New version of Bettencourt's POS"
+            pub_date = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+            platforms = @{
+              "windows-x86_64" = @{
+                signature = $sig.Trim()
+                url = $url
+              }
+            }
+          } | ConvertTo-Json -Depth 5
+          $json | Set-Content latest.json
+          Write-Host "Generated latest.json for version $version"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bettencourt-pos-windows-${{ github.sha }}
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.nsis.zip
+            apps/desktop/src-tauri/target/release/bundle/msi/*.msi
+            latest.json
+          retention-days: 30
+
+      - name: Create GitHub Release with installers + updater manifest
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.nsis.zip
+            apps/desktop/src-tauri/target/release/bundle/msi/*.msi
+            latest.json
+          generate_release_notes: true
+          make_latest: true

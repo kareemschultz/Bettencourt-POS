@@ -12,7 +12,7 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       SECRET_ENCRYPTION_KEY: ${SECRET_ENCRYPTION_KEY}
       BETTER_AUTH_URL: https://pos.karetechsolutions.com
-      CORS_ORIGIN: https://pos.karetechsolutions.com
+      CORS_ORIGIN: https://pos.karetechsolutions.com,https://pos.bettencourtgy.com,tauri://localhost
       VITE_SERVER_URL: https://pos.karetechsolutions.com
     deploy:
       resources:

@@ -1,0 +1,57 @@
+{
+  "productName": "Bettencourt's POS",
+  "version": "1.0.0",
+  "identifier": "com.bettencourt.pos",
+  "build": {
+    "frontendDist": "../../web/build/client",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Bettencourt's POS",
+        "width": 1366,
+        "height": 768,
+        "minWidth": 1024,
+        "minHeight": 600,
+        "fullscreen": false,
+        "resizable": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null,
+      "dangerousDisableAssetCspModification": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": [
+        "https://github.com/kareemschultz/Bettencourt-POS/releases/latest/download/latest.json"
+      ],
+      "dialog": false,
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

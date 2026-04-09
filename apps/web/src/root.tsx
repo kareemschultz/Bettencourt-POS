@@ -15,6 +15,8 @@ import {
 
 import type { Route } from "./+types/root";
 
+import { PWAUpdatePrompt } from "./components/pwa-update-prompt";
+import { TauriUpdatePrompt } from "./components/tauri-update-prompt";
 import { ThemeProvider } from "./components/theme-provider";
 import { Toaster } from "./components/ui/sonner";
 import { queryClient } from "./utils/orpc";
@@ -54,7 +56,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
 	useEffect(() => {
 		if ("serviceWorker" in navigator) {
-			navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+			navigator.serviceWorker
+				.register("/sw.js", { scope: "/" })
+				.catch(() => {});
 		}
 	}, []);
 
@@ -68,6 +72,8 @@ export default function App() {
 			>
 				<Outlet />
 				<Toaster richColors />
+				<PWAUpdatePrompt />
+				<TauriUpdatePrompt />
 			</ThemeProvider>
 			<ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
 		</QueryClientProvider>

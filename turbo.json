@@ -12,6 +12,17 @@
 			"inputs": ["$TURBO_DEFAULT$", ".env*"],
 			"outputs": ["build/**", ".react-router/**"]
 		},
+		// Desktop is built only in CI (Windows runner). Skip in local/Docker builds.
+		"desktop#build": {
+			"dependsOn": [],
+			"inputs": ["$TURBO_DEFAULT$"],
+			"outputs": ["src-tauri/target/release/bundle/**"],
+			"passThroughEnv": [
+				"VITE_SERVER_URL",
+				"TAURI_SIGNING_PRIVATE_KEY",
+				"TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
+			]
+		},
 		"lint": {
 			"dependsOn": ["^lint"]
 		},

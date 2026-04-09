@@ -1,10 +1,10 @@
 import { createContext } from "@Bettencourt-POS/api/context";
 import { onKitchenEvent } from "@Bettencourt-POS/api/lib/kitchen-events";
-import { onPosEvent } from "@Bettencourt-POS/api/lib/pos-events";
 import {
 	hasPermission,
 	loadUserPermissions,
 } from "@Bettencourt-POS/api/lib/permissions";
+import { onPosEvent } from "@Bettencourt-POS/api/lib/pos-events";
 import { appRouter } from "@Bettencourt-POS/api/routers/index";
 import { auth } from "@Bettencourt-POS/auth";
 import { db } from "@Bettencourt-POS/db";
@@ -41,10 +41,14 @@ app.use(logger());
 // Gzip/Brotli compression for all responses (API JSON, HTML, etc.)
 // Static assets already served with correct Content-Encoding by serveStatic.
 app.use("/*", compress());
+// Parse comma-separated CORS origins so Tauri desktop (tauri://localhost)
+// and the web app (https://pos.bettencourtgy.com) both work.
+const allowedOrigins = env.CORS_ORIGIN.split(",").map((o) => o.trim());
+
 app.use(
 	"/*",
 	cors({
-		origin: env.CORS_ORIGIN,
+		origin: (origin) => (allowedOrigins.includes(origin) ? origin : null),
 		allowMethods: ["GET", "POST", "OPTIONS"],
 		allowHeaders: ["Content-Type", "Authorization"],
 		credentials: true,
@@ -317,7 +321,10 @@ app.get("/uploads/*", async (c) => {
 		};
 		const contentType = mimeMap[ext2] ?? "application/octet-stream";
 		return new Response(data, {
-			headers: { "Content-Type": contentType, "Cache-Control": "max-age=86400" },
+			headers: {
+				"Content-Type": contentType,
+				"Cache-Control": "max-age=86400",
+			},
 		});
 	} catch {
 		return c.json({ error: "Not found" }, 404);
@@ -368,7 +375,6 @@ app.use("/*", async (c, next) => {
 
 	await next();
 });
-
 
 // Bridge existing kitchen events into channel-based WebSocket feed
 onKitchenEvent((event) => {
