@@ -49,6 +49,12 @@ import { orpc } from "@/utils/orpc";
 
 export default function GiftCardsPage() {
 	const queryClient = useQueryClient();
+	const { data: userProfile } = useQuery(
+		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
+	);
+	const canReadSettings =
+		Array.isArray(userProfile?.permissions?.settings) &&
+		(userProfile.permissions.settings as string[]).includes("read");
 	const [sellOpen, setSellOpen] = useState(false);
 	const [lookupOpen, setLookupOpen] = useState(false);
 	const [reloadOpen, setReloadOpen] = useState(false);
@@ -79,9 +85,10 @@ export default function GiftCardsPage() {
 	const [cardSearch, setCardSearch] = useState("");
 	const [cardStatusFilter, setCardStatusFilter] = useState("all");
 
-	const { data: cards = [], isLoading } = useQuery(
-		orpc.giftcards.list.queryOptions({ input: {} }),
-	);
+	const { data: cards = [], isLoading } = useQuery({
+		...orpc.giftcards.list.queryOptions({ input: {} }),
+		enabled: canReadSettings,
+	});
 
 	const listKey = orpc.giftcards.list.queryOptions({ input: {} }).queryKey;
 

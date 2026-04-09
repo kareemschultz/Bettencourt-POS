@@ -60,22 +60,31 @@ export default function TimeclockPage() {
 	const [dateRange, setDateRange] = useState({ start: today, end: today });
 	const [employeeSearch, setEmployeeSearch] = useState("");
 
+	const { data: userProfile } = useQuery(
+		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
+	);
+	const canReadReports =
+		Array.isArray(userProfile?.permissions?.reports) &&
+		(userProfile.permissions.reports as string[]).includes("read");
+
 	const { data: activeShift, isLoading: loadingShift } = useQuery({
 		...orpc.timeclock.getActiveShift.queryOptions({ input: {} }),
 		refetchInterval: 30000,
 	});
 
-	const { data: todayShifts = [] } = useQuery(
-		orpc.timeclock.getShifts.queryOptions({
+	const { data: todayShifts = [] } = useQuery({
+		...orpc.timeclock.getShifts.queryOptions({
 			input: { startDate: today, endDate: today },
 		}),
-	);
+		enabled: canReadReports,
+	});
 
-	const { data: summary = [] } = useQuery(
-		orpc.timeclock.getSummary.queryOptions({
+	const { data: summary = [] } = useQuery({
+		...orpc.timeclock.getSummary.queryOptions({
 			input: { startDate: dateRange.start, endDate: dateRange.end },
 		}),
-	);
+		enabled: canReadReports,
+	});
 
 	const shiftQueryKey = orpc.timeclock.getActiveShift.queryOptions({
 		input: {},

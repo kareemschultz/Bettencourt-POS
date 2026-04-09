@@ -85,9 +85,13 @@ export default function ProductsPage() {
 	const { data: products = [] } = useQuery(
 		orpc.products.list.queryOptions({ input: { includeInactive: true } }),
 	);
-	const { data: departments = [] } = useQuery(
-		orpc.categories.list.queryOptions({ input: {} }),
-	);
+	const canReadDepartments =
+		Array.isArray(userProfile?.permissions?.departments) &&
+		(userProfile.permissions.departments as string[]).includes("read");
+	const { data: departments = [] } = useQuery({
+		...orpc.categories.list.queryOptions({ input: {} }),
+		enabled: canReadDepartments,
+	});
 
 	const createProduct = useMutation(
 		orpc.products.create.mutationOptions({
