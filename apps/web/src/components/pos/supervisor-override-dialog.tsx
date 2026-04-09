@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Delete, ShieldAlert } from "lucide-react";
+import { Delete, ShieldAlert, WifiOff } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { getOnlineStatus } from "@/lib/offline";
 import { orpc } from "@/utils/orpc";
 
 interface SupervisorOverrideDialogProps {
@@ -31,6 +32,7 @@ export function SupervisorOverrideDialog({
 	const [attemptsLeft, setAttemptsLeft] = useState(3);
 
 	const label = permissionLabel ?? requiredPermission;
+	const isOffline = !getOnlineStatus();
 
 	const verify = useMutation(
 		orpc.settings.verifySupervisor.mutationOptions({
@@ -75,6 +77,10 @@ export function SupervisorOverrideDialog({
 
 	function handleSubmit() {
 		if (pin.length < 4) return;
+		if (isOffline) {
+			toast.error("Supervisor verification requires an internet connection.");
+			return;
+		}
 		verify.mutate({ pin, requiredPermission });
 	}
 
@@ -106,6 +112,13 @@ export function SupervisorOverrideDialog({
 						<span className="font-medium text-foreground">{label}</span>
 					</DialogDescription>
 				</DialogHeader>
+
+				{isOffline && (
+					<p className="flex items-center justify-center gap-1.5 rounded-md bg-amber-50 px-3 py-2 text-amber-700 text-xs dark:bg-amber-950/30 dark:text-amber-400">
+						<WifiOff className="size-3.5 shrink-0" />
+						Offline — supervisor override requires a connection
+					</p>
+				)}
 
 				{/* PIN dots */}
 				<div className="flex justify-center gap-2 py-2">
@@ -152,7 +165,7 @@ export function SupervisorOverrideDialog({
 					<Button
 						className="h-14 touch-manipulation"
 						onClick={handleSubmit}
-						disabled={pin.length < 4 || verify.isPending || attemptsLeft === 0}
+						disabled={pin.length < 4 || verify.isPending || attemptsLeft === 0 || isOffline}
 					>
 						{verify.isPending ? "..." : "OK"}
 					</Button>

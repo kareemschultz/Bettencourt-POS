@@ -1,8 +1,9 @@
 import { useMutation } from "@tanstack/react-query";
-import { Delete, Lock, LogOut } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Delete, Lock, LogOut, WifiOff } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
+import { getOnlineStatus } from "@/lib/offline";
 import { orpc } from "@/utils/orpc";
 
 interface PinLockScreenProps {
@@ -14,21 +15,75 @@ export function PinLockScreen({ userName, onUnlock }: PinLockScreenProps) {
 	const [pin, setPin] = useState("");
 	const [error, setError] = useState("");
 	const [shake, setShake] = useState(false);
+	const [verifyingOffline, setVerifyingOffline] = useState(false);
+	// Ref so the offline verify closure always sees the submitted value
+	const pinRef = useRef("");
 
-	const verifyPin = useMutation(
+	const onError = useCallback((message: string) => {
+		setPin("");
+		pinRef.current = "";
+		setError(message);
+		setShake(true);
+		setTimeout(() => setShake(false), 500);
+	}, []);
+
+	const verifyPinMutation = useMutation(
 		orpc.settings.verifyPin.mutationOptions({
 			onSuccess: () => {
 				setPin("");
+				pinRef.current = "";
 				setError("");
 				onUnlock();
 			},
-			onError: (err) => {
-				setPin("");
-				setError(err.message || "Invalid PIN");
-				setShake(true);
-				setTimeout(() => setShake(false), 500);
-			},
+			onError: (err) => onError(err.message || "Invalid PIN"),
 		}),
+	);
+
+	// Offline verification using SubtleCrypto — identical to server sha256 check
+	const verifyOffline = useCallback(
+		async (pinValue: string) => {
+			setVerifyingOffline(true);
+			try {
+				const cached = localStorage.getItem("pos-pin-hash");
+				if (!cached) {
+					// No PIN set on this device — allow unlock
+					onUnlock();
+					return;
+				}
+				const buf = await crypto.subtle.digest(
+					"SHA-256",
+					new TextEncoder().encode(pinValue),
+				);
+				const hex = Array.from(new Uint8Array(buf))
+					.map((b) => b.toString(16).padStart(2, "0"))
+					.join("");
+				if (hex === cached) {
+					setPin("");
+					pinRef.current = "";
+					setError("");
+					onUnlock();
+				} else {
+					onError("Invalid PIN");
+				}
+			} catch {
+				onError("Verification failed — connect to the network");
+			} finally {
+				setVerifyingOffline(false);
+			}
+		},
+		[onUnlock, onError],
+	);
+
+	const submitPin = useCallback(
+		(pinValue: string) => {
+			pinRef.current = pinValue;
+			if (!getOnlineStatus()) {
+				verifyOffline(pinValue);
+			} else {
+				verifyPinMutation.mutate({ pin: pinValue });
+			}
+		},
+		[verifyOffline, verifyPinMutation],
 	);
 
 	const handleDigit = useCallback(
@@ -37,13 +92,15 @@ export function PinLockScreen({ userName, onUnlock }: PinLockScreenProps) {
 			setPin((prev) => {
 				const next = prev + digit;
 				if (next.length >= 4) {
-					// Auto-submit on 4+ digits
-					verifyPin.mutate({ pin: next });
+					// Side-effect in setState callback is intentional here — same
+					// pattern as the existing mutation call. Runs synchronously after
+					// the state update is queued.
+					submitPin(next);
 				}
 				return next.length <= 8 ? next : prev;
 			});
 		},
-		[verifyPin],
+		[submitPin],
 	);
 
 	const handleBackspace = useCallback(() => {
@@ -59,12 +116,15 @@ export function PinLockScreen({ userName, onUnlock }: PinLockScreenProps) {
 			} else if (e.key === "Backspace") {
 				handleBackspace();
 			} else if (e.key === "Enter" && pin.length >= 4) {
-				verifyPin.mutate({ pin });
+				submitPin(pin);
 			}
 		}
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [handleDigit, handleBackspace, pin, verifyPin]);
+	}, [handleDigit, handleBackspace, pin, submitPin]);
+
+	const isVerifying = verifyPinMutation.isPending || verifyingOffline;
+	const isOffline = !getOnlineStatus();
 
 	async function handleLogout() {
 		await authClient.signOut();
@@ -89,6 +149,11 @@ export function PinLockScreen({ userName, onUnlock }: PinLockScreenProps) {
 							Welcome back,{" "}
 							<span className="font-medium text-foreground">{userName}</span>
 						</p>
+						{isOffline && (
+							<p className="mt-1 flex items-center justify-center gap-1 text-amber-600 text-xs dark:text-amber-400">
+								<WifiOff className="size-3" /> Offline — using cached PIN
+							</p>
+						)}
 					</div>
 				</div>
 
@@ -137,7 +202,7 @@ export function PinLockScreen({ userName, onUnlock }: PinLockScreenProps) {
 								variant="outline"
 								className="h-14 font-semibold text-xl"
 								onClick={() => handleDigit(d)}
-								disabled={verifyPin.isPending}
+								disabled={isVerifying}
 							>
 								{d}
 							</Button>
@@ -146,7 +211,7 @@ export function PinLockScreen({ userName, onUnlock }: PinLockScreenProps) {
 				</div>
 
 				{/* Loading indicator */}
-				{verifyPin.isPending && (
+				{isVerifying && (
 					<p className="text-muted-foreground text-sm">Verifying...</p>
 				)}
 

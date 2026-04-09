@@ -104,6 +104,13 @@ export default function DashboardLayout() {
 		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
 	);
 
+	// Cache pinHash locally so the PIN lock screen can verify offline
+	useEffect(() => {
+		if (userProfile?.pinHash) {
+			try { localStorage.setItem("pos-pin-hash", userProfile.pinHash); } catch {}
+		}
+	}, [userProfile?.pinHash]);
+
 	// Fetch all locations for the switcher
 	const { data: locations = [] } = useQuery(
 		orpc.locations.listLocations.queryOptions({ input: {} }),

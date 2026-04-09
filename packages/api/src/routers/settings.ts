@@ -54,12 +54,19 @@ const getCurrentUser = protectedProcedure
 			}
 		}
 
-		// Get user's organization via member table
-		const memberRow = await db
-			.select({ organizationId: schema.member.organizationId })
-			.from(schema.member)
-			.where(eq(schema.member.userId, userId))
-			.limit(1);
+		// Get user's organization via member table + pinHash for offline unlock
+		const [memberRow, userRow] = await Promise.all([
+			db
+				.select({ organizationId: schema.member.organizationId })
+				.from(schema.member)
+				.where(eq(schema.member.userId, userId))
+				.limit(1),
+			db
+				.select({ pinHash: schema.user.pinHash })
+				.from(schema.user)
+				.where(eq(schema.user.id, userId))
+				.limit(1),
+		]);
 
 		const primaryRole = roleAssignments[0];
 
@@ -70,6 +77,7 @@ const getCurrentUser = protectedProcedure
 			roleName: primaryRole?.roleName || "Cashier",
 			roleId: primaryRole?.roleId || null,
 			organizationId: memberRow[0]?.organizationId ?? null,
+			pinHash: userRow[0]?.pinHash ?? null,
 			permissions:
 				Object.keys(merged).length > 0
 					? merged

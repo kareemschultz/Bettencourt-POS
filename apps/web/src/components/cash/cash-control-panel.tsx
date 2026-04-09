@@ -23,6 +23,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { printCashSessionReport } from "@/lib/pdf/cash-session-pdf";
+import { getOnlineStatus } from "@/lib/offline";
 import { formatGYD } from "@/lib/types";
 import { orpc } from "@/utils/orpc";
 
@@ -182,7 +183,16 @@ export function CashControlPanel({
 		}),
 	);
 
+	function requireOnline(action: string): boolean {
+		if (!getOnlineStatus()) {
+			toast.error(`Cannot ${action} while offline — connect to the network first.`);
+			return false;
+		}
+		return true;
+	}
+
 	function handleOpenShift() {
+		if (!requireOnline("open shift")) return;
 		openShiftMutation.mutate({
 			openingFloat: String(Number(amount) || 0),
 			locationId,
@@ -191,7 +201,7 @@ export function CashControlPanel({
 	}
 
 	function handleEditFloat() {
-		if (!openSession) return;
+		if (!openSession || !requireOnline("update float")) return;
 		updateSessionMutation.mutate({
 			sessionId: openSession.id,
 			openingFloat: String(Number(amount) || 0),
@@ -199,7 +209,7 @@ export function CashControlPanel({
 	}
 
 	function handleCloseShift() {
-		if (!openSession) return;
+		if (!openSession || !requireOnline("close shift")) return;
 		closeShiftMutation.mutate({
 			sessionId: openSession.id,
 			actualCash: String(totalDenomAmount),
@@ -208,7 +218,7 @@ export function CashControlPanel({
 	}
 
 	function handleDrop() {
-		if (!openSession) return;
+		if (!openSession || !requireOnline("record cash drop")) return;
 		dropMutation.mutate({
 			cashSessionId: openSession.id,
 			amount: String(Number(amount)),
@@ -217,7 +227,7 @@ export function CashControlPanel({
 	}
 
 	function handlePayout() {
-		if (!openSession) return;
+		if (!openSession || !requireOnline("record payout")) return;
 		payoutMutation.mutate({
 			cashSessionId: openSession.id,
 			amount: String(Number(amount)),
@@ -226,7 +236,7 @@ export function CashControlPanel({
 	}
 
 	function handleNoSale() {
-		if (!openSession) return;
+		if (!openSession || !requireOnline("log no-sale")) return;
 		noSaleMutation.mutate({
 			cashSessionId: openSession.id,
 			reason: reason || "No reason provided",
