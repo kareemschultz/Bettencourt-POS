@@ -90,12 +90,13 @@ export default defineConfig({
 					{
 						// Session check — stale-while-revalidate so the user stays
 						// logged in during a shift even if connectivity drops.
-						// Cache expires after 8 hours (one full shift window).
+						// 24h covers overnight blackouts: shift ends, power cuts,
+						// next morning they open the app while still offline.
 						urlPattern: /\/api\/auth\/get-session/,
 						handler: "StaleWhileRevalidate",
 						options: {
 							cacheName: "auth-session",
-							expiration: { maxEntries: 5, maxAgeSeconds: 60 * 60 * 8 },
+							expiration: { maxEntries: 5, maxAgeSeconds: 60 * 60 * 24 },
 						},
 					},
 					{
@@ -104,12 +105,13 @@ export default defineConfig({
 						handler: "NetworkOnly",
 					},
 					{
-						// Product catalog — stale while revalidate
+						// Product catalog — 24h SW cache + IndexedDB fallback
+						// (see pos-terminal.tsx cacheProducts) for indefinite offline use.
 						urlPattern: /\/rpc\/pos\.getProducts/,
 						handler: "StaleWhileRevalidate",
 						options: {
 							cacheName: "pos-products",
-							expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 },
+							expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
 						},
 					},
 					{
