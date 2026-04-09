@@ -60,6 +60,10 @@ export function AppSidebar({ user, organizationName = "Bettencourt's", organizat
 	const [search, setSearch] = useState("");
 	const { state: sidebarState } = useSidebar();
 
+	const canReadInventory =
+		Array.isArray(user.permissions?.inventory) &&
+		user.permissions.inventory.includes("read");
+
 	const { data: alertData } = useQuery({
 		...orpc.inventory.getAlerts.queryOptions({
 			input: {
@@ -67,7 +71,7 @@ export function AppSidebar({ user, organizationName = "Bettencourt's", organizat
 				unacknowledgedOnly: true,
 			},
 		}),
-		enabled: !!user.organization_id,
+		enabled: !!user.organization_id && canReadInventory,
 		refetchInterval: 60_000,
 	});
 	const unacknowledgedAlertCount = alertData?.length ?? 0;

@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { authClient } from "@/lib/auth-client";
+import { getOnlineStatus } from "@/lib/offline";
 import { getActiveModule, PAGE_TITLES } from "@/lib/modules";
 import { hasRouteAccess } from "@/lib/route-access";
 import type { AppUser } from "@/lib/types";
@@ -156,7 +157,9 @@ export default function DashboardLayout() {
 	);
 
 	useEffect(() => {
-		if (!session && !isPending) {
+		// Only redirect to login when we're online — if offline, the cached session
+		// may still be loading. Redirecting offline just shows a broken login page.
+		if (!session && !isPending && getOnlineStatus()) {
 			navigate("/login");
 		}
 	}, [session, isPending, navigate]);
@@ -238,6 +241,23 @@ export default function DashboardLayout() {
 	}
 
 	if (!session || !user) {
+		// Offline with no cached session — show a clear message instead of a blank screen
+		if (!getOnlineStatus()) {
+			return (
+				<div className="flex h-svh flex-col items-center justify-center gap-4 p-8 text-center">
+					<img
+						src="/images/bettencourts-logo.png"
+						alt="Bettencourt's"
+						className="h-16 w-16 object-contain opacity-60"
+					/>
+					<h1 className="font-bold text-xl">You're offline</h1>
+					<p className="max-w-xs text-muted-foreground text-sm">
+						Connect to the internet to sign in. Once logged in, the POS will
+						continue working through brief outages.
+					</p>
+				</div>
+			);
+		}
 		return null;
 	}
 

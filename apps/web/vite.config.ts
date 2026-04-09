@@ -81,10 +81,30 @@ export default defineConfig({
 			workbox: {
 				// Cache app shell (JS, CSS, HTML)
 				globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+				// SPA fallback: serve index.html for any navigation request that
+				// isn't a precached file (e.g. /dashboard, /dashboard/pos offline).
+				navigateFallback: "index.html",
+				navigateFallbackDenylist: [/^\/api\//, /^\/rpc\//],
 				// Runtime caching strategies for API calls
 				runtimeCaching: [
 					{
-						// Product catalog — cache-first (stale while revalidate)
+						// Session check — stale-while-revalidate so the user stays
+						// logged in during a shift even if connectivity drops.
+						// Cache expires after 8 hours (one full shift window).
+						urlPattern: /\/api\/auth\/get-session/,
+						handler: "StaleWhileRevalidate",
+						options: {
+							cacheName: "auth-session",
+							expiration: { maxEntries: 5, maxAgeSeconds: 60 * 60 * 8 },
+						},
+					},
+					{
+						// All other auth endpoints (login, logout, etc.) — network only
+						urlPattern: /\/api\/auth\//,
+						handler: "NetworkOnly",
+					},
+					{
+						// Product catalog — stale while revalidate
 						urlPattern: /\/rpc\/pos\.getProducts/,
 						handler: "StaleWhileRevalidate",
 						options: {
@@ -110,11 +130,6 @@ export default defineConfig({
 							expiration: { maxEntries: 20, maxAgeSeconds: 60 * 5 },
 							networkTimeoutSeconds: 5,
 						},
-					},
-					{
-						// Auth endpoints — network only (never cache)
-						urlPattern: /\/api\/auth\//,
-						handler: "NetworkOnly",
 					},
 					{
 						// All other RPC calls — network first with 3s timeout
