@@ -52,14 +52,15 @@ jobs:
           $conf.version = "${{ github.event.inputs.version }}"
           $conf | ConvertTo-Json -Depth 10 | Set-Content apps/desktop/src-tauri/tauri.conf.json
 
-      - name: Build Tauri (Windows installer + updater artifacts)
+      - name: Build Tauri (Windows installer)
         run: |
           cd apps/desktop
           bunx tauri build
         env:
-          # Signing key — generate once with: bunx tauri signer generate -w ~/.tauri/bettencourtgy.key
-          # Add the private key content to repo secret TAURI_SIGNING_PRIVATE_KEY
-          # Add the password to TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+          # Signing enables auto-update verification. Set these secrets in GitHub repo settings
+          # to enable signed updater artifacts. Without them, the installer still builds fine
+          # but update packages won't be signed (safe for first test, set before production).
+          # Generate key: bunx tauri signer generate -w ~/.tauri/bettencourtgy.key
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
