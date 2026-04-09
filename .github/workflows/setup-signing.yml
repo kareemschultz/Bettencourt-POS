@@ -1,0 +1,140 @@
+name: Setup Signing Keys (Run Once)
+
+# Automates all signing setup in one click:
+#   1. Generates Tauri ed25519 key pair → stores private key as GitHub secret,
+#      commits public key to tauri.conf.json
+#   2. Generates self-signed Windows Authenticode certificate → stores as GitHub
+#      secrets for use during installer builds
+#
+# Prerequisite: Add GH_SETUP_TOKEN to GitHub secrets (Settings → Secrets → Actions).
+# This is a PAT with repo scope. After this workflow runs successfully, GH_SETUP_TOKEN
+# can be deleted — it is only needed once.
+#
+# Trigger: Actions tab → "Setup Signing Keys (Run Once)" → Run workflow
+
+on:
+  workflow_dispatch:
+
+jobs:
+  # ── Job 1: Generate Tauri ed25519 key pair (Linux) ───────────────────────────
+  tauri-signing-key:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_SETUP_TOKEN }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.10'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Tauri ed25519 signing key
+        run: printf '\n\n' | bunx tauri signer generate -w /tmp/tauri-signing.key || bunx tauri signer generate -w /tmp/tauri-signing.key --ci
+
+      - name: Store private key as GitHub secret
+        env:
+          GH_TOKEN: ${{ secrets.GH_SETUP_TOKEN }}
+        run: |
+          # Store private key (empty password — stored as-is in GitHub secret)
+          gh secret set TAURI_SIGNING_PRIVATE_KEY < /tmp/tauri-signing.key
+          # Store empty password so desktop-build.yml TAURI_SIGNING_PRIVATE_KEY_PASSWORD works
+          printf '' | gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+
+      - name: Embed public key in tauri.conf.json
+        run: |
+          PUB=$(cat /tmp/tauri-signing.key.pub)
+          # jq safely substitutes the key without shell injection
+          jq --arg key "$PUB" '.plugins.updater.pubkey = $key' \
+            apps/desktop/src-tauri/tauri.conf.json > /tmp/tauri.conf.tmp
+          mv /tmp/tauri.conf.tmp apps/desktop/src-tauri/tauri.conf.json
+          echo "Public key written to tauri.conf.json"
+          cat /tmp/tauri-signing.key.pub
+
+      - name: Commit public key to repository
+        env:
+          GH_TOKEN: ${{ secrets.GH_SETUP_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apps/desktop/src-tauri/tauri.conf.json
+          git diff --staged --quiet && echo "No changes to commit" || \
+            git commit -m "config: embed Tauri updater public key [skip ci]"
+          git push
+
+  # ── Job 2: Generate self-signed Authenticode certificate (Windows) ───────────
+  windows-codesign-cert:
+    runs-on: windows-latest
+    steps:
+      - name: Generate self-signed code signing certificate
+        env:
+          GH_TOKEN: ${{ secrets.GH_SETUP_TOKEN }}
+        shell: pwsh
+        run: |
+          # Random 32-byte password for the PFX export
+          $passBytes = [System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32)
+          $pass = [Convert]::ToBase64String($passBytes)
+          $securePass = ConvertTo-SecureString $pass -AsPlainText -Force
+
+          # Generate self-signed code-signing certificate (valid 5 years)
+          $cert = New-SelfSignedCertificate `
+            -Type CodeSigning `
+            -Subject "CN=Bettencourt's POS, O=Bettencourt's Supermarket, C=GY" `
+            -KeyUsage DigitalSignature `
+            -FriendlyName "Bettencourt POS Code Signing" `
+            -CertStoreLocation Cert:\CurrentUser\My `
+            -HashAlgorithm SHA256 `
+            -NotAfter (Get-Date).AddYears(5)
+
+          Write-Host "Certificate created:"
+          Write-Host "  Thumbprint : $($cert.Thumbprint)"
+          Write-Host "  Subject    : $($cert.Subject)"
+          Write-Host "  Valid until: $($cert.NotAfter.ToString('yyyy-MM-dd'))"
+
+          # Export to PFX
+          $pfxPath = "$env:TEMP\bettencourt-codesign.pfx"
+          Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $securePass | Out-Null
+
+          # Base64-encode for GitHub secret storage
+          $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($pfxPath))
+
+          # Store both secrets
+          Write-Output $b64 | gh secret set WINDOWS_CERT_BASE64
+          Write-Output $pass | gh secret set WINDOWS_CERT_PASSWORD
+
+          Write-Host "Secrets stored: WINDOWS_CERT_BASE64, WINDOWS_CERT_PASSWORD"
+
+          # Clean up
+          Remove-Item $pfxPath -Force
+
+  # ── Job 3: Summary ────────────────────────────────────────────────────────────
+  summary:
+    needs: [tauri-signing-key, windows-codesign-cert]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print setup summary
+        run: |
+          echo "============================================"
+          echo " Signing Setup Complete"
+          echo "============================================"
+          echo ""
+          echo "Secrets now stored in GitHub:"
+          echo "  TAURI_SIGNING_PRIVATE_KEY          — ed25519 private key (Tauri updater)"
+          echo "  TAURI_SIGNING_PRIVATE_KEY_PASSWORD  — empty (no passphrase)"
+          echo "  WINDOWS_CERT_BASE64                — Authenticode PFX (base64)"
+          echo "  WINDOWS_CERT_PASSWORD              — PFX password"
+          echo ""
+          echo "tauri.conf.json public key committed to repository."
+          echo ""
+          echo "Next steps:"
+          echo "  1. Delete GH_SETUP_TOKEN from GitHub secrets (no longer needed)"
+          echo "  2. Push a tag (e.g. git tag v1.0.0 && git push origin v1.0.0)"
+          echo "     to trigger the desktop build with full signing enabled"
+          echo ""
+          echo "Note: self-signed cert suppresses 'unknown publisher' dialog."
+          echo "For SmartScreen bypass, an EV code-signing cert is required."
