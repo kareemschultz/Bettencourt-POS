@@ -225,13 +225,33 @@ export function PaymentDialog({
 		}
 	}
 
-	// GYD quick amounts
-	const quickCashAmounts = [
-		Math.ceil(total / 100) * 100,
-		Math.ceil(total / 500) * 500,
-		Math.ceil(total / 1000) * 1000,
-		Math.ceil(total / 5000) * 5000,
-	].filter((v, i, a) => a.indexOf(v) === i && v >= totalWithTip);
+	// GYD denominations (notes only, largest first)
+	const GYD_NOTES = [5000, 2000, 1000, 500, 100, 50, 20];
+
+	function calcDenominations(amount: number): { denom: number; count: number }[] {
+		const result: { denom: number; count: number }[] = [];
+		let remaining = Math.round(amount);
+		for (const denom of GYD_NOTES) {
+			if (remaining >= denom) {
+				const count = Math.floor(remaining / denom);
+				result.push({ denom, count });
+				remaining -= count * denom;
+			}
+		}
+		return result;
+	}
+
+	// Quick tender amounts: next round-up to each GYD note boundary above total
+	const quickCashAmounts = Array.from(
+		new Set(
+			GYD_NOTES.slice()
+				.reverse()
+				.map((d) => Math.ceil(totalWithTip / d) * d)
+				.filter((v) => v >= totalWithTip),
+		),
+	)
+		.sort((a, b) => a - b)
+		.slice(0, 4);
 
 	const splitCashNum = Number(splitCashAmount) || 0;
 	const splitCardRemaining = Math.max(0, totalWithTip - splitCashNum);
@@ -328,63 +348,130 @@ export function PaymentDialog({
 					</div>
 				)}
 
-				{step === "cash" && (
-					<div className="flex flex-col gap-4 py-2">
-						<div className="text-center">
-							<p className="text-muted-foreground text-sm">Amount Due</p>
-							<p className="font-bold text-3xl sm:text-2xl">
-								{formatGYD(totalWithTip)}
-							</p>
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="cash-amount">Cash Tendered (GYD)</Label>
-							<Input
-								id="cash-amount"
-								type="number"
-								inputMode="numeric"
-								step="100"
-								value={cashTendered}
-								onChange={(e) => setCashTendered(e.target.value)}
-								placeholder="0"
-								className="h-16 touch-manipulation text-center text-3xl sm:h-14 sm:text-2xl"
-								autoFocus
-							/>
-						</div>
-						<div className="grid grid-cols-2 gap-2">
-							{quickCashAmounts.map((amt) => (
+				{step === "cash" && (() => {
+					const tendered = Number(cashTendered) || 0;
+					const changeAmt = tendered - totalWithTip;
+					const breakdown = tendered >= totalWithTip ? calcDenominations(changeAmt) : [];
+
+					function padDigit(d: string) {
+						if (cashTendered === "0" || cashTendered === "") {
+							setCashTendered(d);
+						} else {
+							setCashTendered((prev) => prev + d);
+						}
+					}
+					function backspace() {
+						setCashTendered((prev) =>
+							prev.length <= 1 ? "" : prev.slice(0, -1),
+						);
+					}
+
+					return (
+						<div className="flex flex-col gap-3 py-1">
+							{/* Due + Tendered display */}
+							<div className="grid grid-cols-2 gap-2 text-center">
+								<div className="rounded-lg bg-muted/50 p-2">
+									<p className="text-muted-foreground text-xs">Due</p>
+									<p className="font-bold text-lg">{formatGYD(totalWithTip)}</p>
+								</div>
+								<div className={`rounded-lg p-2 ${tendered >= totalWithTip ? "bg-green-50 dark:bg-green-950/30" : "bg-primary/5"}`}>
+									<p className="text-muted-foreground text-xs">Tendered</p>
+									<p className={`font-bold text-lg ${tendered >= totalWithTip ? "text-green-700 dark:text-green-400" : ""}`}>
+										{tendered > 0 ? formatGYD(tendered) : "—"}
+									</p>
+								</div>
+							</div>
+
+							{/* Quick denomination buttons */}
+							<div className="grid grid-cols-4 gap-1.5">
+								{quickCashAmounts.map((amt) => (
+									<Button
+										key={amt}
+										variant="outline"
+										className="h-10 touch-manipulation px-1 text-xs font-medium"
+										onClick={() => setCashTendered(String(amt))}
+									>
+										{formatGYD(amt)}
+									</Button>
+								))}
+							</div>
+
+							{/* On-screen numpad */}
+							<div className="grid grid-cols-3 gap-1.5">
+								{["1","2","3","4","5","6","7","8","9"].map((d) => (
+									<Button
+										key={d}
+										variant="outline"
+										className="h-12 touch-manipulation font-semibold text-lg"
+										onClick={() => padDigit(d)}
+									>
+										{d}
+									</Button>
+								))}
 								<Button
-									key={amt}
 									variant="outline"
-									className="h-12 touch-manipulation text-base sm:h-11 sm:text-sm"
-									onClick={() => setCashTendered(String(amt))}
+									className="h-12 touch-manipulation text-muted-foreground text-sm"
+									onClick={() => setCashTendered("")}
 								>
-									{formatGYD(amt)}
+									C
 								</Button>
-							))}
+								<Button
+									variant="outline"
+									className="h-12 touch-manipulation font-semibold text-lg"
+									onClick={() => padDigit("0")}
+								>
+									0
+								</Button>
+								<Button
+									variant="outline"
+									className="h-12 touch-manipulation"
+									onClick={backspace}
+									disabled={!cashTendered}
+								>
+									<Delete className="size-4" />
+								</Button>
+							</div>
+
+							{/* Change breakdown */}
+							{tendered >= totalWithTip && (
+								<div className="rounded-lg border border-green-200 bg-green-50 p-2.5 dark:border-green-800 dark:bg-green-950/30">
+									<p className="mb-1.5 text-center font-bold text-green-700 text-lg dark:text-green-400">
+										Change: {formatGYD(changeAmt)}
+									</p>
+									{breakdown.length > 0 && (
+										<div className="flex flex-wrap justify-center gap-1.5">
+											{breakdown.map(({ denom, count }) => (
+												<span
+													key={denom}
+													className="rounded-md bg-green-100 px-2 py-1 font-medium text-green-800 text-xs dark:bg-green-900/50 dark:text-green-300"
+												>
+													{count > 1 ? `${count}×` : ""}{formatGYD(denom)}
+												</span>
+											))}
+										</div>
+									)}
+								</div>
+							)}
+
+							<div className="flex gap-2">
+								<Button
+									variant="outline"
+									className="h-12 flex-1 touch-manipulation"
+									onClick={() => setStep("method")}
+								>
+									<ArrowLeft className="mr-1.5 size-4" /> Back
+								</Button>
+								<Button
+									className="h-12 flex-1 touch-manipulation font-bold text-base"
+									onClick={handleCashPayment}
+									disabled={processing || tendered < totalWithTip}
+								>
+									{processing ? "Processing..." : "Complete"}
+								</Button>
+							</div>
 						</div>
-						{Number(cashTendered) >= totalWithTip && (
-							<p className="text-center font-semibold text-green-600 text-xl sm:text-lg dark:text-green-400">
-								Change: {formatGYD(Number(cashTendered) - totalWithTip)}
-							</p>
-						)}
-						<div className="flex gap-2">
-							<Button
-								variant="outline"
-								className="h-12 flex-1 touch-manipulation"
-								onClick={() => setStep("method")}
-							>
-								<ArrowLeft className="mr-1.5 size-4" /> Back
-							</Button>
-							<Button
-								className="h-12 flex-1 touch-manipulation font-bold text-base"
-								onClick={handleCashPayment}
-								disabled={processing || Number(cashTendered) < totalWithTip}
-							>
-								{processing ? "Processing..." : "Complete"}
-							</Button>
-						</div>
-					</div>
-				)}
+					);
+				})()}
 
 				{step === "split_cash" && (
 					<div className="flex flex-col gap-4 py-2">
@@ -602,11 +689,28 @@ export function PaymentDialog({
 						<p className="font-bold text-foreground text-lg">
 							Payment Successful
 						</p>
-						{change > 0 && (
-							<p className="font-bold text-3xl text-green-600 sm:text-2xl dark:text-green-400">
-								Change: {formatGYD(change)}
-							</p>
-						)}
+						{change > 0 && (() => {
+							const breakdown = calcDenominations(change);
+							return (
+								<div className="w-full rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950/30">
+									<p className="mb-3 text-center font-bold text-green-700 text-3xl sm:text-2xl dark:text-green-400">
+										Change: {formatGYD(change)}
+									</p>
+									{breakdown.length > 0 && (
+										<div className="flex flex-wrap justify-center gap-2">
+											{breakdown.map(({ denom, count }) => (
+												<span
+													key={denom}
+													className="rounded-lg bg-green-100 px-3 py-1.5 font-semibold text-green-800 text-base dark:bg-green-900/50 dark:text-green-300"
+												>
+													{count > 1 ? `${count}×` : ""}{formatGYD(denom)}
+												</span>
+											))}
+										</div>
+									)}
+								</div>
+							);
+						})()}
 						<Button
 							className="mt-2 h-14 w-full touch-manipulation text-base sm:h-12"
 							onClick={() => {

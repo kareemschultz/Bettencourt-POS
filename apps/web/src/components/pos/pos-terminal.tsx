@@ -431,11 +431,9 @@ export function POSTerminal({
 
 	const cartItemCount = cart.reduce((s, i) => s + i.quantity, 0);
 	const cartTotal = cart.reduce((sum, item) => sum + item.line_total, 0);
-	const cartTax = cart.reduce(
-		(sum, item) => sum + item.line_total * item.product.tax_rate,
-		0,
-	);
-	const grandTotal = cartTotal + cartTax - discount;
+	// VAT-inclusive pricing: product prices already include tax — no tax added on top
+	const cartTax = 0;
+	const grandTotal = cartTotal - discount;
 
 	async function handlePaymentComplete(
 		payments: {
@@ -451,7 +449,7 @@ export function POSTerminal({
 			department: item.product.department_name || null,
 			quantity: item.quantity,
 			unitPrice: item.product.price,
-			taxRate: item.product.tax_rate,
+			taxRate: 0, // VAT-inclusive: price already contains tax
 			isCombo: item.product.is_combo || false,
 			comboComponents: (item.product.combo_components || []).map((cc) => ({
 				componentName: cc.component_name,
