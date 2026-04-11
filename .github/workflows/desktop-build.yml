@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - master
+    paths:
+      - 'apps/desktop/**'
+      - 'apps/web/src/**'
+      - 'packages/**'
+      - '.github/workflows/desktop-build.yml'
   workflow_dispatch:
     inputs:
       version:

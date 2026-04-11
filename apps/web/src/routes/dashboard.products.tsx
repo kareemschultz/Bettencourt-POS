@@ -1,3 +1,4 @@
+import { env } from "@Bettencourt-POS/env/web";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Edit2, Plus, Search, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -62,7 +63,9 @@ const emptyProduct = {
 export default function ProductsPage() {
 	const [search, setSearch] = useState("");
 	const [deptFilter, setDeptFilter] = useState("all");
-	const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+	const [statusFilter, setStatusFilter] = useState<
+		"all" | "active" | "inactive"
+	>("all");
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [form, setForm] = useState(emptyProduct);
@@ -79,7 +82,9 @@ export default function ProductsPage() {
 	const { data: userProfile } = useQuery(
 		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
 	);
-	const { requestOverride, SupervisorDialog } = useSupervisorOverride(userProfile?.permissions);
+	const { requestOverride, SupervisorDialog } = useSupervisorOverride(
+		userProfile?.permissions,
+	);
 	const orgId = userProfile?.organizationId;
 
 	const { data: products = [] } = useQuery(
@@ -97,7 +102,9 @@ export default function ProductsPage() {
 		orpc.products.create.mutationOptions({
 			onSuccess: () => {
 				queryClient.invalidateQueries({
-					queryKey: orpc.products.list.queryOptions({ input: { includeInactive: true } }).queryKey,
+					queryKey: orpc.products.list.queryOptions({
+						input: { includeInactive: true },
+					}).queryKey,
 				});
 				setDialogOpen(false);
 			},
@@ -109,7 +116,9 @@ export default function ProductsPage() {
 		orpc.products.update.mutationOptions({
 			onSuccess: () => {
 				queryClient.invalidateQueries({
-					queryKey: orpc.products.list.queryOptions({ input: { includeInactive: true } }).queryKey,
+					queryKey: orpc.products.list.queryOptions({
+						input: { includeInactive: true },
+					}).queryKey,
 				});
 				setDialogOpen(false);
 			},
@@ -121,7 +130,9 @@ export default function ProductsPage() {
 		orpc.products.delete.mutationOptions({
 			onSuccess: () => {
 				queryClient.invalidateQueries({
-					queryKey: orpc.products.list.queryOptions({ input: { includeInactive: true } }).queryKey,
+					queryKey: orpc.products.list.queryOptions({
+						input: { includeInactive: true },
+					}).queryKey,
 				});
 				setDeleteTarget(null);
 			},
@@ -270,7 +281,10 @@ export default function ProductsPage() {
 						))}
 					</SelectContent>
 				</Select>
-				<Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+				<Select
+					value={statusFilter}
+					onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
+				>
 					<SelectTrigger className="w-36">
 						<SelectValue />
 					</SelectTrigger>
@@ -614,8 +628,14 @@ function ProductDetailsForm({
 								const fd = new FormData();
 								fd.append("file", file);
 								try {
-									const res = await fetch("/api/uploads/product", { method: "POST", body: fd });
-									const data = await res.json() as { url?: string; error?: string };
+									const res = await fetch(
+										`${env.VITE_SERVER_URL}/api/uploads/product`,
+										{ method: "POST", body: fd },
+									);
+									const data = (await res.json()) as {
+										url?: string;
+										error?: string;
+									};
 									if (data.url) setForm({ ...form, imageUrl: data.url });
 								} catch {
 									// Upload failed silently

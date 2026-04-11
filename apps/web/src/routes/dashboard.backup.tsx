@@ -1,3 +1,4 @@
+import { env } from "@Bettencourt-POS/env/web";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	AlertTriangle,
@@ -8,6 +9,7 @@ import {
 	Upload,
 } from "lucide-react";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -38,7 +40,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { toast } from "sonner";
 
 type BackupFile = {
 	filename: string;
@@ -75,8 +76,15 @@ async function apiPost(path: string): Promise<{
 	filename?: string;
 	error?: string;
 }> {
-	const res = await fetch(path, { method: "POST", credentials: "include" });
-	return res.json() as Promise<{ success?: boolean; filename?: string; error?: string }>;
+	const res = await fetch(`${env.VITE_SERVER_URL}${path}`, {
+		method: "POST",
+		credentials: "include",
+	});
+	return res.json() as Promise<{
+		success?: boolean;
+		filename?: string;
+		error?: string;
+	}>;
 }
 
 export default function BackupPage() {
@@ -90,7 +98,9 @@ export default function BackupPage() {
 	const { data, isLoading } = useQuery<{ backups: BackupFile[] }>({
 		queryKey: ["backups"],
 		queryFn: async () => {
-			const res = await fetch("/api/backups", { credentials: "include" });
+			const res = await fetch(`${env.VITE_SERVER_URL}/api/backups`, {
+				credentials: "include",
+			});
 			return res.json() as Promise<{ backups: BackupFile[] }>;
 		},
 		refetchInterval: 30_000,
@@ -126,12 +136,15 @@ export default function BackupPage() {
 	const restoreFromListMutation = useMutation({
 		mutationFn: async (filename: string) => {
 			const formData = new FormData();
-			const res = await fetch(`/api/backups/download/${filename}`, {
-				credentials: "include",
-			});
+			const res = await fetch(
+				`${env.VITE_SERVER_URL}/api/backups/download/${filename}`,
+				{
+					credentials: "include",
+				},
+			);
 			const blob = await res.blob();
 			formData.append("file", blob, filename);
-			const r = await fetch("/api/backups/restore", {
+			const r = await fetch(`${env.VITE_SERVER_URL}/api/backups/restore`, {
 				method: "POST",
 				body: formData,
 				credentials: "include",
@@ -152,7 +165,7 @@ export default function BackupPage() {
 		mutationFn: async (file: File) => {
 			const formData = new FormData();
 			formData.append("file", file, file.name);
-			const r = await fetch("/api/backups/restore", {
+			const r = await fetch(`${env.VITE_SERVER_URL}/api/backups/restore`, {
 				method: "POST",
 				body: formData,
 				credentials: "include",
@@ -163,7 +176,9 @@ export default function BackupPage() {
 			if (res.error) {
 				toast.error("Restore failed: " + res.error);
 			} else {
-				toast.success("Restore complete — data restored from file. Please refresh.");
+				toast.success(
+					"Restore complete — data restored from file. Please refresh.",
+				);
 				queryClient.invalidateQueries({ queryKey: ["backups"] });
 				setUploadFile(null);
 				if (fileInputRef.current) fileInputRef.current.value = "";
@@ -176,7 +191,8 @@ export default function BackupPage() {
 			<div>
 				<h1 className="font-bold text-2xl tracking-tight">Backup & Restore</h1>
 				<p className="text-muted-foreground text-sm">
-					Manage database backups. Backups run automatically every night at midnight.
+					Manage database backups. Backups run automatically every night at
+					midnight.
 				</p>
 			</div>
 
@@ -187,7 +203,9 @@ export default function BackupPage() {
 				</CardHeader>
 				<CardContent className="flex flex-wrap items-center justify-between gap-4">
 					<div className="flex items-center gap-3">
-						<span className={`inline-block h-3 w-3 rounded-full ${healthDot}`} />
+						<span
+							className={`inline-block h-3 w-3 rounded-full ${healthDot}`}
+						/>
 						<div>
 							<p className="font-medium text-sm">
 								{latest
@@ -218,8 +236,8 @@ export default function BackupPage() {
 				<CardHeader>
 					<CardTitle className="text-base">Backup History</CardTitle>
 					<CardDescription>
-						Up to 7 regular backups are kept. Pre-restore snapshots are kept until manually
-						removed.
+						Up to 7 regular backups are kept. Pre-restore snapshots are kept
+						until manually removed.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
@@ -258,15 +276,22 @@ export default function BackupPage() {
 												"",
 											)}
 										</TableCell>
-										<TableCell className="text-sm">{formatDate(b.createdAt)}</TableCell>
-										<TableCell className="text-sm">{formatBytes(b.sizeBytes)}</TableCell>
+										<TableCell className="text-sm">
+											{formatDate(b.createdAt)}
+										</TableCell>
+										<TableCell className="text-sm">
+											{formatBytes(b.sizeBytes)}
+										</TableCell>
 										<TableCell className="text-muted-foreground text-xs">
 											{rowSummary(b.rowCounts)}
 										</TableCell>
 										<TableCell className="text-right">
 											<div className="flex justify-end gap-2">
 												<Button variant="ghost" size="sm" asChild>
-													<a href={`/api/backups/download/${b.filename}`} download>
+													<a
+														href={`/api/backups/download/${b.filename}`}
+														download
+													>
 														<Download className="mr-1 size-3.5" />
 														Download
 													</a>
@@ -296,22 +321,24 @@ export default function BackupPage() {
 													</AlertDialogTrigger>
 													<AlertDialogContent>
 														<AlertDialogHeader>
-															<AlertDialogTitle>Restore this backup?</AlertDialogTitle>
+															<AlertDialogTitle>
+																Restore this backup?
+															</AlertDialogTitle>
 															<AlertDialogDescription asChild>
 																<div className="space-y-2">
 																	<p>
 																		This will{" "}
-																		<strong>replace all current data</strong> with the
-																		backup from{" "}
+																		<strong>replace all current data</strong>{" "}
+																		with the backup from{" "}
 																		{b ? formatDate(b.createdAt) : ""}.
 																	</p>
 																	<p className="text-muted-foreground text-xs">
-																		Contents:{" "}
-																		{b ? rowSummary(b.rowCounts) : ""}
+																		Contents: {b ? rowSummary(b.rowCounts) : ""}
 																	</p>
 																	<p className="font-medium text-amber-600 text-sm">
-																		A pre-restore snapshot of your current data will
-																		be saved automatically before the restore begins.
+																		A pre-restore snapshot of your current data
+																		will be saved automatically before the
+																		restore begins.
 																	</p>
 																</div>
 															</AlertDialogDescription>
@@ -357,8 +384,9 @@ export default function BackupPage() {
 						<div className="flex gap-2">
 							<AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
 							<p className="text-amber-800 text-sm dark:text-amber-200">
-								Restoring will overwrite all current data. A pre-restore snapshot is created
-								automatically, but ensure you have a recent backup before proceeding.
+								Restoring will overwrite all current data. A pre-restore
+								snapshot is created automatically, but ensure you have a recent
+								backup before proceeding.
 							</p>
 						</div>
 					</div>
@@ -370,7 +398,10 @@ export default function BackupPage() {
 							className="max-w-sm"
 							onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
 						/>
-						<AlertDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+						<AlertDialog
+							open={uploadDialogOpen}
+							onOpenChange={setUploadDialogOpen}
+						>
 							<AlertDialogTrigger asChild>
 								<Button
 									disabled={!uploadFile || restoreFromFileMutation.isPending}
@@ -386,11 +417,13 @@ export default function BackupPage() {
 							</AlertDialogTrigger>
 							<AlertDialogContent>
 								<AlertDialogHeader>
-									<AlertDialogTitle>Restore from uploaded file?</AlertDialogTitle>
+									<AlertDialogTitle>
+										Restore from uploaded file?
+									</AlertDialogTitle>
 									<AlertDialogDescription>
-										This will <strong>replace all current data</strong> with the contents
-										of <code>{uploadFile?.name}</code>. A pre-restore snapshot will be
-										saved first.
+										This will <strong>replace all current data</strong> with the
+										contents of <code>{uploadFile?.name}</code>. A pre-restore
+										snapshot will be saved first.
 									</AlertDialogDescription>
 								</AlertDialogHeader>
 								<AlertDialogFooter>
@@ -398,7 +431,8 @@ export default function BackupPage() {
 									<AlertDialogAction
 										className="bg-destructive hover:bg-destructive/90"
 										onClick={() => {
-											if (uploadFile) restoreFromFileMutation.mutate(uploadFile);
+											if (uploadFile)
+												restoreFromFileMutation.mutate(uploadFile);
 											setUploadDialogOpen(false);
 										}}
 									>

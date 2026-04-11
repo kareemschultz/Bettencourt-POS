@@ -18,11 +18,14 @@ declare global {
 	interface Navigator {
 		usb: {
 			getDevices(): Promise<USBDevice[]>;
-			requestDevice(options: { filters: { classCode?: number }[] }): Promise<USBDevice>;
+			requestDevice(options: {
+				filters: { classCode?: number }[];
+			}): Promise<USBDevice>;
 		};
 	}
 }
 
+import { env } from "@Bettencourt-POS/env/web";
 import { buildEscPosPayload } from "./esc-pos";
 
 export type PrintRequest = {
@@ -107,7 +110,7 @@ async function printViaNetwork(
 	address: string,
 	data: Uint8Array,
 ): Promise<void> {
-	const response = await fetch("/api/print/network", {
+	const response = await fetch(`${env.VITE_SERVER_URL}/api/print/network`, {
 		method: "POST",
 		headers: { "Content-Type": "application/octet-stream" },
 		body: JSON.stringify({

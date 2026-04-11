@@ -378,15 +378,18 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
 		setError("");
 		try {
 			// Better Auth's forget-password endpoint sends the reset email
-			const res = await fetch("/api/auth/forget-password", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				credentials: "include",
-				body: JSON.stringify({
-					email,
-					redirectTo: `${window.location.origin}/reset-password`,
-				}),
-			});
+			const res = await fetch(
+				`${env.VITE_SERVER_URL}/api/auth/forget-password`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					credentials: "include",
+					body: JSON.stringify({
+						email,
+						redirectTo: `${window.location.origin}/reset-password`,
+					}),
+				},
+			);
 			if (!res.ok) {
 				const data = await res.json().catch(() => ({}));
 				setError(
