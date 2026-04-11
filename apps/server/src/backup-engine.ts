@@ -1,7 +1,6 @@
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { env } from "@Bettencourt-POS/env/server";
-import { sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import {
 	mkdir,
@@ -14,6 +13,7 @@ import {
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { gunzip, gzip } from "node:zlib";
+import { sql } from "drizzle-orm";
 import cron from "node-cron";
 import {
 	sendBackupFailureAlert,
@@ -260,6 +260,27 @@ export async function restoreBackup(filePath: string): Promise<void> {
 }
 
 export function startBackupScheduler(): void {
+	// On startup: create an initial backup if none exists yet (covers first-run and
+	// the case where the scheduled job never ran due to a permissions issue).
+	mkdir(BACKUP_DIR, { recursive: true })
+		.then(() => readdir(BACKUP_DIR))
+		.then(async (files) => {
+			const hasBackup = files.some(
+				(f) =>
+					f.startsWith("bettencourt-pos-backup-") && f.endsWith(".json.gz"),
+			);
+			if (!hasBackup) {
+				console.log("[backup] No backups found — creating initial backup...");
+				try {
+					const filename = await createBackup("scheduled");
+					console.log(`[backup] Initial backup created: ${filename}`);
+				} catch (err) {
+					console.error("[backup] Initial backup failed:", err);
+				}
+			}
+		})
+		.catch((err) => console.error("[backup] Startup check failed:", err));
+
 	// Run at 04:00 UTC = midnight Guyana time (UTC-4)
 	cron.schedule(
 		"0 4 * * *",
@@ -348,14 +369,14 @@ export function startBackupScheduler(): void {
 						db.execute(sql`
               SELECT COALESCE(SUM(amount),0)::text as total
               FROM expense
-              WHERE DATE(created_at AT TIME ZONE 'America/Guyana') = ${today}`),
+              WHERE expense_date = ${today}`),
 						db.execute(sql`
               SELECT COUNT(*)::int as cnt, COALESCE(SUM(total - amount_paid),0)::text as outstanding
               FROM invoice
               WHERE status IN ('sent','partial')`),
 						db.execute(sql`
               SELECT COUNT(*)::int as cnt FROM stock_alert
-              WHERE acknowledged = false AND alert_type IN ('low_stock','out_of_stock')`),
+              WHERE acknowledged_by IS NULL AND type IN ('low_stock','out_of_stock')`),
 						db.execute(sql`
               SELECT oli.product_name_snapshot as name, SUM(oli.quantity)::int as qty
               FROM order_line_item oli

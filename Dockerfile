@@ -72,6 +72,10 @@ RUN cd apps/fumadocs && bun run build
 WORKDIR /app/apps/server
 RUN bun build --compile --minify ./src/index.ts --outfile /app/server-bin
 
+# Pre-create writable directories so volume mounts inherit nonroot ownership.
+# Docker copies image dir content (including permissions) into a new empty volume on first use.
+RUN mkdir -p /app/backups /app/uploads && chown -R 65532:65532 /app/backups /app/uploads
+
 
 # Stage 2: Minimal distroless runtime
 # gcr.io/distroless/cc-debian12 provides glibc + libstdc++ in ~30MB.
@@ -83,6 +87,11 @@ WORKDIR /app
 
 # The compiled server binary (includes Bun runtime + all JS code)
 COPY --from=builder --chown=nonroot:nonroot /app/server-bin ./server
+
+# Pre-create volume mount targets with correct ownership so Docker inherits
+# nonroot:nonroot permissions when initialising a new named volume.
+COPY --from=builder --chown=nonroot:nonroot /app/backups/ ./backups/
+COPY --from=builder --chown=nonroot:nonroot /app/uploads/ ./uploads/
 
 # SPA static assets served by Hono's serveStatic({ root: "./public" })
 COPY --from=builder --chown=nonroot:nonroot /app/apps/web/build/client/ ./public/
