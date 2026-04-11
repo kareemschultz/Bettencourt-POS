@@ -1,3 +1,4 @@
+import { env } from "@Bettencourt-POS/env/web";
 import { Delete, KeyRound, Mail } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
@@ -108,7 +109,7 @@ function PinLogin({ onSwitchToEmail }: { onSwitchToEmail: () => void }) {
 		setLoading(true);
 		setError("");
 		try {
-			const res = await fetch("/api/auth/pin-login", {
+			const res = await fetch(`${env.VITE_SERVER_URL}/api/auth/pin-login`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
@@ -128,9 +129,12 @@ function PinLogin({ onSwitchToEmail }: { onSwitchToEmail: () => void }) {
 			// Poll to confirm session
 			for (let i = 0; i < 10; i++) {
 				await new Promise((r) => setTimeout(r, 300));
-				const check = await fetch("/api/auth/get-session", {
-					credentials: "include",
-				});
+				const check = await fetch(
+					`${env.VITE_SERVER_URL}/api/auth/get-session`,
+					{
+						credentials: "include",
+					},
+				);
 				if (check.ok) {
 					const data = await check.json();
 					if (data?.session) {
@@ -385,7 +389,10 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
 			});
 			if (!res.ok) {
 				const data = await res.json().catch(() => ({}));
-				setError((data as { message?: string }).message || "Failed to send reset email");
+				setError(
+					(data as { message?: string }).message ||
+						"Failed to send reset email",
+				);
 				setLoading(false);
 			} else {
 				setSent(true);
@@ -401,15 +408,17 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
 		return (
 			<div className="flex flex-col gap-5">
 				<div>
-					<h2 className="font-bold text-2xl text-foreground tracking-tight">Check Your Email</h2>
+					<h2 className="font-bold text-2xl text-foreground tracking-tight">
+						Check Your Email
+					</h2>
 					<p className="mt-2 text-muted-foreground text-sm">
-						If an account exists for <strong>{email}</strong>, a password reset link
-						has been sent. Check your inbox and follow the instructions.
+						If an account exists for <strong>{email}</strong>, a password reset
+						link has been sent. Check your inbox and follow the instructions.
 					</p>
 				</div>
 				<p className="text-muted-foreground text-xs">
-					The link expires in 1 hour. If you do not receive the email, check your spam folder
-					or contact your administrator.
+					The link expires in 1 hour. If you do not receive the email, check
+					your spam folder or contact your administrator.
 				</p>
 				<button
 					type="button"
@@ -425,7 +434,9 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
 	return (
 		<div className="flex flex-col gap-5">
 			<div>
-				<h2 className="font-bold text-2xl text-foreground tracking-tight">Reset Password</h2>
+				<h2 className="font-bold text-2xl text-foreground tracking-tight">
+					Reset Password
+				</h2>
 				<p className="mt-1 text-muted-foreground text-sm">
 					Enter your email address and we will send you a reset link.
 				</p>
@@ -445,11 +456,18 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
 					/>
 				</div>
 				{error && (
-					<p className="rounded-md bg-destructive/10 px-3 py-2 text-destructive text-sm" role="alert">
+					<p
+						className="rounded-md bg-destructive/10 px-3 py-2 text-destructive text-sm"
+						role="alert"
+					>
 						{error}
 					</p>
 				)}
-				<Button type="submit" className="h-12 w-full font-semibold" disabled={loading || !email}>
+				<Button
+					type="submit"
+					className="h-12 w-full font-semibold"
+					disabled={loading || !email}
+				>
 					{loading ? "Sending..." : "Send Reset Link"}
 				</Button>
 			</form>
