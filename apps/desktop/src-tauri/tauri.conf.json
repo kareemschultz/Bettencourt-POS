@@ -1,6 +1,6 @@
 {
   "productName": "Bettencourt's POS",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "identifier": "com.bettencourt.pos",
   "build": {
     "frontendDist": "../../web/build/client",
