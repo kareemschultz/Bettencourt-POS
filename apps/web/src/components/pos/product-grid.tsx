@@ -10,6 +10,7 @@ interface ProductGridProps {
 	onProductLongPress?: (product: Product) => void;
 	cart: CartItem[];
 	eightySixedIds?: Set<string>;
+	emptyMessage?: string;
 }
 
 const deptColors: Record<string, string> = {
@@ -48,6 +49,7 @@ export function ProductGrid({
 	onProductLongPress,
 	cart,
 	eightySixedIds,
+	emptyMessage = "No products found for this register/department.",
 }: ProductGridProps) {
 	if (isLoading) {
 		return (
@@ -60,7 +62,7 @@ export function ProductGrid({
 	if (products.length === 0) {
 		return (
 			<div className="flex h-64 items-center justify-center text-muted-foreground">
-				No products found for this register/department.
+				{emptyMessage}
 			</div>
 		);
 	}

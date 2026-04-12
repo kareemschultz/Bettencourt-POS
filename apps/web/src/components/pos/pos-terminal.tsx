@@ -7,6 +7,7 @@ import {
 	Keyboard,
 	Lock,
 	ReceiptText,
+	Search,
 	ShoppingBag,
 	ShoppingCart,
 	Star,
@@ -116,6 +117,7 @@ export function POSTerminal({
 	const [sellGiftCardOpen, setSellGiftCardOpen] = useState(false);
 	const [departmentOverrideActive, setDepartmentOverrideActive] =
 		useState(false);
+	const [productSearch, setProductSearch] = useState("");
 	const [lastOrderMeta, setLastOrderMeta] = useState<{
 		placedAt: Date;
 		mode: string;
@@ -292,6 +294,12 @@ export function POSTerminal({
 			allocated_price: Number(cc.allocatedPrice),
 		})),
 	}));
+
+	// Client-side search filter applied on top of the department/register filter
+	const searchTerm = productSearch.trim().toLowerCase();
+	const filteredProducts = searchTerm
+		? products.filter((p) => p.name.toLowerCase().includes(searchTerm))
+		: products;
 
 	// Checkout mutation via oRPC
 	const checkoutMutation = useMutation(
@@ -585,6 +593,11 @@ export function POSTerminal({
 		const interval = setInterval(checkTime, 60_000);
 		return () => clearInterval(interval);
 	}, []);
+
+	// Clear product search whenever department or register changes
+	useEffect(() => {
+		setProductSearch("");
+	}, [selectedDepartment, selectedRegister]);
 
 	// Barcode scanner: lookup via API and add to cart
 	const lookupBarcode = useMutation(
@@ -1136,16 +1149,50 @@ export function POSTerminal({
 				</div>
 			)}
 
+			{/* Product search bar */}
+			<div className="flex items-center gap-2 border-border border-b bg-background px-3 py-1.5">
+				<div className="relative max-w-xs flex-1 sm:max-w-sm">
+					<Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						type="search"
+						placeholder="Search products…"
+						value={productSearch}
+						onChange={(e) => setProductSearch(e.target.value)}
+						className="h-8 pl-8 pr-7 text-sm"
+					/>
+					{productSearch && (
+						<button
+							type="button"
+							aria-label="Clear search"
+							onClick={() => setProductSearch("")}
+							className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+						>
+							<XIcon className="size-3.5" />
+						</button>
+					)}
+				</div>
+				{searchTerm && (
+					<span className="text-muted-foreground text-xs">
+						{filteredProducts.length} result{filteredProducts.length !== 1 ? "s" : ""}
+					</span>
+				)}
+			</div>
+
 			{/* Main area: product grid + cart */}
 			<div className="flex flex-1 overflow-hidden">
 				<div className="flex-1 overflow-y-auto p-2 sm:p-3">
 					<ProductGrid
-						products={products}
+						products={filteredProducts}
 						isLoading={isLoading}
 						onProductTap={handleProductTap}
 						onProductLongPress={handleProductLongPress}
 						cart={cart}
 						eightySixedIds={eightySixedIds}
+						emptyMessage={
+							searchTerm
+								? `No products match "${productSearch.trim()}".`
+								: "No products found for this register/department."
+						}
 					/>
 				</div>
 				<div className="hidden h-full w-72 shrink-0 border-border border-l md:block lg:w-80 xl:w-96">
