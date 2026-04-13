@@ -53,7 +53,11 @@ interface AppSidebarProps {
 	organizationSubtitle?: string;
 }
 
-export function AppSidebar({ user, organizationName = "Bettencourt's", organizationSubtitle = "Food Inc." }: AppSidebarProps) {
+export function AppSidebar({
+	user,
+	organizationName = "Bettencourt's",
+	organizationSubtitle = "Food Inc.",
+}: AppSidebarProps) {
 	const location = useLocation();
 	const pathname = location.pathname;
 	const navigate = useNavigate();
@@ -80,7 +84,7 @@ export function AppSidebar({ user, organizationName = "Bettencourt's", organizat
 
 	async function handleSignOut() {
 		await signOut();
-		navigate("/login");
+		window.location.href = "/login";
 	}
 
 	function renderNavGroup(label: string, items: NavItem[]) {

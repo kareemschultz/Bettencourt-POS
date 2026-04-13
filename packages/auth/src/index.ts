@@ -15,7 +15,7 @@ export const auth = betterAuth({
 		provider: "pg",
 		schema: schema,
 	}),
-	trustedOrigins: [env.CORS_ORIGIN],
+	trustedOrigins: env.CORS_ORIGIN.split(",").map((o) => o.trim()),
 	emailAndPassword: {
 		enabled: true,
 		minPasswordLength: 8,
