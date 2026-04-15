@@ -32,28 +32,35 @@ export const CATEGORY_COLORS: Record<string, string> = {
 	Other: "#94a3b8",
 };
 
+/** Get a display string for an entry's categories (multi preferred, falls back to legacy). */
+function entryCategoryLabel(e: ExpenseReportEntry): string {
+	const cats = e.categories ?? [];
+	if (cats.length > 0) return cats.map((c) => c.name).join(", ");
+	return e.category ?? "Uncategorized";
+}
+
 function categoryColor(cat: string): string {
 	if (CATEGORY_COLORS[cat]) return CATEGORY_COLORS[cat]!;
 	const palette = Object.values(CATEGORY_COLORS);
 	let hash = 0;
-	for (let i = 0; i < cat.length; i++) hash = (hash * 31 + cat.charCodeAt(i)) >>> 0;
+	for (let i = 0; i < cat.length; i++)
+		hash = (hash * 31 + cat.charCodeAt(i)) >>> 0;
 	return palette[hash % palette.length]!;
 }
 
 function fmtPayment(raw: string | null | undefined): string {
 	if (!raw) return "—";
-	return raw
-		.replace(/_/g, " ")
-		.replace(/\b\w/g, (c) => c.toUpperCase());
+	return raw.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export interface ExpenseReportEntry {
 	id: string;
 	amount: string;
-	category: string;
+	category: string | null; // legacy single-category column (nullable since migration 0020)
+	categories?: Array<{ id: string; name: string }>; // multi-category via junction table
 	description: string;
-	expense_date: string;   // date the expense occurred (YYYY-MM-DD)
-	created_at: string;     // audit: when the entry was recorded
+	expense_date: string; // date the expense occurred (YYYY-MM-DD)
+	created_at: string; // audit: when the entry was recorded
 	supplier_name: string | null;
 	payment_method: string | null;
 	reference_number: string | null;
@@ -98,12 +105,12 @@ async function fetchLogoBase64(): Promise<string> {
 		const resp = await fetch("/logo.png");
 		const buf = await resp.arrayBuffer();
 		const b64 = (() => {
-		const bytes = new Uint8Array(buf);
-		let binary = "";
-		for (let i = 0; i < bytes.length; i += 8192)
-			binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-		return btoa(binary);
-	})();
+			const bytes = new Uint8Array(buf);
+			let binary = "";
+			for (let i = 0; i < bytes.length; i += 8192)
+				binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+			return btoa(binary);
+		})();
 		return `data:image/png;base64,${b64}`;
 	} catch {
 		return "";
@@ -127,9 +134,12 @@ function esc(str: string | null | undefined): string {
 }
 
 // Shared cell/header styles
-const TH = `padding:7px 10px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;color:#475569;text-transform:uppercase;background:#f8fafc;border-bottom:2px solid #e2e8f0`;
-const TH_R = `padding:7px 10px;text-align:right;font-size:9px;font-weight:700;letter-spacing:.08em;color:#475569;text-transform:uppercase;background:#f8fafc;border-bottom:2px solid #e2e8f0`;
-const TD = `padding:8px 10px;border-bottom:1px solid #f1f5f9;font-size:11.5px;vertical-align:top`;
+const TH =
+	"padding:7px 10px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;color:#475569;text-transform:uppercase;background:#f8fafc;border-bottom:2px solid #e2e8f0";
+const TH_R =
+	"padding:7px 10px;text-align:right;font-size:9px;font-weight:700;letter-spacing:.08em;color:#475569;text-transform:uppercase;background:#f8fafc;border-bottom:2px solid #e2e8f0";
+const TD =
+	"padding:8px 10px;border-bottom:1px solid #f1f5f9;font-size:11.5px;vertical-align:top";
 
 // Render description as individual line items (split on newlines)
 function formatDescLines(desc: string): string {
@@ -146,7 +156,7 @@ function formatDescLines(desc: string): string {
 				`<div style="display:flex;gap:6px;align-items:baseline;margin-bottom:3px">` +
 				`<span style="color:#b8862d;font-size:9px;flex-shrink:0;margin-top:1px">▪</span>` +
 				`<span style="font-size:11px;color:#334155">${esc(l)}</span>` +
-				`</div>`,
+				"</div>",
 		)
 		.join("");
 }
@@ -160,7 +170,8 @@ function buildReportHtml(opts: ExpenseReportOptions, logo: string): string {
 	const topCatMap = new Map<string, number>();
 	const topSupMap = new Map<string, number>();
 	for (const e of rows) {
-		topCatMap.set(e.category, (topCatMap.get(e.category) ?? 0) + Number(e.amount));
+		const catLabel = entryCategoryLabel(e);
+		topCatMap.set(catLabel, (topCatMap.get(catLabel) ?? 0) + Number(e.amount));
 		if (e.supplier_name) {
 			topSupMap.set(
 				e.supplier_name,
@@ -217,7 +228,7 @@ function buildReportHtml(opts: ExpenseReportOptions, logo: string): string {
 		for (const grp of groups) {
 			tableBody += `<tr><td colspan="9" style="background:${grp.color}18;border-left:4px solid ${grp.color};padding:7px 12px;font-weight:700;font-size:11px;color:#1e293b;letter-spacing:.02em">${esc(grp.name)} &nbsp;·&nbsp; ${grp.items.length} item${grp.items.length !== 1 ? "s" : ""} &nbsp;·&nbsp; ${fmtGYD(grp.total)}</td></tr>`;
 			for (const e of grp.items) {
-				tableBody += expenseRow(e, false, categoryColor(e.category));
+				tableBody += expenseRow(e, false, categoryColor(entryCategoryLabel(e)));
 			}
 		}
 	} else {
@@ -225,15 +236,13 @@ function buildReportHtml(opts: ExpenseReportOptions, logo: string): string {
 			tableBody += expenseRow(
 				e,
 				showSource,
-				categoryColor(e.category),
+				categoryColor(entryCategoryLabel(e)),
 				getSourceName ? getSourceName(e.funding_source_id) : undefined,
 			);
 		}
 	}
 
-	const sourceHeader = showSource
-		? `<th style="${TH}">Source</th>`
-		: "";
+	const sourceHeader = showSource ? `<th style="${TH}">Source</th>` : "";
 
 	const generatedAt = new Date().toLocaleString("en-GY", {
 		timeZone: "America/Guyana",
@@ -321,17 +330,21 @@ function buildReportHtml(opts: ExpenseReportOptions, logo: string): string {
   </div>
 
   <!-- Category breakdown -->
-  ${catBreakdown.length > 0 ? `
+  ${
+		catBreakdown.length > 0
+			? `
   <div style="padding:20px 32px;border-bottom:2px solid #e2e8f0">
     <div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#94a3b8;margin-bottom:14px">Category Breakdown</div>
     ${catBars}
-  </div>` : ""}
+  </div>`
+			: ""
+	}
 
   <!-- Expense table -->
   <div style="overflow-x:auto">
     <table style="min-width:1050px">
       <colgroup>
-        ${showSource ? '<col class="c-source" />' : ''}
+        ${showSource ? '<col class="c-source" />' : ""}
         <col class="c-date" /><col class="c-supplier" /><col class="c-cat" />
         <col class="c-desc" /><col class="c-pay" /><col class="c-ref" />
         <col class="c-amt" /><col class="c-auth" />
@@ -394,7 +407,9 @@ function expenseRow(
 	sourceName?: string,
 ): string {
 	// Expense date: when the expense actually occurred (user-supplied)
-	const expenseDateFmt = new Date(e.expense_date + "T12:00:00").toLocaleDateString("en-GY", {
+	const expenseDateFmt = new Date(
+		`${e.expense_date}T12:00:00`,
+	).toLocaleDateString("en-GY", {
 		month: "short",
 		day: "numeric",
 		year: "numeric",
@@ -411,7 +426,9 @@ function expenseRow(
 	} as Intl.DateTimeFormatOptions);
 
 	// Show "Entered" line only when entry date differs from expense date
-	const enteredDateGYT = new Date(e.created_at).toLocaleDateString("en-CA", { timeZone: "America/Guyana" });
+	const enteredDateGYT = new Date(e.created_at).toLocaleDateString("en-CA", {
+		timeZone: "America/Guyana",
+	});
 	const isBackdated = e.expense_date !== enteredDateGYT;
 	const enteredLine = isBackdated
 		? `<div style="font-size:9px;color:#94a3b8;margin-top:2px">Entered: ${esc(enteredDateFmt)}</div>`
@@ -432,7 +449,7 @@ function expenseRow(
     <td style="${TD};white-space:nowrap">
       <span style="display:inline-flex;align-items:center;background:${color}18;border:1px solid ${color}44;border-radius:12px;padding:2px 8px 2px 6px;gap:5px">
         <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${color};flex-shrink:0"></span>
-        <span style="font-size:10.5px;font-weight:600;color:${color}">${esc(e.category)}</span>
+        <span style="font-size:10.5px;font-weight:600;color:${color}">${esc(entryCategoryLabel(e))}</span>
       </span>
     </td>
     <td style="${TD};color:#475569">${formatDescLines(e.description)}</td>

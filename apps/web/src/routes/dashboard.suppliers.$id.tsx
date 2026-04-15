@@ -144,10 +144,13 @@ function getPeriodDates(preset: PeriodPreset): {
 
 // ── Expense row type (matches DB result from getExpenses) ─────────────────
 
+type ExpenseCategoryRef = { id: string; name: string };
+
 type ExpenseRow = {
 	id: string;
 	amount: string;
-	category: string;
+	category: string | null; // legacy column, nullable since migration 0020
+	categories: ExpenseCategoryRef[]; // multi-category via junction table
 	description: string;
 	created_at: string;
 	authorized_by_name: string | null;
@@ -170,7 +173,7 @@ const PAYMENT_METHODS = [
 
 const emptyExpenseForm = {
 	amount: "",
-	category: "",
+	selectedCategories: [] as string[], // array of category IDs
 	description: "",
 	paymentMethod: "",
 	referenceNumber: "",
@@ -414,7 +417,9 @@ export default function SupplierDetailPage() {
 						.toLowerCase()
 						.includes(search.toLowerCase());
 				const matchesCategory =
-					categoryFilter === "" || e.category === categoryFilter;
+					categoryFilter === "" ||
+					(e.categories ?? []).some((c) => c.name === categoryFilter) ||
+					e.category === categoryFilter;
 				return matchesSearch && matchesCategory;
 			})
 			.sort((a, b) => {
@@ -433,9 +438,20 @@ export default function SupplierDetailPage() {
 		0,
 	);
 
-	// Unique categories from loaded expenses
+	// Unique categories from loaded expenses (from multi-category array, with legacy fallback)
 	const uniqueCategories = useMemo(
-		() => [...new Set(expenses.map((e) => e.category))].sort(),
+		() =>
+			[
+				...new Set(
+					expenses.flatMap((e) =>
+						(e.categories ?? []).length > 0
+							? (e.categories ?? []).map((c) => c.name)
+							: e.category
+								? [e.category]
+								: [],
+					),
+				),
+			].sort(),
 		[expenses],
 	);
 
@@ -475,7 +491,10 @@ export default function SupplierDetailPage() {
 					timeZone: "America/Guyana",
 				}),
 				Description: e.description,
-				Category: e.category,
+				Category:
+					(e.categories ?? []).length > 0
+						? (e.categories ?? []).map((c) => c.name).join(", ")
+						: (e.category ?? ""),
 				"Payment Method": e.payment_method ?? "",
 				"Reference #": e.reference_number ?? "",
 				"Authorized By": e.authorized_by_name ?? "",
@@ -497,7 +516,10 @@ export default function SupplierDetailPage() {
 			transactions: filteredExpenses.map((e) => ({
 				date: e.created_at,
 				description: e.description,
-				category: e.category,
+				category:
+					(e.categories ?? []).length > 0
+						? (e.categories ?? []).map((c) => c.name).join(", ")
+						: (e.category ?? ""),
 				paymentMethod: e.payment_method ?? "—",
 				referenceNumber: e.reference_number ?? null,
 				authorizedBy: e.authorized_by_name ?? null,
@@ -518,15 +540,17 @@ export default function SupplierDetailPage() {
 		}
 		if (
 			!expenseForm.amount ||
-			!expenseForm.category ||
+			expenseForm.selectedCategories.length === 0 ||
 			!expenseForm.description
 		) {
-			toast.error("Amount, category, and description are required");
+			toast.error(
+				"Amount, at least one category, and description are required",
+			);
 			return;
 		}
 		createExpense.mutate({
 			amount: expenseForm.amount,
-			category: expenseForm.category,
+			categories: expenseForm.selectedCategories,
 			description: expenseForm.description,
 			supplierId,
 			paymentMethod: expenseForm.paymentMethod || null,
@@ -1235,24 +1259,45 @@ export default function SupplierDetailPage() {
 							/>
 						</div>
 						<div className="flex flex-col gap-1.5">
-							<Label>Category</Label>
-							<Select
-								value={expenseForm.category}
-								onValueChange={(v) =>
-									setExpenseForm((f) => ({ ...f, category: v }))
-								}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Select category" />
-								</SelectTrigger>
-								<SelectContent>
-									{categories.map((c) => (
-										<SelectItem key={c.id} value={c.name}>
+							<Label>
+								Category
+								{expenseForm.selectedCategories.length === 0 && (
+									<span className="ml-1 text-destructive text-xs">*</span>
+								)}
+							</Label>
+							<div className="flex flex-wrap gap-1.5">
+								{categories.map((c) => {
+									const isSelected = expenseForm.selectedCategories.includes(
+										c.id,
+									);
+									return (
+										<button
+											key={c.id}
+											type="button"
+											onClick={() =>
+												setExpenseForm((f) => ({
+													...f,
+													selectedCategories: isSelected
+														? f.selectedCategories.filter((id) => id !== c.id)
+														: [...f.selectedCategories, c.id],
+												}))
+											}
+											className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+												isSelected
+													? "border-primary bg-primary text-primary-foreground"
+													: "border-border bg-background text-foreground hover:border-primary/50 hover:bg-primary/5"
+											}`}
+										>
 											{c.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+										</button>
+									);
+								})}
+								{categories.length === 0 && (
+									<span className="text-muted-foreground text-xs">
+										No categories yet
+									</span>
+								)}
+							</div>
 						</div>
 						<div className="flex flex-col gap-1.5">
 							<Label>Description</Label>
@@ -1380,7 +1425,11 @@ export default function SupplierDetailPage() {
 												})}
 											</td>
 											<td className="max-w-32 truncate p-2">{e.description}</td>
-											<td className="p-2">{e.category}</td>
+											<td className="p-2">
+												{(e.categories ?? []).length > 0
+													? (e.categories ?? []).map((c) => c.name).join(", ")
+													: (e.category ?? "—")}
+											</td>
 											<td className="p-2 text-right font-medium">
 												{formatGYD(Number(e.amount))}
 											</td>

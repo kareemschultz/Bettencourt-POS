@@ -77,7 +77,11 @@ const getById = permissionProcedure("reports.read")
 			.groupBy(schema.expense.category);
 
 		const actualMap = new Map<string, string>(
-			actualByCategory.map((r) => [r.category, r.actual]),
+			actualByCategory
+				.filter(
+					(r): r is { category: string; actual: string } => r.category !== null,
+				)
+				.map((r) => [r.category, r.actual]),
 		);
 
 		const enrichedCategories = categories.map((cat) => ({
@@ -258,7 +262,11 @@ const getBudgetVsActual = permissionProcedure("reports.read")
 			.groupBy(schema.expense.category);
 
 		const actualMap = new Map<string, string>(
-			actualByCategory.map((r) => [r.category, r.actual]),
+			actualByCategory
+				.filter(
+					(r): r is { category: string; actual: string } => r.category !== null,
+				)
+				.map((r) => [r.category, r.actual]),
 		);
 
 		const result = categories.map((cat) => {

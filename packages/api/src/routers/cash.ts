@@ -2,15 +2,16 @@ import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { ORPCError } from "@orpc/server";
 import {
-  and,
-  asc,
-  desc,
-  eq,
-  gte,
-  isNotNull,
-  isNull,
-  lte,
-  sql,
+	and,
+	asc,
+	desc,
+	eq,
+	gte,
+	inArray,
+	isNotNull,
+	isNull,
+	lte,
+	sql,
 } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
@@ -18,576 +19,576 @@ import { requireOrganizationId } from "../lib/org-context";
 
 // ── getSessions ─────────────────────────────────────────────────────────
 const getSessions = permissionProcedure("shifts.read")
-  .input(
-    z
-      .object({
-        locationId: z.string().uuid().optional(),
-        status: z.string().optional(),
-      })
-      .optional(),
-  )
-  .handler(async ({ input: rawInput, context }) => {
-    const input = rawInput ?? {};
-    const orgId = requireOrganizationId(context);
-    const conditions = [eq(schema.location.organizationId, orgId)];
-    if (input.locationId) {
-      conditions.push(eq(schema.cashSession.locationId, input.locationId));
-    }
-    if (input.status) {
-      conditions.push(eq(schema.cashSession.status, input.status));
-    }
+	.input(
+		z
+			.object({
+				locationId: z.string().uuid().optional(),
+				status: z.string().optional(),
+			})
+			.optional(),
+	)
+	.handler(async ({ input: rawInput, context }) => {
+		const input = rawInput ?? {};
+		const orgId = requireOrganizationId(context);
+		const conditions = [eq(schema.location.organizationId, orgId)];
+		if (input.locationId) {
+			conditions.push(eq(schema.cashSession.locationId, input.locationId));
+		}
+		if (input.status) {
+			conditions.push(eq(schema.cashSession.status, input.status));
+		}
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const sessions = await db
-      .select({
-        id: schema.cashSession.id,
-        registerId: schema.cashSession.registerId,
-        locationId: schema.cashSession.locationId,
-        openedBy: schema.cashSession.openedBy,
-        openedAt: schema.cashSession.openedAt,
-        openingFloat: schema.cashSession.openingFloat,
-        closedBy: schema.cashSession.closedBy,
-        closedAt: schema.cashSession.closedAt,
-        closingCount: schema.cashSession.closingCount,
-        expectedCash: schema.cashSession.expectedCash,
-        variance: schema.cashSession.variance,
-        status: schema.cashSession.status,
-        notes: schema.cashSession.notes,
-        userName: schema.user.name,
-      })
-      .from(schema.cashSession)
-      .innerJoin(
-        schema.location,
-        eq(schema.cashSession.locationId, schema.location.id),
-      )
-      .leftJoin(schema.user, eq(schema.cashSession.openedBy, schema.user.id))
-      .where(whereClause)
-      .orderBy(desc(schema.cashSession.openedAt))
-      .limit(50);
+		const sessions = await db
+			.select({
+				id: schema.cashSession.id,
+				registerId: schema.cashSession.registerId,
+				locationId: schema.cashSession.locationId,
+				openedBy: schema.cashSession.openedBy,
+				openedAt: schema.cashSession.openedAt,
+				openingFloat: schema.cashSession.openingFloat,
+				closedBy: schema.cashSession.closedBy,
+				closedAt: schema.cashSession.closedAt,
+				closingCount: schema.cashSession.closingCount,
+				expectedCash: schema.cashSession.expectedCash,
+				variance: schema.cashSession.variance,
+				status: schema.cashSession.status,
+				notes: schema.cashSession.notes,
+				userName: schema.user.name,
+			})
+			.from(schema.cashSession)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.leftJoin(schema.user, eq(schema.cashSession.openedBy, schema.user.id))
+			.where(whereClause)
+			.orderBy(desc(schema.cashSession.openedAt))
+			.limit(50);
 
-    return sessions;
-  });
+		return sessions;
+	});
 
 // ── openSession ─────────────────────────────────────────────────────────
 const openSession = permissionProcedure("shifts.create")
-  .input(
-    z.object({
-      locationId: z.string().uuid(),
-      registerId: z.string().uuid(),
-      openingFloat: z.string().default("0"),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const userId = context.session.user.id;
-    const locationRows = await db
-      .select({ id: schema.location.id })
-      .from(schema.location)
-      .where(
-        and(
-          eq(schema.location.id, input.locationId),
-          eq(schema.location.organizationId, orgId),
-        ),
-      )
-      .limit(1);
-    if (locationRows.length === 0) {
-      throw new ORPCError("FORBIDDEN", { message: "Invalid location scope" });
-    }
-    // Guard: only one open session allowed per register at a time
-    const existingOpen = await db
-      .select({ id: schema.cashSession.id })
-      .from(schema.cashSession)
-      .where(
-        and(
-          eq(schema.cashSession.registerId, input.registerId),
-          eq(schema.cashSession.status, "open"),
-        ),
-      )
-      .limit(1);
+	.input(
+		z.object({
+			locationId: z.string().uuid(),
+			registerId: z.string().uuid(),
+			openingFloat: z.string().default("0"),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const userId = context.session.user.id;
+		const locationRows = await db
+			.select({ id: schema.location.id })
+			.from(schema.location)
+			.where(
+				and(
+					eq(schema.location.id, input.locationId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (locationRows.length === 0) {
+			throw new ORPCError("FORBIDDEN", { message: "Invalid location scope" });
+		}
+		// Guard: only one open session allowed per register at a time
+		const existingOpen = await db
+			.select({ id: schema.cashSession.id })
+			.from(schema.cashSession)
+			.where(
+				and(
+					eq(schema.cashSession.registerId, input.registerId),
+					eq(schema.cashSession.status, "open"),
+				),
+			)
+			.limit(1);
 
-    if (existingOpen.length > 0) {
-      throw new ORPCError("CONFLICT", {
-        message:
-          "A cash session is already open for this register. Close it before opening a new one.",
-      });
-    }
+		if (existingOpen.length > 0) {
+			throw new ORPCError("CONFLICT", {
+				message:
+					"A cash session is already open for this register. Close it before opening a new one.",
+			});
+		}
 
-    const rows = await db
-      .insert(schema.cashSession)
-      .values({
-        locationId: input.locationId,
-        registerId: input.registerId,
-        openedBy: userId,
-        openingFloat: input.openingFloat,
-        status: "open",
-      })
-      .returning({ id: schema.cashSession.id });
+		const rows = await db
+			.insert(schema.cashSession)
+			.values({
+				locationId: input.locationId,
+				registerId: input.registerId,
+				openedBy: userId,
+				openingFloat: input.openingFloat,
+				status: "open",
+			})
+			.returning({ id: schema.cashSession.id });
 
-    return { id: rows[0]?.id, status: "open" };
-  });
+		return { id: rows[0]?.id, status: "open" };
+	});
 
 // ── closeSession ────────────────────────────────────────────────────────
 const closeSession = permissionProcedure("shifts.update")
-  .input(
-    z.object({
-      sessionId: z.string().uuid(),
-      closingNotes: z.string().nullable().optional(),
-      expectedCash: z.string().default("0"),
-      actualCash: z.string().default("0"),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const userId = context.session.user.id;
-    const existing = await db
-      .select({ id: schema.cashSession.id, status: schema.cashSession.status })
-      .from(schema.cashSession)
-      .innerJoin(
-        schema.location,
-        eq(schema.cashSession.locationId, schema.location.id),
-      )
-      .where(
-        and(
-          eq(schema.cashSession.id, input.sessionId),
-          eq(schema.location.organizationId, orgId),
-        ),
-      )
-      .limit(1);
+	.input(
+		z.object({
+			sessionId: z.string().uuid(),
+			closingNotes: z.string().nullable().optional(),
+			expectedCash: z.string().default("0"),
+			actualCash: z.string().default("0"),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const userId = context.session.user.id;
+		const existing = await db
+			.select({ id: schema.cashSession.id, status: schema.cashSession.status })
+			.from(schema.cashSession)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.where(
+				and(
+					eq(schema.cashSession.id, input.sessionId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
 
-    if (existing.length === 0) {
-      throw new ORPCError("NOT_FOUND", { message: "Cash session not found" });
-    }
-    if (existing[0]?.status !== "open") {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Cash session is not open",
-      });
-    }
+		if (existing.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Cash session not found" });
+		}
+		if (existing[0]?.status !== "open") {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Cash session is not open",
+			});
+		}
 
-    const variance = Number(input.actualCash) - Number(input.expectedCash);
+		const variance = Number(input.actualCash) - Number(input.expectedCash);
 
-    await db
-      .update(schema.cashSession)
-      .set({
-        status: "closed",
-        closedAt: new Date(),
-        closedBy: userId,
-        closingCount: input.actualCash,
-        expectedCash: input.expectedCash,
-        variance: variance.toFixed(2),
-        notes: input.closingNotes ?? null,
-      })
-      .where(eq(schema.cashSession.id, input.sessionId));
+		await db
+			.update(schema.cashSession)
+			.set({
+				status: "closed",
+				closedAt: new Date(),
+				closedBy: userId,
+				closingCount: input.actualCash,
+				expectedCash: input.expectedCash,
+				variance: variance.toFixed(2),
+				notes: input.closingNotes ?? null,
+			})
+			.where(eq(schema.cashSession.id, input.sessionId));
 
-    return { status: "closed", variance };
-  });
+		return { status: "closed", variance };
+	});
 
 // ── createDrop ──────────────────────────────────────────────────────────
 const createDrop = permissionProcedure("shifts.create")
-  .input(
-    z.object({
-      cashSessionId: z.string().uuid(),
-      amount: z.string(),
-      reason: z.string().nullable().optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const userId = context.session.user.id;
-    const sessionRows = await db
-      .select({ id: schema.cashSession.id })
-      .from(schema.cashSession)
-      .innerJoin(
-        schema.location,
-        eq(schema.cashSession.locationId, schema.location.id),
-      )
-      .where(
-        and(
-          eq(schema.cashSession.id, input.cashSessionId),
-          eq(schema.location.organizationId, orgId),
-        ),
-      )
-      .limit(1);
-    if (sessionRows.length === 0) {
-      throw new ORPCError("FORBIDDEN", {
-        message: "Cash session is outside your organization scope",
-      });
-    }
-    const dropRows = await db
-      .insert(schema.cashDrop)
-      .values({
-        cashSessionId: input.cashSessionId,
-        amount: input.amount,
-        userId: userId,
-        reason: input.reason ?? null,
-      })
-      .returning({ id: schema.cashDrop.id });
+	.input(
+		z.object({
+			cashSessionId: z.string().uuid(),
+			amount: z.string(),
+			reason: z.string().nullable().optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const userId = context.session.user.id;
+		const sessionRows = await db
+			.select({ id: schema.cashSession.id })
+			.from(schema.cashSession)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.where(
+				and(
+					eq(schema.cashSession.id, input.cashSessionId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (sessionRows.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Cash session is outside your organization scope",
+			});
+		}
+		const dropRows = await db
+			.insert(schema.cashDrop)
+			.values({
+				cashSessionId: input.cashSessionId,
+				amount: input.amount,
+				userId: userId,
+				reason: input.reason ?? null,
+			})
+			.returning({ id: schema.cashDrop.id });
 
-    return { id: dropRows[0]?.id };
-  });
+		return { id: dropRows[0]?.id };
+	});
 
 // ── createPayout ────────────────────────────────────────────────────────
 const createPayout = permissionProcedure("shifts.create")
-  .input(
-    z.object({
-      cashSessionId: z.string().uuid(),
-      amount: z.string(),
-      reason: z.string(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const userId = context.session.user.id;
-    const sessionRows = await db
-      .select({ id: schema.cashSession.id })
-      .from(schema.cashSession)
-      .innerJoin(
-        schema.location,
-        eq(schema.cashSession.locationId, schema.location.id),
-      )
-      .where(
-        and(
-          eq(schema.cashSession.id, input.cashSessionId),
-          eq(schema.location.organizationId, orgId),
-        ),
-      )
-      .limit(1);
-    if (sessionRows.length === 0) {
-      throw new ORPCError("FORBIDDEN", {
-        message: "Cash session is outside your organization scope",
-      });
-    }
-    const payoutRows = await db
-      .insert(schema.cashPayout)
-      .values({
-        cashSessionId: input.cashSessionId,
-        amount: input.amount,
-        userId: userId,
-        reason: input.reason,
-      })
-      .returning({ id: schema.cashPayout.id });
+	.input(
+		z.object({
+			cashSessionId: z.string().uuid(),
+			amount: z.string(),
+			reason: z.string(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const userId = context.session.user.id;
+		const sessionRows = await db
+			.select({ id: schema.cashSession.id })
+			.from(schema.cashSession)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.where(
+				and(
+					eq(schema.cashSession.id, input.cashSessionId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (sessionRows.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Cash session is outside your organization scope",
+			});
+		}
+		const payoutRows = await db
+			.insert(schema.cashPayout)
+			.values({
+				cashSessionId: input.cashSessionId,
+				amount: input.amount,
+				userId: userId,
+				reason: input.reason,
+			})
+			.returning({ id: schema.cashPayout.id });
 
-    return { id: payoutRows[0]?.id };
-  });
+		return { id: payoutRows[0]?.id };
+	});
 
 // ── 7.1 approveVariance ─────────────────────────────────────────────────
 const approveVariance = permissionProcedure("shifts.update")
-  .input(
-    z.object({
-      sessionId: z.string().uuid(),
-      reason: z.string(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const approvedBy = context.session.user.id;
-    const scopedSession = await db
-      .select({ id: schema.cashSession.id })
-      .from(schema.cashSession)
-      .innerJoin(
-        schema.location,
-        eq(schema.cashSession.locationId, schema.location.id),
-      )
-      .where(
-        and(
-          eq(schema.cashSession.id, input.sessionId),
-          eq(schema.location.organizationId, orgId),
-        ),
-      )
-      .limit(1);
-    if (scopedSession.length === 0) {
-      throw new ORPCError("FORBIDDEN", {
-        message: "Cash session is outside your organization scope",
-      });
-    }
-    await db
-      .update(schema.cashSession)
-      .set({
-        varianceApprovedBy: approvedBy,
-        varianceReason: input.reason,
-        varianceApprovedAt: new Date(),
-      })
-      .where(eq(schema.cashSession.id, input.sessionId));
+	.input(
+		z.object({
+			sessionId: z.string().uuid(),
+			reason: z.string(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const approvedBy = context.session.user.id;
+		const scopedSession = await db
+			.select({ id: schema.cashSession.id })
+			.from(schema.cashSession)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.where(
+				and(
+					eq(schema.cashSession.id, input.sessionId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (scopedSession.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Cash session is outside your organization scope",
+			});
+		}
+		await db
+			.update(schema.cashSession)
+			.set({
+				varianceApprovedBy: approvedBy,
+				varianceReason: input.reason,
+				varianceApprovedAt: new Date(),
+			})
+			.where(eq(schema.cashSession.id, input.sessionId));
 
-    return { status: "approved" };
-  });
+		return { status: "approved" };
+	});
 
 // ── 7.1 getVarianceHistory ──────────────────────────────────────────────
 const getVarianceHistory = permissionProcedure("shifts.read")
-  .input(
-    z
-      .object({
-        startDate: z.string().optional(),
-        endDate: z.string().optional(),
-      })
-      .optional(),
-  )
-  .handler(async ({ input: rawInput, context }) => {
-    const input = rawInput ?? {};
-    const orgId = requireOrganizationId(context);
-    const conditions = [
-      sql`${schema.cashSession.status} = 'closed'`,
-      sql`${schema.cashSession.variance} IS NOT NULL`,
-      sql`${schema.cashSession.variance}::numeric != 0`,
-      eq(schema.location.organizationId, orgId),
-    ];
+	.input(
+		z
+			.object({
+				startDate: z.string().optional(),
+				endDate: z.string().optional(),
+			})
+			.optional(),
+	)
+	.handler(async ({ input: rawInput, context }) => {
+		const input = rawInput ?? {};
+		const orgId = requireOrganizationId(context);
+		const conditions = [
+			sql`${schema.cashSession.status} = 'closed'`,
+			sql`${schema.cashSession.variance} IS NOT NULL`,
+			sql`${schema.cashSession.variance}::numeric != 0`,
+			eq(schema.location.organizationId, orgId),
+		];
 
-    if (input.startDate) {
-      conditions.push(
-        sql`${schema.cashSession.closedAt} >= ${input.startDate}::timestamptz`,
-      );
-    }
-    if (input.endDate) {
-      conditions.push(
-        sql`${schema.cashSession.closedAt} <= ${input.endDate}::timestamptz`,
-      );
-    }
+		if (input.startDate) {
+			conditions.push(
+				sql`${schema.cashSession.closedAt} >= ${input.startDate}::timestamptz`,
+			);
+		}
+		if (input.endDate) {
+			conditions.push(
+				sql`${schema.cashSession.closedAt} <= ${input.endDate}::timestamptz`,
+			);
+		}
 
-    const rows = await db
-      .select({
-        id: schema.cashSession.id,
-        openedBy: schema.cashSession.openedBy,
-        closedAt: schema.cashSession.closedAt,
-        expectedCash: schema.cashSession.expectedCash,
-        closingCount: schema.cashSession.closingCount,
-        variance: schema.cashSession.variance,
-        varianceApprovedBy: schema.cashSession.varianceApprovedBy,
-        varianceReason: schema.cashSession.varianceReason,
-        varianceApprovedAt: schema.cashSession.varianceApprovedAt,
-        userName: schema.user.name,
-      })
-      .from(schema.cashSession)
-      .innerJoin(
-        schema.location,
-        eq(schema.cashSession.locationId, schema.location.id),
-      )
-      .leftJoin(schema.user, eq(schema.cashSession.openedBy, schema.user.id))
-      .where(and(...conditions))
-      .orderBy(desc(schema.cashSession.closedAt))
-      .limit(100);
+		const rows = await db
+			.select({
+				id: schema.cashSession.id,
+				openedBy: schema.cashSession.openedBy,
+				closedAt: schema.cashSession.closedAt,
+				expectedCash: schema.cashSession.expectedCash,
+				closingCount: schema.cashSession.closingCount,
+				variance: schema.cashSession.variance,
+				varianceApprovedBy: schema.cashSession.varianceApprovedBy,
+				varianceReason: schema.cashSession.varianceReason,
+				varianceApprovedAt: schema.cashSession.varianceApprovedAt,
+				userName: schema.user.name,
+			})
+			.from(schema.cashSession)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.leftJoin(schema.user, eq(schema.cashSession.openedBy, schema.user.id))
+			.where(and(...conditions))
+			.orderBy(desc(schema.cashSession.closedAt))
+			.limit(100);
 
-    return rows;
-  });
+		return rows;
+	});
 
 // ── 7.1 getReconciliationRules ──────────────────────────────────────────
 const getReconciliationRules = permissionProcedure("shifts.read")
-  .input(z.object({}).optional())
-  .handler(async ({ context }) => {
-    const orgId = requireOrganizationId(context);
-    const rows = await db
-      .select()
-      .from(schema.cashReconciliationRule)
-      .where(eq(schema.cashReconciliationRule.organizationId, orgId))
-      .limit(1);
+	.input(z.object({}).optional())
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+		const rows = await db
+			.select()
+			.from(schema.cashReconciliationRule)
+			.where(eq(schema.cashReconciliationRule.organizationId, orgId))
+			.limit(1);
 
-    return rows[0] ?? null;
-  });
+		return rows[0] ?? null;
+	});
 
 // ── 7.1 updateReconciliationRules ───────────────────────────────────────
 const updateReconciliationRules = permissionProcedure("shifts.update")
-  .input(
-    z.object({
-      maxVarianceAmount: z.string().optional(),
-      requirePhotoEvidence: z.boolean().optional(),
-      notifyManagers: z.boolean().optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const existing = await db
-      .select()
-      .from(schema.cashReconciliationRule)
-      .where(eq(schema.cashReconciliationRule.organizationId, orgId))
-      .limit(1);
+	.input(
+		z.object({
+			maxVarianceAmount: z.string().optional(),
+			requirePhotoEvidence: z.boolean().optional(),
+			notifyManagers: z.boolean().optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const existing = await db
+			.select()
+			.from(schema.cashReconciliationRule)
+			.where(eq(schema.cashReconciliationRule.organizationId, orgId))
+			.limit(1);
 
-    if (existing.length === 0) {
-      const rows = await db
-        .insert(schema.cashReconciliationRule)
-        .values({
-          organizationId: orgId,
-          maxVarianceAmount: input.maxVarianceAmount ?? "500",
-          requirePhotoEvidence: input.requirePhotoEvidence ?? false,
-          notifyManagers: input.notifyManagers ?? true,
-        })
-        .returning();
-      return rows[0]!;
-    }
+		if (existing.length === 0) {
+			const rows = await db
+				.insert(schema.cashReconciliationRule)
+				.values({
+					organizationId: orgId,
+					maxVarianceAmount: input.maxVarianceAmount ?? "500",
+					requirePhotoEvidence: input.requirePhotoEvidence ?? false,
+					notifyManagers: input.notifyManagers ?? true,
+				})
+				.returning();
+			return rows[0]!;
+		}
 
-    const updateData: Record<string, unknown> = {};
-    if (input.maxVarianceAmount !== undefined)
-      updateData.maxVarianceAmount = input.maxVarianceAmount;
-    if (input.requirePhotoEvidence !== undefined)
-      updateData.requirePhotoEvidence = input.requirePhotoEvidence;
-    if (input.notifyManagers !== undefined)
-      updateData.notifyManagers = input.notifyManagers;
+		const updateData: Record<string, unknown> = {};
+		if (input.maxVarianceAmount !== undefined)
+			updateData.maxVarianceAmount = input.maxVarianceAmount;
+		if (input.requirePhotoEvidence !== undefined)
+			updateData.requirePhotoEvidence = input.requirePhotoEvidence;
+		if (input.notifyManagers !== undefined)
+			updateData.notifyManagers = input.notifyManagers;
 
-    const rows = await db
-      .update(schema.cashReconciliationRule)
-      .set(updateData)
-      .where(eq(schema.cashReconciliationRule.organizationId, orgId))
-      .returning();
+		const rows = await db
+			.update(schema.cashReconciliationRule)
+			.set(updateData)
+			.where(eq(schema.cashReconciliationRule.organizationId, orgId))
+			.returning();
 
-    return rows[0]!;
-  });
+		return rows[0]!;
+	});
 
 // ── 7.3 initiateHandoff ────────────────────────────────────────────────
 const initiateHandoff = permissionProcedure("shifts.create")
-  .input(
-    z.object({
-      cashSessionId: z.string().uuid(),
-      toUserId: z.string(),
-      countedAmount: z.string(),
-      expectedAmount: z.string(),
-      notes: z.string().nullable().optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const fromUserId = context.session.user.id;
-    if (input.toUserId === fromUserId) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Cannot hand off a session to yourself",
-      });
-    }
+	.input(
+		z.object({
+			cashSessionId: z.string().uuid(),
+			toUserId: z.string(),
+			countedAmount: z.string(),
+			expectedAmount: z.string(),
+			notes: z.string().nullable().optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const fromUserId = context.session.user.id;
+		if (input.toUserId === fromUserId) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Cannot hand off a session to yourself",
+			});
+		}
 
-    // Ensure the receiving user belongs to the same organization
-    const recipientMember = await db
-      .select({ userId: schema.member.userId })
-      .from(schema.member)
-      .where(
-        and(
-          eq(schema.member.organizationId, orgId),
-          eq(schema.member.userId, input.toUserId),
-        ),
-      )
-      .limit(1);
-    if (recipientMember.length === 0) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Selected handoff recipient is not in your organization",
-      });
-    }
+		// Ensure the receiving user belongs to the same organization
+		const recipientMember = await db
+			.select({ userId: schema.member.userId })
+			.from(schema.member)
+			.where(
+				and(
+					eq(schema.member.organizationId, orgId),
+					eq(schema.member.userId, input.toUserId),
+				),
+			)
+			.limit(1);
+		if (recipientMember.length === 0) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Selected handoff recipient is not in your organization",
+			});
+		}
 
-    const variance = Number(input.countedAmount) - Number(input.expectedAmount);
-    const scopedSession = await db
-      .select({ id: schema.cashSession.id })
-      .from(schema.cashSession)
-      .innerJoin(
-        schema.location,
-        eq(schema.cashSession.locationId, schema.location.id),
-      )
-      .where(
-        and(
-          eq(schema.cashSession.id, input.cashSessionId),
-          eq(schema.location.organizationId, orgId),
-        ),
-      )
-      .limit(1);
-    if (scopedSession.length === 0) {
-      throw new ORPCError("FORBIDDEN", {
-        message: "Cash session is outside your organization scope",
-      });
-    }
+		const variance = Number(input.countedAmount) - Number(input.expectedAmount);
+		const scopedSession = await db
+			.select({ id: schema.cashSession.id })
+			.from(schema.cashSession)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.where(
+				and(
+					eq(schema.cashSession.id, input.cashSessionId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (scopedSession.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Cash session is outside your organization scope",
+			});
+		}
 
-    const rows = await db
-      .insert(schema.shiftHandoff)
-      .values({
-        cashSessionId: input.cashSessionId,
-        fromUserId: fromUserId,
-        toUserId: input.toUserId,
-        countedAmount: input.countedAmount,
-        expectedAmount: input.expectedAmount,
-        variance: variance.toFixed(2),
-        status: "pending",
-        notes: input.notes ?? null,
-      })
-      .returning({ id: schema.shiftHandoff.id });
+		const rows = await db
+			.insert(schema.shiftHandoff)
+			.values({
+				cashSessionId: input.cashSessionId,
+				fromUserId: fromUserId,
+				toUserId: input.toUserId,
+				countedAmount: input.countedAmount,
+				expectedAmount: input.expectedAmount,
+				variance: variance.toFixed(2),
+				status: "pending",
+				notes: input.notes ?? null,
+			})
+			.returning({ id: schema.shiftHandoff.id });
 
-    return { id: rows[0]?.id, status: "pending", variance };
-  });
+		return { id: rows[0]?.id, status: "pending", variance };
+	});
 
 // ── 7.3 acceptHandoff ──────────────────────────────────────────────────
 const acceptHandoff = permissionProcedure("shifts.update")
-  .input(
-    z.object({
-      handoffId: z.string().uuid(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const actorId = context.session.user.id;
-    const scoped = await db
-      .select({
-        id: schema.shiftHandoff.id,
-        toUserId: schema.shiftHandoff.toUserId,
-        status: schema.shiftHandoff.status,
-      })
-      .from(schema.shiftHandoff)
-      .innerJoin(
-        schema.cashSession,
-        eq(schema.shiftHandoff.cashSessionId, schema.cashSession.id),
-      )
-      .innerJoin(
-        schema.location,
-        eq(schema.cashSession.locationId, schema.location.id),
-      )
-      .where(
-        and(
-          eq(schema.shiftHandoff.id, input.handoffId),
-          eq(schema.location.organizationId, orgId),
-        ),
-      )
-      .limit(1);
-    if (scoped.length === 0) {
-      throw new ORPCError("FORBIDDEN", {
-        message: "Handoff is outside your organization scope",
-      });
-    }
+	.input(
+		z.object({
+			handoffId: z.string().uuid(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const actorId = context.session.user.id;
+		const scoped = await db
+			.select({
+				id: schema.shiftHandoff.id,
+				toUserId: schema.shiftHandoff.toUserId,
+				status: schema.shiftHandoff.status,
+			})
+			.from(schema.shiftHandoff)
+			.innerJoin(
+				schema.cashSession,
+				eq(schema.shiftHandoff.cashSessionId, schema.cashSession.id),
+			)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.where(
+				and(
+					eq(schema.shiftHandoff.id, input.handoffId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (scoped.length === 0) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Handoff is outside your organization scope",
+			});
+		}
 
-    const handoff = scoped[0]!;
-    if (handoff.status !== "pending") {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Only pending handoffs can be accepted",
-      });
-    }
-    if (handoff.toUserId !== actorId) {
-      throw new ORPCError("FORBIDDEN", {
-        message: "Only the assigned recipient can accept this handoff",
-      });
-    }
+		const handoff = scoped[0]!;
+		if (handoff.status !== "pending") {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Only pending handoffs can be accepted",
+			});
+		}
+		if (handoff.toUserId !== actorId) {
+			throw new ORPCError("FORBIDDEN", {
+				message: "Only the assigned recipient can accept this handoff",
+			});
+		}
 
-    await db
-      .update(schema.shiftHandoff)
-      .set({ status: "accepted" })
-      .where(eq(schema.shiftHandoff.id, input.handoffId));
+		await db
+			.update(schema.shiftHandoff)
+			.set({ status: "accepted" })
+			.where(eq(schema.shiftHandoff.id, input.handoffId));
 
-    return { status: "accepted" };
-  });
+		return { status: "accepted" };
+	});
 
 // ── 7.3 getHandoffs ────────────────────────────────────────────────────
 const getHandoffs = permissionProcedure("shifts.read")
-  .input(
-    z
-      .object({
-        cashSessionId: z.string().uuid().optional(),
-      })
-      .optional(),
-  )
-  .handler(async ({ input: rawInput, context }) => {
-    const input = rawInput ?? {};
-    const orgId = requireOrganizationId(context);
-    const conditions = [];
-    if (input.cashSessionId) {
-      conditions.push(
-        eq(schema.shiftHandoff.cashSessionId, input.cashSessionId),
-      );
-    }
-    const whereClause = and(
-      eq(schema.location.organizationId, orgId),
-      ...(conditions.length > 0 ? conditions : []),
-    );
+	.input(
+		z
+			.object({
+				cashSessionId: z.string().uuid().optional(),
+			})
+			.optional(),
+	)
+	.handler(async ({ input: rawInput, context }) => {
+		const input = rawInput ?? {};
+		const orgId = requireOrganizationId(context);
+		const conditions = [];
+		if (input.cashSessionId) {
+			conditions.push(
+				eq(schema.shiftHandoff.cashSessionId, input.cashSessionId),
+			);
+		}
+		const whereClause = and(
+			eq(schema.location.organizationId, orgId),
+			...(conditions.length > 0 ? conditions : []),
+		);
 
-    const result = await db.execute(
-      sql`SELECT sh.*,
+		const result = await db.execute(
+			sql`SELECT sh.*,
 				fu.name as from_user_name,
 				tu.name as to_user_name
 			FROM shift_handoff sh
@@ -598,83 +599,101 @@ const getHandoffs = permissionProcedure("shifts.read")
 			WHERE ${whereClause}
 			ORDER BY sh.created_at DESC
 			LIMIT 50`,
-    );
+		);
 
-    return result.rows;
-  });
+		return result.rows;
+	});
 
 // ── 7.4 createExpense ──────────────────────────────────────────────────
 const createExpense = permissionProcedure("shifts.create")
-  .input(
-    z.object({
-      cashSessionId: z.string().uuid().nullable().optional(),
-      amount: z.string(),
-      category: z.string(),
-      description: z.string(),
-      receiptPhotoUrl: z.string().nullable().optional(),
-      paymentMethod: z.string().nullable().optional(),
-      referenceNumber: z.string().nullable().optional(),
-      notes: z.string().nullable().optional(),
-      organizationId: z.string().uuid().optional(),
-      supplierId: z.string().uuid().nullable().optional(),
-      fundingSourceId: z.string().uuid().optional(),
-      billable: z.boolean().optional(),
-      customerId: z.string().uuid().nullable().optional(),
-      // expenseDate: the date the expense occurred (YYYY-MM-DD). Defaults to today in GYT.
-      expenseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const actorId = context.session.user.id;
-    const orgId = requireOrganizationId(context);
-    const rows = await db
-      .insert(schema.expense)
-      .values({
-        cashSessionId: input.cashSessionId ?? null,
-        amount: input.amount,
-        category: input.category,
-        description: input.description,
-        receiptPhotoUrl: input.receiptPhotoUrl ?? null,
-        paymentMethod: input.paymentMethod ?? null,
-        referenceNumber: input.referenceNumber ?? null,
-        notes: input.notes ?? null,
-        authorizedBy: actorId,
-        createdBy: actorId,
-        organizationId: orgId,
-        supplierId: input.supplierId ?? null,
-        fundingSourceId: input.fundingSourceId ?? null,
-        billable: input.billable ?? false,
-        customerId: input.customerId ?? null,
-        expenseDate: input.expenseDate ?? undefined, // undefined → DB default (CURRENT_DATE)
-      })
-      .returning({ id: schema.expense.id });
+	.input(
+		z.object({
+			cashSessionId: z.string().uuid().nullable().optional(),
+			amount: z.string(),
+			categories: z.array(z.string().uuid()).min(1),
+			description: z.string(),
+			receiptPhotoUrl: z.string().nullable().optional(),
+			paymentMethod: z.string().nullable().optional(),
+			referenceNumber: z.string().nullable().optional(),
+			notes: z.string().nullable().optional(),
+			organizationId: z.string().uuid().optional(),
+			supplierId: z.string().uuid().nullable().optional(),
+			fundingSourceId: z.string().uuid().optional(),
+			billable: z.boolean().optional(),
+			customerId: z.string().uuid().nullable().optional(),
+			// expenseDate: the date the expense occurred (YYYY-MM-DD). Defaults to today in GYT.
+			expenseDate: z
+				.string()
+				.regex(/^\d{4}-\d{2}-\d{2}$/)
+				.optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const actorId = context.session.user.id;
+		const orgId = requireOrganizationId(context);
+		const rows = await db
+			.insert(schema.expense)
+			.values({
+				cashSessionId: input.cashSessionId ?? null,
+				amount: input.amount,
+				description: input.description,
+				receiptPhotoUrl: input.receiptPhotoUrl ?? null,
+				paymentMethod: input.paymentMethod ?? null,
+				referenceNumber: input.referenceNumber ?? null,
+				notes: input.notes ?? null,
+				authorizedBy: actorId,
+				createdBy: actorId,
+				organizationId: orgId,
+				supplierId: input.supplierId ?? null,
+				fundingSourceId: input.fundingSourceId ?? null,
+				billable: input.billable ?? false,
+				customerId: input.customerId ?? null,
+				expenseDate: input.expenseDate ?? undefined, // undefined → DB default (CURRENT_DATE)
+			})
+			.returning({ id: schema.expense.id });
 
-    return { id: rows[0]?.id };
-  });
+		if (rows[0]?.id && input.categories.length > 0) {
+			await db.insert(schema.expenseCategoryLink).values(
+				input.categories.map((categoryId) => ({
+					expenseId: rows[0]?.id,
+					categoryId,
+				})),
+			);
+		}
+
+		return { id: rows[0]?.id };
+	});
 
 // ── 7.4 getExpenses ────────────────────────────────────────────────────
 const getExpenses = permissionProcedure("shifts.read")
-  .input(
-    z.object({
-      organizationId: z.string().uuid().optional(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-      supplierId: z.string().uuid().optional(),
-      billable: z.boolean().optional(),
-      invoiceStatus: z.enum(["uninvoiced", "invoiced"]).optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const result = await db.execute(
-      sql`SELECT e.*,
+	.input(
+		z.object({
+			organizationId: z.string().uuid().optional(),
+			startDate: z.string().optional(),
+			endDate: z.string().optional(),
+			supplierId: z.string().uuid().optional(),
+			billable: z.boolean().optional(),
+			invoiceStatus: z.enum(["uninvoiced", "invoiced"]).optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const result = await db.execute(
+			sql`SELECT e.*,
 				au.name as authorized_by_name,
 				cu.name as created_by_name,
-				s.name as supplier_name
+				s.name as supplier_name,
+				COALESCE(
+					json_agg(json_build_object('id', ec.id, 'name', ec.name) ORDER BY ec.name)
+						FILTER (WHERE ec.id IS NOT NULL),
+					'[]'
+				) as categories
 			FROM expense e
 			LEFT JOIN "user" au ON au.id = e.authorized_by
 			LEFT JOIN "user" cu ON cu.id = e.created_by
 			LEFT JOIN supplier s ON s.id = e.supplier_id
+			LEFT JOIN expense_category_link ecl ON ecl.expense_id = e.id
+			LEFT JOIN expense_category ec ON ec.id = ecl.category_id
 			WHERE e.organization_id = ${orgId}::uuid
 				${input.startDate ? sql`AND e.expense_date >= ${input.startDate}::date` : sql``}
 				${input.endDate ? sql`AND e.expense_date <= ${input.endDate}::date` : sql``}
@@ -682,27 +701,28 @@ const getExpenses = permissionProcedure("shifts.read")
 				${input.billable !== undefined ? sql`AND e.billable = ${input.billable}` : sql``}
 				${input.invoiceStatus === "uninvoiced" ? sql`AND e.billable = true AND e.invoiced_at IS NULL` : sql``}
 				${input.invoiceStatus === "invoiced" ? sql`AND e.invoiced_at IS NOT NULL` : sql``}
+			GROUP BY e.id, au.name, cu.name, s.name
 			ORDER BY e.expense_date DESC, e.created_at DESC
 			LIMIT 1000`,
-    );
+		);
 
-    return result.rows;
-  });
+		return result.rows;
+	});
 
 // ── 7.4 getExpenseReport ───────────────────────────────────────────────
 const getExpenseReport = permissionProcedure("shifts.read")
-  .input(
-    z.object({
-      organizationId: z.string().uuid().optional(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    // Daily expenses grouped by supplier with totals
-    const result = await db.execute(
-      sql`SELECT
+	.input(
+		z.object({
+			organizationId: z.string().uuid().optional(),
+			startDate: z.string().optional(),
+			endDate: z.string().optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		// Daily expenses grouped by supplier with totals
+		const result = await db.execute(
+			sql`SELECT
 				COALESCE(s.name, 'Unassigned') as supplier_name,
 				e.supplier_id,
 				e.category,
@@ -715,42 +735,42 @@ const getExpenseReport = permissionProcedure("shifts.read")
 				${input.endDate ? sql`AND e.expense_date <= ${input.endDate}::date` : sql``}
 			GROUP BY s.name, e.supplier_id, e.category
 			ORDER BY total DESC`,
-    );
+		);
 
-    const grandTotal = await db.execute(
-      sql`SELECT SUM(amount::numeric)::text as total
+		const grandTotal = await db.execute(
+			sql`SELECT SUM(amount::numeric)::text as total
 			FROM expense
 			WHERE organization_id = ${orgId}::uuid
 				${input.startDate ? sql`AND expense_date >= ${input.startDate}::date` : sql``}
 				${input.endDate ? sql`AND expense_date <= ${input.endDate}::date` : sql``}`,
-    );
+		);
 
-    return {
-      bySupplier: result.rows,
-      grandTotal: grandTotal.rows[0]?.total ?? "0",
-    };
-  });
+		return {
+			bySupplier: result.rows,
+			grandTotal: grandTotal.rows[0]?.total ?? "0",
+		};
+	});
 
 // ── getSupplierSpendSummary ──────────────────────────────────────────────
 const getSupplierSpendSummary = permissionProcedure("shifts.read")
-  .input(
-    z.object({
-      supplierId: z.string().uuid(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const { supplierId, startDate, endDate } = input;
+	.input(
+		z.object({
+			supplierId: z.string().uuid(),
+			startDate: z.string().optional(),
+			endDate: z.string().optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const { supplierId, startDate, endDate } = input;
 
-    const periodResult = await db.execute<{
-      total: string;
-      count: string;
-      avg: string;
-      largest: string;
-      largest_desc: string | null;
-    }>(sql`
+		const periodResult = await db.execute<{
+			total: string;
+			count: string;
+			avg: string;
+			largest: string;
+			largest_desc: string | null;
+		}>(sql`
       SELECT
         COALESCE(SUM(amount), 0)::text AS total,
         COUNT(*)::text                 AS count,
@@ -768,33 +788,33 @@ const getSupplierSpendSummary = permissionProcedure("shifts.read")
         ${startDate ? sql`AND expense_date >= ${startDate}::date` : sql``}
         ${endDate ? sql`AND expense_date <= ${endDate}::date` : sql``}
     `);
-    const period = periodResult.rows[0];
+		const period = periodResult.rows[0];
 
-    const allTimeResult = await db.execute<{
-      total: string;
-      count: string;
-    }>(sql`
+		const allTimeResult = await db.execute<{
+			total: string;
+			count: string;
+		}>(sql`
       SELECT COALESCE(SUM(amount), 0)::text AS total, COUNT(*)::text AS count
       FROM expense
       WHERE supplier_id = ${supplierId}::uuid AND organization_id = ${orgId}::uuid
     `);
-    const allTime = allTimeResult.rows[0];
+		const allTime = allTimeResult.rows[0];
 
-    const lastResult = await db.execute<{ last_date: string | null }>(sql`
+		const lastResult = await db.execute<{ last_date: string | null }>(sql`
       SELECT MAX(created_at)::text AS last_date
       FROM expense
       WHERE supplier_id = ${supplierId}::uuid AND organization_id = ${orgId}::uuid
     `);
-    const last = lastResult.rows[0];
+		const last = lastResult.rows[0];
 
-    let prevTotal = "0";
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const days = Math.round((end.getTime() - start.getTime()) / 86_400_000);
-      const prevEnd = new Date(start.getTime() - 1);
-      const prevStart = new Date(prevEnd.getTime() - days * 86_400_000);
-      const prevResult = await db.execute<{ total: string }>(sql`
+		let prevTotal = "0";
+		if (startDate && endDate) {
+			const start = new Date(startDate);
+			const end = new Date(endDate);
+			const days = Math.round((end.getTime() - start.getTime()) / 86_400_000);
+			const prevEnd = new Date(start.getTime() - 1);
+			const prevStart = new Date(prevEnd.getTime() - days * 86_400_000);
+			const prevResult = await db.execute<{ total: string }>(sql`
         SELECT COALESCE(SUM(amount), 0)::text AS total
         FROM expense
         WHERE supplier_id     = ${supplierId}::uuid
@@ -802,32 +822,32 @@ const getSupplierSpendSummary = permissionProcedure("shifts.read")
           AND expense_date >= ${prevStart.toISOString().slice(0, 10)}::date
           AND expense_date <= ${prevEnd.toISOString().slice(0, 10)}::date
       `);
-      prevTotal = prevResult.rows[0]?.total ?? "0";
-    }
+			prevTotal = prevResult.rows[0]?.total ?? "0";
+		}
 
-    return {
-      periodTotal: period?.total ?? "0",
-      periodCount: Number(period?.count ?? 0),
-      periodAvg: period?.avg ?? "0",
-      periodLargest: period?.largest ?? "0",
-      periodLargestDesc: period?.largest_desc ?? null,
-      allTimeTotal: allTime?.total ?? "0",
-      allTimeCount: Number(allTime?.count ?? 0),
-      lastPurchaseDate: last?.last_date ?? null,
-      previousPeriodTotal: prevTotal,
-    };
-  });
+		return {
+			periodTotal: period?.total ?? "0",
+			periodCount: Number(period?.count ?? 0),
+			periodAvg: period?.avg ?? "0",
+			periodLargest: period?.largest ?? "0",
+			periodLargestDesc: period?.largest_desc ?? null,
+			allTimeTotal: allTime?.total ?? "0",
+			allTimeCount: Number(allTime?.count ?? 0),
+			lastPurchaseDate: last?.last_date ?? null,
+			previousPeriodTotal: prevTotal,
+		};
+	});
 
 // ── getSupplierMonthlySpend ──────────────────────────────────────────────
 const getSupplierMonthlySpend = permissionProcedure("shifts.read")
-  .input(z.object({ supplierId: z.string().uuid() }))
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const queryResult = await db.execute<{
-      month: string;
-      total: string;
-      count: string;
-    }>(sql`
+	.input(z.object({ supplierId: z.string().uuid() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const queryResult = await db.execute<{
+			month: string;
+			total: string;
+			count: string;
+		}>(sql`
       SELECT
         TO_CHAR(DATE_TRUNC('month', created_at AT TIME ZONE 'America/Guyana'), 'YYYY-MM') AS month,
         COALESCE(SUM(amount), 0)::text AS total,
@@ -839,56 +859,56 @@ const getSupplierMonthlySpend = permissionProcedure("shifts.read")
       GROUP BY DATE_TRUNC('month', created_at AT TIME ZONE 'America/Guyana')
       ORDER BY month ASC
     `);
-    const map = new Map(queryResult.rows.map((r) => [r.month, r]));
-    const result: {
-      month: string;
-      label: string;
-      total: string;
-      count: number;
-    }[] = [];
-    // Derive current year/month in Guyana time so keys match the SQL grouping
-    const gyNow = new Date().toLocaleDateString("en-CA", {
-      timeZone: "America/Guyana",
-    }); // "YYYY-MM-DD"
-    const [gyYear, gyMonth] = gyNow.split("-").map(Number) as [number, number];
-    for (let i = 11; i >= 0; i--) {
-      // Safe month arithmetic that avoids JS setMonth() day-overflow
-      const totalMonths = gyYear * 12 + (gyMonth - 1) - i;
-      const year = Math.floor(totalMonths / 12);
-      const month = (totalMonths % 12) + 1;
-      const key = `${year}-${String(month).padStart(2, "0")}`;
-      const labelDate = new Date(year, month - 1, 1);
-      const label = labelDate.toLocaleString("en-GY", {
-        month: "short",
-        year: "2-digit",
-      });
-      const row = map.get(key);
-      result.push({
-        month: key,
-        label,
-        total: row?.total ?? "0",
-        count: Number(row?.count ?? 0),
-      });
-    }
-    return result;
-  });
+		const map = new Map(queryResult.rows.map((r) => [r.month, r]));
+		const result: {
+			month: string;
+			label: string;
+			total: string;
+			count: number;
+		}[] = [];
+		// Derive current year/month in Guyana time so keys match the SQL grouping
+		const gyNow = new Date().toLocaleDateString("en-CA", {
+			timeZone: "America/Guyana",
+		}); // "YYYY-MM-DD"
+		const [gyYear, gyMonth] = gyNow.split("-").map(Number) as [number, number];
+		for (let i = 11; i >= 0; i--) {
+			// Safe month arithmetic that avoids JS setMonth() day-overflow
+			const totalMonths = gyYear * 12 + (gyMonth - 1) - i;
+			const year = Math.floor(totalMonths / 12);
+			const month = (totalMonths % 12) + 1;
+			const key = `${year}-${String(month).padStart(2, "0")}`;
+			const labelDate = new Date(year, month - 1, 1);
+			const label = labelDate.toLocaleString("en-GY", {
+				month: "short",
+				year: "2-digit",
+			});
+			const row = map.get(key);
+			result.push({
+				month: key,
+				label,
+				total: row?.total ?? "0",
+				count: Number(row?.count ?? 0),
+			});
+		}
+		return result;
+	});
 
 // ── getSupplierCategoryBreakdown ─────────────────────────────────────────
 const getSupplierCategoryBreakdown = permissionProcedure("shifts.read")
-  .input(
-    z.object({
-      supplierId: z.string().uuid(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const { supplierId, startDate, endDate } = input;
-    const queryResult = await db.execute<{
-      category: string;
-      total: string;
-    }>(sql`
+	.input(
+		z.object({
+			supplierId: z.string().uuid(),
+			startDate: z.string().optional(),
+			endDate: z.string().optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const { supplierId, startDate, endDate } = input;
+		const queryResult = await db.execute<{
+			category: string;
+			total: string;
+		}>(sql`
       SELECT
         category,
         COALESCE(SUM(amount), 0)::text AS total
@@ -900,26 +920,26 @@ const getSupplierCategoryBreakdown = permissionProcedure("shifts.read")
       GROUP BY category
       ORDER BY SUM(amount) DESC
     `);
-    const rows = queryResult.rows;
-    const grandTotal = rows.reduce((s, r) => s + Number(r.total), 0);
-    return rows.map((r) => ({
-      category: r.category,
-      total: r.total,
-      pct:
-        grandTotal > 0 ? Math.round((Number(r.total) / grandTotal) * 100) : 0,
-    }));
-  });
+		const rows = queryResult.rows;
+		const grandTotal = rows.reduce((s, r) => s + Number(r.total), 0);
+		return rows.map((r) => ({
+			category: r.category,
+			total: r.total,
+			pct:
+				grandTotal > 0 ? Math.round((Number(r.total) / grandTotal) * 100) : 0,
+		}));
+	});
 
 // ── getSupplierCategoryByMonth ───────────────────────────────────────────
 const getSupplierCategoryByMonth = permissionProcedure("shifts.read")
-  .input(z.object({ supplierId: z.string().uuid() }))
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const queryResult = await db.execute<{
-      month: string;
-      category: string;
-      total: string;
-    }>(sql`
+	.input(z.object({ supplierId: z.string().uuid() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const queryResult = await db.execute<{
+			month: string;
+			category: string;
+			total: string;
+		}>(sql`
       SELECT
         TO_CHAR(DATE_TRUNC('month', created_at AT TIME ZONE 'America/Guyana'), 'YYYY-MM') AS month,
         category,
@@ -933,36 +953,36 @@ const getSupplierCategoryByMonth = permissionProcedure("shifts.read")
         category
       ORDER BY month ASC, SUM(amount) DESC
     `);
-    const gyNow = new Date().toLocaleDateString("en-CA", {
-      timeZone: "America/Guyana",
-    });
-    const [gyYear, gyMonth] = gyNow.split("-").map(Number) as [number, number];
-    const months: { month: string; label: string }[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const totalMonths = gyYear * 12 + (gyMonth - 1) - i;
-      const year = Math.floor(totalMonths / 12);
-      const month = (totalMonths % 12) + 1;
-      const key = `${year}-${String(month).padStart(2, "0")}`;
-      months.push({
-        month: key,
-        label: new Date(year, month - 1, 1).toLocaleString("en-GY", {
-          month: "short",
-          year: "2-digit",
-        }),
-      });
-    }
-    return { months, rows: queryResult.rows };
-  });
+		const gyNow = new Date().toLocaleDateString("en-CA", {
+			timeZone: "America/Guyana",
+		});
+		const [gyYear, gyMonth] = gyNow.split("-").map(Number) as [number, number];
+		const months: { month: string; label: string }[] = [];
+		for (let i = 11; i >= 0; i--) {
+			const totalMonths = gyYear * 12 + (gyMonth - 1) - i;
+			const year = Math.floor(totalMonths / 12);
+			const month = (totalMonths % 12) + 1;
+			const key = `${year}-${String(month).padStart(2, "0")}`;
+			months.push({
+				month: key,
+				label: new Date(year, month - 1, 1).toLocaleString("en-GY", {
+					month: "short",
+					year: "2-digit",
+				}),
+			});
+		}
+		return { months, rows: queryResult.rows };
+	});
 
 // ── getExpenseCategoryByMonth ────────────────────────────────────────────
 const getExpenseCategoryByMonth = permissionProcedure("shifts.read").handler(
-  async ({ context }) => {
-    const orgId = requireOrganizationId(context);
-    const queryResult = await db.execute<{
-      month: string;
-      category: string;
-      total: string;
-    }>(sql`
+	async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+		const queryResult = await db.execute<{
+			month: string;
+			category: string;
+			total: string;
+		}>(sql`
       SELECT
         TO_CHAR(DATE_TRUNC('month', created_at AT TIME ZONE 'America/Guyana'), 'YYYY-MM') AS month,
         category,
@@ -975,173 +995,208 @@ const getExpenseCategoryByMonth = permissionProcedure("shifts.read").handler(
         category
       ORDER BY month ASC, SUM(amount) DESC
     `);
-    // Build 12-month skeleton with labels (Guyana timezone)
-    const gyNow = new Date().toLocaleDateString("en-CA", {
-      timeZone: "America/Guyana",
-    });
-    const [gyYear, gyMonth] = gyNow.split("-").map(Number) as [number, number];
-    const months: { month: string; label: string }[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const totalMonths = gyYear * 12 + (gyMonth - 1) - i;
-      const year = Math.floor(totalMonths / 12);
-      const month = (totalMonths % 12) + 1;
-      const key = `${year}-${String(month).padStart(2, "0")}`;
-      months.push({
-        month: key,
-        label: new Date(year, month - 1, 1).toLocaleString("en-GY", {
-          month: "short",
-          year: "2-digit",
-        }),
-      });
-    }
-    return { months, rows: queryResult.rows };
-  },
+		// Build 12-month skeleton with labels (Guyana timezone)
+		const gyNow = new Date().toLocaleDateString("en-CA", {
+			timeZone: "America/Guyana",
+		});
+		const [gyYear, gyMonth] = gyNow.split("-").map(Number) as [number, number];
+		const months: { month: string; label: string }[] = [];
+		for (let i = 11; i >= 0; i--) {
+			const totalMonths = gyYear * 12 + (gyMonth - 1) - i;
+			const year = Math.floor(totalMonths / 12);
+			const month = (totalMonths % 12) + 1;
+			const key = `${year}-${String(month).padStart(2, "0")}`;
+			months.push({
+				month: key,
+				label: new Date(year, month - 1, 1).toLocaleString("en-GY", {
+					month: "short",
+					year: "2-digit",
+				}),
+			});
+		}
+		return { months, rows: queryResult.rows };
+	},
 );
 
 // ── 7.4 getExpenseCategories ────────────────────────────────────────────
 const getExpenseCategories = permissionProcedure("shifts.read").handler(
-  async ({ context }) => {
-    const orgId = requireOrganizationId(context);
-    return db
-      .select({
-        id: schema.expenseCategory.id,
-        name: schema.expenseCategory.name,
-      })
-      .from(schema.expenseCategory)
-      .where(eq(schema.expenseCategory.organizationId, orgId))
-      .orderBy(schema.expenseCategory.name);
-  },
+	async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+		return db
+			.select({
+				id: schema.expenseCategory.id,
+				name: schema.expenseCategory.name,
+			})
+			.from(schema.expenseCategory)
+			.where(eq(schema.expenseCategory.organizationId, orgId))
+			.orderBy(schema.expenseCategory.name);
+	},
 );
 
 // ── 7.4 createExpenseCategory ───────────────────────────────────────────
 const createExpenseCategory = permissionProcedure("shifts.create")
-  .input(z.object({ name: z.string().min(1).max(100) }))
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const [row] = await db
-      .insert(schema.expenseCategory)
-      .values({ name: input.name.trim(), organizationId: orgId })
-      .returning();
-    return row;
-  });
+	.input(z.object({ name: z.string().min(1).max(100) }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const [row] = await db
+			.insert(schema.expenseCategory)
+			.values({ name: input.name.trim(), organizationId: orgId })
+			.returning();
+		return row;
+	});
 
 // ── 7.4 deleteExpenseCategory ───────────────────────────────────────────
 const deleteExpenseCategory = permissionProcedure("shifts.delete")
-  .input(z.object({ id: z.string().uuid() }))
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    await db
-      .delete(schema.expenseCategory)
-      .where(
-        and(
-          eq(schema.expenseCategory.id, input.id),
-          eq(schema.expenseCategory.organizationId, orgId),
-        ),
-      );
-    return { success: true };
-  });
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		await db
+			.delete(schema.expenseCategory)
+			.where(
+				and(
+					eq(schema.expenseCategory.id, input.id),
+					eq(schema.expenseCategory.organizationId, orgId),
+				),
+			);
+		return { success: true };
+	});
 
 // ── 7.4 updateExpense ──────────────────────────────────────────────────
 const updateExpense = permissionProcedure("shifts.update")
-  .input(
-    z.object({
-      expenseId: z.string().uuid(),
-      amount: z.string(),
-      category: z.string(),
-      description: z.string(),
-      supplierId: z.string().uuid().nullable().optional(),
-      paymentMethod: z.string().nullable().optional(),
-      referenceNumber: z.string().nullable().optional(),
-      notes: z.string().nullable().optional(),
-      fundingSourceId: z.string().uuid().nullable().optional(),
-      receiptPhotoUrl: z.string().nullable().optional(),
-      billable: z.boolean().optional(),
-      customerId: z.string().uuid().nullable().optional(),
-      expenseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    await db
-      .update(schema.expense)
-      .set({
-        amount: input.amount,
-        category: input.category,
-        description: input.description,
-        supplierId: input.supplierId ?? null,
-        paymentMethod: input.paymentMethod ?? null,
-        referenceNumber: input.referenceNumber ?? null,
-        notes: input.notes ?? null,
-        fundingSourceId: input.fundingSourceId ?? null,
-        receiptPhotoUrl: input.receiptPhotoUrl ?? null,
-        billable: input.billable ?? false,
-        customerId: input.customerId ?? null,
-        ...(input.expenseDate ? { expenseDate: input.expenseDate } : {}),
-      })
-      .where(
-        and(
-          eq(schema.expense.id, input.expenseId),
-          eq(schema.expense.organizationId, orgId),
-        ),
-      );
+	.input(
+		z.object({
+			expenseId: z.string().uuid(),
+			amount: z.string(),
+			categories: z.array(z.string().uuid()).min(1),
+			description: z.string(),
+			supplierId: z.string().uuid().nullable().optional(),
+			paymentMethod: z.string().nullable().optional(),
+			referenceNumber: z.string().nullable().optional(),
+			notes: z.string().nullable().optional(),
+			fundingSourceId: z.string().uuid().nullable().optional(),
+			receiptPhotoUrl: z.string().nullable().optional(),
+			billable: z.boolean().optional(),
+			customerId: z.string().uuid().nullable().optional(),
+			expenseDate: z
+				.string()
+				.regex(/^\d{4}-\d{2}-\d{2}$/)
+				.optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 
-    return { status: "updated" };
-  });
+		await db.transaction(async (tx) => {
+			await tx
+				.update(schema.expense)
+				.set({
+					amount: input.amount,
+					description: input.description,
+					supplierId: input.supplierId ?? null,
+					paymentMethod: input.paymentMethod ?? null,
+					referenceNumber: input.referenceNumber ?? null,
+					notes: input.notes ?? null,
+					fundingSourceId: input.fundingSourceId ?? null,
+					receiptPhotoUrl: input.receiptPhotoUrl ?? null,
+					billable: input.billable ?? false,
+					customerId: input.customerId ?? null,
+					...(input.expenseDate ? { expenseDate: input.expenseDate } : {}),
+				})
+				.where(
+					and(
+						eq(schema.expense.id, input.expenseId),
+						eq(schema.expense.organizationId, orgId),
+					),
+				);
+
+			// Replace category links atomically
+			await tx
+				.delete(schema.expenseCategoryLink)
+				.where(eq(schema.expenseCategoryLink.expenseId, input.expenseId));
+
+			if (input.categories.length > 0) {
+				await tx.insert(schema.expenseCategoryLink).values(
+					input.categories.map((categoryId) => ({
+						expenseId: input.expenseId,
+						categoryId,
+					})),
+				);
+			}
+		});
+
+		return { status: "updated" };
+	});
 
 // ── 7.4 deleteExpense ──────────────────────────────────────────────────
 const deleteExpense = permissionProcedure("shifts.delete")
-  .input(z.object({ expenseId: z.string().uuid() }))
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    await db
-      .delete(schema.expense)
-      .where(
-        and(
-          eq(schema.expense.id, input.expenseId),
-          eq(schema.expense.organizationId, orgId),
-        ),
-      );
+	.input(z.object({ expenseId: z.string().uuid() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		await db
+			.delete(schema.expense)
+			.where(
+				and(
+					eq(schema.expense.id, input.expenseId),
+					eq(schema.expense.organizationId, orgId),
+				),
+			);
 
-    return { status: "deleted" };
-  });
+		return { status: "deleted" };
+	});
+
+// ── 7.5 bulkDeleteExpenses ────────────────────────────────────────────
+const bulkDeleteExpenses = permissionProcedure("shifts.delete")
+	.input(z.object({ expenseIds: z.array(z.string().uuid()).min(1) }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		await db
+			.delete(schema.expense)
+			.where(
+				and(
+					inArray(schema.expense.id, input.expenseIds),
+					eq(schema.expense.organizationId, orgId),
+				),
+			);
+		return { status: "deleted", count: input.expenseIds.length };
+	});
 
 // ── 7.7 logNoSale ─────────────────────────────────────────────────────
 const logNoSale = permissionProcedure("shifts.create")
-  .input(
-    z.object({
-      cashSessionId: z.string().uuid(),
-      reason: z.string(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const userId = context.session.user.id;
-    const rows = await db
-      .insert(schema.noSaleEvent)
-      .values({
-        cashSessionId: input.cashSessionId,
-        userId: userId,
-        reason: input.reason,
-      })
-      .returning({ id: schema.noSaleEvent.id });
+	.input(
+		z.object({
+			cashSessionId: z.string().uuid(),
+			reason: z.string(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const userId = context.session.user.id;
+		const rows = await db
+			.insert(schema.noSaleEvent)
+			.values({
+				cashSessionId: input.cashSessionId,
+				userId: userId,
+				reason: input.reason,
+			})
+			.returning({ id: schema.noSaleEvent.id });
 
-    return { id: rows[0]?.id };
-  });
+		return { id: rows[0]?.id };
+	});
 
 // ── 7.7 getNoSaleReport ───────────────────────────────────────────────
 const getNoSaleReport = permissionProcedure("shifts.read")
-  .input(
-    z
-      .object({
-        startDate: z.string().optional(),
-        endDate: z.string().optional(),
-      })
-      .optional(),
-  )
-  .handler(async ({ input: rawInput, context }) => {
-    const input = rawInput ?? {};
-    const orgId = requireOrganizationId(context);
-    const result = await db.execute(
-      sql`SELECT
+	.input(
+		z
+			.object({
+				startDate: z.string().optional(),
+				endDate: z.string().optional(),
+			})
+			.optional(),
+	)
+	.handler(async ({ input: rawInput, context }) => {
+		const input = rawInput ?? {};
+		const orgId = requireOrganizationId(context);
+		const result = await db.execute(
+			sql`SELECT
 				nse.id, nse.cash_session_id, nse.reason, nse.created_at,
 				u.name as user_name, u.id as user_id
 			FROM no_sale_event nse
@@ -1153,531 +1208,532 @@ const getNoSaleReport = permissionProcedure("shifts.read")
 				${input.endDate ? sql`AND nse.created_at <= ${input.endDate}::timestamptz` : sql``}
 			ORDER BY nse.created_at DESC
 			LIMIT 200`,
-    );
+		);
 
-    return result.rows;
-  });
+		return result.rows;
+	});
 
 // ── listFundingSources ──────────────────────────────────────────────────
 const listFundingSources = permissionProcedure("shifts.read").handler(
-  async ({ context }) => {
-    const orgId = requireOrganizationId(context);
-    return db
-      .select()
-      .from(schema.fundingSource)
-      .where(
-        and(
-          eq(schema.fundingSource.organizationId, orgId),
-          eq(schema.fundingSource.isActive, true),
-        ),
-      )
-      .orderBy(asc(schema.fundingSource.name));
-  },
+	async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+		return db
+			.select()
+			.from(schema.fundingSource)
+			.where(
+				and(
+					eq(schema.fundingSource.organizationId, orgId),
+					eq(schema.fundingSource.isActive, true),
+				),
+			)
+			.orderBy(asc(schema.fundingSource.name));
+	},
 );
 
 // ── createFundingSource ─────────────────────────────────────────────────
 const createFundingSource = permissionProcedure("shifts.create")
-  .input(z.object({ name: z.string().min(1).trim() }))
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const existing = await db
-      .select({ id: schema.fundingSource.id })
-      .from(schema.fundingSource)
-      .where(
-        and(
-          eq(schema.fundingSource.organizationId, orgId),
-          eq(schema.fundingSource.name, input.name),
-        ),
-      )
-      .limit(1);
-    if (existing.length > 0) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Funding source already exists",
-      });
-    }
-    const [row] = await db
-      .insert(schema.fundingSource)
-      .values({ name: input.name, organizationId: orgId })
-      .returning();
-    return row!;
-  });
+	.input(z.object({ name: z.string().min(1).trim() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const existing = await db
+			.select({ id: schema.fundingSource.id })
+			.from(schema.fundingSource)
+			.where(
+				and(
+					eq(schema.fundingSource.organizationId, orgId),
+					eq(schema.fundingSource.name, input.name),
+				),
+			)
+			.limit(1);
+		if (existing.length > 0) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Funding source already exists",
+			});
+		}
+		const [row] = await db
+			.insert(schema.fundingSource)
+			.values({ name: input.name, organizationId: orgId })
+			.returning();
+		return row!;
+	});
 
 // ── updateFundingSource ─────────────────────────────────────────────────
 const updateFundingSource = permissionProcedure("shifts.update")
-  .input(
-    z.object({
-      id: z.string().uuid(),
-      name: z.string().min(1).trim().optional(),
-      isActive: z.boolean().optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const existing = await db
-      .select({ id: schema.fundingSource.id })
-      .from(schema.fundingSource)
-      .where(
-        and(
-          eq(schema.fundingSource.id, input.id),
-          eq(schema.fundingSource.organizationId, orgId),
-        ),
-      )
-      .limit(1);
-    if (existing.length === 0) {
-      throw new ORPCError("NOT_FOUND", {
-        message: "Funding source not found",
-      });
-    }
-    const updateData: Record<string, unknown> = {};
-    if (input.name !== undefined) updateData.name = input.name;
-    if (input.isActive !== undefined) updateData.isActive = input.isActive;
-    const [row] = await db
-      .update(schema.fundingSource)
-      .set(updateData)
-      .where(eq(schema.fundingSource.id, input.id))
-      .returning();
-    return row!;
-  });
+	.input(
+		z.object({
+			id: z.string().uuid(),
+			name: z.string().min(1).trim().optional(),
+			isActive: z.boolean().optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const existing = await db
+			.select({ id: schema.fundingSource.id })
+			.from(schema.fundingSource)
+			.where(
+				and(
+					eq(schema.fundingSource.id, input.id),
+					eq(schema.fundingSource.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (existing.length === 0) {
+			throw new ORPCError("NOT_FOUND", {
+				message: "Funding source not found",
+			});
+		}
+		const updateData: Record<string, unknown> = {};
+		if (input.name !== undefined) updateData.name = input.name;
+		if (input.isActive !== undefined) updateData.isActive = input.isActive;
+		const [row] = await db
+			.update(schema.fundingSource)
+			.set(updateData)
+			.where(eq(schema.fundingSource.id, input.id))
+			.returning();
+		return row!;
+	});
 
 // ── deleteFundingSource ─────────────────────────────────────────────────
 const deleteFundingSource = permissionProcedure("shifts.delete")
-  .input(z.object({ id: z.string().uuid() }))
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const existing = await db
-      .select({ id: schema.fundingSource.id })
-      .from(schema.fundingSource)
-      .where(
-        and(
-          eq(schema.fundingSource.id, input.id),
-          eq(schema.fundingSource.organizationId, orgId),
-        ),
-      )
-      .limit(1);
-    if (existing.length === 0) {
-      throw new ORPCError("NOT_FOUND", {
-        message: "Funding source not found",
-      });
-    }
-    await db
-      .delete(schema.fundingSource)
-      .where(eq(schema.fundingSource.id, input.id));
-    return { success: true };
-  });
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const existing = await db
+			.select({ id: schema.fundingSource.id })
+			.from(schema.fundingSource)
+			.where(
+				and(
+					eq(schema.fundingSource.id, input.id),
+					eq(schema.fundingSource.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (existing.length === 0) {
+			throw new ORPCError("NOT_FOUND", {
+				message: "Funding source not found",
+			});
+		}
+		await db
+			.delete(schema.fundingSource)
+			.where(eq(schema.fundingSource.id, input.id));
+		return { success: true };
+	});
 
 // ── getExpensesByFundingSource ──────────────────────────────────────────
 const getExpensesByFundingSource = permissionProcedure("shifts.read")
-  .input(
-    z.object({
-      startDate: z.string(),
-      endDate: z.string(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
+	.input(
+		z.object({
+			startDate: z.string(),
+			endDate: z.string(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 
-    // Fetch all expenses with a funding source, filtered by expense_date
-    const withSource = await db
-      .select({
-        id: schema.expense.id,
-        amount: schema.expense.amount,
-        category: schema.expense.category,
-        description: schema.expense.description,
-        createdAt: schema.expense.createdAt,
-        expenseDate: schema.expense.expenseDate,
-        fundingSourceId: schema.expense.fundingSourceId,
-        supplierId: schema.expense.supplierId,
-        supplierName: schema.supplier.name,
-      })
-      .from(schema.expense)
-      .leftJoin(
-        schema.supplier,
-        eq(schema.expense.supplierId, schema.supplier.id),
-      )
-      .where(
-        and(
-          eq(schema.expense.organizationId, orgId),
-          isNotNull(schema.expense.fundingSourceId),
-          gte(schema.expense.expenseDate, input.startDate),
-          lte(schema.expense.expenseDate, input.endDate),
-        ),
-      )
-      .orderBy(
-        asc(schema.expense.fundingSourceId),
-        asc(schema.expense.expenseDate),
-      );
+		// Fetch all expenses with a funding source, filtered by expense_date
+		const withSource = await db
+			.select({
+				id: schema.expense.id,
+				amount: schema.expense.amount,
+				category: schema.expense.category,
+				description: schema.expense.description,
+				createdAt: schema.expense.createdAt,
+				expenseDate: schema.expense.expenseDate,
+				fundingSourceId: schema.expense.fundingSourceId,
+				supplierId: schema.expense.supplierId,
+				supplierName: schema.supplier.name,
+			})
+			.from(schema.expense)
+			.leftJoin(
+				schema.supplier,
+				eq(schema.expense.supplierId, schema.supplier.id),
+			)
+			.where(
+				and(
+					eq(schema.expense.organizationId, orgId),
+					isNotNull(schema.expense.fundingSourceId),
+					gte(schema.expense.expenseDate, input.startDate),
+					lte(schema.expense.expenseDate, input.endDate),
+				),
+			)
+			.orderBy(
+				asc(schema.expense.fundingSourceId),
+				asc(schema.expense.expenseDate),
+			);
 
-    // Fetch expenses with no funding source (General Cash)
-    const withoutSource = await db
-      .select({
-        id: schema.expense.id,
-        amount: schema.expense.amount,
-        category: schema.expense.category,
-        description: schema.expense.description,
-        createdAt: schema.expense.createdAt,
-        expenseDate: schema.expense.expenseDate,
-        fundingSourceId: schema.expense.fundingSourceId,
-        supplierId: schema.expense.supplierId,
-        supplierName: schema.supplier.name,
-      })
-      .from(schema.expense)
-      .leftJoin(
-        schema.supplier,
-        eq(schema.expense.supplierId, schema.supplier.id),
-      )
-      .where(
-        and(
-          eq(schema.expense.organizationId, orgId),
-          isNull(schema.expense.fundingSourceId),
-          gte(schema.expense.expenseDate, input.startDate),
-          lte(schema.expense.expenseDate, input.endDate),
-        ),
-      )
-      .orderBy(asc(schema.expense.expenseDate));
+		// Fetch expenses with no funding source (General Cash)
+		const withoutSource = await db
+			.select({
+				id: schema.expense.id,
+				amount: schema.expense.amount,
+				category: schema.expense.category,
+				description: schema.expense.description,
+				createdAt: schema.expense.createdAt,
+				expenseDate: schema.expense.expenseDate,
+				fundingSourceId: schema.expense.fundingSourceId,
+				supplierId: schema.expense.supplierId,
+				supplierName: schema.supplier.name,
+			})
+			.from(schema.expense)
+			.leftJoin(
+				schema.supplier,
+				eq(schema.expense.supplierId, schema.supplier.id),
+			)
+			.where(
+				and(
+					eq(schema.expense.organizationId, orgId),
+					isNull(schema.expense.fundingSourceId),
+					gte(schema.expense.expenseDate, input.startDate),
+					lte(schema.expense.expenseDate, input.endDate),
+				),
+			)
+			.orderBy(asc(schema.expense.expenseDate));
 
-    // Fetch all funding sources for the org
-    const fundingSources = await db
-      .select({ id: schema.fundingSource.id, name: schema.fundingSource.name })
-      .from(schema.fundingSource)
-      .where(eq(schema.fundingSource.organizationId, orgId));
+		// Fetch all funding sources for the org
+		const fundingSources = await db
+			.select({ id: schema.fundingSource.id, name: schema.fundingSource.name })
+			.from(schema.fundingSource)
+			.where(eq(schema.fundingSource.organizationId, orgId));
 
-    const sourceMap = new Map<string, string>(
-      fundingSources.map((fs) => [String(fs.id), String(fs.name)]),
-    );
+		const sourceMap = new Map<string, string>(
+			fundingSources.map((fs) => [String(fs.id), String(fs.name)]),
+		);
 
-    // Group by funding source id
-    const groupMap = new Map<
-      string | null,
-      {
-        fundingSourceId: string | null;
-        fundingSource: string;
-        subtotal: number;
-        items: {
-          expenseId: string;
-          vendor: string;
-          category: string;
-          amount: string;
-          description: string;
-          createdAt: string;
-        }[];
-      }
-    >();
+		// Group by funding source id
+		const groupMap = new Map<
+			string | null,
+			{
+				fundingSourceId: string | null;
+				fundingSource: string;
+				subtotal: number;
+				items: {
+					expenseId: string;
+					vendor: string;
+					category: string;
+					amount: string;
+					description: string;
+					createdAt: string;
+				}[];
+			}
+		>();
 
-    for (const row of withSource) {
-      const fsId = String(row.fundingSourceId!);
-      const fsName: string = sourceMap.get(fsId) ?? "Unknown";
-      if (!groupMap.has(fsId)) {
-        groupMap.set(fsId, {
-          fundingSourceId: fsId,
-          fundingSource: fsName,
-          subtotal: 0,
-          items: [],
-        });
-      }
-      const group = groupMap.get(fsId)!;
-      group.subtotal += Number(row.amount);
-      group.items.push({
-        expenseId: String(row.id),
-        vendor: String(row.supplierName ?? row.description),
-        category: String(row.category),
-        amount: String(row.amount),
-        description: String(row.description),
-        createdAt: (row.createdAt as Date).toISOString(),
-      });
-    }
+		for (const row of withSource) {
+			const fsId = String(row.fundingSourceId!);
+			const fsName: string = sourceMap.get(fsId) ?? "Unknown";
+			if (!groupMap.has(fsId)) {
+				groupMap.set(fsId, {
+					fundingSourceId: fsId,
+					fundingSource: fsName,
+					subtotal: 0,
+					items: [],
+				});
+			}
+			const group = groupMap.get(fsId)!;
+			group.subtotal += Number(row.amount);
+			group.items.push({
+				expenseId: String(row.id),
+				vendor: String(row.supplierName ?? row.description),
+				category: row.category ?? "",
+				amount: String(row.amount),
+				description: String(row.description),
+				createdAt: (row.createdAt as Date).toISOString(),
+			});
+		}
 
-    if (withoutSource.length > 0) {
-      const generalGroup = {
-        fundingSourceId: null as string | null,
-        fundingSource: "General Cash",
-        subtotal: 0,
-        items: [] as {
-          expenseId: string;
-          vendor: string;
-          category: string;
-          amount: string;
-          description: string;
-          createdAt: string;
-        }[],
-      };
-      for (const row of withoutSource) {
-        generalGroup.subtotal += Number(row.amount);
-        generalGroup.items.push({
-          expenseId: String(row.id),
-          vendor: String(row.supplierName ?? row.description),
-          category: String(row.category),
-          amount: String(row.amount),
-          description: String(row.description),
-          createdAt: (row.createdAt as Date).toISOString(),
-        });
-      }
-      groupMap.set(null, generalGroup);
-    }
+		if (withoutSource.length > 0) {
+			const generalGroup = {
+				fundingSourceId: null as string | null,
+				fundingSource: "General Cash",
+				subtotal: 0,
+				items: [] as {
+					expenseId: string;
+					vendor: string;
+					category: string;
+					amount: string;
+					description: string;
+					createdAt: string;
+				}[],
+			};
+			for (const row of withoutSource) {
+				generalGroup.subtotal += Number(row.amount);
+				generalGroup.items.push({
+					expenseId: String(row.id),
+					vendor: String(row.supplierName ?? row.description),
+					category: row.category ?? "",
+					amount: String(row.amount),
+					description: String(row.description),
+					createdAt: (row.createdAt as Date).toISOString(),
+				});
+			}
+			groupMap.set(null, generalGroup);
+		}
 
-    const groups = Array.from(groupMap.values()).map((g) => ({
-      ...g,
-      subtotal: g.subtotal.toFixed(2),
-    }));
+		const groups = Array.from(groupMap.values()).map((g) => ({
+			...g,
+			subtotal: g.subtotal.toFixed(2),
+		}));
 
-    const grandTotal = groups
-      .reduce((sum, g) => sum + Number(g.subtotal), 0)
-      .toFixed(2);
+		const grandTotal = groups
+			.reduce((sum, g) => sum + Number(g.subtotal), 0)
+			.toFixed(2);
 
-    return {
-      date: `${input.startDate} to ${input.endDate}`,
-      grandTotal,
-      groups,
-    };
-  });
+		return {
+			date: `${input.startDate} to ${input.endDate}`,
+			grandTotal,
+			groups,
+		};
+	});
 
 // ── getDailyExpenseSummary ──────────────────────────────────────────────
 const getDailyExpenseSummary = permissionProcedure("shifts.read")
-  .input(z.object({ date: z.string() }))
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
+	.input(z.object({ date: z.string() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 
-    // Fetch all expenses with a funding source for the day (filtered by expense_date)
-    const withSource = await db
-      .select({
-        id: schema.expense.id,
-        amount: schema.expense.amount,
-        category: schema.expense.category,
-        description: schema.expense.description,
-        createdAt: schema.expense.createdAt,
-        expenseDate: schema.expense.expenseDate,
-        fundingSourceId: schema.expense.fundingSourceId,
-        supplierId: schema.expense.supplierId,
-        supplierName: schema.supplier.name,
-      })
-      .from(schema.expense)
-      .leftJoin(
-        schema.supplier,
-        eq(schema.expense.supplierId, schema.supplier.id),
-      )
-      .where(
-        and(
-          eq(schema.expense.organizationId, orgId),
-          isNotNull(schema.expense.fundingSourceId),
-          eq(schema.expense.expenseDate, input.date),
-        ),
-      )
-      .orderBy(
-        asc(schema.expense.fundingSourceId),
-        asc(schema.expense.createdAt),
-      );
+		// Fetch all expenses with a funding source for the day (filtered by expense_date)
+		const withSource = await db
+			.select({
+				id: schema.expense.id,
+				amount: schema.expense.amount,
+				category: schema.expense.category,
+				description: schema.expense.description,
+				createdAt: schema.expense.createdAt,
+				expenseDate: schema.expense.expenseDate,
+				fundingSourceId: schema.expense.fundingSourceId,
+				supplierId: schema.expense.supplierId,
+				supplierName: schema.supplier.name,
+			})
+			.from(schema.expense)
+			.leftJoin(
+				schema.supplier,
+				eq(schema.expense.supplierId, schema.supplier.id),
+			)
+			.where(
+				and(
+					eq(schema.expense.organizationId, orgId),
+					isNotNull(schema.expense.fundingSourceId),
+					eq(schema.expense.expenseDate, input.date),
+				),
+			)
+			.orderBy(
+				asc(schema.expense.fundingSourceId),
+				asc(schema.expense.createdAt),
+			);
 
-    // Fetch expenses with no funding source (General Cash) for the day
-    const withoutSource = await db
-      .select({
-        id: schema.expense.id,
-        amount: schema.expense.amount,
-        category: schema.expense.category,
-        description: schema.expense.description,
-        createdAt: schema.expense.createdAt,
-        expenseDate: schema.expense.expenseDate,
-        fundingSourceId: schema.expense.fundingSourceId,
-        supplierId: schema.expense.supplierId,
-        supplierName: schema.supplier.name,
-      })
-      .from(schema.expense)
-      .leftJoin(
-        schema.supplier,
-        eq(schema.expense.supplierId, schema.supplier.id),
-      )
-      .where(
-        and(
-          eq(schema.expense.organizationId, orgId),
-          isNull(schema.expense.fundingSourceId),
-          eq(schema.expense.expenseDate, input.date),
-        ),
-      )
-      .orderBy(asc(schema.expense.createdAt));
+		// Fetch expenses with no funding source (General Cash) for the day
+		const withoutSource = await db
+			.select({
+				id: schema.expense.id,
+				amount: schema.expense.amount,
+				category: schema.expense.category,
+				description: schema.expense.description,
+				createdAt: schema.expense.createdAt,
+				expenseDate: schema.expense.expenseDate,
+				fundingSourceId: schema.expense.fundingSourceId,
+				supplierId: schema.expense.supplierId,
+				supplierName: schema.supplier.name,
+			})
+			.from(schema.expense)
+			.leftJoin(
+				schema.supplier,
+				eq(schema.expense.supplierId, schema.supplier.id),
+			)
+			.where(
+				and(
+					eq(schema.expense.organizationId, orgId),
+					isNull(schema.expense.fundingSourceId),
+					eq(schema.expense.expenseDate, input.date),
+				),
+			)
+			.orderBy(asc(schema.expense.createdAt));
 
-    // Fetch all funding sources for the org
-    const fundingSources = await db
-      .select({ id: schema.fundingSource.id, name: schema.fundingSource.name })
-      .from(schema.fundingSource)
-      .where(eq(schema.fundingSource.organizationId, orgId));
+		// Fetch all funding sources for the org
+		const fundingSources = await db
+			.select({ id: schema.fundingSource.id, name: schema.fundingSource.name })
+			.from(schema.fundingSource)
+			.where(eq(schema.fundingSource.organizationId, orgId));
 
-    const sourceMap = new Map<string, string>(
-      fundingSources.map((fs) => [String(fs.id), String(fs.name)]),
-    );
+		const sourceMap = new Map<string, string>(
+			fundingSources.map((fs) => [String(fs.id), String(fs.name)]),
+		);
 
-    const groupMap = new Map<
-      string | null,
-      {
-        fundingSourceId: string | null;
-        fundingSource: string;
-        subtotal: number;
-        items: {
-          expenseId: string;
-          vendor: string;
-          category: string;
-          amount: string;
-          description: string;
-          expenseDate: string;
-          createdAt: string;
-        }[];
-      }
-    >();
+		const groupMap = new Map<
+			string | null,
+			{
+				fundingSourceId: string | null;
+				fundingSource: string;
+				subtotal: number;
+				items: {
+					expenseId: string;
+					vendor: string;
+					category: string;
+					amount: string;
+					description: string;
+					expenseDate: string;
+					createdAt: string;
+				}[];
+			}
+		>();
 
-    for (const row of withSource) {
-      const fsId = String(row.fundingSourceId!);
-      const fsName: string = sourceMap.get(fsId) ?? "Unknown";
-      if (!groupMap.has(fsId)) {
-        groupMap.set(fsId, {
-          fundingSourceId: fsId,
-          fundingSource: fsName,
-          subtotal: 0,
-          items: [],
-        });
-      }
-      const group = groupMap.get(fsId)!;
-      group.subtotal += Number(row.amount);
-      group.items.push({
-        expenseId: String(row.id),
-        vendor: String(row.supplierName ?? row.description),
-        category: String(row.category),
-        amount: String(row.amount),
-        description: String(row.description),
-        expenseDate: String(row.expenseDate),
-        createdAt: (row.createdAt as Date).toISOString(),
-      });
-    }
+		for (const row of withSource) {
+			const fsId = String(row.fundingSourceId!);
+			const fsName: string = sourceMap.get(fsId) ?? "Unknown";
+			if (!groupMap.has(fsId)) {
+				groupMap.set(fsId, {
+					fundingSourceId: fsId,
+					fundingSource: fsName,
+					subtotal: 0,
+					items: [],
+				});
+			}
+			const group = groupMap.get(fsId)!;
+			group.subtotal += Number(row.amount);
+			group.items.push({
+				expenseId: String(row.id),
+				vendor: String(row.supplierName ?? row.description),
+				category: row.category ?? "",
+				amount: String(row.amount),
+				description: String(row.description),
+				expenseDate: String(row.expenseDate),
+				createdAt: (row.createdAt as Date).toISOString(),
+			});
+		}
 
-    if (withoutSource.length > 0) {
-      const generalGroup = {
-        fundingSourceId: null as string | null,
-        fundingSource: "General Cash",
-        subtotal: 0,
-        items: [] as {
-          expenseId: string;
-          vendor: string;
-          category: string;
-          amount: string;
-          description: string;
-          expenseDate: string;
-          createdAt: string;
-        }[],
-      };
-      for (const row of withoutSource) {
-        generalGroup.subtotal += Number(row.amount);
-        generalGroup.items.push({
-          expenseId: String(row.id),
-          vendor: String(row.supplierName ?? row.description),
-          category: String(row.category),
-          amount: String(row.amount),
-          description: String(row.description),
-          expenseDate: String(row.expenseDate),
-          createdAt: (row.createdAt as Date).toISOString(),
-        });
-      }
-      groupMap.set(null, generalGroup);
-    }
+		if (withoutSource.length > 0) {
+			const generalGroup = {
+				fundingSourceId: null as string | null,
+				fundingSource: "General Cash",
+				subtotal: 0,
+				items: [] as {
+					expenseId: string;
+					vendor: string;
+					category: string;
+					amount: string;
+					description: string;
+					expenseDate: string;
+					createdAt: string;
+				}[],
+			};
+			for (const row of withoutSource) {
+				generalGroup.subtotal += Number(row.amount);
+				generalGroup.items.push({
+					expenseId: String(row.id),
+					vendor: String(row.supplierName ?? row.description),
+					category: row.category ?? "",
+					amount: String(row.amount),
+					description: String(row.description),
+					expenseDate: String(row.expenseDate),
+					createdAt: (row.createdAt as Date).toISOString(),
+				});
+			}
+			groupMap.set(null, generalGroup);
+		}
 
-    const groups = Array.from(groupMap.values()).map((g) => ({
-      ...g,
-      subtotal: g.subtotal.toFixed(2),
-    }));
+		const groups = Array.from(groupMap.values()).map((g) => ({
+			...g,
+			subtotal: g.subtotal.toFixed(2),
+		}));
 
-    const grandTotal = groups
-      .reduce((sum, g) => sum + Number(g.subtotal), 0)
-      .toFixed(2);
+		const grandTotal = groups
+			.reduce((sum, g) => sum + Number(g.subtotal), 0)
+			.toFixed(2);
 
-    return {
-      date: input.date,
-      grandTotal,
-      groups,
-    };
-  });
+		return {
+			date: input.date,
+			grandTotal,
+			groups,
+		};
+	});
 
 // ── updateSession ───────────────────────────────────────────────────────
 const updateSession = permissionProcedure("shifts.update")
-  .input(
-    z.object({
-      sessionId: z.string().uuid(),
-      openingFloat: z.string().optional(),
-    }),
-  )
-  .handler(async ({ input, context }) => {
-    const orgId = requireOrganizationId(context);
-    const existing = await db
-      .select({ id: schema.cashSession.id, status: schema.cashSession.status })
-      .from(schema.cashSession)
-      .innerJoin(
-        schema.location,
-        eq(schema.cashSession.locationId, schema.location.id),
-      )
-      .where(
-        and(
-          eq(schema.cashSession.id, input.sessionId),
-          eq(schema.location.organizationId, orgId),
-        ),
-      )
-      .limit(1);
+	.input(
+		z.object({
+			sessionId: z.string().uuid(),
+			openingFloat: z.string().optional(),
+		}),
+	)
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		const existing = await db
+			.select({ id: schema.cashSession.id, status: schema.cashSession.status })
+			.from(schema.cashSession)
+			.innerJoin(
+				schema.location,
+				eq(schema.cashSession.locationId, schema.location.id),
+			)
+			.where(
+				and(
+					eq(schema.cashSession.id, input.sessionId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
 
-    if (existing.length === 0) {
-      throw new ORPCError("NOT_FOUND", { message: "Cash session not found" });
-    }
-    if (existing[0]?.status !== "open") {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Only open sessions can be edited",
-      });
-    }
+		if (existing.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Cash session not found" });
+		}
+		if (existing[0]?.status !== "open") {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Only open sessions can be edited",
+			});
+		}
 
-    const updates: Record<string, unknown> = {};
-    if (input.openingFloat !== undefined) {
-      updates.openingFloat = input.openingFloat;
-    }
+		const updates: Record<string, unknown> = {};
+		if (input.openingFloat !== undefined) {
+			updates.openingFloat = input.openingFloat;
+		}
 
-    await db
-      .update(schema.cashSession)
-      .set(updates)
-      .where(eq(schema.cashSession.id, input.sessionId));
+		await db
+			.update(schema.cashSession)
+			.set(updates)
+			.where(eq(schema.cashSession.id, input.sessionId));
 
-    return { status: "updated" };
-  });
+		return { status: "updated" };
+	});
 
 export const cashRouter = {
-  getSessions,
-  openSession,
-  closeSession,
-  createDrop,
-  createPayout,
-  // 7.1 Reconciliation
-  approveVariance,
-  getVarianceHistory,
-  getReconciliationRules,
-  updateReconciliationRules,
-  // 7.3 Shift Handoff
-  initiateHandoff,
-  acceptHandoff,
-  getHandoffs,
-  // 7.4 Expense Tracking
-  createExpense,
-  updateExpense,
-  getExpenses,
-  getExpenseReport,
-  getExpenseCategories,
-  createExpenseCategory,
-  deleteExpenseCategory,
-  deleteExpense,
-  getExpenseCategoryByMonth,
-  // Vendor Ledger
-  getSupplierSpendSummary,
-  getSupplierMonthlySpend,
-  getSupplierCategoryBreakdown,
-  getSupplierCategoryByMonth,
-  // 7.7 No-Sale Drawer Tracking
-  logNoSale,
-  getNoSaleReport,
-  // Funding Sources
-  listFundingSources,
-  createFundingSource,
-  updateFundingSource,
-  deleteFundingSource,
-  getExpensesByFundingSource,
-  getDailyExpenseSummary,
-  // Session editing
-  updateSession,
+	getSessions,
+	openSession,
+	closeSession,
+	createDrop,
+	createPayout,
+	// 7.1 Reconciliation
+	approveVariance,
+	getVarianceHistory,
+	getReconciliationRules,
+	updateReconciliationRules,
+	// 7.3 Shift Handoff
+	initiateHandoff,
+	acceptHandoff,
+	getHandoffs,
+	// 7.4 Expense Tracking
+	createExpense,
+	updateExpense,
+	getExpenses,
+	getExpenseReport,
+	getExpenseCategories,
+	createExpenseCategory,
+	deleteExpenseCategory,
+	deleteExpense,
+	bulkDeleteExpenses,
+	getExpenseCategoryByMonth,
+	// Vendor Ledger
+	getSupplierSpendSummary,
+	getSupplierMonthlySpend,
+	getSupplierCategoryBreakdown,
+	getSupplierCategoryByMonth,
+	// 7.7 No-Sale Drawer Tracking
+	logNoSale,
+	getNoSaleReport,
+	// Funding Sources
+	listFundingSources,
+	createFundingSource,
+	updateFundingSource,
+	deleteFundingSource,
+	getExpensesByFundingSource,
+	getDailyExpenseSummary,
+	// Session editing
+	updateSession,
 };

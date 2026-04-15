@@ -43,6 +43,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandItem,
+	CommandList,
+} from "@/components/ui/command";
 import {
 	Dialog,
 	DialogContent,
@@ -51,16 +59,15 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandItem,
-	CommandList,
-} from "@/components/ui/command";
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
 	Popover,
 	PopoverContent,
@@ -83,13 +90,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
 import { authClient } from "@/lib/auth-client";
 import { downloadCsv } from "@/lib/csv-export";
 import { printDailyExpenseSummary } from "@/lib/pdf/daily-expense-summary-pdf";
@@ -105,7 +106,6 @@ type SourceGroup = {
 	items: ExpenseRow[];
 	total: number;
 };
-
 
 const SUPPLIER_COLORS = [
 	"bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
@@ -128,7 +128,7 @@ const PAYMENT_METHODS = [
 
 const emptyForm = {
 	amount: "",
-	category: "",
+	selectedCategories: [] as string[], // array of category IDs
 	description: "",
 	supplierId: "",
 	paymentMethod: "",
@@ -140,13 +140,16 @@ const emptyForm = {
 	expenseDate: todayGY(), // defaults to today; user can back-date
 };
 
+type ExpenseCategoryRef = { id: string; name: string };
+
 type ExpenseRow = {
 	id: string;
 	amount: string;
-	category: string;
+	category: string | null; // legacy column, kept for backward-compat
+	categories: ExpenseCategoryRef[]; // multi-category via junction table
 	description: string;
-	expense_date: string;   // the date the expense occurred (user-supplied)
-	created_at: string;     // immutable audit: when the entry was entered
+	expense_date: string; // the date the expense occurred (user-supplied)
+	created_at: string; // immutable audit: when the entry was entered
 	authorized_by_name: string | null;
 	created_by_name: string | null;
 	supplier_name: string | null;
@@ -166,7 +169,11 @@ export default function ExpensesPage() {
 	// Sticky date: when on, the expense date stays locked after each submission
 	// so bulk-entry sessions don't require changing the date on every record.
 	const [stickyDate, setStickyDate] = useState(() => {
-		try { return localStorage.getItem("expense_sticky_date") === "true"; } catch { return false; }
+		try {
+			return localStorage.getItem("expense_sticky_date") === "true";
+		} catch {
+			return false;
+		}
 	});
 	const { data: userProfile } = useQuery(
 		orpc.settings.getCurrentUser.queryOptions({ input: {} }),
@@ -215,7 +222,6 @@ export default function ExpensesPage() {
 	const [newCategoryName, setNewCategoryName] = useState("");
 	const [viewingExpense, setViewingExpense] = useState<ExpenseRow | null>(null);
 	const [categoryFilter, setCategoryFilter] = useState("all");
-	
 
 	// Funding source state
 	const [fundingSourceFilter, setFundingSourceFilter] = useState("all");
@@ -239,7 +245,9 @@ export default function ExpensesPage() {
 	// Daily summary state
 	const [viewMode, setViewMode] = useState<"table" | "daily">("table");
 	const [summaryDate, setSummaryDate] = useState(today);
-	const [groupBy, setGroupBy] = useState<"none" | "source" | "category" | "supplier">("none");
+	const [groupBy, setGroupBy] = useState<
+		"none" | "source" | "category" | "supplier"
+	>("none");
 
 	const { data: expensesRaw = [] } = useQuery(
 		orpc.cash.getExpenses.queryOptions({
@@ -327,6 +335,11 @@ export default function ExpensesPage() {
 	}
 
 	const [deleteExpenseId, setDeleteExpenseId] = useState<string | null>(null);
+	const [selectedExpenseIds, setSelectedExpenseIds] = useState<Set<string>>(
+		new Set(),
+	);
+	const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+	const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
 	const [supplierSearch, setSupplierSearch] = useState("");
 	const [supplierPopoverOpen, setSupplierPopoverOpen] = useState(false);
 	const [deleteCategoryItem, setDeleteCategoryItem] = useState<{
@@ -340,7 +353,9 @@ export default function ExpensesPage() {
 				setDialogOpen(false);
 				if (stickyDate) {
 					// Persist the submitted date as the locked date for next entry
-					try { localStorage.setItem("expense_locked_date", form.expenseDate); } catch {}
+					try {
+						localStorage.setItem("expense_locked_date", form.expenseDate);
+					} catch {}
 					setForm({ ...emptyForm, expenseDate: form.expenseDate });
 				} else {
 					setForm(emptyForm);
@@ -371,6 +386,18 @@ export default function ExpensesPage() {
 				toast.success("Expense deleted");
 			},
 			onError: (err) => toast.error(err.message || "Failed to delete expense"),
+		}),
+	);
+
+	const bulkDeleteExpensesMut = useMutation(
+		orpc.cash.bulkDeleteExpenses.mutationOptions({
+			onSuccess: (data) => {
+				invalidateExpenses();
+				setSelectedExpenseIds(new Set());
+				setBulkDeleteConfirmOpen(false);
+				toast.success(`${data.count} expense(s) deleted`);
+			},
+			onError: (err) => toast.error(err.message || "Failed to delete expenses"),
 		}),
 	);
 
@@ -454,8 +481,7 @@ export default function ExpensesPage() {
 				setNewSupplierName("");
 				toast.success("Supplier added");
 			},
-			onError: (err) =>
-				toast.error(err.message || "Failed to add supplier"),
+			onError: (err) => toast.error(err.message || "Failed to add supplier"),
 		}),
 	);
 
@@ -481,16 +507,25 @@ export default function ExpensesPage() {
 	];
 	const fundingSourceColorMap = new Map<string, string>();
 	fundingSources.forEach((fs, i) => {
-		fundingSourceColorMap.set(fs.id, SOURCE_COLORS_HEX[i % SOURCE_COLORS_HEX.length]!);
+		fundingSourceColorMap.set(
+			fs.id,
+			SOURCE_COLORS_HEX[i % SOURCE_COLORS_HEX.length]!,
+		);
 	});
 	const getSourceColor = (id: string | null | undefined): string =>
 		id ? (fundingSourceColorMap.get(id) ?? "#64748b") : "#64748b";
 	const getSourceName = (id: string | null | undefined): string =>
-		id ? (fundingSources.find((f) => f.id === id)?.name ?? "Unknown") : "Unassigned";
+		id
+			? (fundingSources.find((f) => f.id === id)?.name ?? "Unknown")
+			: "Unassigned";
 
 	const filtered = expenses
 		.filter((e) => supplierFilter === "all" || e.supplier_id === supplierFilter)
-		.filter((e) => categoryFilter === "all" || e.category === categoryFilter)
+		.filter(
+			(e) =>
+				categoryFilter === "all" ||
+				(e.categories ?? []).some((c) => c.name === categoryFilter),
+		)
 		.filter(
 			(e) =>
 				fundingSourceFilter === "all" ||
@@ -498,9 +533,17 @@ export default function ExpensesPage() {
 		);
 
 	// Category breakdown (client-side from loaded expenses)
+	// Each expense can appear in multiple categories — sum per category name
 	const categoryBreakdown = Object.entries(
 		expenses.reduce<Record<string, number>>((acc, e) => {
-			acc[e.category] = (acc[e.category] ?? 0) + Number(e.amount);
+			const cats = e.categories ?? [];
+			if (cats.length === 0) {
+				acc.Uncategorized = (acc.Uncategorized ?? 0) + Number(e.amount);
+			} else {
+				for (const c of cats) {
+					acc[c.name] = (acc[c.name] ?? 0) + Number(e.amount);
+				}
+			}
 			return acc;
 		}, {}),
 	)
@@ -542,7 +585,7 @@ export default function ExpensesPage() {
 							0,
 						),
 					},
-			  ]
+				]
 			: []),
 	];
 
@@ -561,7 +604,16 @@ export default function ExpensesPage() {
 	];
 	const expensesByCategory = Object.entries(
 		filtered.reduce<Record<string, typeof filtered>>((acc, e) => {
-			(acc[e.category] ??= []).push(e);
+			const cats = e.categories ?? [];
+			if (cats.length === 0) {
+				if (!acc.Uncategorized) acc.Uncategorized = [];
+				acc.Uncategorized.push(e);
+			} else {
+				for (const c of cats) {
+					if (!acc[c.name]) acc[c.name] = [];
+					acc[c.name].push(e);
+				}
+			}
 			return acc;
 		}, {}),
 	)
@@ -582,7 +634,8 @@ export default function ExpensesPage() {
 	const expensesBySupplier = Object.entries(
 		filtered.reduce<Record<string, typeof filtered>>((acc, e) => {
 			const key = e.supplier_name ?? "(No supplier)";
-			(acc[key] ??= []).push(e);
+			if (!acc[key]) acc[key] = [];
+			acc[key].push(e);
 			return acc;
 		}, {}),
 	)
@@ -601,24 +654,33 @@ export default function ExpensesPage() {
 
 	// Active group list based on current groupBy selection
 	const activeGroups =
-		groupBy === "source" ? expensesBySource
-		: groupBy === "category" ? expensesByCategory
-		: groupBy === "supplier" ? expensesBySupplier
-		: null;
+		groupBy === "source"
+			? expensesBySource
+			: groupBy === "category"
+				? expensesByCategory
+				: groupBy === "supplier"
+					? expensesBySupplier
+					: null;
 
 	// Smart report title — used as PDF tab title (becomes Save-as filename)
 	const pdfTitle = (() => {
-		const d = new Date(startDate + "T12:00:00");
-		const monthLabel = d.toLocaleString("en-GY", { month: "short", year: "numeric" });
+		const d = new Date(`${startDate}T12:00:00`);
+		const monthLabel = d.toLocaleString("en-GY", {
+			month: "short",
+			year: "numeric",
+		});
 		const groupLabel =
-			groupBy === "source" ? " — By Source"
-			: groupBy === "category" ? " — By Category"
-			: groupBy === "supplier" ? " — By Supplier"
-			: "";
+			groupBy === "source"
+				? " — By Source"
+				: groupBy === "category"
+					? " — By Category"
+					: groupBy === "supplier"
+						? " — By Supplier"
+						: "";
 		return `Expense Report${groupLabel} — ${monthLabel}`;
 	})();
 
-		// Pivot category-by-month data for stacked bar chart
+	// Pivot category-by-month data for stacked bar chart
 	const CHART_CATEGORIES = [
 		"Food Cost",
 		"Beverages",
@@ -657,7 +719,15 @@ export default function ExpensesPage() {
 		setEditingId(null);
 		if (stickyDate) {
 			// Use the saved locked date; fall back to form's current date, then today
-			const locked = (() => { try { return localStorage.getItem("expense_locked_date") || form.expenseDate; } catch { return form.expenseDate; } })();
+			const locked = (() => {
+				try {
+					return (
+						localStorage.getItem("expense_locked_date") || form.expenseDate
+					);
+				} catch {
+					return form.expenseDate;
+				}
+			})();
 			setForm({ ...emptyForm, expenseDate: locked || today });
 		} else {
 			setForm(emptyForm);
@@ -669,7 +739,7 @@ export default function ExpensesPage() {
 		setEditingId(e.id);
 		setForm({
 			amount: e.amount,
-			category: e.category,
+			selectedCategories: (e.categories ?? []).map((c) => c.id),
 			description: e.description,
 			supplierId: e.supplier_id ?? "",
 			paymentMethod: e.payment_method ?? "",
@@ -688,15 +758,21 @@ export default function ExpensesPage() {
 			toast.error("Organization context is missing");
 			return;
 		}
-		if (!form.amount || !form.category || !form.description) {
-			toast.error("Amount, category, and description are required");
+		if (
+			!form.amount ||
+			form.selectedCategories.length === 0 ||
+			!form.description
+		) {
+			toast.error(
+				"Amount, at least one category, and description are required",
+			);
 			return;
 		}
 		if (editingId) {
 			updateExpense.mutate({
 				expenseId: editingId,
 				amount: form.amount,
-				category: form.category,
+				categories: form.selectedCategories,
 				description: form.description,
 				supplierId: form.supplierId || null,
 				paymentMethod: form.paymentMethod || null,
@@ -716,11 +792,13 @@ export default function ExpensesPage() {
 				);
 			});
 			if (sameDay.length > 0) {
-				toast.warning("Similar expense already exists for that date — double-check before saving");
+				toast.warning(
+					"Similar expense already exists for that date — double-check before saving",
+				);
 			}
 			createExpense.mutate({
 				amount: form.amount,
-				category: form.category,
+				categories: form.selectedCategories,
 				description: form.description,
 				supplierId: form.supplierId || null,
 				paymentMethod: form.paymentMethod || null,
@@ -786,15 +864,15 @@ export default function ExpensesPage() {
 						</Select>
 					)}
 					<DropdownMenu>
-						<DropdownMenuTrigger
-							className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm hover:bg-accent hover:text-accent-foreground"
-						>
+						<DropdownMenuTrigger className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm hover:bg-accent hover:text-accent-foreground">
 							<Settings2 className="size-4" />
 							Manage
 							<ChevronDown className="size-3.5 opacity-60" />
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end" className="w-48">
-							<DropdownMenuItem onClick={() => setManageFundingSourcesOpen(true)}>
+							<DropdownMenuItem
+								onClick={() => setManageFundingSourcesOpen(true)}
+							>
 								<Wallet className="mr-2 size-4" />
 								Funding Sources
 							</DropdownMenuItem>
@@ -819,13 +897,15 @@ export default function ExpensesPage() {
 								(activeGroups
 									? activeGroups.flatMap((g) =>
 											g.items.map((e) => ({ ...e, _group: g.name })),
-									  )
-								: filtered
+										)
+									: filtered
 								).map((e) => ({
 									"Funding Source": getSourceName(e.funding_source_id),
-									Date: new Date(e.expense_date + "T12:00:00").toLocaleDateString("en-GY"),
+									Date: new Date(
+										`${e.expense_date}T12:00:00`,
+									).toLocaleDateString("en-GY"),
 									Supplier: e.supplier_name ?? "",
-									Category: e.category,
+									Category: (e.categories ?? []).map((c) => c.name).join(", "),
 									Description: e.description ?? "",
 									Amount: e.amount,
 									"Payment Method": e.payment_method ?? "",
@@ -1016,18 +1096,25 @@ export default function ExpensesPage() {
 								<p className="text-muted-foreground text-xs">
 									{expenses.length} entries
 								</p>
-								{prevMonthReport?.grandTotal && Number(prevMonthReport.grandTotal) > 0 && (() => {
-									const curr = Number(reportData?.grandTotal ?? 0);
-									const prev = Number(prevMonthReport.grandTotal);
-									const diff = prev > 0 ? ((curr - prev) / prev) * 100 : 0;
-									return (
-										<span className={`text-xs font-medium ${
-											diff > 0 ? "text-destructive" : "text-green-600 dark:text-green-400"
-										}`}>
-											{diff > 0 ? "+" : ""}{diff.toFixed(0)}% vs last month
-										</span>
-									);
-								})()}
+								{prevMonthReport?.grandTotal &&
+									Number(prevMonthReport.grandTotal) > 0 &&
+									(() => {
+										const curr = Number(reportData?.grandTotal ?? 0);
+										const prev = Number(prevMonthReport.grandTotal);
+										const diff = prev > 0 ? ((curr - prev) / prev) * 100 : 0;
+										return (
+											<span
+												className={`font-medium text-xs ${
+													diff > 0
+														? "text-destructive"
+														: "text-green-600 dark:text-green-400"
+												}`}
+											>
+												{diff > 0 ? "+" : ""}
+												{diff.toFixed(0)}% vs last month
+											</span>
+										);
+									})()}
 							</CardContent>
 						</Card>
 						{(
@@ -1108,7 +1195,7 @@ export default function ExpensesPage() {
 							</div>
 						</div>
 					)}
-	
+
 					{/* Category Breakdown */}
 					{categoryBreakdown.length > 0 && (
 						<div>
@@ -1153,7 +1240,7 @@ export default function ExpensesPage() {
 									className="overflow-hidden rounded-lg border border-border"
 								>
 									<div
-										className="flex items-center justify-between px-4 py-2 text-sm font-medium"
+										className="flex items-center justify-between px-4 py-2 font-medium text-sm"
 										style={{
 											backgroundColor: `${src.color}18`,
 											borderBottom: `2px solid ${src.color}`,
@@ -1165,11 +1252,14 @@ export default function ExpensesPage() {
 												style={{ backgroundColor: src.color }}
 											/>
 											<span>{src.name}</span>
-											<span className="text-muted-foreground text-xs font-normal">
-												{src.items.length} expense{src.items.length !== 1 ? "s" : ""}
+											<span className="font-normal text-muted-foreground text-xs">
+												{src.items.length} expense
+												{src.items.length !== 1 ? "s" : ""}
 											</span>
 										</div>
-										<span className="font-semibold">{formatGYD(src.total)}</span>
+										<span className="font-semibold">
+											{formatGYD(src.total)}
+										</span>
 									</div>
 									<Table>
 										<TableHeader>
@@ -1178,7 +1268,9 @@ export default function ExpensesPage() {
 												<TableHead className="text-xs">Supplier</TableHead>
 												<TableHead className="text-xs">Category</TableHead>
 												<TableHead className="text-xs">Description</TableHead>
-												<TableHead className="text-right text-xs">Amount</TableHead>
+												<TableHead className="text-right text-xs">
+													Amount
+												</TableHead>
 												<TableHead className="text-xs">Authorized By</TableHead>
 												<TableHead className="w-20 text-xs" />
 											</TableRow>
@@ -1229,7 +1321,13 @@ export default function ExpensesPage() {
 																</span>
 															)}
 														</TableCell>
-														<TableCell className="text-xs">{e.category}</TableCell>
+														<TableCell className="text-xs">
+															{(e.categories ?? []).length > 0
+																? (e.categories ?? [])
+																		.map((c) => c.name)
+																		.join(", ")
+																: (e.category ?? "—")}
+														</TableCell>
 														<TableCell className="max-w-48 truncate text-xs">
 															{e.description}
 														</TableCell>
@@ -1261,7 +1359,10 @@ export default function ExpensesPage() {
 																	>
 																		<MoreHorizontal className="size-4" />
 																	</DropdownMenuTrigger>
-																	<DropdownMenuContent align="end" className="w-40">
+																	<DropdownMenuContent
+																		align="end"
+																		className="w-40"
+																	>
 																		<DropdownMenuSeparator />
 																		<DropdownMenuItem
 																			className="text-destructive focus:text-destructive"
@@ -1299,165 +1400,237 @@ export default function ExpensesPage() {
 							</div>
 						</div>
 					) : (
-						<div className="rounded-lg border border-border">
-							<Table>
-								<TableHeader>
-									<TableRow>
-										<TableHead className="w-28 text-xs">Source</TableHead>
-										<TableHead className="text-xs">Date</TableHead>
-										<TableHead className="text-xs">Supplier</TableHead>
-										<TableHead className="text-xs">Category</TableHead>
-										<TableHead className="text-xs">Description</TableHead>
-										<TableHead className="text-right text-xs">Amount</TableHead>
-										<TableHead className="text-xs">Authorized By</TableHead>
-										<TableHead className="w-20 text-xs" />
-									</TableRow>
-								</TableHeader>
-								<TableBody>
-									{filtered.length === 0 ? (
+						<>
+							{selectedExpenseIds.size > 0 && (
+								<div className="mb-2 flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2">
+									<span className="font-medium text-sm">
+										{selectedExpenseIds.size} selected
+									</span>
+									<Button
+										size="sm"
+										variant="destructive"
+										onClick={() => setBulkDeleteConfirmOpen(true)}
+									>
+										<Trash2 className="mr-1.5 size-3.5" />
+										Delete Selected
+									</Button>
+									<Button
+										size="sm"
+										variant="ghost"
+										onClick={() => setSelectedExpenseIds(new Set())}
+									>
+										Clear
+									</Button>
+								</div>
+							)}
+							<div className="rounded-lg border border-border">
+								<Table>
+									<TableHeader>
 										<TableRow>
-											<TableCell
-												colSpan={8}
-												className="py-10 text-center text-muted-foreground text-sm"
-											>
-												<ReceiptText className="mx-auto mb-2 size-8 opacity-30" />
-												No expenses recorded
-											</TableCell>
+											<TableHead className="w-10">
+												<Checkbox
+													checked={
+														filtered.length > 0 &&
+														filtered.every((e) => selectedExpenseIds.has(e.id))
+													}
+													onCheckedChange={(checked) => {
+														if (checked) {
+															setSelectedExpenseIds(
+																new Set(filtered.map((e) => e.id)),
+															);
+														} else {
+															setSelectedExpenseIds(new Set());
+														}
+													}}
+												/>
+											</TableHead>
+											<TableHead className="w-28 text-xs">Source</TableHead>
+											<TableHead className="text-xs">Date</TableHead>
+											<TableHead className="text-xs">Supplier</TableHead>
+											<TableHead className="text-xs">Category</TableHead>
+											<TableHead className="text-xs">Description</TableHead>
+											<TableHead className="text-right text-xs">
+												Amount
+											</TableHead>
+											<TableHead className="text-xs">Authorized By</TableHead>
+											<TableHead className="w-20 text-xs" />
 										</TableRow>
-									) : (
-										filtered.map((e) => {
-											const color = e.supplier_id
-												? supplierColorMap.get(e.supplier_id)
-												: undefined;
-											const srcColor = getSourceColor(e.funding_source_id);
-											const srcName = getSourceName(e.funding_source_id);
-											return (
-												<TableRow
-													key={e.id}
-													className="cursor-pointer transition-colors hover:bg-muted/60"
-													style={{ borderLeft: `3px solid ${srcColor}` }}
-													onClick={() => setViewingExpense(e)}
+									</TableHeader>
+									<TableBody>
+										{filtered.length === 0 ? (
+											<TableRow>
+												<TableCell
+													colSpan={9}
+													className="py-10 text-center text-muted-foreground text-sm"
 												>
-													<TableCell className="text-xs">
-														<span
-															className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-white"
-															style={{ backgroundColor: srcColor }}
-														>
-															{srcName}
-														</span>
-													</TableCell>
-													<TableCell className="whitespace-nowrap text-xs">
-														<span className="font-medium text-foreground">
-															{new Date(e.expense_date + "T12:00:00").toLocaleDateString("en-GY", {
-																month: "short",
-																day: "numeric",
-															})}
-														</span>
-														{e.expense_date !== new Date(e.created_at).toLocaleDateString("en-CA", { timeZone: "America/Guyana" }) && (
+													<ReceiptText className="mx-auto mb-2 size-8 opacity-30" />
+													No expenses recorded
+												</TableCell>
+											</TableRow>
+										) : (
+											filtered.map((e) => {
+												const color = e.supplier_id
+													? supplierColorMap.get(e.supplier_id)
+													: undefined;
+												const srcColor = getSourceColor(e.funding_source_id);
+												const srcName = getSourceName(e.funding_source_id);
+												return (
+													<TableRow
+														key={e.id}
+														className="cursor-pointer transition-colors hover:bg-muted/60"
+														style={{ borderLeft: `3px solid ${srcColor}` }}
+														onClick={() => setViewingExpense(e)}
+													>
+														<TableCell onClick={(ev) => ev.stopPropagation()}>
+															<Checkbox
+																checked={selectedExpenseIds.has(e.id)}
+																onCheckedChange={(checked) => {
+																	setSelectedExpenseIds((prev) => {
+																		const next = new Set(prev);
+																		if (checked) next.add(e.id);
+																		else next.delete(e.id);
+																		return next;
+																	});
+																}}
+															/>
+														</TableCell>
+														<TableCell className="text-xs">
 															<span
-																className="ml-1 text-muted-foreground text-[10px]"
-																title={"Entered: " + new Date(e.created_at).toLocaleString("en-GY", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+																className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium text-white text-xs"
+																style={{ backgroundColor: srcColor }}
 															>
-																(backdated)
+																{srcName}
 															</span>
-														)}
-													</TableCell>
-													<TableCell>
-														{e.supplier_id ? (
-															<Link
-																to={`/dashboard/suppliers/${e.supplier_id}`}
-																onClick={(ev) => ev.stopPropagation()}
-															>
+														</TableCell>
+														<TableCell className="whitespace-nowrap text-xs">
+															<span className="font-medium text-foreground">
+																{new Date(
+																	`${e.expense_date}T12:00:00`,
+																).toLocaleDateString("en-GY", {
+																	month: "short",
+																	day: "numeric",
+																})}
+															</span>
+															{e.expense_date !==
+																new Date(e.created_at).toLocaleDateString(
+																	"en-CA",
+																	{ timeZone: "America/Guyana" },
+																) && (
+																<span
+																	className="ml-1 text-[10px] text-muted-foreground"
+																	title={`Entered: ${new Date(e.created_at).toLocaleString("en-GY", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}`}
+																>
+																	(backdated)
+																</span>
+															)}
+														</TableCell>
+														<TableCell>
+															{e.supplier_id ? (
+																<Link
+																	to={`/dashboard/suppliers/${e.supplier_id}`}
+																	onClick={(ev) => ev.stopPropagation()}
+																>
+																	<Badge
+																		variant="secondary"
+																		className={`text-xs hover:opacity-80 ${color ?? ""}`}
+																	>
+																		{e.supplier_name}
+																	</Badge>
+																</Link>
+															) : e.supplier_name ? (
 																<Badge
 																	variant="secondary"
-																	className={`text-xs hover:opacity-80 ${color ?? ""}`}
+																	className={`text-xs ${color ?? ""}`}
 																>
 																	{e.supplier_name}
 																</Badge>
-															</Link>
-														) : e.supplier_name ? (
-															<Badge
-																variant="secondary"
-																className={`text-xs ${color ?? ""}`}
-															>
-																{e.supplier_name}
-															</Badge>
-														) : (
-															<span className="text-muted-foreground text-xs">
-																—
-															</span>
-														)}
-													</TableCell>
-													<TableCell className="text-xs">{e.category}</TableCell>
-													<TableCell className="max-w-48 truncate text-xs">
-														{e.description}
-													</TableCell>
-													<TableCell className="text-right font-semibold text-sm">
-														{formatGYD(Number(e.amount))}
-													</TableCell>
-													<TableCell className="text-muted-foreground text-xs">
-														{e.authorized_by_name ?? "—"}
-													</TableCell>
-													<TableCell>
-														<div className="flex items-center justify-end gap-1">
-															<Button
-																size="icon"
-																variant="ghost"
-																className="size-7"
-																type="button"
-																onClick={(ev) => {
-																	ev.stopPropagation();
-																	openEdit(e);
-																}}
-															>
-																<Pencil className="size-3.5" />
-															</Button>
-															<DropdownMenu>
-																<DropdownMenuTrigger
-																	className="inline-flex size-7 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+															) : (
+																<span className="text-muted-foreground text-xs">
+																	—
+																</span>
+															)}
+														</TableCell>
+														<TableCell className="text-xs">
+															{(e.categories ?? []).length > 0
+																? (e.categories ?? [])
+																		.map((c) => c.name)
+																		.join(", ")
+																: (e.category ?? "—")}
+														</TableCell>
+														<TableCell className="max-w-48 truncate text-xs">
+															{e.description}
+														</TableCell>
+														<TableCell className="text-right font-semibold text-sm">
+															{formatGYD(Number(e.amount))}
+														</TableCell>
+														<TableCell className="text-muted-foreground text-xs">
+															{e.authorized_by_name ?? "—"}
+														</TableCell>
+														<TableCell>
+															<div className="flex items-center justify-end gap-1">
+																<Button
+																	size="icon"
+																	variant="ghost"
+																	className="size-7"
 																	type="button"
-																	onClick={(ev) => ev.stopPropagation()}
+																	onClick={(ev) => {
+																		ev.stopPropagation();
+																		openEdit(e);
+																	}}
 																>
-																	<MoreHorizontal className="size-4" />
-																</DropdownMenuTrigger>
-																<DropdownMenuContent align="end" className="w-40">
-																	<DropdownMenuSeparator />
-																	<DropdownMenuItem
-																		className="text-destructive focus:text-destructive"
-																		onClick={(ev) => {
-																			ev.stopPropagation();
-																			setDeleteExpenseId(e.id);
-																		}}
+																	<Pencil className="size-3.5" />
+																</Button>
+																<DropdownMenu>
+																	<DropdownMenuTrigger
+																		className="inline-flex size-7 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+																		type="button"
+																		onClick={(ev) => ev.stopPropagation()}
 																	>
-																		<Trash2 className="mr-2 size-3.5" />
-																		Delete
-																	</DropdownMenuItem>
-																</DropdownMenuContent>
-															</DropdownMenu>
-														</div>
-													</TableCell>
-												</TableRow>
-											);
-										})
-									)}
-								</TableBody>
-							</Table>
-							{filtered.length > 0 && (
-								<div className="flex items-center justify-between border-border border-t px-4 py-3 text-sm">
-									<span className="text-muted-foreground">
-										{filtered.length} expense{filtered.length !== 1 ? "s" : ""}
-										{(supplierFilter !== "all" ||
-											categoryFilter !== "all" ||
-											fundingSourceFilter !== "all") && (
-											<span className="ml-1 text-xs">(filtered)</span>
+																		<MoreHorizontal className="size-4" />
+																	</DropdownMenuTrigger>
+																	<DropdownMenuContent
+																		align="end"
+																		className="w-40"
+																	>
+																		<DropdownMenuSeparator />
+																		<DropdownMenuItem
+																			className="text-destructive focus:text-destructive"
+																			onClick={(ev) => {
+																				ev.stopPropagation();
+																				setDeleteExpenseId(e.id);
+																			}}
+																		>
+																			<Trash2 className="mr-2 size-3.5" />
+																			Delete
+																		</DropdownMenuItem>
+																	</DropdownMenuContent>
+																</DropdownMenu>
+															</div>
+														</TableCell>
+													</TableRow>
+												);
+											})
 										)}
-									</span>
-									<span className="font-semibold">
-										Total: {formatGYD(totalToday)}
-									</span>
-								</div>
-							)}
-						</div>
+									</TableBody>
+								</Table>
+								{filtered.length > 0 && (
+									<div className="flex items-center justify-between border-border border-t px-4 py-3 text-sm">
+										<span className="text-muted-foreground">
+											{filtered.length} expense
+											{filtered.length !== 1 ? "s" : ""}
+											{(supplierFilter !== "all" ||
+												categoryFilter !== "all" ||
+												fundingSourceFilter !== "all") && (
+												<span className="ml-1 text-xs">(filtered)</span>
+											)}
+										</span>
+										<span className="font-semibold">
+											Total: {formatGYD(totalToday)}
+										</span>
+									</div>
+								)}
+							</div>
+						</>
 					)}
 
 					{/* Category by Month Chart */}
@@ -1645,33 +1818,46 @@ export default function ExpensesPage() {
 					setDialogOpen(open);
 					if (!open) {
 						setEditingId(null);
-						setForm(stickyDate && !editingId ? { ...emptyForm, expenseDate: form.expenseDate } : emptyForm);
+						setForm(
+							stickyDate && !editingId
+								? { ...emptyForm, expenseDate: form.expenseDate }
+								: emptyForm,
+						);
 					}
 				}}
 			>
-				<DialogContent className="flex flex-col sm:max-w-md max-h-[90vh]">
+				<DialogContent className="flex max-h-[90vh] flex-col sm:max-w-md">
 					<DialogHeader>
 						<DialogTitle>
 							{editingId ? "Edit Expense" : "Record Expense"}
 						</DialogTitle>
 					</DialogHeader>
-					<div className="flex flex-col gap-4 py-2 overflow-y-auto flex-1 min-h-0 pr-1">
+					<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-2 pr-1">
 						<div className="flex flex-col gap-1.5">
 							<div className="flex items-center justify-between">
 								<Label>Expense Date</Label>
 								{!editingId && (
 									<div className="flex items-center gap-2">
-										<span className="text-xs text-muted-foreground">
-											{stickyDate ? `Locked to ${form.expenseDate || today}` : "Lock date"}
+										<span className="text-muted-foreground text-xs">
+											{stickyDate
+												? `Locked to ${form.expenseDate || today}`
+												: "Lock date"}
 										</span>
 										<Switch
 											checked={stickyDate}
 											onCheckedChange={(v) => {
 												setStickyDate(v);
 												try {
-													localStorage.setItem("expense_sticky_date", String(v));
+													localStorage.setItem(
+														"expense_sticky_date",
+														String(v),
+													);
 													// When locking, save the currently-selected date as the locked date
-													if (v) localStorage.setItem("expense_locked_date", form.expenseDate || today);
+													if (v)
+														localStorage.setItem(
+															"expense_locked_date",
+															form.expenseDate || today,
+														);
 												} catch {}
 											}}
 										/>
@@ -1684,11 +1870,17 @@ export default function ExpensesPage() {
 								value={form.expenseDate || today}
 								onChange={(e) => {
 									setForm((f) => ({ ...f, expenseDate: e.target.value }));
-									if (stickyDate) try { localStorage.setItem("expense_locked_date", e.target.value); } catch {}
+									if (stickyDate)
+										try {
+											localStorage.setItem(
+												"expense_locked_date",
+												e.target.value,
+											);
+										} catch {}
 								}}
 							/>
 							{form.expenseDate && form.expenseDate !== today && (
-								<p className="text-xs text-amber-600 dark:text-amber-400">
+								<p className="text-amber-600 text-xs dark:text-amber-400">
 									Back-dated — entry will be recorded as {today}
 								</p>
 							)}
@@ -1716,16 +1908,22 @@ export default function ExpensesPage() {
 									Add Supplier
 								</button>
 							</div>
-							<Popover open={supplierPopoverOpen} onOpenChange={setSupplierPopoverOpen}>
+							<Popover
+								open={supplierPopoverOpen}
+								onOpenChange={setSupplierPopoverOpen}
+							>
 								<PopoverTrigger asChild>
 									<Button
 										variant="outline"
 										role="combobox"
 										className="w-full justify-between font-normal"
 									>
-										<span className={form.supplierId ? "" : "text-muted-foreground"}>
+										<span
+											className={form.supplierId ? "" : "text-muted-foreground"}
+										>
 											{form.supplierId
-												? (suppliers.find((s) => s.id === form.supplierId)?.name ?? "Unknown")
+												? (suppliers.find((s) => s.id === form.supplierId)
+														?.name ?? "Unknown")
 												: "Select supplier (optional)"}
 										</span>
 										<ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
@@ -1733,7 +1931,7 @@ export default function ExpensesPage() {
 								</PopoverTrigger>
 								<PopoverContent className="w-[--radix-popover-trigger-width] p-0">
 									<Command>
-										<div className="flex items-center border-b border-border px-3">
+										<div className="flex items-center border-border border-b px-3">
 											<input
 												placeholder="Search suppliers…"
 												value={supplierSearch}
@@ -1753,11 +1951,17 @@ export default function ExpensesPage() {
 														setSupplierPopoverOpen(false);
 													}}
 												>
-													<Check className={`mr-2 size-3.5 ${!form.supplierId ? "opacity-100" : "opacity-0"}`} />
+													<Check
+														className={`mr-2 size-3.5 ${!form.supplierId ? "opacity-100" : "opacity-0"}`}
+													/>
 													No supplier
 												</CommandItem>
 												{suppliers
-													.filter((s) => s.name.toLowerCase().includes(supplierSearch.toLowerCase()))
+													.filter((s) =>
+														s.name
+															.toLowerCase()
+															.includes(supplierSearch.toLowerCase()),
+													)
 													.slice(0, 15)
 													.map((s) => (
 														<CommandItem
@@ -1775,19 +1979,25 @@ export default function ExpensesPage() {
 																setForm((f) => ({
 																	...f,
 																	supplierId: s.id,
-																	category:
-																		f.category || (recent?.category ?? f.category),
+																	selectedCategories:
+																		f.selectedCategories.length > 0
+																			? f.selectedCategories
+																			: (recent?.categories ?? []).map(
+																					(c) => c.id,
+																				),
 																}));
 																setSupplierSearch("");
 																setSupplierPopoverOpen(false);
 															}}
 														>
-															<Check className={`mr-2 size-3.5 ${form.supplierId === s.id ? "opacity-100" : "opacity-0"}`} />
+															<Check
+																className={`mr-2 size-3.5 ${form.supplierId === s.id ? "opacity-100" : "opacity-0"}`}
+															/>
 															{s.name}
 														</CommandItem>
 													))}
-												</CommandGroup>
-											</CommandList>
+											</CommandGroup>
+										</CommandList>
 									</Command>
 								</PopoverContent>
 							</Popover>
@@ -1826,22 +2036,76 @@ export default function ExpensesPage() {
 							</Select>
 						</div>
 						<div className="flex flex-col gap-1.5">
-							<Label>Category</Label>
-							<Select
-								value={form.category}
-								onValueChange={(v) => setForm((f) => ({ ...f, category: v }))}
+							<Label>
+								Category
+								{form.selectedCategories.length === 0 && (
+									<span className="ml-1 text-destructive text-xs">*</span>
+								)}
+							</Label>
+							<Popover
+								open={categoryPopoverOpen}
+								onOpenChange={setCategoryPopoverOpen}
 							>
-								<SelectTrigger>
-									<SelectValue placeholder="Select category" />
-								</SelectTrigger>
-								<SelectContent>
-									{categories.map((c) => (
-										<SelectItem key={c.id} value={c.name}>
-											{c.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+								<PopoverTrigger asChild>
+									<Button
+										variant="outline"
+										role="combobox"
+										className="w-full justify-between font-normal"
+									>
+										<span className="truncate">
+											{form.selectedCategories.length === 0
+												? "Select categories..."
+												: categories
+														.filter((c) =>
+															form.selectedCategories.includes(c.id),
+														)
+														.map((c) => c.name)
+														.join(", ")}
+										</span>
+										<ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent
+									className="w-[--radix-popover-trigger-width] p-0"
+									align="start"
+								>
+									<Command>
+										<CommandList>
+											{categories.length === 0 ? (
+												<CommandEmpty>No categories yet</CommandEmpty>
+											) : (
+												<CommandGroup>
+													{categories.map((c) => {
+														const isSelected = form.selectedCategories.includes(
+															c.id,
+														);
+														return (
+															<CommandItem
+																key={c.id}
+																onSelect={() =>
+																	setForm((f) => ({
+																		...f,
+																		selectedCategories: isSelected
+																			? f.selectedCategories.filter(
+																					(id) => id !== c.id,
+																				)
+																			: [...f.selectedCategories, c.id],
+																	}))
+																}
+															>
+																<Check
+																	className={`mr-2 size-4 ${isSelected ? "opacity-100" : "opacity-0"}`}
+																/>
+																{c.name}
+															</CommandItem>
+														);
+													})}
+												</CommandGroup>
+											)}
+										</CommandList>
+									</Command>
+								</PopoverContent>
+							</Popover>
 						</div>
 						<div className="flex flex-col gap-1.5">
 							<Label>Description</Label>
@@ -1942,20 +2206,27 @@ export default function ExpensesPage() {
 								<div className="flex flex-col gap-1">
 									<p className="text-muted-foreground text-xs">Expense Date</p>
 									<p className="font-medium text-sm">
-										{new Date(viewingExpense.expense_date + "T12:00:00").toLocaleDateString(
-											"en-GY",
-											{ weekday: "short", month: "short", day: "numeric", year: "numeric" },
-										)}
-									</p>
-									<p className="text-muted-foreground text-[10px]">
-										Entered:{" "}
-										{new Date(viewingExpense.created_at).toLocaleString("en-GY", {
+										{new Date(
+											`${viewingExpense.expense_date}T12:00:00`,
+										).toLocaleDateString("en-GY", {
+											weekday: "short",
 											month: "short",
 											day: "numeric",
-											hour: "2-digit",
-											minute: "2-digit",
-											hour12: false,
+											year: "numeric",
 										})}
+									</p>
+									<p className="text-[10px] text-muted-foreground">
+										Entered:{" "}
+										{new Date(viewingExpense.created_at).toLocaleString(
+											"en-GY",
+											{
+												month: "short",
+												day: "numeric",
+												hour: "2-digit",
+												minute: "2-digit",
+												hour12: false,
+											},
+										)}
 									</p>
 								</div>
 								<div className="flex flex-col gap-1">
@@ -1969,7 +2240,13 @@ export default function ExpensesPage() {
 							<div className="grid grid-cols-2 gap-4">
 								<div className="flex flex-col gap-1">
 									<p className="text-muted-foreground text-xs">Category</p>
-									<p className="text-sm">{viewingExpense.category}</p>
+									<p className="text-sm">
+										{(viewingExpense.categories ?? []).length > 0
+											? (viewingExpense.categories ?? [])
+													.map((c) => c.name)
+													.join(", ")
+											: (viewingExpense.category ?? "—")}
+									</p>
 								</div>
 								<div className="flex flex-col gap-1">
 									<p className="text-muted-foreground text-xs">Supplier</p>
@@ -2156,6 +2433,39 @@ export default function ExpensesPage() {
 				</AlertDialogContent>
 			</AlertDialog>
 
+			{/* Bulk Delete Confirmation */}
+			<AlertDialog
+				open={bulkDeleteConfirmOpen}
+				onOpenChange={(o) => {
+					if (!o) setBulkDeleteConfirmOpen(false);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							Delete {selectedExpenseIds.size} expense(s)?
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							This action cannot be undone. All selected expenses will be
+							permanently removed.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+							onClick={() =>
+								bulkDeleteExpensesMut.mutate({
+									expenseIds: [...selectedExpenseIds],
+								})
+							}
+						>
+							Delete {selectedExpenseIds.size} expense(s)
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
 			{/* Delete Category Confirmation */}
 			<AlertDialog
 				open={!!deleteCategoryItem}
@@ -2187,7 +2497,6 @@ export default function ExpensesPage() {
 				</AlertDialogContent>
 			</AlertDialog>
 
-
 			{/* Manage Suppliers Dialog */}
 			<Dialog
 				open={manageSuppliersOpen}
@@ -2200,7 +2509,8 @@ export default function ExpensesPage() {
 					<DialogHeader>
 						<DialogTitle>Add Supplier</DialogTitle>
 						<DialogDescription>
-							Quickly add a new supplier. You can add full details later in Inventory → Suppliers.
+							Quickly add a new supplier. You can add full details later in
+							Inventory → Suppliers.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="flex flex-col gap-4 py-2">
@@ -2221,7 +2531,9 @@ export default function ExpensesPage() {
 									if (!newSupplierName.trim()) return;
 									createSupplierMut.mutate({ name: newSupplierName.trim() });
 								}}
-								disabled={!newSupplierName.trim() || createSupplierMut.isPending}
+								disabled={
+									!newSupplierName.trim() || createSupplierMut.isPending
+								}
 							>
 								<Plus className="size-4" />
 								Add
