@@ -75,9 +75,12 @@ describe("hasRouteAccess — route guard", () => {
 
 	// ── No permissions ─────────────────────────────────────────────────────
 
-	test("user with no permissions cannot access any mapped route", () => {
-		for (const route of Object.keys(ROUTE_MODULE_MAP)) {
-			expect(hasRouteAccess(route, noPerms)).toBe(false);
+	test("user with no permissions cannot access any permission-gated route", () => {
+		for (const [route, module] of Object.entries(ROUTE_MODULE_MAP)) {
+			// null module = accessible to all authenticated users by design — skip
+			if (module !== null) {
+				expect(hasRouteAccess(route, noPerms)).toBe(false);
+			}
 		}
 	});
 
