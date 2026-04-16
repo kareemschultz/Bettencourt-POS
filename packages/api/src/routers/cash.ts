@@ -652,10 +652,11 @@ const createExpense = permissionProcedure("shifts.create")
 			})
 			.returning({ id: schema.expense.id });
 
-		if (rows[0]?.id && input.categories.length > 0) {
+		const expenseId = rows[0]?.id;
+		if (expenseId && input.categories.length > 0) {
 			await db.insert(schema.expenseCategoryLink).values(
 				input.categories.map((categoryId) => ({
-					expenseId: rows[0]?.id,
+					expenseId,
 					categoryId,
 				})),
 			);
