@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Printer, Split, X } from "lucide-react";
 
 // Prints the receipt in an isolated popup so only the receipt content is printed,
@@ -72,6 +73,15 @@ export function ReceiptPreview({
 	receiptConfig,
 	onSplitBill,
 }: ReceiptPreviewProps) {
+	useEffect(() => {
+		if (!open) return;
+		const timer = setTimeout(
+			() => printReceiptPopup(document.getElementById("receipt-content")),
+			300,
+		);
+		return () => clearTimeout(timer);
+	}, [open]);
+
 	if (!order) return null;
 
 	const rc = receiptConfig ?? {
