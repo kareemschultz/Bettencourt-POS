@@ -6,7 +6,6 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin } from "better-auth/plugins/admin";
 import { multiSession } from "better-auth/plugins/multi-session";
 import { organization } from "better-auth/plugins/organization";
-import { twoFactor } from "better-auth/plugins/two-factor";
 import { username } from "better-auth/plugins/username";
 import nodemailer from "nodemailer";
 
@@ -53,9 +52,6 @@ export const auth = betterAuth({
 	plugins: [
 		organization({
 			disableOrganizationDeletion: true,
-		}),
-		twoFactor({
-			issuer: "Bettencourt POS",
 		}),
 		multiSession({
 			maximumSessions: 3,
