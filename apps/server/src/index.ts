@@ -10,7 +10,7 @@ import { auth } from "@Bettencourt-POS/auth";
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { env } from "@Bettencourt-POS/env/server";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
@@ -34,6 +34,20 @@ import {
 } from "./pin-rate-limit";
 import { backupsRouter } from "./routes/backups";
 import { publishPosEvent, websocket, wsHandler } from "./ws";
+
+// BetterAuth uses 32-char alphanumeric IDs (not UUIDs) for sessions.
+// Rejection sampling avoids modulo bias across the 62-char alphabet.
+function generateBetterAuthId(): string {
+	const chars =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	const bytes = randomBytes(64);
+	let result = "";
+	for (let i = 0; i < bytes.length && result.length < 32; i++) {
+		const b = bytes[i]!;
+		if (b < 248) result += chars[b % 62]!;
+	}
+	return result;
+}
 
 const app = new Hono();
 
@@ -113,28 +127,30 @@ app.post("/api/auth/pin-login", async (c) => {
 
 		// Create session directly via Drizzle — bypasses auth.$context which triggers
 		// a Zod v4 cyclical schema bug in BetterAuth 1.5.x plugins.
-		const sessionToken = randomUUID();
-		const sessionId = randomUUID();
+		// Token format must match BetterAuth's: 32-char alphanumeric (not UUID).
+		// Cookie name must include __Secure- prefix (BetterAuth adds this in production).
+		const sessionToken = generateBetterAuthId();
+		const sessionId = generateBetterAuthId();
 		await db.insert(schema.session).values({
 			id: sessionId,
 			token: sessionToken,
 			userId: user.id,
-			expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+			expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
 			createdAt: new Date(),
 			updatedAt: new Date(),
 			ipAddress: clientIp ?? null,
-			userAgent: null,
+			userAgent: c.req.raw.headers.get("user-agent") ?? null,
 			activeOrganizationId: null,
 		});
 
 		const signedToken = `${sessionToken}.${await makeSignature(sessionToken, env.BETTER_AUTH_SECRET)}`;
 		const cookieParts = [
-			`better-auth.session_token=${signedToken}`,
+			`__Secure-better-auth.session_token=${encodeURIComponent(signedToken)}`,
 			"Path=/",
 			"HttpOnly",
 			"Secure",
 			"SameSite=None",
-			`Max-Age=${30 * 24 * 60 * 60}`,
+			`Max-Age=${7 * 24 * 60 * 60}`,
 		].join("; ");
 
 		// Session is set via cookie only — do not expose token in response body
