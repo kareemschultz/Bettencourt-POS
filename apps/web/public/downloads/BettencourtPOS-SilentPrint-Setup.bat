@@ -4,62 +4,88 @@ color 0A
 
 echo.
 echo  =========================================================
-echo   KareTech Solutions - Bettencourt's POS Setup
-echo   Silent Receipt Printing - One-Click Installer
+echo   KareTech Solutions
+echo   Bettencourt's POS - Terminal Setup
+echo   Silent Printing + Fullscreen Kiosk
 echo  =========================================================
 echo.
-echo  This will automatically configure the POS shortcut
-echo  for silent printing and fullscreen mode.
+echo  Scanning for Bettencourt's POS shortcuts...
 echo.
-pause
 
 powershell -ExecutionPolicy Bypass -Command ^
 "$ErrorActionPreference = 'Stop'; ^
-$appId = 'nkngegcjpmjpnokicmecbicjianljdkh'; ^
-$addFlags = '--kiosk --kiosk-printing'; ^
-$locations = @( ^
+^
+$pwaAppId   = 'nkngegcjpmjpnokicmecbicjianljdkh'; ^
+$posUrls    = @('pos.bettencourtgy.com', 'pos.karetechsolutions.com'); ^
+$kioskFlags = '--kiosk --kiosk-printing'; ^
+^
+$searchPaths = @( ^
     [Environment]::GetFolderPath('Desktop'), ^
     [Environment]::GetFolderPath('CommonDesktopDirectory'), ^
     [Environment]::GetFolderPath('ApplicationData') + '\Microsoft\Windows\Start Menu\Programs', ^
     [Environment]::GetFolderPath('CommonApplicationData') + '\Microsoft\Windows\Start Menu\Programs', ^
     [Environment]::GetFolderPath('LocalApplicationData') + '\Microsoft\Windows\Start Menu\Programs' ^
 ); ^
-$shell = New-Object -ComObject WScript.Shell; ^
-$found = $false; ^
-foreach ($loc in $locations) { ^
-    if (Test-Path $loc) { ^
-        Get-ChildItem -Path $loc -Filter '*.lnk' -Recurse -ErrorAction SilentlyContinue | ForEach-Object { ^
-            try { ^
-                $lnk = $shell.CreateShortcut($_.FullName); ^
-                if ($lnk.Arguments -like \"*$appId*\") { ^
-                    Write-Host \"`n  Found shortcut: $($_.Name)\" -ForegroundColor Cyan; ^
-                    Write-Host \"  Current args:   $($lnk.Arguments)\" -ForegroundColor Gray; ^
-                    $args = $lnk.Arguments; ^
-                    if ($args -notlike '*--kiosk-printing*') { ^
-                        $lnk.Arguments = \"$args $addFlags\"; ^
-                        $lnk.Save(); ^
-                        Write-Host \"  Updated to:     $($lnk.Arguments)\" -ForegroundColor Green; ^
-                        Write-Host \"`n  Done! Shortcut patched successfully.\" -ForegroundColor Green; ^
-                    } else { ^
-                        Write-Host \"  Already configured - no changes needed.\" -ForegroundColor Yellow; ^
-                    } ^
-                    $found = $true; ^
-                } ^
-            } catch {} ^
+^
+$shell   = New-Object -ComObject WScript.Shell; ^
+$patched = 0; ^
+$already = 0; ^
+^
+foreach ($dir in $searchPaths) { ^
+    if (-not (Test-Path $dir)) { continue } ^
+    Get-ChildItem -Path $dir -Filter '*.lnk' -Recurse -ErrorAction SilentlyContinue | ForEach-Object { ^
+        try { ^
+            $lnk  = $shell.CreateShortcut($_.FullName); ^
+            $args = $lnk.Arguments; ^
+            $isPwa    = $args -like \"*$pwaAppId*\"; ^
+            $isChrome = (-not $isPwa) -and ($lnk.TargetPath -like '*chrome.exe') -and ($posUrls | Where-Object { $args -like \"*$_*\" }); ^
+            if (-not $isPwa -and -not $isChrome) { return } ^
+            $type = if ($isPwa) { 'PWA (installed app)' } else { 'Chrome browser shortcut' } ^
+            Write-Host \"  Found : $($_.Name)\" -ForegroundColor Cyan; ^
+            Write-Host \"  Type  : $type\" -ForegroundColor Cyan; ^
+            Write-Host \"  Args  : $args\" -ForegroundColor DarkGray; ^
+            if ($args -like '*--kiosk-printing*') { ^
+                Write-Host \"  Status: Already configured.\" -ForegroundColor Yellow; ^
+                $already++; ^
+                Write-Host ''; ^
+                return ^
+            } ^
+            if ($isPwa) { ^
+                $lnk.Arguments = \"$args $kioskFlags\" ^
+            } else { ^
+                $lnk.Arguments = \"$kioskFlags $args\" ^
+            } ^
+            $lnk.Save(); ^
+            Write-Host \"  Status: Patched OK.\" -ForegroundColor Green; ^
+            Write-Host \"  New   : $($lnk.Arguments)\" -ForegroundColor DarkGray; ^
+            $patched++; ^
+            Write-Host '' ^
+        } catch { ^
+            Write-Host \"  Warning: Could not read $($_.Name)\" -ForegroundColor DarkYellow ^
         } ^
     } ^
-}; ^
-if (-not $found) { ^
-    Write-Host \"`n  ERROR: Shortcut not found automatically.\" -ForegroundColor Red; ^
-    Write-Host \"  Please follow the manual steps in the PDF guide.\" -ForegroundColor Yellow; ^
+} ^
+^
+Write-Host ''; ^
+if ($patched -eq 0 -and $already -eq 0) { ^
+    Write-Host '  ERROR: No Bettencourt POS shortcut was found.' -ForegroundColor Red; ^
+    Write-Host '  Make sure the POS is installed as a PWA (Chrome install icon' -ForegroundColor Yellow; ^
+    Write-Host '  in the address bar) or a Chrome shortcut exists on the Desktop' -ForegroundColor Yellow; ^
+    Write-Host '  or Start Menu, then run this script again.' -ForegroundColor Yellow ^
+} elseif ($patched -gt 0) { ^
+    Write-Host \"  Done! $patched shortcut(s) configured.\" -ForegroundColor Green ^
+} else { ^
+    Write-Host '  Already set up - nothing to do.' -ForegroundColor Yellow ^
 } ^
 "
 
 echo.
 echo  =========================================================
-echo   Next step: Close Chrome completely (right-click Chrome
-echo   in the system tray at bottom-right ^> Exit), then
-echo   reopen Bettencourt's POS from the desktop shortcut.
+echo   NEXT STEPS:
+echo   1. Close Chrome completely
+echo      (right-click Chrome in system tray ^> Exit)
+echo   2. Reopen Bettencourt's POS from the desktop shortcut
+echo   3. The POS will open fullscreen with silent printing
 echo  =========================================================
 echo.
 pause
