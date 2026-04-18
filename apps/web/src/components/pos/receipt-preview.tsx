@@ -100,6 +100,8 @@ interface ReceiptPreviewProps {
 	userName: string;
 	receiptConfig?: ReceiptConfig | null;
 	onSplitBill?: () => void;
+	/** When true: print silently without showing the dialog at all. */
+	autoPrint?: boolean;
 }
 
 export function ReceiptPreview({
@@ -111,15 +113,16 @@ export function ReceiptPreview({
 	userName,
 	receiptConfig,
 	onSplitBill,
+	autoPrint = false,
 }: ReceiptPreviewProps) {
 	useEffect(() => {
 		if (!open) return;
-		const timer = setTimeout(
-			() => printReceiptPopup(document.getElementById("receipt-content")),
-			300,
-		);
+		const timer = setTimeout(() => {
+			printReceiptPopup(document.getElementById("receipt-content"));
+			if (autoPrint) onOpenChange(false);
+		}, 150);
 		return () => clearTimeout(timer);
-	}, [open]);
+	}, [open, autoPrint, onOpenChange]);
 
 	if (!order) return null;
 
@@ -144,6 +147,242 @@ export function ReceiptPreview({
 		items.map((i) => i.product.department_name || "General"),
 	);
 
+	const receiptContent = (
+		<div
+			id="receipt-content"
+			className="rounded-lg border border-border bg-background p-5 font-mono text-xs leading-relaxed"
+		>
+			{/* Header */}
+			<div className="mb-3 text-center">
+				{rc.showLogo && (
+					<img
+						src="/images/bettencourts-home-style-logo.jpg"
+						alt={rc.businessName}
+						className="mx-auto mb-2 h-14 w-auto object-contain"
+						style={{
+							filter: "grayscale(1) contrast(1.5) brightness(0.85)",
+						}}
+					/>
+				)}
+				<p className="font-bold text-base uppercase tracking-wide">
+					{rc.businessName}
+				</p>
+				{rc.tagline && (
+					<p className="text-[10px] text-muted-foreground italic">
+						{rc.tagline}
+					</p>
+				)}
+				{rc.addressLine1 && (
+					<p className="text-muted-foreground">{rc.addressLine1}</p>
+				)}
+				{rc.addressLine2 && (
+					<p className="text-muted-foreground">{rc.addressLine2}</p>
+				)}
+				{rc.phone && <p className="text-muted-foreground">Tel: {rc.phone}</p>}
+			</div>
+
+			{/* Order info */}
+			<div className="mb-2 border-border border-t border-dashed pt-2">
+				<div className="flex justify-between">
+					<span>Order</span>
+					<span className="font-bold">
+						{String(order.order_number ?? "N/A")}
+					</span>
+				</div>
+				{!!order.daily_number && (
+					<div className="flex justify-between">
+						<span>Daily #</span>
+						<span className="font-bold">{String(order.daily_number)}</span>
+					</div>
+				)}
+				<div className="flex justify-between">
+					<span>Date</span>
+					<span>
+						{now.toLocaleDateString()}{" "}
+						{now.toLocaleTimeString([], {
+							hour: "2-digit",
+							minute: "2-digit",
+						})}
+					</span>
+				</div>
+				<div className="flex justify-between">
+					<span>Served by</span>
+					<span className="font-medium">
+						{String(order.user_name || userName)}
+					</span>
+				</div>
+				{departments.size === 1 && (
+					<div className="flex justify-between">
+						<span>Dept</span>
+						<span className="font-medium">{[...departments][0]}</span>
+					</div>
+				)}
+				{!!order.order_type && order.order_type !== "dine_in" && (
+					<div className="flex justify-between">
+						<span>Type</span>
+						<span className="font-bold uppercase">
+							{String(order.order_type)}
+						</span>
+					</div>
+				)}
+			</div>
+
+			{/* Pickup / Delivery details */}
+			{!!order.customer_name && (
+				<div className="mb-2 border-border border-t border-dashed pt-2">
+					<div className="flex justify-between">
+						<span>Customer</span>
+						<span className="font-medium">{String(order.customer_name)}</span>
+					</div>
+					{!!order.customer_phone && (
+						<div className="flex justify-between">
+							<span>Phone</span>
+							<span>{String(order.customer_phone)}</span>
+						</div>
+					)}
+					{!!order.delivery_address && (
+						<div className="flex justify-between">
+							<span>Address</span>
+							<span className="max-w-[50%] text-right">
+								{String(order.delivery_address)}
+							</span>
+						</div>
+					)}
+					{!!order.estimated_ready_at && (
+						<div className="flex justify-between">
+							<span>Ready at</span>
+							<span className="font-medium">
+								{new Date(String(order.estimated_ready_at)).toLocaleTimeString(
+									[],
+									{
+										hour: "2-digit",
+										minute: "2-digit",
+									},
+								)}
+							</span>
+						</div>
+					)}
+				</div>
+			)}
+
+			{/* Items */}
+			<div className="mb-2 border-border border-t border-dashed pt-2">
+				{items.map((item, idx) => (
+					<div key={idx} className="mb-1">
+						<div className="flex justify-between">
+							<span className="flex-1 truncate">
+								{item.quantity > 1 ? `${item.quantity}x ` : ""}
+								{item.product.name}
+							</span>
+							<span className="shrink-0 pl-2">
+								{formatGYD(item.line_total)}
+							</span>
+						</div>
+						{item.quantity > 1 && (
+							<div className="pl-2 text-muted-foreground">
+								{`@ ${formatGYD(item.product.price)} each`}
+							</div>
+						)}
+						{item.product.is_combo &&
+							(item.product.combo_components ?? []).map((cc) => (
+								<div
+									key={cc.id}
+									className="pl-2 text-[10px] text-muted-foreground"
+								>
+									· {cc.component_name}
+								</div>
+							))}
+						{departments.size > 1 && item.product.department_name && (
+							<div className="pl-2 text-[10px] text-muted-foreground">
+								[{item.product.department_name}]
+							</div>
+						)}
+						{item.notes && (
+							<div className="pl-2 text-[10px] text-muted-foreground italic">
+								Note: {item.notes}
+							</div>
+						)}
+					</div>
+				))}
+			</div>
+
+			{/* Totals */}
+			<div className="mb-2 flex flex-col gap-0.5 border-border border-t border-dashed pt-2">
+				<div className="flex justify-between">
+					<span>Subtotal</span>
+					<span>{formatGYD(subtotal)}</span>
+				</div>
+				{tax > 0 && (
+					<div className="flex justify-between">
+						<span>Tax</span>
+						<span>{formatGYD(tax)}</span>
+					</div>
+				)}
+				{Number(order.discount_total || 0) > 0 && (
+					<div className="flex justify-between text-destructive">
+						<span>
+							Discount
+							{order.discount_label ? ` (${order.discount_label})` : ""}
+						</span>
+						<span>-{formatGYD(Number(order.discount_total))}</span>
+					</div>
+				)}
+				<div className="mt-1 flex justify-between border-border border-t border-double pt-1 font-bold text-sm">
+					<span>TOTAL</span>
+					<span>{formatGYD(total)}</span>
+				</div>
+			</div>
+
+			{/* Payment Info */}
+			{!!order.payments && Array.isArray(order.payments) && (
+				<div className="mb-2 border-border border-t border-dashed pt-2">
+					{(order.payments as Array<{ method: string; amount: number }>).map(
+						(p, i) => (
+							<div key={i} className="flex justify-between">
+								<span className="capitalize">{p.method}</span>
+								<span>{formatGYD(p.amount)}</span>
+							</div>
+						),
+					)}
+				</div>
+			)}
+
+			{/* Change */}
+			{change > 0 && (
+				<div className="mb-2 border-border border-t border-dashed pt-2">
+					<div className="flex justify-between font-bold">
+						<span>Change</span>
+						<span>{formatGYD(change)}</span>
+					</div>
+				</div>
+			)}
+
+			{/* Footer */}
+			<div className="mt-3 text-center text-muted-foreground">
+				{rc.footerMessage && <p>{rc.footerMessage}</p>}
+				{rc.promoMessage && (
+					<p className="mt-1 font-bold text-foreground">{rc.promoMessage}</p>
+				)}
+			</div>
+		</div>
+	);
+
+	if (autoPrint) {
+		return (
+			<div
+				aria-hidden="true"
+				style={{
+					position: "fixed",
+					left: "-9999px",
+					top: 0,
+					visibility: "hidden",
+				}}
+			>
+				{receiptContent}
+			</div>
+		);
+	}
+
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-w-sm">
@@ -162,228 +401,7 @@ export function ReceiptPreview({
 					</DialogTitle>
 				</DialogHeader>
 
-				<div
-					id="receipt-content"
-					className="rounded-lg border border-border bg-background p-5 font-mono text-xs leading-relaxed"
-				>
-					{/* Header */}
-					<div className="mb-3 text-center">
-						{rc.showLogo && (
-							<img
-								src="/images/bettencourts-home-style-logo.jpg"
-								alt={rc.businessName}
-								className="mx-auto mb-2 h-14 w-auto object-contain"
-								style={{
-									filter: "grayscale(1) contrast(1.5) brightness(0.85)",
-								}}
-							/>
-						)}
-						<p className="font-bold text-base uppercase tracking-wide">
-							{rc.businessName}
-						</p>
-						{rc.tagline && (
-							<p className="text-[10px] text-muted-foreground italic">
-								{rc.tagline}
-							</p>
-						)}
-						{rc.addressLine1 && (
-							<p className="text-muted-foreground">{rc.addressLine1}</p>
-						)}
-						{rc.addressLine2 && (
-							<p className="text-muted-foreground">{rc.addressLine2}</p>
-						)}
-						{rc.phone && (
-							<p className="text-muted-foreground">Tel: {rc.phone}</p>
-						)}
-					</div>
-
-					{/* Order info */}
-					<div className="mb-2 border-border border-t border-dashed pt-2">
-						<div className="flex justify-between">
-							<span>Order</span>
-							<span className="font-bold">
-								{String(order.order_number ?? "N/A")}
-							</span>
-						</div>
-						{!!order.daily_number && (
-							<div className="flex justify-between">
-								<span>Daily #</span>
-								<span className="font-bold">{String(order.daily_number)}</span>
-							</div>
-						)}
-						<div className="flex justify-between">
-							<span>Date</span>
-							<span>
-								{now.toLocaleDateString()}{" "}
-								{now.toLocaleTimeString([], {
-									hour: "2-digit",
-									minute: "2-digit",
-								})}
-							</span>
-						</div>
-						<div className="flex justify-between">
-							<span>Served by</span>
-							<span className="font-medium">
-								{String(order.user_name || userName)}
-							</span>
-						</div>
-						{departments.size === 1 && (
-							<div className="flex justify-between">
-								<span>Dept</span>
-								<span className="font-medium">{[...departments][0]}</span>
-							</div>
-						)}
-						{!!order.order_type && order.order_type !== "dine_in" && (
-							<div className="flex justify-between">
-								<span>Type</span>
-								<span className="font-bold uppercase">
-									{String(order.order_type)}
-								</span>
-							</div>
-						)}
-					</div>
-
-					{/* Pickup / Delivery details */}
-					{!!order.customer_name && (
-						<div className="mb-2 border-border border-t border-dashed pt-2">
-							<div className="flex justify-between">
-								<span>Customer</span>
-								<span className="font-medium">
-									{String(order.customer_name)}
-								</span>
-							</div>
-							{!!order.customer_phone && (
-								<div className="flex justify-between">
-									<span>Phone</span>
-									<span>{String(order.customer_phone)}</span>
-								</div>
-							)}
-							{!!order.delivery_address && (
-								<div className="flex justify-between">
-									<span>Address</span>
-									<span className="max-w-[50%] text-right">
-										{String(order.delivery_address)}
-									</span>
-								</div>
-							)}
-							{!!order.estimated_ready_at && (
-								<div className="flex justify-between">
-									<span>Ready at</span>
-									<span className="font-medium">
-										{new Date(
-											String(order.estimated_ready_at),
-										).toLocaleTimeString([], {
-											hour: "2-digit",
-											minute: "2-digit",
-										})}
-									</span>
-								</div>
-							)}
-						</div>
-					)}
-
-					{/* Items */}
-					<div className="mb-2 border-border border-t border-dashed pt-2">
-						{items.map((item, idx) => (
-							<div key={idx} className="mb-1">
-								<div className="flex justify-between">
-									<span className="flex-1 truncate">
-										{item.quantity > 1 ? `${item.quantity}x ` : ""}
-										{item.product.name}
-									</span>
-									<span className="shrink-0 pl-2">
-										{formatGYD(item.line_total)}
-									</span>
-								</div>
-								{item.quantity > 1 && (
-									<div className="pl-2 text-muted-foreground">
-										{`@ ${formatGYD(item.product.price)} each`}
-									</div>
-								)}
-								{item.product.is_combo &&
-									(item.product.combo_components ?? []).map((cc) => (
-										<div
-											key={cc.id}
-											className="pl-2 text-[10px] text-muted-foreground"
-										>
-											· {cc.component_name}
-										</div>
-									))}
-								{departments.size > 1 && item.product.department_name && (
-									<div className="pl-2 text-[10px] text-muted-foreground">
-										[{item.product.department_name}]
-									</div>
-								)}
-								{item.notes && (
-									<div className="pl-2 text-[10px] text-muted-foreground italic">
-										Note: {item.notes}
-									</div>
-								)}
-							</div>
-						))}
-					</div>
-
-					{/* Totals */}
-					<div className="mb-2 flex flex-col gap-0.5 border-border border-t border-dashed pt-2">
-						<div className="flex justify-between">
-							<span>Subtotal</span>
-							<span>{formatGYD(subtotal)}</span>
-						</div>
-						{tax > 0 && (
-							<div className="flex justify-between">
-								<span>Tax</span>
-								<span>{formatGYD(tax)}</span>
-							</div>
-						)}
-						{Number(order.discount_total || 0) > 0 && (
-							<div className="flex justify-between text-destructive">
-								<span>
-									Discount
-									{order.discount_label ? ` (${order.discount_label})` : ""}
-								</span>
-								<span>-{formatGYD(Number(order.discount_total))}</span>
-							</div>
-						)}
-						<div className="mt-1 flex justify-between border-border border-t border-double pt-1 font-bold text-sm">
-							<span>TOTAL</span>
-							<span>{formatGYD(total)}</span>
-						</div>
-					</div>
-
-					{/* Payment Info */}
-					{!!order.payments && Array.isArray(order.payments) && (
-						<div className="mb-2 border-border border-t border-dashed pt-2">
-							{(
-								order.payments as Array<{ method: string; amount: number }>
-							).map((p, i) => (
-								<div key={i} className="flex justify-between">
-									<span className="capitalize">{p.method}</span>
-									<span>{formatGYD(p.amount)}</span>
-								</div>
-							))}
-						</div>
-					)}
-
-					{/* Change */}
-					{change > 0 && (
-						<div className="mb-2 border-border border-t border-dashed pt-2">
-							<div className="flex justify-between font-bold">
-								<span>Change</span>
-								<span>{formatGYD(change)}</span>
-							</div>
-						</div>
-					)}
-
-					{/* Footer */}
-					<div className="mt-3 text-center text-muted-foreground">
-						{rc.footerMessage && <p>{rc.footerMessage}</p>}
-						{rc.promoMessage && (
-							<p className="mt-1 font-bold text-foreground">
-								{rc.promoMessage}
-							</p>
-						)}
-					</div>
-				</div>
+				{receiptContent}
 
 				<div className="flex gap-2">
 					<Button

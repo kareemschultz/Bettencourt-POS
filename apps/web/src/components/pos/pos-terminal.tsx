@@ -93,6 +93,7 @@ export function POSTerminal({
 	);
 	const [paymentOpen, setPaymentOpen] = useState(false);
 	const [receiptOpen, setReceiptOpen] = useState(false);
+	const [autoPrintReceipt, setAutoPrintReceipt] = useState(false);
 	const [discountOpen, setDiscountOpen] = useState(false);
 	const [splitBillOpen, setSplitBillOpen] = useState(false);
 	const [notesItemId, setNotesItemId] = useState<string | null>(null);
@@ -305,6 +306,7 @@ export function POSTerminal({
 					mode: orderMode,
 				});
 				setPaymentOpen(false);
+				setAutoPrintReceipt(true);
 				setReceiptOpen(true);
 				setMobileCartOpen(false);
 				setCart([]);
@@ -562,7 +564,10 @@ export function POSTerminal({
 			}
 			if (e.key === "F8") {
 				e.preventDefault();
-				if (lastOrder) setReceiptOpen(true);
+				if (lastOrder) {
+					setAutoPrintReceipt(false);
+					setReceiptOpen(true);
+				}
 			}
 			if (e.key === "F12") {
 				e.preventDefault();
@@ -878,7 +883,10 @@ export function POSTerminal({
 							variant="ghost"
 							size="sm"
 							className="hidden gap-1.5 text-xs sm:flex"
-							onClick={() => setReceiptOpen(true)}
+							onClick={() => {
+								setAutoPrintReceipt(false);
+								setReceiptOpen(true);
+							}}
 						>
 							<ReceiptText className="size-3.5" />
 							Reprint
@@ -1232,6 +1240,7 @@ export function POSTerminal({
 				items={lastCartSnapshot}
 				change={lastChange}
 				userName={userName}
+				autoPrint={autoPrintReceipt}
 				onSplitBill={
 					lastOrder?.id
 						? () => {
