@@ -11,7 +11,7 @@ function printReceiptPopup(el: HTMLElement | null) {
 	const win = window.open(
 		"",
 		"_blank",
-		"width=420,height=680,menubar=no,toolbar=no",
+		"width=220,height=700,menubar=no,toolbar=no",
 	);
 	if (!win) {
 		window.print();
@@ -20,7 +20,8 @@ function printReceiptPopup(el: HTMLElement | null) {
 	win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Receipt</title>
 		<style>
 			* { margin: 0; padding: 0; box-sizing: border-box; }
-			body { font-family: monospace; font-size: 11px; line-height: 1.625; background: #fff; color: #000; padding: 12px; }
+			@page { size: 58mm auto; margin: 0; }
+			body { font-family: monospace; font-size: 11px; line-height: 1.5; background: #fff; color: #000; padding: 2px; width: 58mm; }
 			.flex { display: flex; }
 			.flex-1 { flex: 1 1 0%; }
 			.flex-col { flex-direction: column; }
@@ -44,7 +45,7 @@ function printReceiptPopup(el: HTMLElement | null) {
 			.pt-1 { padding-top: 4px; }
 			.pt-2 { padding-top: 8px; }
 			.pl-2 { padding-left: 8px; }
-			.p-5 { padding: 20px; }
+			.p-5 { padding: 8px; }
 			.border-t { border-top: 1px solid #ddd; }
 			.border-dashed { border-style: dashed; }
 			.border-double { border-style: double; border-top-width: 3px; }
