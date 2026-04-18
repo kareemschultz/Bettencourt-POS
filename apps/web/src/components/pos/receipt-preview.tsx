@@ -20,7 +20,37 @@ function printReceiptPopup(el: HTMLElement | null) {
 	win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Receipt</title>
 		<style>
 			* { margin: 0; padding: 0; box-sizing: border-box; }
-			body { font-family: monospace; font-size: 11px; background: #fff; color: #000; padding: 12px; }
+			body { font-family: monospace; font-size: 11px; line-height: 1.625; background: #fff; color: #000; padding: 12px; }
+			.flex { display: flex; }
+			.flex-1 { flex: 1 1 0%; }
+			.flex-col { flex-direction: column; }
+			.shrink-0 { flex-shrink: 0; }
+			.justify-between { justify-content: space-between; }
+			.text-center { text-align: center; }
+			.text-right { text-align: right; }
+			.font-bold { font-weight: 700; }
+			.font-medium { font-weight: 500; }
+			.text-sm { font-size: 14px; }
+			.italic { font-style: italic; }
+			.capitalize { text-transform: capitalize; }
+			.uppercase { text-transform: uppercase; }
+			.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+			.mb-1 { margin-bottom: 4px; }
+			.mb-2 { margin-bottom: 8px; }
+			.mb-3 { margin-bottom: 12px; }
+			.mt-1 { margin-top: 4px; }
+			.mt-3 { margin-top: 12px; }
+			.mx-auto { margin-left: auto; margin-right: auto; }
+			.pt-1 { padding-top: 4px; }
+			.pt-2 { padding-top: 8px; }
+			.pl-2 { padding-left: 8px; }
+			.p-5 { padding: 20px; }
+			.border-t { border-top: 1px solid #ddd; }
+			.border-dashed { border-style: dashed; }
+			.border-double { border-style: double; border-top-width: 3px; }
+			.h-14 { height: 56px; }
+			.w-auto { width: auto; }
+			.object-contain { object-fit: contain; }
 			@media print { body { padding: 0; } }
 		</style></head><body>${el.innerHTML}</body></html>`);
 	win.document.close();
@@ -160,7 +190,9 @@ export function ReceiptPreview({
 					<div className="mb-2 border-border border-t border-dashed pt-2">
 						<div className="flex justify-between">
 							<span>Order</span>
-							<span className="font-bold">{String(order.order_number)}</span>
+							<span className="font-bold">
+								{String(order.order_number ?? "N/A")}
+							</span>
 						</div>
 						{!!order.daily_number && (
 							<div className="flex justify-between">
