@@ -297,10 +297,25 @@ export function POSTerminal({
 	// Checkout mutation via oRPC
 	const checkoutMutation = useMutation(
 		orpc.pos.checkout.mutationOptions({
-			onSuccess: (result) => {
+			onSuccess: (result, variables) => {
+				const change = result.change || 0;
 				setLastCartSnapshot([...cart]);
-				setLastOrder(result.order as Record<string, unknown>);
-				setLastChange(result.change || 0);
+				// Map API camelCase → snake_case + inject missing fields for receipt
+				setLastOrder({
+					...result.order,
+					created_at: result.order.createdAt,
+					daily_number: result.order.dailyNumber,
+					user_name: result.order.userName || userName,
+					order_type: variables.orderType,
+					customer_name: variables.customerName,
+					customer_phone: variables.customerPhone,
+					delivery_address: variables.deliveryAddress,
+					estimated_ready_at: variables.estimatedReadyAt,
+					discount_total: variables.discountTotal || undefined,
+					discount_label: discountLabel || undefined,
+					payments: variables.payments,
+				} as Record<string, unknown>);
+				setLastChange(change);
 				setLastOrderMeta({
 					placedAt: new Date(),
 					mode: orderMode,
@@ -314,6 +329,13 @@ export function POSTerminal({
 				setDiscountLabel("");
 				setSelectedCustomer(null);
 				resetPickupFields();
+				// Confirmation toast — visible even when print dialog appears
+				const now = new Date();
+				const orderNum = `BET-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}-${String(result.order.dailyNumber ?? 0).padStart(3, "0")}`;
+				toast.success(
+					`Sale complete — ${orderNum}${change > 0 ? ` · Change: ${formatGYD(change)}` : ""}`,
+					{ duration: 5000 },
+				);
 			},
 			onError: (error) => {
 				if (
