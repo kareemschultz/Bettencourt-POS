@@ -111,28 +111,31 @@ app.post("/api/auth/pin-login", async (c) => {
 		// Clear failures on success
 		await clearPinFailures(clientIp);
 
-		// Create a session directly via Better Auth's internal adapter (no password needed)
-		const ctx = await auth.$context;
-		const session = await ctx.internalAdapter.createSession(user.id);
-		if (!session) {
-			return c.json({ error: "Failed to create session" }, 500);
-		}
+		// Create session directly via Drizzle — bypasses auth.$context which triggers
+		// a Zod v4 cyclical schema bug in BetterAuth 1.5.x plugins.
+		const sessionToken = randomUUID();
+		const sessionId = randomUUID();
+		await db.insert(schema.session).values({
+			id: sessionId,
+			token: sessionToken,
+			userId: user.id,
+			expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			ipAddress: clientIp ?? null,
+			userAgent: null,
+			activeOrganizationId: null,
+		});
 
-		// Sign the session token using Better Auth's cookie signing format: "token.signature"
-		const signedToken = `${session.token}.${await makeSignature(session.token, ctx.secret)}`;
-		const cookieAttrs = ctx.authCookies.sessionToken.attributes;
-
-		// Build the Set-Cookie header string
+		const signedToken = `${sessionToken}.${await makeSignature(sessionToken, env.BETTER_AUTH_SECRET)}`;
 		const cookieParts = [
-			`${ctx.authCookies.sessionToken.name}=${signedToken}`,
-			`Path=${cookieAttrs.path ?? "/"}`,
-			cookieAttrs.httpOnly ? "HttpOnly" : "",
-			cookieAttrs.secure ? "Secure" : "",
-			cookieAttrs.sameSite ? `SameSite=${cookieAttrs.sameSite}` : "",
-			cookieAttrs.maxAge ? `Max-Age=${cookieAttrs.maxAge}` : "",
-		]
-			.filter(Boolean)
-			.join("; ");
+			`better-auth.session_token=${signedToken}`,
+			"Path=/",
+			"HttpOnly",
+			"Secure",
+			"SameSite=None",
+			`Max-Age=${30 * 24 * 60 * 60}`,
+		].join("; ");
 
 		// Session is set via cookie only — do not expose token in response body
 		return new Response(
