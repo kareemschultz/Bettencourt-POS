@@ -53,7 +53,10 @@ export function DiscountDialog({
 				if (!o) onClose();
 			}}
 		>
-			<DialogContent className="max-w-xs sm:max-w-sm">
+			<DialogContent
+				aria-describedby={undefined}
+				className="max-w-xs sm:max-w-sm"
+			>
 				<DialogHeader>
 					<DialogTitle>Apply Discount</DialogTitle>
 				</DialogHeader>

@@ -120,7 +120,10 @@ export function SellGiftCardDialog({
 				}
 			}}
 		>
-			<DialogContent className="max-w-[calc(100vw-2rem)] rounded-xl sm:max-w-sm">
+			<DialogContent
+				aria-describedby={undefined}
+				className="max-w-[calc(100vw-2rem)] rounded-xl sm:max-w-sm"
+			>
 				<DialogHeader>
 					<DialogTitle className="flex items-center justify-center gap-2 text-lg">
 						<Gift className="size-5" />

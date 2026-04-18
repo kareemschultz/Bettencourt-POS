@@ -243,18 +243,9 @@ app.post("/api/print/network", async (c) => {
 	}
 });
 
-app.get("/ws", async (c) => {
-	const session = await auth.api.getSession({ headers: c.req.raw.headers });
-	if (!session?.user) {
-		return c.json({ error: "Unauthorized" }, 401);
-	}
-
-	const permissions = await loadUserPermissions(session.user.id);
-	if (!hasPermission(permissions, "orders.read")) {
-		return c.json({ error: "Forbidden" }, 403);
-	}
-
-	return wsHandler(c);
+app.get("/ws", (c) => {
+	// Auth is verified in onOpen — upgrade must be called synchronously.
+	return wsHandler(c, c.req.raw.headers);
 });
 
 // ── Receipt photo upload ───────────────────────────────────────────────

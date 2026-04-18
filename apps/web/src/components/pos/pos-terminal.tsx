@@ -132,6 +132,11 @@ export function POSTerminal({
 		enabled: !!selectedCustomer?.id,
 	});
 
+	// Receipt config from settings (used by ReceiptPreview)
+	const { data: receiptConfig } = useQuery(
+		orpc.settings.getReceiptConfig.queryOptions({ input: {} }),
+	);
+
 	// Customer search
 	const { data: customerResults = [] } = useQuery({
 		...orpc.customers.search.queryOptions({
@@ -1262,6 +1267,7 @@ export function POSTerminal({
 				items={lastCartSnapshot}
 				change={lastChange}
 				userName={userName}
+				receiptConfig={receiptConfig ?? null}
 				autoPrint={autoPrintReceipt}
 				onSplitBill={
 					lastOrder?.id

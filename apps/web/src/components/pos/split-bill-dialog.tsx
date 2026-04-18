@@ -215,7 +215,10 @@ export function SplitBillDialog({
 				if (!o) onClose();
 			}}
 		>
-			<DialogContent className="max-w-[calc(100vw-2rem)] rounded-xl sm:max-w-md">
+			<DialogContent
+				aria-describedby={undefined}
+				className="max-w-[calc(100vw-2rem)] rounded-xl sm:max-w-md"
+			>
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						<Split className="size-5" />

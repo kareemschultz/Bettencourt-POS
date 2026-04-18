@@ -1,3 +1,8 @@
+import {
+	hasPermission,
+	loadUserPermissions,
+} from "@Bettencourt-POS/api/lib/permissions";
+import { auth } from "@Bettencourt-POS/auth";
 import type { Context } from "hono";
 import { createBunWebSocket } from "hono/bun";
 
@@ -66,9 +71,20 @@ export function publishPosEvent(input: Partial<PosRealtimeMessage>) {
 
 export const { upgradeWebSocket, websocket } = createBunWebSocket();
 
-export function wsHandler(c: Context) {
+export function wsHandler(c: Context, rawHeaders: Headers) {
 	return upgradeWebSocket((_ctx) => ({
-		onOpen(_event, ws) {
+		async onOpen(_event, ws) {
+			const session = await auth.api.getSession({ headers: rawHeaders });
+			if (!session?.user) {
+				ws.close(1008, "Unauthorized");
+				return;
+			}
+			const permissions = await loadUserPermissions(session.user.id);
+			if (!hasPermission(permissions, "orders.read")) {
+				ws.close(1008, "Forbidden");
+				return;
+			}
+
 			const subscribed = parseChannelList(
 				new URL(c.req.url).searchParams
 					.get("channels")

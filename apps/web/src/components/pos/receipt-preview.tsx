@@ -363,7 +363,7 @@ export function ReceiptPreview({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-sm">
+			<DialogContent aria-describedby={undefined} className="max-w-sm">
 				<DialogHeader>
 					<DialogTitle className="flex items-center justify-between">
 						Receipt

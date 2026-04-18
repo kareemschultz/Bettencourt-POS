@@ -96,7 +96,7 @@ export function ModifierDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-			<DialogContent className="max-w-md">
+			<DialogContent aria-describedby={undefined} className="max-w-md">
 				<DialogHeader>
 					<DialogTitle>Customize: {product.name}</DialogTitle>
 				</DialogHeader>

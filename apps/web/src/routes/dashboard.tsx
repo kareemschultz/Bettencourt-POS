@@ -318,7 +318,7 @@ export default function DashboardLayout() {
 					<div className="flex flex-1 items-center gap-2">
 						{locations.filter((l) => l.isActive).length > 0 ? (
 							<Select
-								value={selectedLocationId ?? undefined}
+								value={selectedLocationId ?? ""}
 								onValueChange={handleLocationChange}
 							>
 								<SelectTrigger className="h-8 w-[180px] border-none bg-transparent text-muted-foreground text-sm shadow-none focus:ring-0">
