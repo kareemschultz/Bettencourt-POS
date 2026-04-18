@@ -122,11 +122,15 @@ if ($patched -gt 0) { ^
     Write-Host '  Setup could not complete. See messages above.' -ForegroundColor Red ^
 } ^
 Write-Host '  =======================================================' -ForegroundColor White; ^
+Write-Host ''; ^
+Write-Host '  IMPORTANT: Always open the POS using the Desktop shortcut.' -ForegroundColor Cyan; ^
+Write-Host '  Opening from Chrome or the taskbar pin will NOT hide the taskbar.' -ForegroundColor Cyan; ^
+Write-Host '  =======================================================' -ForegroundColor White; ^
 "
 
 echo.
 echo  =========================================================
-echo   Setup complete. Press any key to close this window.
+echo   Press any key to close this window.
 echo  =========================================================
 echo.
-pause >nul
+pause
