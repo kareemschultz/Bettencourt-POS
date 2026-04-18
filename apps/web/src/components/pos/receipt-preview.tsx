@@ -371,7 +371,6 @@ export function ReceiptPreview({
 								{rc.promoMessage}
 							</p>
 						)}
-						{rc.tagline && <p className="text-[10px] italic">{rc.tagline}</p>}
 					</div>
 				</div>
 
