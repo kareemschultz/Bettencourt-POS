@@ -380,13 +380,14 @@ export default function PrintersPage() {
 							Option A — Install as App (recommended)
 						</p>
 						<p className="mb-2 text-muted-foreground text-xs">
-							Install the POS directly from Chrome. No script needed — the app
-							opens fullscreen automatically.
+							Installs the POS as a desktop app. After installing, run the Setup
+							Script below once to enable fullscreen kiosk mode and silent
+							printing.
 						</p>
 						{isPwa ? (
 							<p className="flex items-center gap-1.5 text-[11px] text-green-600 dark:text-green-400">
-								<Check className="size-3" /> Already installed as an app on this
-								device
+								<Check className="size-3" /> Installed as an app on this device
+								— run the setup script below if not yet in kiosk mode
 							</p>
 						) : pwaPrompt ? (
 							<Button size="sm" onClick={installPwa} className="h-7 text-xs">
@@ -396,20 +397,23 @@ export default function PrintersPage() {
 						) : (
 							<p className="text-[11px] text-muted-foreground">
 								To install: click the{" "}
-								<span className="font-medium">install icon</span> (⊕) in
-								Chrome's address bar, then reopen from the desktop shortcut.
+								<span className="font-medium">⊕ install icon</span> in Chrome's
+								address bar. If you just removed the app, stay on this page for
+								30 seconds — Chrome will re-enable the install option.
 							</p>
 						)}
 					</div>
 
-					{/* Option B — Setup script (Chrome / existing shortcut) */}
+					{/* Option B — Setup script */}
 					<div className="rounded-md border bg-muted/30 p-3">
 						<p className="mb-1 font-medium text-xs">
-							Option B — Setup Script (Chrome or existing shortcut)
+							Setup Script — Kiosk Mode + Silent Printing
 						</p>
 						<p className="mb-2 text-muted-foreground text-xs">
-							Run once on the POS computer. Auto-detects PWA or Chrome shortcuts
-							and patches them. If no shortcut exists, it creates one.
+							Run once on the POS computer (after installing the app above).
+							Patches the Desktop shortcut with kiosk flags and sets Windows
+							taskbar to auto-hide. Creates a shortcut automatically if none
+							exists.
 						</p>
 						<div className="flex flex-wrap items-center gap-2">
 							<a
