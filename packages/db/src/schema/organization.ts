@@ -80,7 +80,7 @@ export const receiptConfig = pgTable(
 			.references(() => organization.id, { onDelete: "cascade" }),
 		businessName: text("business_name")
 			.notNull()
-			.default("Bettencourt's Food Inc."),
+			.default("Bettencourt's Homestyle Diner"),
 		tagline: text("tagline").default("'A True Guyanese Gem'"),
 		addressLine1: text("address_line_1"),
 		addressLine2: text("address_line_2"),

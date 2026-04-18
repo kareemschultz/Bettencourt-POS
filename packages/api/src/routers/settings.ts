@@ -2,8 +2,8 @@ import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { createHash } from "node:crypto";
 import { ORPCError } from "@orpc/server";
-import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
+import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure, protectedProcedure } from "../index";
 import { requireOrganizationId } from "../lib/org-context";
@@ -515,7 +515,8 @@ const setPin = protectedProcedure
 	});
 
 // ── getReceiptConfig ──────────────────────────────────────────────────
-const getReceiptConfig = permissionProcedure("settings.read")
+// Receipt config is public data -- use protectedProcedure so cashiers can fetch it.
+const getReceiptConfig = protectedProcedure
 	.input(z.object({ organizationId: z.string().uuid().optional() }).optional())
 	.handler(async ({ context }) => {
 		const orgId = requireOrganizationId(context);
@@ -531,11 +532,11 @@ const getReceiptConfig = permissionProcedure("settings.read")
 		return {
 			id: null,
 			organizationId: orgId,
-			businessName: "Bettencourt's Food Inc.",
-			tagline: "'A True Guyanese Gem'",
-			addressLine1: "Lot 12 Robb Street",
+			businessName: "Bettencourt's Homestyle Diner",
+			tagline: "A True Guyanese Gem",
+			addressLine1: "22 ZZ Durban Street, Wortmanville",
 			addressLine2: "Georgetown, Guyana",
-			phone: "+592-227-0000",
+			phone: "592-231-1368",
 			footerMessage: "Thank you for choosing Bettencourt's!",
 			promoMessage: null,
 			showLogo: true,
@@ -875,8 +876,10 @@ const getDocumentSettings = permissionProcedure("settings.read")
 				.insert(schema.invoiceDocumentSettings)
 				.values({
 					organizationId: orgId,
-					invoiceFooterNote: "Payment is due within 30 days of the invoice date.",
-					quotationFooterNote: "This quotation is valid for 30 days from the date of issue.",
+					invoiceFooterNote:
+						"Payment is due within 30 days of the invoice date.",
+					quotationFooterNote:
+						"This quotation is valid for 30 days from the date of issue.",
 					defaultQuotationTerms: "Valid for 30 days",
 				})
 				.returning();
@@ -1284,7 +1287,10 @@ const updateUserDetails = permissionProcedure("users.update")
 		const updates: Record<string, unknown> = { updatedAt: new Date() };
 		if (input.name) updates.name = input.name;
 		if (input.email) updates.email = input.email;
-		await db.update(schema.user).set(updates).where(eq(schema.user.id, input.userId));
+		await db
+			.update(schema.user)
+			.set(updates)
+			.where(eq(schema.user.id, input.userId));
 		return { success: true };
 	});
 
@@ -1333,7 +1339,9 @@ const adminResetPassword = permissionProcedure("users.update")
 			});
 		}
 		// Also revoke all active sessions so the user must log in with the new password
-		await db.delete(schema.session).where(eq(schema.session.userId, input.userId));
+		await db
+			.delete(schema.session)
+			.where(eq(schema.session.userId, input.userId));
 		return { success: true, tempPassword };
 	});
 
@@ -1342,7 +1350,11 @@ const adminSetPin = permissionProcedure("users.update")
 	.input(
 		z.object({
 			userId: z.string(),
-			pin: z.string().regex(/^\d{4,8}$/).optional().nullable(),
+			pin: z
+				.string()
+				.regex(/^\d{4,8}$/)
+				.optional()
+				.nullable(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -1362,7 +1374,10 @@ const adminSetPin = permissionProcedure("users.update")
 		const pinHash = input.pin
 			? createHash("sha256").update(input.pin).digest("hex")
 			: null;
-		await db.update(schema.user).set({ pinHash }).where(eq(schema.user.id, input.userId));
+		await db
+			.update(schema.user)
+			.set({ pinHash })
+			.where(eq(schema.user.id, input.userId));
 		return { success: true };
 	});
 
@@ -1383,7 +1398,9 @@ const revokeUserSessions = permissionProcedure("users.update")
 			.limit(1);
 		if (memberRows.length === 0)
 			throw new ORPCError("NOT_FOUND", { message: "User not found" });
-		await db.delete(schema.session).where(eq(schema.session.userId, input.userId));
+		await db
+			.delete(schema.session)
+			.where(eq(schema.session.userId, input.userId));
 		return { success: true };
 	});
 
@@ -1393,7 +1410,9 @@ const deleteUser = permissionProcedure("users.update")
 	.handler(async ({ input, context }) => {
 		const orgId = requireOrganizationId(context);
 		if (input.userId === context.session.user.id)
-			throw new ORPCError("BAD_REQUEST", { message: "You cannot delete your own account" });
+			throw new ORPCError("BAD_REQUEST", {
+				message: "You cannot delete your own account",
+			});
 		const memberRows = await db
 			.select({ userId: schema.member.userId })
 			.from(schema.member)
@@ -1419,7 +1438,11 @@ const inviteUser = permissionProcedure("users.create")
 			roleId: z.string().uuid(),
 			sendInvite: z.boolean().default(false),
 			tempPassword: z.string().min(8).optional(),
-			pin: z.string().regex(/^\d{4,8}$/).optional().nullable(),
+			pin: z
+				.string()
+				.regex(/^\d{4,8}$/)
+				.optional()
+				.nullable(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -1478,7 +1501,11 @@ const inviteUser = permissionProcedure("users.create")
 			});
 		});
 
-		return { success: true, userId: id, tempPassword: input.sendInvite ? null : password };
+		return {
+			success: true,
+			userId: id,
+			tempPassword: input.sendInvite ? null : password,
+		};
 	});
 
 // ── changeOwnPassword (self-service) ───────────────────────────────────
@@ -1502,13 +1529,17 @@ const changeOwnPassword = protectedProcedure
 			)
 			.limit(1);
 		if (accountRows.length === 0 || !accountRows[0]!.password)
-			throw new ORPCError("BAD_REQUEST", { message: "No password set on this account" });
+			throw new ORPCError("BAD_REQUEST", {
+				message: "No password set on this account",
+			});
 		const valid = await verifyPassword({
 			password: input.currentPassword,
 			hash: accountRows[0]!.password,
 		});
 		if (!valid)
-			throw new ORPCError("BAD_REQUEST", { message: "Current password is incorrect" });
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Current password is incorrect",
+			});
 		const hashed = await hashPassword(input.newPassword);
 		await db
 			.update(schema.account)
@@ -1521,7 +1552,11 @@ const changeOwnPassword = protectedProcedure
 const changeOwnPin = protectedProcedure
 	.input(
 		z.object({
-			pin: z.string().regex(/^\d{4,8}$/, "PIN must be 4–8 digits").optional().nullable(),
+			pin: z
+				.string()
+				.regex(/^\d{4,8}$/, "PIN must be 4–8 digits")
+				.optional()
+				.nullable(),
 		}),
 	)
 	.handler(async ({ input, context }) => {
@@ -1529,7 +1564,10 @@ const changeOwnPin = protectedProcedure
 		const pinHash = input.pin
 			? createHash("sha256").update(input.pin).digest("hex")
 			: null;
-		await db.update(schema.user).set({ pinHash }).where(eq(schema.user.id, userId));
+		await db
+			.update(schema.user)
+			.set({ pinHash })
+			.where(eq(schema.user.id, userId));
 		return { success: true };
 	});
 

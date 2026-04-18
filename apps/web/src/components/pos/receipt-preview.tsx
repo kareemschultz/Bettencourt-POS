@@ -1,5 +1,5 @@
-import { useEffect } from "react";
 import { Printer, Split, X } from "lucide-react";
+import { useEffect } from "react";
 
 // Prints the receipt in an isolated popup so only the receipt content is printed,
 // not the entire dashboard page.
@@ -85,11 +85,11 @@ export function ReceiptPreview({
 	if (!order) return null;
 
 	const rc = receiptConfig ?? {
-		businessName: "Bettencourt's Food Inc.",
-		tagline: "'A True Guyanese Gem'",
-		addressLine1: "Lot 12 Robb Street",
+		businessName: "Bettencourt's Homestyle Diner",
+		tagline: "A True Guyanese Gem",
+		addressLine1: "22 ZZ Durban Street, Wortmanville",
 		addressLine2: "Georgetown, Guyana",
-		phone: "+592-227-0000",
+		phone: "592-231-1368",
 		footerMessage: "Thank you for choosing Bettencourt's!",
 		promoMessage: null,
 		showLogo: true,
@@ -129,6 +129,16 @@ export function ReceiptPreview({
 				>
 					{/* Header */}
 					<div className="mb-3 text-center">
+						{rc.showLogo && (
+							<img
+								src="/images/bettencourts-home-style-logo.jpg"
+								alt={rc.businessName}
+								className="mx-auto mb-2 h-14 w-auto object-contain"
+								style={{
+									filter: "grayscale(1) contrast(1.5) brightness(0.85)",
+								}}
+							/>
+						)}
 						<p className="font-bold text-sm">{rc.businessName}</p>
 						{rc.tagline && (
 							<p className="text-[10px] text-muted-foreground italic">
