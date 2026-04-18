@@ -142,11 +142,6 @@ export function ReceiptPreview({
 	const tax = items.reduce((s, i) => s + i.line_total * i.product.tax_rate, 0);
 	const total = Number(order.total || subtotal + tax);
 
-	// Group items by department
-	const departments = new Set(
-		items.map((i) => i.product.department_name || "General"),
-	);
-
 	const receiptContent = (
 		<div
 			id="receipt-content"
@@ -184,17 +179,11 @@ export function ReceiptPreview({
 			{/* Order info */}
 			<div className="mb-2 border-border border-t border-dashed pt-2">
 				<div className="flex justify-between">
-					<span>Order</span>
+					<span>Receipt #</span>
 					<span className="font-bold">
-						{String(order.order_number ?? "N/A")}
+						{`${now.toLocaleDateString("en-US", { month: "short" }).toUpperCase()}${String(now.getDate()).padStart(2, "0")}-${String(order.daily_number ?? 0).padStart(3, "0")}`}
 					</span>
 				</div>
-				{!!order.daily_number && (
-					<div className="flex justify-between">
-						<span>Daily #</span>
-						<span className="font-bold">{String(order.daily_number)}</span>
-					</div>
-				)}
 				<div className="flex justify-between">
 					<span>Date</span>
 					<span>
@@ -211,12 +200,6 @@ export function ReceiptPreview({
 						{String(order.user_name || userName)}
 					</span>
 				</div>
-				{departments.size === 1 && (
-					<div className="flex justify-between">
-						<span>Dept</span>
-						<span className="font-medium">{[...departments][0]}</span>
-					</div>
-				)}
 				{!!order.order_type && order.order_type !== "dine_in" && (
 					<div className="flex justify-between">
 						<span>Type</span>
@@ -292,11 +275,6 @@ export function ReceiptPreview({
 									· {cc.component_name}
 								</div>
 							))}
-						{departments.size > 1 && item.product.department_name && (
-							<div className="pl-2 text-[10px] text-muted-foreground">
-								[{item.product.department_name}]
-							</div>
-						)}
 						{item.notes && (
 							<div className="pl-2 text-[10px] text-muted-foreground italic">
 								Note: {item.notes}
