@@ -1,65 +1,73 @@
 import { Printer, Split, X } from "lucide-react";
 import { useEffect } from "react";
 
-// Prints the receipt in an isolated popup so only the receipt content is printed,
-// not the entire dashboard page.
+const RECEIPT_STYLES = `
+	* { margin: 0; padding: 0; box-sizing: border-box; }
+	@page { size: 58mm auto; margin: 0; }
+	body { font-family: monospace; font-size: 11px; line-height: 1.5; background: #fff; color: #000; padding: 2px; width: 58mm; }
+	.flex { display: flex; }
+	.flex-1 { flex: 1 1 0%; }
+	.flex-col { flex-direction: column; }
+	.shrink-0 { flex-shrink: 0; }
+	.justify-between { justify-content: space-between; }
+	.text-center { text-align: center; }
+	.text-right { text-align: right; }
+	.font-bold { font-weight: 700; }
+	.font-medium { font-weight: 500; }
+	.text-sm { font-size: 14px; }
+	.text-base { font-size: 16px; }
+	.tracking-wide { letter-spacing: 0.05em; }
+	.italic { font-style: italic; }
+	.capitalize { text-transform: capitalize; }
+	.uppercase { text-transform: uppercase; }
+	.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.mb-1 { margin-bottom: 4px; }
+	.mb-2 { margin-bottom: 8px; }
+	.mb-3 { margin-bottom: 12px; }
+	.mt-1 { margin-top: 4px; }
+	.mt-3 { margin-top: 12px; }
+	.mx-auto { margin-left: auto; margin-right: auto; }
+	.pt-1 { padding-top: 4px; }
+	.pt-2 { padding-top: 8px; }
+	.pl-2 { padding-left: 8px; }
+	.p-5 { padding: 8px; }
+	.border-t { border-top: 1px solid #ddd; }
+	.border-dashed { border-style: dashed; }
+	.border-double { border-style: double; border-top-width: 3px; }
+	.h-14 { height: 56px; }
+	.w-auto { width: auto; }
+	.object-contain { object-fit: contain; }
+	@media print { body { padding: 0; } }
+`;
+
+// Uses a hidden iframe so --kiosk-printing applies (popup windows may not
+// inherit the flag from the parent window context).
 function printReceiptPopup(el: HTMLElement | null) {
 	if (!el) {
 		window.print();
 		return;
 	}
-	const win = window.open(
-		"",
-		"_blank",
-		"width=220,height=700,menubar=no,toolbar=no",
-	);
-	if (!win) {
+	const iframe = document.createElement("iframe");
+	iframe.style.cssText =
+		"position:fixed;width:0;height:0;border:none;opacity:0;pointer-events:none;";
+	document.body.appendChild(iframe);
+	const doc = iframe.contentDocument ?? iframe.contentWindow?.document;
+	if (!doc) {
 		window.print();
+		document.body.removeChild(iframe);
 		return;
 	}
-	win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Receipt</title>
-		<style>
-			* { margin: 0; padding: 0; box-sizing: border-box; }
-			@page { size: 58mm auto; margin: 0; }
-			body { font-family: monospace; font-size: 11px; line-height: 1.5; background: #fff; color: #000; padding: 2px; width: 58mm; }
-			.flex { display: flex; }
-			.flex-1 { flex: 1 1 0%; }
-			.flex-col { flex-direction: column; }
-			.shrink-0 { flex-shrink: 0; }
-			.justify-between { justify-content: space-between; }
-			.text-center { text-align: center; }
-			.text-right { text-align: right; }
-			.font-bold { font-weight: 700; }
-			.font-medium { font-weight: 500; }
-			.text-sm { font-size: 14px; }
-			.italic { font-style: italic; }
-			.capitalize { text-transform: capitalize; }
-			.uppercase { text-transform: uppercase; }
-			.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-			.mb-1 { margin-bottom: 4px; }
-			.mb-2 { margin-bottom: 8px; }
-			.mb-3 { margin-bottom: 12px; }
-			.mt-1 { margin-top: 4px; }
-			.mt-3 { margin-top: 12px; }
-			.mx-auto { margin-left: auto; margin-right: auto; }
-			.pt-1 { padding-top: 4px; }
-			.pt-2 { padding-top: 8px; }
-			.pl-2 { padding-left: 8px; }
-			.p-5 { padding: 8px; }
-			.border-t { border-top: 1px solid #ddd; }
-			.border-dashed { border-style: dashed; }
-			.border-double { border-style: double; border-top-width: 3px; }
-			.h-14 { height: 56px; }
-			.w-auto { width: auto; }
-			.object-contain { object-fit: contain; }
-			@media print { body { padding: 0; } }
-		</style></head><body>${el.innerHTML}</body></html>`);
-	win.document.close();
-	win.focus();
+	doc.open();
+	doc.write(
+		`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Receipt</title><style>${RECEIPT_STYLES}</style></head><body>${el.innerHTML}</body></html>`,
+	);
+	doc.close();
 	setTimeout(() => {
-		win.print();
-		win.close();
-	}, 200);
+		iframe.contentWindow?.print();
+		setTimeout(() => {
+			if (document.body.contains(iframe)) document.body.removeChild(iframe);
+		}, 1000);
+	}, 150);
 }
 
 import { Button } from "@/components/ui/button";
@@ -123,7 +131,7 @@ export function ReceiptPreview({
 		phone: "592-231-1368",
 		footerMessage: "Thank you for choosing Bettencourt's!",
 		promoMessage: null,
-		showLogo: true,
+		showLogo: false,
 	};
 
 	const now = new Date((order.created_at as string) || Date.now());
@@ -170,7 +178,9 @@ export function ReceiptPreview({
 								}}
 							/>
 						)}
-						<p className="font-bold text-sm">{rc.businessName}</p>
+						<p className="font-bold text-base uppercase tracking-wide">
+							{rc.businessName}
+						</p>
 						{rc.tagline && (
 							<p className="text-[10px] text-muted-foreground italic">
 								{rc.tagline}
