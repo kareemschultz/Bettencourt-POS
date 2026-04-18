@@ -8,8 +8,8 @@ import {
 	timestamp,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { reportingCategory } from "./product";
 import { location, organization } from "./organization";
+import { reportingCategory } from "./product";
 
 export const printer = pgTable(
 	"printer",

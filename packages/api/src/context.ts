@@ -1,6 +1,6 @@
+import { auth } from "@Bettencourt-POS/auth";
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
-import { auth } from "@Bettencourt-POS/auth";
 import { eq } from "drizzle-orm";
 import type { Context as HonoContext } from "hono";
 import { loadUserPermissions, type Permissions } from "./lib/permissions";

@@ -149,8 +149,9 @@ const upcoming = permissionProcedure("orders.read")
 	.handler(async ({ input: rawInput, context }) => {
 		const input = rawInput ?? {};
 		const orgId = requireOrganizationId(context);
-		const today = new Date()
-			.toLocaleDateString("en-CA", { timeZone: "America/Guyana" });
+		const today = new Date().toLocaleDateString("en-CA", {
+			timeZone: "America/Guyana",
+		});
 
 		const conditions = [
 			eq(schema.reservation.organizationId, orgId),

@@ -126,8 +126,10 @@ const update = permissionProcedure("customers.write")
 
 		const updates: Record<string, unknown> = {};
 		if (input.name !== undefined) updates.name = input.name;
-		if (input.supervisorName !== undefined) updates.supervisorName = input.supervisorName;
-		if (input.supervisorPosition !== undefined) updates.supervisorPosition = input.supervisorPosition;
+		if (input.supervisorName !== undefined)
+			updates.supervisorName = input.supervisorName;
+		if (input.supervisorPosition !== undefined)
+			updates.supervisorPosition = input.supervisorPosition;
 		if (input.phone !== undefined) updates.phone = input.phone;
 		if (input.address !== undefined) updates.address = input.address;
 

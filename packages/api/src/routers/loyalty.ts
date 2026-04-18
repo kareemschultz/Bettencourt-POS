@@ -104,7 +104,9 @@ const createTier = permissionProcedure("settings.update")
 			)
 			.limit(1);
 		if (!program[0]) {
-			throw new ORPCError("NOT_FOUND", { message: "Loyalty program not found" });
+			throw new ORPCError("NOT_FOUND", {
+				message: "Loyalty program not found",
+			});
 		}
 		const rows = await db
 			.insert(schema.loyaltyTier)

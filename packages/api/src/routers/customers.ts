@@ -182,7 +182,7 @@ const update = permissionProcedure("customers.update")
 		if (input.phone !== undefined) updates.phone = input.phone;
 		if (input.email !== undefined) updates.email = input.email;
 		if (input.address !== undefined) updates.address = input.address;
-			if (input.notes !== undefined) updates.notes = input.notes;
+		if (input.notes !== undefined) updates.notes = input.notes;
 
 		await db
 			.update(schema.customer)

@@ -145,7 +145,8 @@ const getSummary = permissionProcedure("orders.read").handler(async () => {
 			(openInvoicesResult.rows[0] as Record<string, unknown>).cnt ?? 0,
 		),
 		openInvoicesTotal: String(
-			(openInvoicesResult.rows[0] as Record<string, unknown>).outstanding ?? "0",
+			(openInvoicesResult.rows[0] as Record<string, unknown>).outstanding ??
+				"0",
 		),
 		overdueInvoicesCount: Number(
 			(overdueInvoicesResult.rows[0] as Record<string, unknown>).cnt ?? 0,

@@ -686,7 +686,9 @@ const updateReorderSettings = permissionProcedure("inventory.update")
 	.input(
 		z.object({
 			inventoryItemId: z.string().uuid(),
-			reorderPoint: z.string().refine((v) => Number(v) >= 0, "Reorder point must be non-negative"),
+			reorderPoint: z
+				.string()
+				.refine((v) => Number(v) >= 0, "Reorder point must be non-negative"),
 			preferredSupplierId: z.string().uuid().nullable().optional(),
 		}),
 	)
@@ -714,7 +716,9 @@ const logWaste = permissionProcedure("inventory.create")
 			organizationId: z.string().uuid().optional(),
 			inventoryItemId: z.string().uuid().optional(),
 			productName: z.string().min(1),
-			quantity: z.string().refine((v) => Number(v) > 0, "Quantity must be positive"),
+			quantity: z
+				.string()
+				.refine((v) => Number(v) > 0, "Quantity must be positive"),
 			unit: z.string().min(1),
 			estimatedCost: z.string(),
 			reason: z.enum(["spoilage", "over_prep", "expired", "dropped", "other"]),

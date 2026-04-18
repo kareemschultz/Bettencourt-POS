@@ -105,7 +105,10 @@ const getActiveTickets = permissionProcedure("orders.read")
 					eq(schema.kitchenOrderItem.orderLineItemId, schema.orderLineItem.id),
 				)
 				.where(inArray(schema.kitchenOrderItem.ticketId, ticketIds))
-				.orderBy(asc(schema.orderLineItem.courseNumber), asc(schema.kitchenOrderItem.createdAt));
+				.orderBy(
+					asc(schema.orderLineItem.courseNumber),
+					asc(schema.kitchenOrderItem.createdAt),
+				);
 		}
 
 		// Attach items to their tickets
@@ -211,7 +214,10 @@ const updateItemStatus = permissionProcedure("orders.update")
 							organizationId: schema.order.organizationId,
 						})
 						.from(schema.kitchenOrderTicket)
-						.innerJoin(schema.order, eq(schema.kitchenOrderTicket.orderId, schema.order.id))
+						.innerJoin(
+							schema.order,
+							eq(schema.kitchenOrderTicket.orderId, schema.order.id),
+						)
 						.where(eq(schema.kitchenOrderTicket.id, id))
 						.limit(1);
 
@@ -224,12 +230,16 @@ const updateItemStatus = permissionProcedure("orders.update")
 								quantity: schema.kitchenOrderItem.quantity,
 								notes: schema.kitchenOrderItem.notes,
 								courseNumber: schema.orderLineItem.courseNumber,
-								reportingCategoryName: schema.orderLineItem.reportingCategorySnapshot,
+								reportingCategoryName:
+									schema.orderLineItem.reportingCategorySnapshot,
 							})
 							.from(schema.kitchenOrderItem)
 							.leftJoin(
 								schema.orderLineItem,
-								eq(schema.kitchenOrderItem.orderLineItemId, schema.orderLineItem.id),
+								eq(
+									schema.kitchenOrderItem.orderLineItemId,
+									schema.orderLineItem.id,
+								),
 							)
 							.where(eq(schema.kitchenOrderItem.ticketId, id));
 

@@ -626,8 +626,8 @@ const getOverdueSummary = permissionProcedure("reports.read")
 
 // ── getPaidThisMonth ───────────────────────────────────────────────────
 
-const getPaidThisMonth = permissionProcedure("invoices.read")
-	.handler(async ({ context }) => {
+const getPaidThisMonth = permissionProcedure("invoices.read").handler(
+	async ({ context }) => {
 		const orgId = requireOrganizationId(context);
 		// Get start of current month in Guyana timezone
 		const now = new Date();
@@ -655,7 +655,8 @@ const getPaidThisMonth = permissionProcedure("invoices.read")
 			);
 
 		return { total: result[0]?.total ?? "0" };
-	});
+	},
+);
 
 // ── router export ──────────────────────────────────────────────────────
 

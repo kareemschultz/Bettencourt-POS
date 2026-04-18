@@ -444,14 +444,8 @@ const mergeOrders = permissionProcedure("orders.update")
 					),
 				);
 
-			const subtotal = lineItems.reduce(
-				(sum, li) => sum + Number(li.total),
-				0,
-			);
-			const taxTotal = lineItems.reduce(
-				(sum, li) => sum + Number(li.tax),
-				0,
-			);
+			const subtotal = lineItems.reduce((sum, li) => sum + Number(li.total), 0);
+			const taxTotal = lineItems.reduce((sum, li) => sum + Number(li.tax), 0);
 
 			await tx
 				.update(schema.order)

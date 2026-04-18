@@ -25,10 +25,15 @@ const listFloors = permissionProcedure("orders.read")
 				sortOrder: schema.floor.sortOrder,
 				isActive: schema.floor.isActive,
 				createdAt: schema.floor.createdAt,
-				tableCount: sql<number>`count(${schema.tableLayout.id})`.as("table_count"),
+				tableCount: sql<number>`count(${schema.tableLayout.id})`.as(
+					"table_count",
+				),
 			})
 			.from(schema.floor)
-			.leftJoin(schema.tableLayout, eq(schema.floor.id, schema.tableLayout.floorId))
+			.leftJoin(
+				schema.tableLayout,
+				eq(schema.floor.id, schema.tableLayout.floorId),
+			)
 			.where(eq(schema.floor.locationId, input.locationId))
 			.groupBy(schema.floor.id)
 			.orderBy(asc(schema.floor.sortOrder), asc(schema.floor.name));
@@ -91,7 +96,10 @@ const updateFloor = permissionProcedure("orders.create")
 		if (input.isActive !== undefined) updates.isActive = input.isActive;
 
 		if (Object.keys(updates).length > 0) {
-			await db.update(schema.floor).set(updates).where(eq(schema.floor.id, input.id));
+			await db
+				.update(schema.floor)
+				.set(updates)
+				.where(eq(schema.floor.id, input.id));
 		}
 
 		return { success: true };
@@ -199,7 +207,10 @@ const saveTableBatch = permissionProcedure("orders.create")
 			input.floorId == null
 				? null
 				: await db
-						.select({ id: schema.floor.id, locationId: schema.floor.locationId })
+						.select({
+							id: schema.floor.id,
+							locationId: schema.floor.locationId,
+						})
 						.from(schema.floor)
 						.where(eq(schema.floor.id, input.floorId))
 						.limit(1);

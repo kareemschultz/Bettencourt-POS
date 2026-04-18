@@ -5,10 +5,10 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
 import { createAuditLog } from "../lib/audit";
-import { printService } from "../lib/print-service";
 import { emitKitchenEvent } from "../lib/kitchen-events";
-import { emitPosEvent } from "../lib/pos-events";
 import { requireOrganizationId } from "../lib/org-context";
+import { emitPosEvent } from "../lib/pos-events";
+import { printService } from "../lib/print-service";
 
 async function nextInvoiceNumber(orgId: string): Promise<string> {
 	const result = await db
@@ -63,8 +63,12 @@ const getProducts = permissionProcedure("orders.read")
 		}
 
 		// Get departments (filtered if register has restrictions)
-		let departments: { id: string; name: string; sortOrder: number | null; pinProtected: boolean }[] =
-			[];
+		let departments: {
+			id: string;
+			name: string;
+			sortOrder: number | null;
+			pinProtected: boolean;
+		}[] = [];
 		if (departmentFilter.length > 0) {
 			departments = await db
 				.select({
@@ -438,19 +442,22 @@ const checkout = permissionProcedure("orders.create")
 				const taxAmount = lineTotal * item.taxRate;
 
 				// Insert the main line item
-				const [lineItemRow] = await tx.insert(schema.orderLineItem).values({
-					orderId: createdOrder.id,
-					productId: item.productId,
-					productNameSnapshot: item.productName,
-					reportingCategorySnapshot: item.department,
-					quantity: item.quantity,
-					unitPrice: item.unitPrice.toFixed(2),
-					tax: taxAmount.toFixed(2),
-					total: lineTotal.toFixed(2),
-					modifiersSnapshot: item.modifiers,
-					notes: item.notes ?? null,
-					courseNumber: item.courseNumber ?? 1,
-				}).returning({ id: schema.orderLineItem.id });
+				const [lineItemRow] = await tx
+					.insert(schema.orderLineItem)
+					.values({
+						orderId: createdOrder.id,
+						productId: item.productId,
+						productNameSnapshot: item.productName,
+						reportingCategorySnapshot: item.department,
+						quantity: item.quantity,
+						unitPrice: item.unitPrice.toFixed(2),
+						tax: taxAmount.toFixed(2),
+						total: lineTotal.toFixed(2),
+						modifiersSnapshot: item.modifiers,
+						notes: item.notes ?? null,
+						courseNumber: item.courseNumber ?? 1,
+					})
+					.returning({ id: schema.orderLineItem.id });
 				if (lineItemRow) lineItemIdByIndex.set(_itemIdx, lineItemRow.id);
 
 				// If combo product, also insert component line items for reporting
@@ -738,7 +745,6 @@ const lookupBarcode = permissionProcedure("orders.create")
 		});
 	});
 
-
 // ── toggle86 (mark item as unavailable / available) ─────────────────────
 const toggle86 = permissionProcedure("orders.update")
 	.input(
@@ -756,7 +762,10 @@ const toggle86 = permissionProcedure("orders.update")
 			.insert(schema.productLocation)
 			.values({ productId, locationId, isAvailable })
 			.onConflictDoUpdate({
-				target: [schema.productLocation.productId, schema.productLocation.locationId],
+				target: [
+					schema.productLocation.productId,
+					schema.productLocation.locationId,
+				],
 				set: { isAvailable },
 			});
 
@@ -778,7 +787,13 @@ const toggle86 = permissionProcedure("orders.update")
 			locationId,
 		});
 
-		emitPosEvent({ type: "product:86", productId, locationId, isAvailable, productName });
+		emitPosEvent({
+			type: "product:86",
+			productId,
+			locationId,
+			isAvailable,
+			productName,
+		});
 
 		return { productId, locationId, isAvailable, productName };
 	});

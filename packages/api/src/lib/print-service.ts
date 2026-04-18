@@ -59,7 +59,9 @@ export function renderKitchenTicket(job: PrintJob): string {
 	const rows = job.items
 		.map((item) => {
 			const notes = item.notes ? `\n  * ${item.notes}` : "";
-			const mods = item.modifiers?.length ? `\n  + ${item.modifiers.join(", ")}` : "";
+			const mods = item.modifiers?.length
+				? `\n  + ${item.modifiers.join(", ")}`
+				: "";
 			const course = item.courseNumber ? ` [C${item.courseNumber}]` : "";
 			return `${item.quantity}x ${item.name}${course}${mods}${notes}`;
 		})
@@ -78,7 +80,10 @@ export function renderKitchenTicket(job: PrintJob): string {
 
 export function renderBarTicket(job: PrintJob): string {
 	const rows = job.items
-		.map((item) => `${item.quantity}x ${item.name}${item.notes ? `\n  * ${item.notes}` : ""}`)
+		.map(
+			(item) =>
+				`${item.quantity}x ${item.name}${item.notes ? `\n  * ${item.notes}` : ""}`,
+		)
 		.join("\n");
 	return [
 		"BAR TICKET",
@@ -92,10 +97,16 @@ export function renderBarTicket(job: PrintJob): string {
 }
 
 export function renderReceiptPreview(job: PrintJob): string {
-	const rows = job.items.map((item) => `${item.quantity}x ${item.name}`).join("\n");
-	return ["RECEIPT PREVIEW", divider(), `Order: #${job.orderNumber}`, rows, divider()].join(
-		"\n",
-	);
+	const rows = job.items
+		.map((item) => `${item.quantity}x ${item.name}`)
+		.join("\n");
+	return [
+		"RECEIPT PREVIEW",
+		divider(),
+		`Order: #${job.orderNumber}`,
+		rows,
+		divider(),
+	].join("\n");
 }
 
 async function getActivePrinters(organizationId: string, locationId: string) {
@@ -132,15 +143,20 @@ async function getCategoryRoutes(printerIds: string[]) {
 		.where(inArray(schema.printerRoute.printerId, printerIds));
 }
 
-export async function resolvePrinterTargets(job: PrintJob): Promise<PrinterTarget[]> {
+export async function resolvePrinterTargets(
+	job: PrintJob,
+): Promise<PrinterTarget[]> {
 	const printers = await getActivePrinters(job.organizationId, job.locationId);
 	if (printers.length === 0) return [];
 
 	const routes = await getCategoryRoutes(printers.map((p) => p.id));
 	const routeMap = new Map<string, Set<string>>();
 	for (const route of routes) {
-		if (!routeMap.has(route.printerId)) routeMap.set(route.printerId, new Set());
-		routeMap.get(route.printerId)?.add((route.reportingCategoryName ?? "").toLowerCase());
+		if (!routeMap.has(route.printerId))
+			routeMap.set(route.printerId, new Set());
+		routeMap
+			.get(route.printerId)
+			?.add((route.reportingCategoryName ?? "").toLowerCase());
 	}
 
 	const targets: PrinterTarget[] = [];
@@ -206,7 +222,8 @@ export async function resolvePrinterTargets(job: PrintJob): Promise<PrinterTarge
 function renderByType(target: PrinterTarget, baseJob: PrintJob): string {
 	const scopedJob = { ...baseJob, items: target.items };
 	if (target.jobType === "bar_ticket") return renderBarTicket(scopedJob);
-	if (target.jobType === "receipt_preview") return renderReceiptPreview(scopedJob);
+	if (target.jobType === "receipt_preview")
+		return renderReceiptPreview(scopedJob);
 	return renderKitchenTicket(scopedJob);
 }
 

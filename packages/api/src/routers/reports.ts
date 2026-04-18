@@ -235,7 +235,6 @@ const getReport = permissionProcedure("reports.read")
 			};
 		}
 
-
 		if (input.type === "tips") {
 			const summaryResult = await db.execute(
 				sql`SELECT
@@ -378,7 +377,6 @@ const getReport = permissionProcedure("reports.read")
 			);
 			return result.rows;
 		}
-
 
 		if (input.type === "customer_analytics") {
 			// KPI summary

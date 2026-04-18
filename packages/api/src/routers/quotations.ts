@@ -250,8 +250,10 @@ const update = permissionProcedure("quotations.update")
 		if (input.customerPhone !== undefined)
 			updates.customerPhone = input.customerPhone;
 		if (input.agencyName !== undefined) updates.agencyName = input.agencyName;
-		if (input.contactPersonName !== undefined) updates.contactPersonName = input.contactPersonName;
-		if (input.contactPersonPosition !== undefined) updates.contactPersonPosition = input.contactPersonPosition;
+		if (input.contactPersonName !== undefined)
+			updates.contactPersonName = input.contactPersonName;
+		if (input.contactPersonPosition !== undefined)
+			updates.contactPersonPosition = input.contactPersonPosition;
 		if (input.customerId !== undefined) updates.customerId = input.customerId;
 		if (input.validUntil !== undefined)
 			updates.validUntil = new Date(input.validUntil);

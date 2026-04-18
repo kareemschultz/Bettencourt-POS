@@ -63,7 +63,10 @@ const ingestOrder = permissionProcedure("orders.create")
 			})
 			.returning();
 
-		if (!order) throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "Order creation failed" });
+		if (!order)
+			throw new ORPCError("INTERNAL_SERVER_ERROR", {
+				message: "Order creation failed",
+			});
 
 		// Insert line items
 		for (const item of input.items) {

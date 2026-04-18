@@ -289,8 +289,6 @@ const voidOrder = permissionProcedure("orders.void")
 		return { success: true, orderNumber: order.orderNumber };
 	});
 
-
-
 // ── listOpenTabs ──────────────────────────────────────────────────────
 const listOpenTabs = permissionProcedure("orders.read")
 	.input(

@@ -1,97 +1,97 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1772790713176,
-      "tag": "0000_natural_sersi",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1772803507115,
-      "tag": "0001_slippery_shiver_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1772844585111,
-      "tag": "0002_loose_human_fly",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1772927675409,
-      "tag": "0003_careless_manta",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1773168825411,
-      "tag": "0004_tiny_pretty_boy",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1773174818189,
-      "tag": "0010_recurring_lifecycle_and_runs",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1773237447478,
-      "tag": "0011_billing_allocation_and_lifecycle",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1773400000000,
-      "tag": "0012_operations_polish",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1773400001000,
-      "tag": "0013_comms_notifications",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1773414096955,
-      "tag": "0014_gap_analysis_foundation",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1773420000000,
-      "tag": "0014_pricelists_and_kiosk",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1773420001000,
-      "tag": "0015_schema_fixes",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "7",
-      "when": 1774920491029,
-      "tag": "0012_smart_zzzax",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1772790713176,
+			"tag": "0000_natural_sersi",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1772803507115,
+			"tag": "0001_slippery_shiver_man",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1772844585111,
+			"tag": "0002_loose_human_fly",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1772927675409,
+			"tag": "0003_careless_manta",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1773168825411,
+			"tag": "0004_tiny_pretty_boy",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1773174818189,
+			"tag": "0010_recurring_lifecycle_and_runs",
+			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "7",
+			"when": 1773237447478,
+			"tag": "0011_billing_allocation_and_lifecycle",
+			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1773400000000,
+			"tag": "0012_operations_polish",
+			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "7",
+			"when": 1773400001000,
+			"tag": "0013_comms_notifications",
+			"breakpoints": true
+		},
+		{
+			"idx": 9,
+			"version": "7",
+			"when": 1773414096955,
+			"tag": "0014_gap_analysis_foundation",
+			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "7",
+			"when": 1773420000000,
+			"tag": "0014_pricelists_and_kiosk",
+			"breakpoints": true
+		},
+		{
+			"idx": 11,
+			"version": "7",
+			"when": 1773420001000,
+			"tag": "0015_schema_fixes",
+			"breakpoints": true
+		},
+		{
+			"idx": 12,
+			"version": "7",
+			"when": 1774920491029,
+			"tag": "0012_smart_zzzax",
+			"breakpoints": true
+		}
+	]
 }
