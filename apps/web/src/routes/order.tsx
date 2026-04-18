@@ -58,7 +58,9 @@ export default function OnlineOrderPage() {
 	const [cartOpen, setCartOpen] = useState(false);
 	const [activeDepartment, setActiveDepartment] = useState<string | null>(null);
 	const [view, setView] = useState<PageView>("menu");
-	const [orderType, setOrderType] = useState<OrderType>(tableId ? "dine_in" : "pickup");
+	const [orderType, setOrderType] = useState<OrderType>(
+		tableId ? "dine_in" : "pickup",
+	);
 	const [customerName, setCustomerName] = useState("");
 	const [customerPhone, setCustomerPhone] = useState("");
 	const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -171,14 +173,21 @@ export default function OnlineOrderPage() {
 	});
 
 	const handleSubmitOrder = useCallback(() => {
-		if (orderType !== "dine_in" && (!customerName.trim() || !customerPhone.trim())) return;
+		if (
+			orderType !== "dine_in" &&
+			(!customerName.trim() || !customerPhone.trim())
+		)
+			return;
 		if (orderType === "delivery" && !deliveryAddress.trim()) return;
 		if (cart.length === 0) return;
 
 		placeOrderMutation.mutate({
-			customerName: customerName.trim() || (tableName ? `Table ${tableName}` : "Guest"),
+			customerName:
+				customerName.trim() || (tableName ? `Table ${tableName}` : "Guest"),
 			customerPhone: customerPhone.trim() || "N/A",
-			orderType: (orderType === "dine_in" ? "pickup" : orderType) as "delivery" | "pickup",
+			orderType: (orderType === "dine_in" ? "pickup" : orderType) as
+				| "delivery"
+				| "pickup",
 			deliveryAddress:
 				orderType === "delivery" ? deliveryAddress.trim() : undefined,
 			items: cart.map((item) => ({

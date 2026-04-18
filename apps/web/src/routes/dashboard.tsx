@@ -34,8 +34,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { authClient } from "@/lib/auth-client";
-import { getOnlineStatus } from "@/lib/offline";
 import { getActiveModule, PAGE_TITLES } from "@/lib/modules";
+import { getOnlineStatus } from "@/lib/offline";
 import { hasRouteAccess } from "@/lib/route-access";
 import type { AppUser } from "@/lib/types";
 import {
@@ -107,7 +107,9 @@ export default function DashboardLayout() {
 	// Cache pinHash locally so the PIN lock screen can verify offline
 	useEffect(() => {
 		if (userProfile?.pinHash) {
-			try { localStorage.setItem("pos-pin-hash", userProfile.pinHash); } catch {}
+			try {
+				localStorage.setItem("pos-pin-hash", userProfile.pinHash);
+			} catch {}
 		}
 	}, [userProfile?.pinHash]);
 

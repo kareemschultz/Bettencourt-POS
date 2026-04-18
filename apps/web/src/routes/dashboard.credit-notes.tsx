@@ -1,5 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronsUpDown, FileDown, FileText, MoreHorizontal, Plus, Trash2, X } from "lucide-react";
+import {
+	ChevronsUpDown,
+	FileDown,
+	FileText,
+	MoreHorizontal,
+	Plus,
+	Trash2,
+	X,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -23,6 +31,10 @@ import {
 	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
+import {
+	CustomerCombobox,
+	type CustomerHit,
+} from "@/components/ui/customer-combobox";
 import {
 	Dialog,
 	DialogContent,
@@ -57,7 +69,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { openCreditNotePdf } from "@/lib/pdf/credit-note-pdf";
 import { statusBadgeClass } from "@/lib/status-colors";
 import { formatGYD } from "@/lib/types";
-import { CustomerCombobox, type CustomerHit } from "@/components/ui/customer-combobox";
 import { orpc } from "@/utils/orpc";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -106,7 +117,13 @@ const emptyCNForm: CNForm = {
 };
 
 const TAX_RATE = 16.5;
-const CN_STATUS_FILTERS = ["All", "Draft", "Issued", "Applied", "Voided"] as const;
+const CN_STATUS_FILTERS = [
+	"All",
+	"Draft",
+	"Issued",
+	"Applied",
+	"Voided",
+] as const;
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -150,7 +167,18 @@ export default function CreditNotesPage() {
 			input: { limit: 100, offset: 0 },
 		}),
 	);
-	const invoiceOptions = (invoiceListRaw as unknown as { invoices: Array<{ id: string; invoiceNumber: string; customerName: string; total: string; amountPaid: string }> }).invoices ?? [];
+	const invoiceOptions =
+		(
+			invoiceListRaw as unknown as {
+				invoices: Array<{
+					id: string;
+					invoiceNumber: string;
+					customerName: string;
+					total: string;
+					amountPaid: string;
+				}>;
+			}
+		).invoices ?? [];
 
 	// ── Mutations ────────────────────────────────────────────────────────────
 
@@ -464,11 +492,19 @@ export default function CreditNotesPage() {
 													</DropdownMenuTrigger>
 													<DropdownMenuContent align="end" className="w-44">
 														{cn.status === "draft" && (
-															<DropdownMenuItem onClick={() => issueMut.mutate({ id: cn.id })}>
+															<DropdownMenuItem
+																onClick={() => issueMut.mutate({ id: cn.id })}
+															>
 																Issue
 															</DropdownMenuItem>
 														)}
-														<DropdownMenuItem onClick={async () => { const r = await openCreditNotePdf(cn); if (r === "popup_blocked") toast.error("Allow popups to open the PDF"); }}>
+														<DropdownMenuItem
+															onClick={async () => {
+																const r = await openCreditNotePdf(cn);
+																if (r === "popup_blocked")
+																	toast.error("Allow popups to open the PDF");
+															}}
+														>
 															<FileDown className="mr-2 size-3.5" />
 															Print / Save PDF
 														</DropdownMenuItem>
@@ -523,7 +559,10 @@ export default function CreditNotesPage() {
 							</div>
 							<div className="col-span-2 flex flex-col gap-1.5">
 								<Label>Original Invoice (optional)</Label>
-								<Popover open={invoiceComboOpen} onOpenChange={setInvoiceComboOpen}>
+								<Popover
+									open={invoiceComboOpen}
+									onOpenChange={setInvoiceComboOpen}
+								>
 									<PopoverTrigger asChild>
 										<Button
 											variant="outline"
@@ -531,8 +570,11 @@ export default function CreditNotesPage() {
 											className="w-full justify-between font-normal text-sm"
 										>
 											{form.originalInvoiceNumber
-												? invoiceOptions.find(i => i.invoiceNumber === form.originalInvoiceNumber)
-													? `${form.originalInvoiceNumber} — ${invoiceOptions.find(i => i.invoiceNumber === form.originalInvoiceNumber)!.customerName}`
+												? invoiceOptions.find(
+														(i) =>
+															i.invoiceNumber === form.originalInvoiceNumber,
+													)
+													? `${form.originalInvoiceNumber} — ${invoiceOptions.find((i) => i.invoiceNumber === form.originalInvoiceNumber)!.customerName}`
 													: form.originalInvoiceNumber
 												: "Select invoice..."}
 											<ChevronsUpDown className="ml-2 size-3.5 text-muted-foreground" />
@@ -549,17 +591,22 @@ export default function CreditNotesPage() {
 															key={inv.id}
 															value={`${inv.invoiceNumber} ${inv.customerName}`}
 															onSelect={() => {
-																setForm(f => ({
+																setForm((f) => ({
 																	...f,
 																	originalInvoiceNumber: inv.invoiceNumber,
-																	customerName: f.customerName || inv.customerName,
+																	customerName:
+																		f.customerName || inv.customerName,
 																}));
 																setInvoiceComboOpen(false);
 															}}
 														>
 															<div className="flex flex-col">
-																<span className="font-mono font-semibold text-xs">{inv.invoiceNumber}</span>
-																<span className="text-muted-foreground text-xs">{inv.customerName}</span>
+																<span className="font-mono font-semibold text-xs">
+																	{inv.invoiceNumber}
+																</span>
+																<span className="text-muted-foreground text-xs">
+																	{inv.customerName}
+																</span>
 															</div>
 														</CommandItem>
 													))}
@@ -686,7 +733,9 @@ export default function CreditNotesPage() {
 							<Input
 								placeholder="e.g. Kitchen, Front of House, Admin"
 								value={form.department}
-								onChange={(e) => setForm(f => ({ ...f, department: e.target.value }))}
+								onChange={(e) =>
+									setForm((f) => ({ ...f, department: e.target.value }))
+								}
 							/>
 						</div>
 
@@ -709,7 +758,11 @@ export default function CreditNotesPage() {
 						</div>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
+						<Button
+							variant="outline"
+							type="button"
+							onClick={() => setDialogOpen(false)}
+						>
 							Cancel
 						</Button>
 						<Button

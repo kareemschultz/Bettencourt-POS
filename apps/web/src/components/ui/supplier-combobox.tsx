@@ -84,7 +84,7 @@ export function SupplierCombobox({
 			</PopoverTrigger>
 			<PopoverContent className="w-[--radix-popover-trigger-width] p-0">
 				<Command>
-					<div className="flex items-center border-b border-border px-3">
+					<div className="flex items-center border-border border-b px-3">
 						<Input
 							placeholder="Search suppliers…"
 							value={search}
@@ -100,7 +100,7 @@ export function SupplierCombobox({
 					<CommandList>
 						{filtered.length === 0 && !isLoading && (
 							<CommandEmpty>
-								<div className="py-3 text-center text-xs text-muted-foreground">
+								<div className="py-3 text-center text-muted-foreground text-xs">
 									{search
 										? `No supplier found. "${search}" will be saved as typed.`
 										: "No suppliers found."}
@@ -127,9 +127,9 @@ export function SupplierCombobox({
 											)}
 										/>
 										<div>
-											<div className="text-sm font-medium">{s.name}</div>
+											<div className="font-medium text-sm">{s.name}</div>
 											{s.phone && (
-												<div className="text-xs text-muted-foreground">
+												<div className="text-muted-foreground text-xs">
 													{s.phone}
 												</div>
 											)}
@@ -189,7 +189,7 @@ export function SupplierComboboxInline({
 					disabled={disabled}
 					className="pr-8"
 				/>
-				<ChevronsUpDown className="absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground opacity-50" />
+				<ChevronsUpDown className="absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted-foreground opacity-50" />
 			</div>
 
 			{open && filtered.length > 0 && (
@@ -216,9 +216,9 @@ export function SupplierComboboxInline({
 											)}
 										/>
 										<div>
-											<div className="text-sm font-medium">{s.name}</div>
+											<div className="font-medium text-sm">{s.name}</div>
 											{s.phone && (
-												<div className="text-xs text-muted-foreground">
+												<div className="text-muted-foreground text-xs">
 													{s.phone}
 												</div>
 											)}

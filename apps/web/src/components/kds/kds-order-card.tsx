@@ -23,7 +23,10 @@ type KdsOrder = {
 };
 
 function elapsedMinutes(from: string | Date) {
-	return Math.max(0, Math.floor((Date.now() - new Date(from).getTime()) / 60000));
+	return Math.max(
+		0,
+		Math.floor((Date.now() - new Date(from).getTime()) / 60000),
+	);
 }
 
 function cardTone(minutes: number) {
@@ -60,11 +63,18 @@ export function KdsOrderCard({
 		<div className={`rounded-lg border p-3 ${cardTone(mins)}`}>
 			<div className="mb-2 flex items-center justify-between">
 				<p className="font-bold text-base">#{order.orderNumber}</p>
-				<p className="flex items-center gap-1 text-xs"><Clock className="size-3" />{mins}m</p>
+				<p className="flex items-center gap-1 text-xs">
+					<Clock className="size-3" />
+					{mins}m
+				</p>
 			</div>
 			<div className="mb-3 flex items-center gap-2 text-xs">
 				{order.tableName ? <span>Table {order.tableName}</span> : null}
-				{order.orderType ? <span className="rounded bg-muted px-1.5 py-0.5 uppercase">{order.orderType}</span> : null}
+				{order.orderType ? (
+					<span className="rounded bg-muted px-1.5 py-0.5 uppercase">
+						{order.orderType}
+					</span>
+				) : null}
 			</div>
 			<div className="space-y-2">
 				{courseGroups.map(([courseNum, items]) => {
@@ -75,7 +85,7 @@ export function KdsOrderCard({
 						<div key={courseNum}>
 							{hasMultipleCourses && (
 								<div className="mb-1 flex items-center justify-between">
-									<span className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
+									<span className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
 										Course {courseNum}
 									</span>
 									{onFireCourse && !allFired && !allDone && (
@@ -102,15 +112,19 @@ export function KdsOrderCard({
 									onClick={() => onBumpItem(item.id)}
 									className={cn(
 										"w-full rounded border bg-background px-2 py-1.5 text-left hover:bg-muted/40",
-										item.status === "done" && "opacity-40 line-through",
-										item.firedAt && item.status !== "done" && "border-orange-300 bg-orange-50 dark:bg-orange-950/20",
+										item.status === "done" && "line-through opacity-40",
+										item.firedAt &&
+											item.status !== "done" &&
+											"border-orange-300 bg-orange-50 dark:bg-orange-950/20",
 									)}
 								>
 									<div className="flex justify-between text-sm">
 										<span>{item.productName}</span>
 										<span>x{item.quantity}</span>
 									</div>
-									{item.notes ? <p className="text-[10px] text-amber-600">{item.notes}</p> : null}
+									{item.notes ? (
+										<p className="text-[10px] text-amber-600">{item.notes}</p>
+									) : null}
 								</button>
 							))}
 						</div>

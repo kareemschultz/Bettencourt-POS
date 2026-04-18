@@ -1,5 +1,5 @@
-import { createBunWebSocket } from "hono/bun";
 import type { Context } from "hono";
+import { createBunWebSocket } from "hono/bun";
 
 export type PosChannel =
 	| "pos:orders"
@@ -39,7 +39,9 @@ function parseChannelList(raw: unknown): PosChannel[] {
 	);
 }
 
-function normalizeMessage(input: Partial<PosRealtimeMessage>): PosRealtimeMessage | null {
+function normalizeMessage(
+	input: Partial<PosRealtimeMessage>,
+): PosRealtimeMessage | null {
 	if (!input?.channel || !VALID_CHANNELS.has(input.channel)) return null;
 	if (!input.event || typeof input.event !== "string") return null;
 

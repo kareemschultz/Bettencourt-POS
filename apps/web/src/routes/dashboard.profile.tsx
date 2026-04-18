@@ -11,10 +11,25 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -53,7 +68,9 @@ function StrengthMeter({ password }: { password: string }) {
 					/>
 				))}
 			</div>
-			<p className="text-muted-foreground text-xs">{STRENGTH_LABELS[Math.max(0, score - 1)]}</p>
+			<p className="text-muted-foreground text-xs">
+				{STRENGTH_LABELS[Math.max(0, score - 1)]}
+			</p>
 		</div>
 	);
 }
@@ -62,7 +79,8 @@ function StrengthMeter({ password }: { password: string }) {
 function deviceIcon(ua: string | null) {
 	if (!ua) return <Monitor className="size-4" />;
 	const lower = ua.toLowerCase();
-	if (/mobile|android|iphone/.test(lower)) return <Smartphone className="size-4" />;
+	if (/mobile|android|iphone/.test(lower))
+		return <Smartphone className="size-4" />;
 	if (/tablet|ipad/.test(lower)) return <Laptop className="size-4" />;
 	return <Monitor className="size-4" />;
 }
@@ -100,12 +118,16 @@ export default function ProfilePage() {
 		orpc.settings.getOwnSessions.queryOptions({ input: {} }),
 	);
 
-	const sessionsKey = orpc.settings.getOwnSessions.queryOptions({ input: {} }).queryKey;
+	const sessionsKey = orpc.settings.getOwnSessions.queryOptions({
+		input: {},
+	}).queryKey;
 
 	const changePassword = useMutation(
 		orpc.settings.changeOwnPassword.mutationOptions({
 			onSuccess: () => {
-				setCurrentPw(""); setNewPw(""); setConfirmPw("");
+				setCurrentPw("");
+				setNewPw("");
+				setConfirmPw("");
 				toast.success("Password updated successfully");
 			},
 			onError: (err) => toast.error(err.message || "Failed to update password"),
@@ -115,7 +137,8 @@ export default function ProfilePage() {
 	const changePin = useMutation(
 		orpc.settings.changeOwnPin.mutationOptions({
 			onSuccess: () => {
-				setNewPin(""); setConfirmPin("");
+				setNewPin("");
+				setConfirmPin("");
 				toast.success("PIN updated successfully");
 			},
 			onError: (err) => toast.error(err.message || "Failed to update PIN"),
@@ -140,9 +163,7 @@ export default function ProfilePage() {
 		!changePassword.isPending;
 
 	const canSubmitPin =
-		newPin.length >= 4 &&
-		newPin === confirmPin &&
-		!changePin.isPending;
+		newPin.length >= 4 && newPin === confirmPin && !changePin.isPending;
 
 	return (
 		<div className="space-y-6 p-4 md:p-6">
@@ -170,9 +191,13 @@ export default function ProfilePage() {
 					) : (
 						<div className="space-y-1">
 							<p className="font-semibold text-lg">{currentUser?.name}</p>
-							<p className="text-muted-foreground text-sm">{currentUser?.email}</p>
+							<p className="text-muted-foreground text-sm">
+								{currentUser?.email}
+							</p>
 							{currentUser?.roleName && (
-								<Badge variant="outline" className="mt-1">{currentUser.roleName}</Badge>
+								<Badge variant="outline" className="mt-1">
+									{currentUser.roleName}
+								</Badge>
 							)}
 						</div>
 					)}
@@ -185,16 +210,24 @@ export default function ProfilePage() {
 					<CardTitle className="flex items-center gap-2">
 						<KeyRound className="size-4" /> Change Password
 					</CardTitle>
-					<CardDescription>Minimum 8 characters. Use a strong, unique password.</CardDescription>
+					<CardDescription>
+						Minimum 8 characters. Use a strong, unique password.
+					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<form
 						onSubmit={(e) => {
 							e.preventDefault();
-							if (newPw !== confirmPw) { toast.error("Passwords do not match"); return; }
-							changePassword.mutate({ currentPassword: currentPw, newPassword: newPw });
+							if (newPw !== confirmPw) {
+								toast.error("Passwords do not match");
+								return;
+							}
+							changePassword.mutate({
+								currentPassword: currentPw,
+								newPassword: newPw,
+							});
 						}}
-						className="space-y-4 max-w-sm"
+						className="max-w-sm space-y-4"
 					>
 						<div className="space-y-1.5">
 							<Label htmlFor="current-pw">Current Password</Label>
@@ -227,7 +260,9 @@ export default function ProfilePage() {
 								autoComplete="new-password"
 							/>
 							{confirmPw && newPw !== confirmPw && (
-								<p className="text-destructive text-xs">Passwords do not match</p>
+								<p className="text-destructive text-xs">
+									Passwords do not match
+								</p>
 							)}
 							{confirmPw && newPw === confirmPw && (
 								<p className="flex items-center gap-1 text-green-600 text-xs">
@@ -236,7 +271,9 @@ export default function ProfilePage() {
 							)}
 						</div>
 						<Button type="submit" disabled={!canSubmitPassword}>
-							{changePassword.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+							{changePassword.isPending && (
+								<Loader2 className="mr-2 size-4 animate-spin" />
+							)}
 							Update Password
 						</Button>
 					</form>
@@ -248,18 +285,21 @@ export default function ProfilePage() {
 				<CardHeader>
 					<CardTitle>POS PIN</CardTitle>
 					<CardDescription>
-						4–6 digit PIN used for quick login on the cashier screen.
-						Leave blank to remove your PIN.
+						4–6 digit PIN used for quick login on the cashier screen. Leave
+						blank to remove your PIN.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<form
 						onSubmit={(e) => {
 							e.preventDefault();
-							if (newPin && newPin !== confirmPin) { toast.error("PINs do not match"); return; }
+							if (newPin && newPin !== confirmPin) {
+								toast.error("PINs do not match");
+								return;
+							}
 							changePin.mutate({ pin: newPin || null });
 						}}
-						className="space-y-4 max-w-sm"
+						className="max-w-sm space-y-4"
 					>
 						<div className="space-y-1.5">
 							<Label htmlFor="new-pin">New PIN</Label>
@@ -282,14 +322,18 @@ export default function ProfilePage() {
 								maxLength={6}
 								placeholder="Re-enter PIN"
 								value={confirmPin}
-								onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
+								onChange={(e) =>
+									setConfirmPin(e.target.value.replace(/\D/g, ""))
+								}
 							/>
 							{newPin && confirmPin && newPin !== confirmPin && (
 								<p className="text-destructive text-xs">PINs do not match</p>
 							)}
 						</div>
 						<Button type="submit" disabled={!canSubmitPin}>
-							{changePin.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+							{changePin.isPending && (
+								<Loader2 className="mr-2 size-4 animate-spin" />
+							)}
 							{newPin ? "Update PIN" : "Remove PIN"}
 						</Button>
 					</form>
@@ -301,9 +345,12 @@ export default function ProfilePage() {
 				<CardHeader className="flex flex-row items-center justify-between">
 					<div>
 						<CardTitle>Active Sessions</CardTitle>
-						<CardDescription>Devices currently signed in to your account.</CardDescription>
+						<CardDescription>
+							Devices currently signed in to your account.
+						</CardDescription>
 					</div>
-					{sessions.filter((s) => !(s as { isCurrent?: boolean }).isCurrent).length > 0 && (
+					{sessions.filter((s) => !(s as { isCurrent?: boolean }).isCurrent)
+						.length > 0 && (
 						<Button
 							variant="outline"
 							size="sm"
@@ -317,10 +364,14 @@ export default function ProfilePage() {
 				<CardContent>
 					{sessionsLoading ? (
 						<div className="space-y-3">
-							{[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+							{[1, 2].map((i) => (
+								<Skeleton key={i} className="h-14 w-full rounded-lg" />
+							))}
 						</div>
 					) : sessions.length === 0 ? (
-						<p className="text-muted-foreground text-sm">No active sessions found.</p>
+						<p className="text-muted-foreground text-sm">
+							No active sessions found.
+						</p>
 					) : (
 						<div className="space-y-2">
 							{sessions.map((s) => {
@@ -339,22 +390,27 @@ export default function ProfilePage() {
 										<div className="text-muted-foreground">
 											{deviceIcon(session.userAgent)}
 										</div>
-										<div className="flex-1 min-w-0">
-											<p className="text-sm font-medium flex items-center gap-2">
+										<div className="min-w-0 flex-1">
+											<p className="flex items-center gap-2 font-medium text-sm">
 												{browserName(session.userAgent)}
 												{session.isCurrent && (
-													<Badge variant="secondary" className="text-xs">This device</Badge>
+													<Badge variant="secondary" className="text-xs">
+														This device
+													</Badge>
 												)}
 											</p>
-											<p className="text-muted-foreground text-xs truncate">
+											<p className="truncate text-muted-foreground text-xs">
 												{session.ipAddress ?? "Unknown IP"} · Last active{" "}
 												{session.updatedAt
-													? new Date(session.updatedAt).toLocaleDateString("en-GY", {
-															timeZone: "America/Guyana",
-															day: "2-digit",
-															month: "short",
-															year: "numeric",
-														})
+													? new Date(session.updatedAt).toLocaleDateString(
+															"en-GY",
+															{
+																timeZone: "America/Guyana",
+																day: "2-digit",
+																month: "short",
+																year: "numeric",
+															},
+														)
 													: "—"}
 											</p>
 										</div>
@@ -372,8 +428,9 @@ export default function ProfilePage() {
 					<AlertDialogHeader>
 						<AlertDialogTitle>Sign out all other sessions?</AlertDialogTitle>
 						<AlertDialogDescription>
-							This will sign out all devices except the one you are using right now.
-							Anyone using your account on another device will need to log in again.
+							This will sign out all devices except the one you are using right
+							now. Anyone using your account on another device will need to log
+							in again.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -382,7 +439,9 @@ export default function ProfilePage() {
 							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 							onClick={() => revokeSessions.mutate({})}
 						>
-							{revokeSessions.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+							{revokeSessions.isPending && (
+								<Loader2 className="mr-2 size-4 animate-spin" />
+							)}
 							Sign Out Others
 						</AlertDialogAction>
 					</AlertDialogFooter>

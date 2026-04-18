@@ -8,7 +8,9 @@ import { orpc } from "@/utils/orpc";
 export default function KdsRoute() {
 	const [station, setStation] = useState("all");
 	const qc = useQueryClient();
-	const queryKey = orpc.kitchen.getActiveTickets.queryOptions({ input: {} }).queryKey;
+	const queryKey = orpc.kitchen.getActiveTickets.queryOptions({
+		input: {},
+	}).queryKey;
 	const { data: orders = [] } = useQuery({
 		...orpc.kitchen.getActiveTickets.queryOptions({ input: {} }),
 		refetchInterval: 15000,
@@ -33,7 +35,9 @@ export default function KdsRoute() {
 
 	const filtered = useMemo(() => {
 		if (station === "all") return orders;
-		return orders.filter((o) => (o.printerTarget ?? "kitchen").toLowerCase().includes(station));
+		return orders.filter((o) =>
+			(o.printerTarget ?? "kitchen").toLowerCase().includes(station),
+		);
 	}, [orders, station]);
 
 	const counts = {
@@ -44,7 +48,11 @@ export default function KdsRoute() {
 
 	return (
 		<div className="h-screen overflow-hidden bg-muted/20">
-			<KdsHeader station={station} onStationChange={setStation} counts={counts} />
+			<KdsHeader
+				station={station}
+				onStationChange={setStation}
+				counts={counts}
+			/>
 			<div className="h-[calc(100vh-64px)] overflow-auto p-3">
 				<div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
 					{filtered.map((order) => (

@@ -33,7 +33,10 @@ export function useWebSocket({
 
 	onMessageRef.current = onMessage;
 
-	const channelKey = useMemo(() => channels.slice().sort().join(","), [channels]);
+	const channelKey = useMemo(
+		() => channels.slice().sort().join(","),
+		[channels],
+	);
 	const stableChannels = useMemo(
 		() => (channelKey ? channelKey.split(",") : []),
 		[channelKey],

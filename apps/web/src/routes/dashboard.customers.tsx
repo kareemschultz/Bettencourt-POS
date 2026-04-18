@@ -55,7 +55,13 @@ interface CustomerForm {
 	notes: string;
 }
 
-const emptyForm: CustomerForm = { name: "", phone: "", email: "", address: "", notes: "" };
+const emptyForm: CustomerForm = {
+	name: "",
+	phone: "",
+	email: "",
+	address: "",
+	notes: "",
+};
 
 export default function CustomersPage() {
 	const queryClient = useQueryClient();

@@ -4201,7 +4201,7 @@ function LanguageTab() {
 								className={`flex min-h-[64px] items-center gap-3 rounded-lg border p-4 text-left transition-colors ${
 									isActive
 										? "border-primary bg-primary/5 ring-2 ring-primary"
-										: "border-border opacity-50 cursor-not-allowed"
+										: "cursor-not-allowed border-border opacity-50"
 								}`}
 							>
 								<span className="text-2xl">{lang.flag}</span>

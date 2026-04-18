@@ -45,10 +45,12 @@ import { orpc } from "@/utils/orpc";
 
 const STATUS_COLORS: Record<string, string> = {
 	confirmed: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-	seated: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+	seated:
+		"bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
 	completed: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
 	cancelled: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-	no_show: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+	no_show:
+		"bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
 };
 
 export default function ReservationsPage() {
@@ -98,9 +100,12 @@ export default function ReservationsPage() {
 		}),
 	);
 
-	const filtered = statusFilter === "all"
-		? reservations
-		: (reservations as Array<{ status: string }>).filter((r) => r.status === statusFilter);
+	const filtered =
+		statusFilter === "all"
+			? reservations
+			: (reservations as Array<{ status: string }>).filter(
+					(r) => r.status === statusFilter,
+				);
 
 	const todayConfirmed = (reservations as Array<{ status: string }>).filter(
 		(r) => r.status === "confirmed",
@@ -224,23 +229,27 @@ export default function ReservationsPage() {
 										</TableCell>
 									</TableRow>
 								) : (
-									(filtered as Array<{
-										id: string;
-										time: string;
-										customerName: string;
-										customerPhone: string | null;
-										partySize: number;
-										tableName: string | null;
-										status: string;
-										notes: string | null;
-									}>).map((r) => (
+									(
+										filtered as Array<{
+											id: string;
+											time: string;
+											customerName: string;
+											customerPhone: string | null;
+											partySize: number;
+											tableName: string | null;
+											status: string;
+											notes: string | null;
+										}>
+									).map((r) => (
 										<TableRow key={r.id}>
 											<TableCell className="font-medium">{r.time}</TableCell>
 											<TableCell>{r.customerName}</TableCell>
 											<TableCell className="text-muted-foreground text-xs">
 												{r.customerPhone || "–"}
 											</TableCell>
-											<TableCell className="text-center">{r.partySize}</TableCell>
+											<TableCell className="text-center">
+												{r.partySize}
+											</TableCell>
 											<TableCell>{r.tableName || "–"}</TableCell>
 											<TableCell>
 												<Badge

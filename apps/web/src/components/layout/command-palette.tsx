@@ -47,7 +47,9 @@ export function CommandPalette({ user }: CommandPaletteProps) {
 			<CommandList>
 				<CommandEmpty>No pages found.</CommandEmpty>
 				{MODULES.map((mod, idx) => {
-					const visible = mod.items.filter((item) => !item.hidden && canSeeItem(user, item));
+					const visible = mod.items.filter(
+						(item) => !item.hidden && canSeeItem(user, item),
+					);
 					if (visible.length === 0) return null;
 					return (
 						<div key={mod.id}>

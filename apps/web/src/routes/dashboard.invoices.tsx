@@ -21,6 +21,10 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import {
+	AgencyCombobox,
+	type AgencyHit,
+} from "@/components/ui/agency-combobox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +33,10 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+	CustomerCombobox,
+	type CustomerHit,
+} from "@/components/ui/customer-combobox";
 import {
 	Dialog,
 	DialogContent,
@@ -45,6 +53,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ProductCombobox } from "@/components/ui/product-combobox";
 import {
 	Select,
 	SelectContent,
@@ -63,12 +72,9 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { authClient } from "@/lib/auth-client";
-import { openInvoicePdf, type DocSettings } from "@/lib/pdf/invoice-pdf";
-import { AgencyCombobox, type AgencyHit } from "@/components/ui/agency-combobox";
-import { CustomerCombobox, type CustomerHit } from "@/components/ui/customer-combobox";
-import { ProductCombobox } from "@/components/ui/product-combobox";
-import { formatGYD } from "@/lib/types";
+import { type DocSettings, openInvoicePdf } from "@/lib/pdf/invoice-pdf";
 import { statusBadgeClass } from "@/lib/status-colors";
+import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
 
@@ -187,7 +193,16 @@ const emptyRecordPaymentForm: RecordPaymentForm = {
 	notes: "",
 };
 
-const STATUS_FILTERS = ["All", "Draft", "Sent", "Outstanding", "Overdue", "Paid", "Overpaid", "Cancelled"] as const;
+const STATUS_FILTERS = [
+	"All",
+	"Draft",
+	"Sent",
+	"Outstanding",
+	"Overdue",
+	"Paid",
+	"Overpaid",
+	"Cancelled",
+] as const;
 
 export default function InvoicesPage() {
 	const { data: session } = authClient.useSession();
@@ -241,9 +256,7 @@ export default function InvoicesPage() {
 	const invoices = (raw as unknown as { invoices: InvoiceRow[]; total: number })
 		.invoices;
 
-	const upsertAgencyMut = useMutation(
-		orpc.agencies.create.mutationOptions({}),
-	);
+	const upsertAgencyMut = useMutation(orpc.agencies.create.mutationOptions({}));
 
 	const createMut = useMutation(
 		orpc.invoices.create.mutationOptions({
@@ -407,7 +420,8 @@ export default function InvoicesPage() {
 		setForm({
 			...emptyForm,
 			taxRate: String(docSettings?.defaultTaxRate ?? "14"),
-			taxMode: (docSettings?.defaultTaxMode as "invoice" | "line" | "incl") ?? "incl",
+			taxMode:
+				(docSettings?.defaultTaxMode as "invoice" | "line" | "incl") ?? "incl",
 			discountType:
 				(docSettings?.defaultDiscountType as "percent" | "fixed") ?? "percent",
 			paymentTerms: docSettings?.defaultPaymentTerms ?? "due_on_receipt",
@@ -418,17 +432,26 @@ export default function InvoicesPage() {
 	function openEdit(inv: InvoiceRow) {
 		setEditingId(inv.id);
 		setForm({
-			customerType: (inv as { agencyName?: string | null }).agencyName ? "agency" : "individual",
+			customerType: (inv as { agencyName?: string | null }).agencyName
+				? "agency"
+				: "individual",
 			customerName: inv.customerName,
 			customerAddress: inv.customerAddress ?? "",
 			customerPhone: inv.customerPhone ?? "",
-			customerId: (inv as {customerId?: string | null}).customerId ?? "",
+			customerId: (inv as { customerId?: string | null }).customerId ?? "",
 			agencyName: (inv as { agencyName?: string | null }).agencyName ?? "",
-			contactPersonName: (inv as { contactPersonName?: string | null }).contactPersonName ?? "",
-			contactPersonPosition: (inv as { contactPersonPosition?: string | null }).contactPersonPosition ?? "",
+			contactPersonName:
+				(inv as { contactPersonName?: string | null }).contactPersonName ?? "",
+			contactPersonPosition:
+				(inv as { contactPersonPosition?: string | null })
+					.contactPersonPosition ?? "",
 			department: (inv as { department?: string | null }).department ?? "",
-			issuedDate: inv.issuedDate ? (new Date(inv.issuedDate).toISOString().split("T")[0] ?? "") : "",
-			dueDate: inv.dueDate ? (new Date(inv.dueDate).toISOString().split("T")[0] ?? "") : "",
+			issuedDate: inv.issuedDate
+				? (new Date(inv.issuedDate).toISOString().split("T")[0] ?? "")
+				: "",
+			dueDate: inv.dueDate
+				? (new Date(inv.dueDate).toISOString().split("T")[0] ?? "")
+				: "",
 			notes: inv.notes ?? "",
 			items: Array.isArray(inv.items)
 				? (inv.items as LineItem[])
@@ -440,8 +463,14 @@ export default function InvoicesPage() {
 			taxRate: inv.taxRate ?? "14",
 			paymentTerms: inv.paymentTerms ?? "due_on_receipt",
 			preparedBy: inv.preparedBy ?? "",
-			brand: ((inv as { brand?: string | null }).brand === "home_style" ? "home_style" : "foods_inc"),
-		noteMode: (inv.notes && !PREDEFINED_NOTES_INV.includes(inv.notes) ? "custom" : "preset"),
+			brand:
+				(inv as { brand?: string | null }).brand === "home_style"
+					? "home_style"
+					: "foods_inc",
+			noteMode:
+				inv.notes && !PREDEFINED_NOTES_INV.includes(inv.notes)
+					? "custom"
+					: "preset",
 		});
 		setDialogOpen(true);
 	}
@@ -485,9 +514,10 @@ export default function InvoicesPage() {
 				: Number(form.discountValue || 0);
 		const taxableBase = subtotal - discountAmt;
 		const rate = Number(form.taxRate || 0);
-		const taxAmt = form.taxMode === "incl"
-			? taxableBase * (rate / (100 + rate))
-			: taxableBase * (rate / 100);
+		const taxAmt =
+			form.taxMode === "incl"
+				? taxableBase * (rate / (100 + rate))
+				: taxableBase * (rate / 100);
 		const total = form.taxMode === "incl" ? taxableBase : taxableBase + taxAmt;
 		const userId = session?.user?.id ?? "";
 
@@ -558,10 +588,12 @@ export default function InvoicesPage() {
 			: Number(form.discountValue || 0);
 	const formTaxableBase = subtotal - formDiscountAmt;
 	const formRate = Number(form.taxRate || 0);
-	const formTaxAmt = form.taxMode === "incl"
-		? formTaxableBase * (formRate / (100 + formRate))
-		: formTaxableBase * (formRate / 100);
-	const formTotal = form.taxMode === "incl" ? formTaxableBase : formTaxableBase + formTaxAmt;
+	const formTaxAmt =
+		form.taxMode === "incl"
+			? formTaxableBase * (formRate / (100 + formRate))
+			: formTaxableBase * (formRate / 100);
+	const formTotal =
+		form.taxMode === "incl" ? formTaxableBase : formTaxableBase + formTaxAmt;
 
 	return (
 		<div className="flex flex-col gap-6 p-4 md:p-6">
@@ -686,7 +718,9 @@ export default function InvoicesPage() {
 									<TableHead className="text-xs">Customer</TableHead>
 									<TableHead className="text-xs">Items</TableHead>
 									<TableHead className="text-right text-xs">Total</TableHead>
-									<TableHead className="text-right text-xs">Balance Due</TableHead>
+									<TableHead className="text-right text-xs">
+										Balance Due
+									</TableHead>
 									<TableHead className="text-xs">Status</TableHead>
 									<TableHead className="text-xs">Due</TableHead>
 									<TableHead className="text-xs">Actions</TableHead>
@@ -726,10 +760,25 @@ export default function InvoicesPage() {
 											</TableCell>
 											<TableCell className="text-right text-sm">
 												{(() => {
-													const balance = Number(inv.total) - Number(inv.amountPaid);
-													if (balance <= 0) return <span className="text-emerald-600 text-xs">Paid</span>;
-													if (inv.status === "overdue") return <span className="font-mono font-semibold text-destructive text-xs">{formatGYD(balance)}</span>;
-													return <span className="font-mono text-xs">{formatGYD(balance)}</span>;
+													const balance =
+														Number(inv.total) - Number(inv.amountPaid);
+													if (balance <= 0)
+														return (
+															<span className="text-emerald-600 text-xs">
+																Paid
+															</span>
+														);
+													if (inv.status === "overdue")
+														return (
+															<span className="font-mono font-semibold text-destructive text-xs">
+																{formatGYD(balance)}
+															</span>
+														);
+													return (
+														<span className="font-mono text-xs">
+															{formatGYD(balance)}
+														</span>
+													);
 												})()}
 											</TableCell>
 											<TableCell>
@@ -796,7 +845,10 @@ export default function InvoicesPage() {
 																<DropdownMenuItem
 																	onClick={(e) => {
 																		e.stopPropagation();
-																		updateMut.mutate({ id: inv.id, status: "sent" });
+																		updateMut.mutate({
+																			id: inv.id,
+																			status: "sent",
+																		});
 																	}}
 																>
 																	<Send className="mr-2 size-3.5" />
@@ -807,27 +859,48 @@ export default function InvoicesPage() {
 																onClick={(e) => {
 																	e.stopPropagation();
 																	setForm({
-																		customerType: inv.agencyName ? "agency" : "individual",
+																		customerType: inv.agencyName
+																			? "agency"
+																			: "individual",
 																		customerName: inv.customerName,
 																		customerAddress: inv.customerAddress ?? "",
 																		customerPhone: inv.customerPhone ?? "",
 																		customerId: inv.customerId ?? "",
 																		agencyName: inv.agencyName ?? "",
-																		contactPersonName: inv.contactPersonName ?? "",
-																		contactPersonPosition: inv.contactPersonPosition ?? "",
+																		contactPersonName:
+																			inv.contactPersonName ?? "",
+																		contactPersonPosition:
+																			inv.contactPersonPosition ?? "",
 																		issuedDate: todayGY(),
 																		dueDate: "",
 																		notes: inv.notes ?? "",
 																		items: (inv.items as LineItem[]) ?? [],
-																		discountType: (inv.discountType as "percent" | "fixed") ?? "percent",
+																		discountType:
+																			(inv.discountType as
+																				| "percent"
+																				| "fixed") ?? "percent",
 																		discountValue: inv.discountValue ?? "",
-																		taxMode: (inv.taxMode as "invoice" | "line" | "incl") ?? "invoice",
+																		taxMode:
+																			(inv.taxMode as
+																				| "invoice"
+																				| "line"
+																				| "incl") ?? "invoice",
 																		taxRate: inv.taxRate ?? "14",
-																		paymentTerms: inv.paymentTerms ?? "due_on_receipt",
+																		paymentTerms:
+																			inv.paymentTerms ?? "due_on_receipt",
 																		preparedBy: inv.preparedBy ?? "",
 																		customInvoiceNumber: "",
-																		department: (inv as InvoiceRow & { department?: string | null }).department ?? "",
-																		brand: ((inv as { brand?: string | null }).brand === "home_style" ? "home_style" : "foods_inc"),
+																		department:
+																			(
+																				inv as InvoiceRow & {
+																					department?: string | null;
+																				}
+																			).department ?? "",
+																		brand:
+																			(inv as { brand?: string | null })
+																				.brand === "home_style"
+																				? "home_style"
+																				: "foods_inc",
 																		noteMode: "preset" as const,
 																	});
 																	setEditingId(null);
@@ -840,8 +913,12 @@ export default function InvoicesPage() {
 															<DropdownMenuItem
 																onClick={async (e) => {
 																	e.stopPropagation();
-																	const r = await openInvoicePdf(inv, (docSettings ?? {}) as DocSettings);
-																	if (r === "popup_blocked") toast.error("Allow popups to open the PDF");
+																	const r = await openInvoicePdf(
+																		inv,
+																		(docSettings ?? {}) as DocSettings,
+																	);
+																	if (r === "popup_blocked")
+																		toast.error("Allow popups to open the PDF");
 																}}
 															>
 																<Printer className="mr-2 size-3.5" />
@@ -857,18 +934,19 @@ export default function InvoicesPage() {
 																Copy Reminder
 															</DropdownMenuItem>
 															<DropdownMenuSeparator />
-															{!["cancelled", "paid"].includes(inv.status) && canDelete && (
-																<DropdownMenuItem
-																	className="text-destructive focus:text-destructive"
-																	onClick={(e) => {
-																		e.stopPropagation();
-																		deleteMut.mutate({ id: inv.id });
-																	}}
-																>
-																	<Trash2 className="mr-2 size-3.5" />
-																	Cancel Invoice
-																</DropdownMenuItem>
-															)}
+															{!["cancelled", "paid"].includes(inv.status) &&
+																canDelete && (
+																	<DropdownMenuItem
+																		className="text-destructive focus:text-destructive"
+																		onClick={(e) => {
+																			e.stopPropagation();
+																			deleteMut.mutate({ id: inv.id });
+																		}}
+																	>
+																		<Trash2 className="mr-2 size-3.5" />
+																		Cancel Invoice
+																	</DropdownMenuItem>
+																)}
 														</DropdownMenuContent>
 													</DropdownMenu>
 												</div>
@@ -900,8 +978,12 @@ export default function InvoicesPage() {
 												variant="outline"
 												size="sm"
 												onClick={async () => {
-													const r = await openInvoicePdf(selectedInvoice, docSettings ?? {});
-													if (r === "popup_blocked") toast.error("Allow popups to open the PDF");
+													const r = await openInvoicePdf(
+														selectedInvoice,
+														docSettings ?? {},
+													);
+													if (r === "popup_blocked")
+														toast.error("Allow popups to open the PDF");
 												}}
 												className="no-print gap-1.5"
 											>
@@ -936,14 +1018,71 @@ export default function InvoicesPage() {
 											</span>
 										)}
 									</div>
-									{((selectedInvoice as unknown as {agencyName?: string | null}).agencyName ||
-										(selectedInvoice as unknown as {contactPersonName?: string | null}).contactPersonName) && (
+									{((
+										selectedInvoice as unknown as { agencyName?: string | null }
+									).agencyName ||
+										(
+											selectedInvoice as unknown as {
+												contactPersonName?: string | null;
+											}
+										).contactPersonName) && (
 										<div className="mb-2 flex flex-wrap gap-4 rounded-md bg-muted/40 px-3 py-2 text-xs">
-											{(selectedInvoice as unknown as {agencyName?: string | null}).agencyName && (
-												<span><span className="text-muted-foreground">Agency: </span><span className="font-medium">{(selectedInvoice as unknown as {agencyName?: string}).agencyName}</span></span>
+											{(
+												selectedInvoice as unknown as {
+													agencyName?: string | null;
+												}
+											).agencyName && (
+												<span>
+													<span className="text-muted-foreground">
+														Agency:{" "}
+													</span>
+													<span className="font-medium">
+														{
+															(
+																selectedInvoice as unknown as {
+																	agencyName?: string;
+																}
+															).agencyName
+														}
+													</span>
+												</span>
 											)}
-											{(selectedInvoice as unknown as {contactPersonName?: string | null}).contactPersonName && (
-												<span><span className="text-muted-foreground">Order By: </span><span className="font-medium">{(selectedInvoice as unknown as {contactPersonName?: string}).contactPersonName}</span>{(selectedInvoice as unknown as {contactPersonPosition?: string | null}).contactPersonPosition && <span className="text-muted-foreground ml-1">({(selectedInvoice as unknown as {contactPersonPosition?: string}).contactPersonPosition})</span>}</span>
+											{(
+												selectedInvoice as unknown as {
+													contactPersonName?: string | null;
+												}
+											).contactPersonName && (
+												<span>
+													<span className="text-muted-foreground">
+														Order By:{" "}
+													</span>
+													<span className="font-medium">
+														{
+															(
+																selectedInvoice as unknown as {
+																	contactPersonName?: string;
+																}
+															).contactPersonName
+														}
+													</span>
+													{(
+														selectedInvoice as unknown as {
+															contactPersonPosition?: string | null;
+														}
+													).contactPersonPosition && (
+														<span className="ml-1 text-muted-foreground">
+															(
+															{
+																(
+																	selectedInvoice as unknown as {
+																		contactPersonPosition?: string;
+																	}
+																).contactPersonPosition
+															}
+															)
+														</span>
+													)}
+												</span>
 											)}
 										</div>
 									)}
@@ -1303,7 +1442,7 @@ export default function InvoicesPage() {
 					}
 				}}
 			>
-				<DialogContent className="max-h-[90vh] w-full max-w-2xl sm:max-w-4xl overflow-y-auto">
+				<DialogContent className="max-h-[90vh] w-full max-w-2xl overflow-y-auto sm:max-w-4xl">
 					<DialogHeader>
 						<DialogTitle>
 							{editingId ? "Edit Invoice" : "New Invoice"}
@@ -1335,19 +1474,23 @@ export default function InvoicesPage() {
 
 						{/* Document Header */}
 						<div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3">
-							<Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">From</Label>
+							<Label className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+								From
+							</Label>
 							<div className="flex gap-2">
 								<button
 									type="button"
-									className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${form.brand === "foods_inc" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
+									className={`flex-1 rounded-md border px-3 py-2 font-medium text-sm transition-colors ${form.brand === "foods_inc" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
 									onClick={() => setForm((f) => ({ ...f, brand: "foods_inc" }))}
 								>
 									Bettencourt's Food Inc.
 								</button>
 								<button
 									type="button"
-									className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${form.brand === "home_style" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
-									onClick={() => setForm((f) => ({ ...f, brand: "home_style" }))}
+									className={`flex-1 rounded-md border px-3 py-2 font-medium text-sm transition-colors ${form.brand === "home_style" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
+									onClick={() =>
+										setForm((f) => ({ ...f, brand: "home_style" }))
+									}
 								>
 									Bettencourt's Home Style
 								</button>
@@ -1358,7 +1501,9 @@ export default function InvoicesPage() {
 									<Input
 										placeholder="Your name"
 										value={form.preparedBy}
-										onChange={(e) => setForm((f) => ({ ...f, preparedBy: e.target.value }))}
+										onChange={(e) =>
+											setForm((f) => ({ ...f, preparedBy: e.target.value }))
+										}
 									/>
 								</div>
 								<div className="flex flex-col gap-1.5">
@@ -1366,7 +1511,9 @@ export default function InvoicesPage() {
 									<Input
 										placeholder="e.g. Kitchen, Catering, Admin"
 										value={form.department}
-										onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
+										onChange={(e) =>
+											setForm((f) => ({ ...f, department: e.target.value }))
+										}
 									/>
 								</div>
 							</div>
@@ -1376,20 +1523,28 @@ export default function InvoicesPage() {
 						<div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3">
 							{/* Toggle */}
 							<div className="flex items-center justify-between">
-								<Label className="text-xs font-medium">Bill To</Label>
+								<Label className="font-medium text-xs">Bill To</Label>
 								<div className="flex overflow-hidden rounded border text-xs">
 									<button
 										type="button"
-										className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${form.customerType === "individual" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`}
-										onClick={() => setForm(f => ({ ...f, customerType: "individual", agencyName: "" }))}
+										className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${form.customerType === "individual" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+										onClick={() =>
+											setForm((f) => ({
+												...f,
+												customerType: "individual",
+												agencyName: "",
+											}))
+										}
 									>
 										<User className="size-3" />
 										Individual
 									</button>
 									<button
 										type="button"
-										className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${form.customerType === "agency" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`}
-										onClick={() => setForm(f => ({ ...f, customerType: "agency" }))}
+										className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${form.customerType === "agency" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+										onClick={() =>
+											setForm((f) => ({ ...f, customerType: "agency" }))
+										}
 									>
 										<Building2 className="size-3" />
 										Agency / Ministry
@@ -1403,25 +1558,69 @@ export default function InvoicesPage() {
 										<Label className="text-xs">Customer Name *</Label>
 										<CustomerCombobox
 											value={form.customerName}
-											onChange={(name) => setForm(f => ({ ...f, customerName: name, customerId: "" }))}
-											onSelect={(c: CustomerHit) => setForm(f => ({ ...f, customerName: c.name, customerPhone: c.phone ?? f.customerPhone, customerAddress: c.address ?? f.customerAddress, customerId: c.id }))}
+											onChange={(name) =>
+												setForm((f) => ({
+													...f,
+													customerName: name,
+													customerId: "",
+												}))
+											}
+											onSelect={(c: CustomerHit) =>
+												setForm((f) => ({
+													...f,
+													customerName: c.name,
+													customerPhone: c.phone ?? f.customerPhone,
+													customerAddress: c.address ?? f.customerAddress,
+													customerId: c.id,
+												}))
+											}
 										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Phone</Label>
-										<Input placeholder="Phone number" value={form.customerPhone} onChange={(e) => setForm(f => ({ ...f, customerPhone: e.target.value }))} />
+										<Input
+											placeholder="Phone number"
+											value={form.customerPhone}
+											onChange={(e) =>
+												setForm((f) => ({
+													...f,
+													customerPhone: e.target.value,
+												}))
+											}
+										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Issued Date</Label>
-										<Input type="date" value={form.issuedDate} onChange={(e) => setForm(f => ({ ...f, issuedDate: e.target.value }))} />
+										<Input
+											type="date"
+											value={form.issuedDate}
+											onChange={(e) =>
+												setForm((f) => ({ ...f, issuedDate: e.target.value }))
+											}
+										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Due Date</Label>
-										<Input type="date" value={form.dueDate} onChange={(e) => setForm(f => ({ ...f, dueDate: e.target.value }))} />
+										<Input
+											type="date"
+											value={form.dueDate}
+											onChange={(e) =>
+												setForm((f) => ({ ...f, dueDate: e.target.value }))
+											}
+										/>
 									</div>
 									<div className="col-span-2 flex flex-col gap-1.5">
 										<Label className="text-xs">Address</Label>
-										<Input placeholder="Customer address" value={form.customerAddress} onChange={(e) => setForm(f => ({ ...f, customerAddress: e.target.value }))} />
+										<Input
+											placeholder="Customer address"
+											value={form.customerAddress}
+											onChange={(e) =>
+												setForm((f) => ({
+													...f,
+													customerAddress: e.target.value,
+												}))
+											}
+										/>
 									</div>
 								</div>
 							) : (
@@ -1430,44 +1629,103 @@ export default function InvoicesPage() {
 										<Label className="text-xs">Agency / Ministry Name *</Label>
 										<AgencyCombobox
 											value={form.agencyName}
-											onChange={(name) => setForm(f => ({ ...f, agencyName: name }))}
-											onSelect={(hit: AgencyHit) => setForm(f => ({
-												...f,
-												agencyName: hit.name,
-												customerName: hit.supervisorName ?? f.customerName,
-												contactPersonPosition: hit.supervisorPosition ?? f.contactPersonPosition,
-												customerPhone: hit.phone ?? f.customerPhone,
-												customerAddress: hit.address ?? f.customerAddress,
-											}))}
+											onChange={(name) =>
+												setForm((f) => ({ ...f, agencyName: name }))
+											}
+											onSelect={(hit: AgencyHit) =>
+												setForm((f) => ({
+													...f,
+													agencyName: hit.name,
+													customerName: hit.supervisorName ?? f.customerName,
+													contactPersonPosition:
+														hit.supervisorPosition ?? f.contactPersonPosition,
+													customerPhone: hit.phone ?? f.customerPhone,
+													customerAddress: hit.address ?? f.customerAddress,
+												}))
+											}
 										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Supervisor Name</Label>
-										<Input placeholder="e.g. John Smith" value={form.customerName} onChange={(e) => setForm(f => ({ ...f, customerName: e.target.value }))} />
+										<Input
+											placeholder="e.g. John Smith"
+											value={form.customerName}
+											onChange={(e) =>
+												setForm((f) => ({ ...f, customerName: e.target.value }))
+											}
+										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Position / Title</Label>
-										<Input placeholder="e.g. Permanent Secretary" value={form.contactPersonPosition} onChange={(e) => setForm(f => ({ ...f, contactPersonPosition: e.target.value }))} />
+										<Input
+											placeholder="e.g. Permanent Secretary"
+											value={form.contactPersonPosition}
+											onChange={(e) =>
+												setForm((f) => ({
+													...f,
+													contactPersonPosition: e.target.value,
+												}))
+											}
+										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Order Placed By</Label>
-										<Input placeholder="Name of person who called" value={form.contactPersonName} onChange={(e) => setForm(f => ({ ...f, contactPersonName: e.target.value }))} />
+										<Input
+											placeholder="Name of person who called"
+											value={form.contactPersonName}
+											onChange={(e) =>
+												setForm((f) => ({
+													...f,
+													contactPersonName: e.target.value,
+												}))
+											}
+										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Phone</Label>
-										<Input placeholder="Phone number" value={form.customerPhone} onChange={(e) => setForm(f => ({ ...f, customerPhone: e.target.value }))} />
+										<Input
+											placeholder="Phone number"
+											value={form.customerPhone}
+											onChange={(e) =>
+												setForm((f) => ({
+													...f,
+													customerPhone: e.target.value,
+												}))
+											}
+										/>
 									</div>
 									<div className="col-span-2 flex flex-col gap-1.5">
 										<Label className="text-xs">Address</Label>
-										<Input placeholder="Agency address" value={form.customerAddress} onChange={(e) => setForm(f => ({ ...f, customerAddress: e.target.value }))} />
+										<Input
+											placeholder="Agency address"
+											value={form.customerAddress}
+											onChange={(e) =>
+												setForm((f) => ({
+													...f,
+													customerAddress: e.target.value,
+												}))
+											}
+										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Issued Date</Label>
-										<Input type="date" value={form.issuedDate} onChange={(e) => setForm(f => ({ ...f, issuedDate: e.target.value }))} />
+										<Input
+											type="date"
+											value={form.issuedDate}
+											onChange={(e) =>
+												setForm((f) => ({ ...f, issuedDate: e.target.value }))
+											}
+										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Due Date</Label>
-										<Input type="date" value={form.dueDate} onChange={(e) => setForm(f => ({ ...f, dueDate: e.target.value }))} />
+										<Input
+											type="date"
+											value={form.dueDate}
+											onChange={(e) =>
+												setForm((f) => ({ ...f, dueDate: e.target.value }))
+											}
+										/>
 									</div>
 								</div>
 							)}
@@ -1496,7 +1754,9 @@ export default function InvoicesPage() {
 													<ProductCombobox
 														className="h-8 w-full"
 														value={item.description}
-														onChange={(desc) => updateItem(i, "description", desc)}
+														onChange={(desc) =>
+															updateItem(i, "description", desc)
+														}
 														onSelect={(product) => {
 															updateItem(i, "description", product.name);
 															updateItem(i, "unitPrice", Number(product.price));
@@ -1560,14 +1820,22 @@ export default function InvoicesPage() {
 
 						{/* Tax/Discount Settings */}
 						<div className="flex flex-col gap-2 rounded-md bg-muted/40 p-2 text-sm">
-							<Collapsible open={taxSettingsOpen} onOpenChange={setTaxSettingsOpen}>
+							<Collapsible
+								open={taxSettingsOpen}
+								onOpenChange={setTaxSettingsOpen}
+							>
 								<CollapsibleTrigger asChild>
 									<button
 										type="button"
-										className="flex w-full items-center gap-2 text-left text-xs hover:text-foreground transition-colors"
+										className="flex w-full items-center gap-2 text-left text-xs transition-colors hover:text-foreground"
 									>
-										<span className="font-medium text-foreground">VAT: {parseFloat(String(form.taxRate))}% · {form.taxMode === "incl" ? "Incl." : "Excl."}</span>
-										<ChevronDown className={`ml-auto size-3 transition-transform ${taxSettingsOpen ? "rotate-180" : ""}`} />
+										<span className="font-medium text-foreground">
+											VAT: {Number.parseFloat(String(form.taxRate))}% ·{" "}
+											{form.taxMode === "incl" ? "Incl." : "Excl."}
+										</span>
+										<ChevronDown
+											className={`ml-auto size-3 transition-transform ${taxSettingsOpen ? "rotate-180" : ""}`}
+										/>
 									</button>
 								</CollapsibleTrigger>
 								<CollapsibleContent>
@@ -1589,14 +1857,18 @@ export default function InvoicesPage() {
 											<button
 												type="button"
 												className={`px-2 py-1 transition-colors ${form.taxMode !== "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-												onClick={() => setForm((f) => ({ ...f, taxMode: "invoice" }))}
+												onClick={() =>
+													setForm((f) => ({ ...f, taxMode: "invoice" }))
+												}
 											>
 												Excl.
 											</button>
 											<button
 												type="button"
 												className={`px-2 py-1 transition-colors ${form.taxMode === "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-												onClick={() => setForm((f) => ({ ...f, taxMode: "incl" }))}
+												onClick={() =>
+													setForm((f) => ({ ...f, taxMode: "incl" }))
+												}
 											>
 												Incl.
 											</button>
@@ -1605,57 +1877,61 @@ export default function InvoicesPage() {
 								</CollapsibleContent>
 							</Collapsible>
 							<div className="flex flex-wrap items-center gap-3">
-							<div className="flex items-center gap-1.5">
-								<span className="text-muted-foreground text-xs">Discount:</span>
-								<Select
-									value={form.discountType}
-									onValueChange={(v) =>
-										setForm((f) => ({
-											...f,
-											discountType: v as "percent" | "fixed",
-										}))
-									}
-								>
-									<SelectTrigger className="h-7 w-16 text-xs">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="percent">%</SelectItem>
-										<SelectItem value="fixed">GYD</SelectItem>
-									</SelectContent>
-								</Select>
-								<Input
-									className="h-7 w-20 text-xs"
-									type="number"
-									min="0"
-									step="0.01"
-									value={form.discountValue === "0" ? "" : form.discountValue}
-									onChange={(e) =>
-										setForm((f) => ({ ...f, discountValue: e.target.value }))
-									}
-								/>
-							</div>
-							<div className="flex items-center gap-1.5">
-								<span className="text-muted-foreground text-xs">Payment Terms:</span>
-								<Select
-									value={form.paymentTerms}
-									onValueChange={(v) =>
-										setForm((f) => ({ ...f, paymentTerms: v }))
-									}
-								>
-									<SelectTrigger className="h-7 w-36 text-xs">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="due_on_receipt">
-											Due on Receipt
-										</SelectItem>
-										<SelectItem value="net_15">Net 15</SelectItem>
-										<SelectItem value="net_30">Net 30</SelectItem>
-										<SelectItem value="net_60">Net 60</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
+								<div className="flex items-center gap-1.5">
+									<span className="text-muted-foreground text-xs">
+										Discount:
+									</span>
+									<Select
+										value={form.discountType}
+										onValueChange={(v) =>
+											setForm((f) => ({
+												...f,
+												discountType: v as "percent" | "fixed",
+											}))
+										}
+									>
+										<SelectTrigger className="h-7 w-16 text-xs">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="percent">%</SelectItem>
+											<SelectItem value="fixed">GYD</SelectItem>
+										</SelectContent>
+									</Select>
+									<Input
+										className="h-7 w-20 text-xs"
+										type="number"
+										min="0"
+										step="0.01"
+										value={form.discountValue === "0" ? "" : form.discountValue}
+										onChange={(e) =>
+											setForm((f) => ({ ...f, discountValue: e.target.value }))
+										}
+									/>
+								</div>
+								<div className="flex items-center gap-1.5">
+									<span className="text-muted-foreground text-xs">
+										Payment Terms:
+									</span>
+									<Select
+										value={form.paymentTerms}
+										onValueChange={(v) =>
+											setForm((f) => ({ ...f, paymentTerms: v }))
+										}
+									>
+										<SelectTrigger className="h-7 w-36 text-xs">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="due_on_receipt">
+												Due on Receipt
+											</SelectItem>
+											<SelectItem value="net_15">Net 15</SelectItem>
+											<SelectItem value="net_30">Net 30</SelectItem>
+											<SelectItem value="net_60">Net 60</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
 							</div>
 						</div>
 
@@ -1680,7 +1956,10 @@ export default function InvoicesPage() {
 							)}
 							{formTaxAmt > 0 && (
 								<div className="flex justify-between text-muted-foreground">
-									<span>VAT {form.taxRate}%{form.taxMode === "incl" ? " (incl.)" : ""}</span>
+									<span>
+										VAT {form.taxRate}%
+										{form.taxMode === "incl" ? " (incl.)" : ""}
+									</span>
 									<span className="font-mono">{formatGYD(formTaxAmt)}</span>
 								</div>
 							)}
@@ -1693,7 +1972,11 @@ export default function InvoicesPage() {
 						<div className="flex flex-col gap-1.5">
 							<Label>Notes</Label>
 							<Select
-								value={form.noteMode === "custom" ? "__custom__" : (form.notes || "__none__")}
+								value={
+									form.noteMode === "custom"
+										? "__custom__"
+										: form.notes || "__none__"
+								}
 								onValueChange={(v) => {
 									if (v === "__custom__") {
 										setForm((f) => ({ ...f, noteMode: "custom", notes: "" }));
@@ -1710,7 +1993,9 @@ export default function InvoicesPage() {
 								<SelectContent>
 									<SelectItem value="__none__">No note</SelectItem>
 									{PREDEFINED_NOTES_INV.map((n) => (
-										<SelectItem key={n} value={n}>{n}</SelectItem>
+										<SelectItem key={n} value={n}>
+											{n}
+										</SelectItem>
 									))}
 									<SelectItem value="__custom__">Custom note...</SelectItem>
 								</SelectContent>

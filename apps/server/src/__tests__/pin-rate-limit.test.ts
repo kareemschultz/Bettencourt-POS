@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
 	computeNextFailureState,
-	getLockoutRemainingSecondsFromState,
 	type FailureState,
+	getLockoutRemainingSecondsFromState,
 } from "../pin-rate-limit-state";
 
 describe("PIN rate-limit state machine", () => {

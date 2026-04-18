@@ -370,7 +370,9 @@ export default function VarianceAnalysisPage() {
 																variant="ghost"
 																className="h-7 text-xs"
 																onClick={() => {
-																	navigate(`/dashboard/inventory?tab=ledger&item=${row.ingredient_id}`);
+																	navigate(
+																		`/dashboard/inventory?tab=ledger&item=${row.ingredient_id}`,
+																	);
 																}}
 															>
 																Investigate

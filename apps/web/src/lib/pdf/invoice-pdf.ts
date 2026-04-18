@@ -98,12 +98,12 @@ async function fetchLogoBase64(brand?: string | null): Promise<string> {
 		if (!resp.ok) throw new Error("not found");
 		const buf = await resp.arrayBuffer();
 		const b64 = (() => {
-		const bytes = new Uint8Array(buf);
-		let binary = "";
-		for (let i = 0; i < bytes.length; i += 8192)
-			binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-		return btoa(binary);
-	})();
+			const bytes = new Uint8Array(buf);
+			let binary = "";
+			for (let i = 0; i < bytes.length; i += 8192)
+				binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+			return btoa(binary);
+		})();
 		return `data:${mime};base64,${b64}`;
 	} catch {
 		return "";
@@ -146,7 +146,9 @@ function buildInvoiceHtml(
 	const isFullyPaid = balance <= 0.005;
 
 	const isHomeStyle = invoice.brand === "home_style";
-	const companyName = isHomeStyle ? "Bettencourts Homestyle Diner" : "Bettencourt's Food Inc.";
+	const companyName = isHomeStyle
+		? "Bettencourts Homestyle Diner"
+		: "Bettencourt's Food Inc.";
 
 	const issuedStr = invoice.issuedDate
 		? new Date(invoice.issuedDate).toLocaleDateString("en-GY")
@@ -159,8 +161,7 @@ function buildInvoiceHtml(
 		? `<img class="company-logo" src="${logo}" alt="${escHtml(companyName)} logo">`
 		: "";
 
-	const taxColHeader =
-		invoice.taxMode === "line" ? "<th>Tax</th>" : "";
+	const taxColHeader = invoice.taxMode === "line" ? "<th>Tax</th>" : "";
 
 	const itemRows = items
 		.map(
@@ -231,10 +232,14 @@ function buildInvoiceHtml(
 		invoice.agencyName ? escHtml(invoice.customerName) : null,
 		invoice.contactPersonName
 			? `${escHtml(invoice.contactPersonName)}${invoice.contactPersonPosition ? `, ${escHtml(invoice.contactPersonPosition)}` : ""}`
-			: invoice.contactPersonPosition ? escHtml(invoice.contactPersonPosition) : null,
+			: invoice.contactPersonPosition
+				? escHtml(invoice.contactPersonPosition)
+				: null,
 		invoice.customerPhone ? escHtml(invoice.customerPhone) : null,
 		invoice.customerAddress ? escHtml(invoice.customerAddress) : null,
-	].filter(Boolean).join("<br>");
+	]
+		.filter(Boolean)
+		.join("<br>");
 
 	// Notes shown above the totals left-column (mirrors IN public_notes placement)
 	const notesBlock = invoice.notes

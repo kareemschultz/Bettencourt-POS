@@ -165,7 +165,12 @@ export function SupervisorOverrideDialog({
 					<Button
 						className="h-14 touch-manipulation"
 						onClick={handleSubmit}
-						disabled={pin.length < 4 || verify.isPending || attemptsLeft === 0 || isOffline}
+						disabled={
+							pin.length < 4 ||
+							verify.isPending ||
+							attemptsLeft === 0 ||
+							isOffline
+						}
 					>
 						{verify.isPending ? "..." : "OK"}
 					</Button>

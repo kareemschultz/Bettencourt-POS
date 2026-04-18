@@ -1,5 +1,11 @@
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 
 export function KdsHeader({
 	station,
@@ -17,7 +23,9 @@ export function KdsHeader({
 			</div>
 			<div className="flex items-center gap-2">
 				<Select value={station} onValueChange={onStationChange}>
-					<SelectTrigger className="h-8 w-36"><SelectValue /></SelectTrigger>
+					<SelectTrigger className="h-8 w-36">
+						<SelectValue />
+					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value="all">All stations</SelectItem>
 						<SelectItem value="kitchen">Kitchen</SelectItem>

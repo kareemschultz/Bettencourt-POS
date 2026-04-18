@@ -5,8 +5,8 @@ import {
 	Bar,
 	BarChart,
 	CartesianGrid,
-	ResponsiveContainer,
 	Tooltip as RechartsTooltip,
+	ResponsiveContainer,
 	XAxis,
 	YAxis,
 } from "recharts";
@@ -153,7 +153,9 @@ export default function TipsReportPage() {
 				<div className="grid grid-cols-2 gap-4 md:grid-cols-5">
 					<Card>
 						<CardHeader className="pb-1">
-							<CardTitle className="text-muted-foreground text-xs font-normal">Total Tips</CardTitle>
+							<CardTitle className="font-normal text-muted-foreground text-xs">
+								Total Tips
+							</CardTitle>
 						</CardHeader>
 						<CardContent>
 							<p className="font-bold text-2xl">{formatGYD(totalTips)}</p>
@@ -161,7 +163,9 @@ export default function TipsReportPage() {
 					</Card>
 					<Card>
 						<CardHeader className="pb-1">
-							<CardTitle className="text-muted-foreground text-xs font-normal">Avg Tip</CardTitle>
+							<CardTitle className="font-normal text-muted-foreground text-xs">
+								Avg Tip
+							</CardTitle>
 						</CardHeader>
 						<CardContent>
 							<p className="font-bold text-2xl">{formatGYD(avgTip)}</p>
@@ -169,7 +173,9 @@ export default function TipsReportPage() {
 					</Card>
 					<Card>
 						<CardHeader className="pb-1">
-							<CardTitle className="text-muted-foreground text-xs font-normal">Tipped Orders</CardTitle>
+							<CardTitle className="font-normal text-muted-foreground text-xs">
+								Tipped Orders
+							</CardTitle>
 						</CardHeader>
 						<CardContent>
 							<p className="font-bold text-2xl">
@@ -182,7 +188,9 @@ export default function TipsReportPage() {
 					</Card>
 					<Card>
 						<CardHeader className="pb-1">
-							<CardTitle className="text-muted-foreground text-xs font-normal">Tip %</CardTitle>
+							<CardTitle className="font-normal text-muted-foreground text-xs">
+								Tip %
+							</CardTitle>
 						</CardHeader>
 						<CardContent>
 							<p className="font-bold text-2xl">{tipPercentage.toFixed(1)}%</p>
@@ -190,7 +198,9 @@ export default function TipsReportPage() {
 					</Card>
 					<Card>
 						<CardHeader className="pb-1">
-							<CardTitle className="text-muted-foreground text-xs font-normal">Revenue</CardTitle>
+							<CardTitle className="font-normal text-muted-foreground text-xs">
+								Revenue
+							</CardTitle>
 						</CardHeader>
 						<CardContent>
 							<p className="font-bold text-2xl">{formatGYD(totalRevenue)}</p>
@@ -214,9 +224,16 @@ export default function TipsReportPage() {
 									<XAxis dataKey="name" tick={{ fontSize: 12 }} />
 									<YAxis tick={{ fontSize: 12 }} />
 									<RechartsTooltip
-										formatter={(value: number | undefined) => [formatGYD(value ?? 0), "Tips"] as [string, string]}
+										formatter={(value: number | undefined) =>
+											[formatGYD(value ?? 0), "Tips"] as [string, string]
+										}
 									/>
-									<Bar dataKey="tips" name="Tips" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+									<Bar
+										dataKey="tips"
+										name="Tips"
+										fill="hsl(var(--primary))"
+										radius={[4, 4, 0, 0]}
+									/>
 								</BarChart>
 							</ResponsiveContainer>
 						) : (
@@ -244,16 +261,25 @@ export default function TipsReportPage() {
 							<TableBody>
 								{byMethod.length === 0 ? (
 									<TableRow>
-										<TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+										<TableCell
+											colSpan={3}
+											className="py-8 text-center text-muted-foreground"
+										>
 											No data
 										</TableCell>
 									</TableRow>
 								) : (
 									byMethod.map((m) => (
 										<TableRow key={m.method}>
-											<TableCell className="capitalize">{m.method.replace("_", " ")}</TableCell>
-											<TableCell className="text-right">{formatGYD(Number(m.tips_total))}</TableCell>
-											<TableCell className="text-right">{m.tip_count}</TableCell>
+											<TableCell className="capitalize">
+												{m.method.replace("_", " ")}
+											</TableCell>
+											<TableCell className="text-right">
+												{formatGYD(Number(m.tips_total))}
+											</TableCell>
+											<TableCell className="text-right">
+												{m.tip_count}
+											</TableCell>
 										</TableRow>
 									))
 								)}
@@ -283,7 +309,10 @@ export default function TipsReportPage() {
 						<TableBody>
 							{byEmployee.length === 0 ? (
 								<TableRow>
-									<TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+									<TableCell
+										colSpan={6}
+										className="py-8 text-center text-muted-foreground"
+									>
 										No tip data for this period
 									</TableCell>
 								</TableRow>
@@ -291,11 +320,21 @@ export default function TipsReportPage() {
 								<>
 									{byEmployee.map((e) => (
 										<TableRow key={e.user_id}>
-											<TableCell className="font-medium">{e.employee_name}</TableCell>
-											<TableCell className="text-right">{formatGYD(Number(e.tips_earned))}</TableCell>
-											<TableCell className="text-right">{e.tipped_orders}</TableCell>
-											<TableCell className="text-right">{e.total_orders}</TableCell>
-											<TableCell className="text-right">{formatGYD(Number(e.avg_tip))}</TableCell>
+											<TableCell className="font-medium">
+												{e.employee_name}
+											</TableCell>
+											<TableCell className="text-right">
+												{formatGYD(Number(e.tips_earned))}
+											</TableCell>
+											<TableCell className="text-right">
+												{e.tipped_orders}
+											</TableCell>
+											<TableCell className="text-right">
+												{e.total_orders}
+											</TableCell>
+											<TableCell className="text-right">
+												{formatGYD(Number(e.avg_tip))}
+											</TableCell>
 											<TableCell className="text-right">
 												{e.total_orders > 0
 													? `${((e.tipped_orders / e.total_orders) * 100).toFixed(0)}%`
@@ -306,10 +345,14 @@ export default function TipsReportPage() {
 									{/* Totals row */}
 									<TableRow className="border-t-2 font-bold">
 										<TableCell>Total</TableCell>
-										<TableCell className="text-right">{formatGYD(totalTips)}</TableCell>
+										<TableCell className="text-right">
+											{formatGYD(totalTips)}
+										</TableCell>
 										<TableCell className="text-right">{tippedOrders}</TableCell>
 										<TableCell className="text-right">{totalOrders}</TableCell>
-										<TableCell className="text-right">{formatGYD(avgTip)}</TableCell>
+										<TableCell className="text-right">
+											{formatGYD(avgTip)}
+										</TableCell>
 										<TableCell className="text-right">
 											{totalOrders > 0
 												? `${((tippedOrders / totalOrders) * 100).toFixed(0)}%`

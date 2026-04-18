@@ -201,7 +201,9 @@ export function CartPanel({
 											{item.product.name}
 										</p>
 										{item.courseNumber ? (
-											<p className="text-[10px] text-muted-foreground">Course {item.courseNumber}</p>
+											<p className="text-[10px] text-muted-foreground">
+												Course {item.courseNumber}
+											</p>
 										) : null}
 										{item.product.is_combo &&
 											(item.product.combo_components ?? []).length > 0 && (

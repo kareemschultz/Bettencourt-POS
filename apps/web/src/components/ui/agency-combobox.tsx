@@ -3,14 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, ChevronsUpDown, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
 	Command,
 	CommandGroup,
 	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
@@ -18,6 +17,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
@@ -80,7 +80,8 @@ export function AgencyCombobox({
 		orpc.agencies.create.mutationOptions({
 			onSuccess: (newAgency) => {
 				queryClient.invalidateQueries({
-					queryKey: orpc.agencies.search.queryOptions({ input: { query: "" } }).queryKey,
+					queryKey: orpc.agencies.search.queryOptions({ input: { query: "" } })
+						.queryKey,
 				});
 				const hit: AgencyHit = {
 					id: newAgency.id,
@@ -92,11 +93,18 @@ export function AgencyCombobox({
 				};
 				handleSelect(hit);
 				setCreateOpen(false);
-				setCreateForm({ name: "", supervisorName: "", supervisorPosition: "", phone: "", address: "" });
+				setCreateForm({
+					name: "",
+					supervisorName: "",
+					supervisorPosition: "",
+					phone: "",
+					address: "",
+				});
 				setCreateError("");
 			},
 			onError: (err) => {
-				const msg = err instanceof Error ? err.message : "Failed to create agency";
+				const msg =
+					err instanceof Error ? err.message : "Failed to create agency";
 				setCreateError(msg);
 			},
 		}),
@@ -123,7 +131,13 @@ export function AgencyCombobox({
 	}
 
 	function openCreateModal() {
-		setCreateForm({ name: query, supervisorName: "", supervisorPosition: "", phone: "", address: "" });
+		setCreateForm({
+			name: query,
+			supervisorName: "",
+			supervisorPosition: "",
+			phone: "",
+			address: "",
+		});
 		setCreateError("");
 		setCreateOpen(true);
 		setOpen(false);
@@ -159,9 +173,9 @@ export function AgencyCombobox({
 						autoComplete="off"
 					/>
 					{isFetching ? (
-						<Loader2 className="absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
+						<Loader2 className="absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
 					) : (
-						<ChevronsUpDown className="absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground opacity-40 pointer-events-none" />
+						<ChevronsUpDown className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted-foreground opacity-40" />
 					)}
 				</div>
 
@@ -189,9 +203,9 @@ export function AgencyCombobox({
 											className="cursor-pointer"
 										>
 											<div className="flex flex-col">
-												<span className="text-sm font-medium">{hit.name}</span>
+												<span className="font-medium text-sm">{hit.name}</span>
 												{hit.supervisorName && (
-													<span className="text-xs text-muted-foreground">
+													<span className="text-muted-foreground text-xs">
 														{hit.supervisorName}
 														{hit.supervisorPosition
 															? ` — ${hit.supervisorPosition}`
@@ -204,12 +218,12 @@ export function AgencyCombobox({
 								</CommandGroup>
 							</CommandList>
 						</Command>
-						<div className="border-t border-border px-3 py-2">
+						<div className="border-border border-t px-3 py-2">
 							<button
 								type="button"
 								onMouseDown={(e) => e.preventDefault()}
 								onClick={openCreateModal}
-								className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+								className="flex items-center gap-1.5 text-primary text-xs hover:underline"
 							>
 								<Building2 className="size-3" />
 								Add new agency
@@ -223,17 +237,17 @@ export function AgencyCombobox({
 					debouncedQuery.length >= 2 &&
 					!isFetching && (
 						<div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md">
-							<div className="px-3 py-2.5 text-xs text-muted-foreground">
+							<div className="px-3 py-2.5 text-muted-foreground text-xs">
 								No match —{" "}
-								<span className="font-medium text-foreground">"{query}"</span> will
-								be saved as entered.
+								<span className="font-medium text-foreground">"{query}"</span>{" "}
+								will be saved as entered.
 							</div>
-							<div className="border-t border-border px-3 py-2">
+							<div className="border-border border-t px-3 py-2">
 								<button
 									type="button"
 									onMouseDown={(e) => e.preventDefault()}
 									onClick={openCreateModal}
-									className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+									className="flex items-center gap-1.5 text-primary text-xs hover:underline"
 								>
 									<Building2 className="size-3" />
 									Add new agency
@@ -250,11 +264,15 @@ export function AgencyCombobox({
 					</DialogHeader>
 					<form onSubmit={handleCreate} className="grid gap-4 py-2">
 						<div className="grid gap-1.5">
-							<Label htmlFor="ac-name">Agency Name <span className="text-destructive">*</span></Label>
+							<Label htmlFor="ac-name">
+								Agency Name <span className="text-destructive">*</span>
+							</Label>
 							<Input
 								id="ac-name"
 								value={createForm.name}
-								onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+								onChange={(e) =>
+									setCreateForm((f) => ({ ...f, name: e.target.value }))
+								}
 								placeholder="e.g. Ministry of Home Affairs"
 								autoFocus
 							/>
@@ -264,7 +282,12 @@ export function AgencyCombobox({
 							<Input
 								id="ac-supervisor"
 								value={createForm.supervisorName}
-								onChange={(e) => setCreateForm((f) => ({ ...f, supervisorName: e.target.value }))}
+								onChange={(e) =>
+									setCreateForm((f) => ({
+										...f,
+										supervisorName: e.target.value,
+									}))
+								}
 								placeholder="e.g. John Doe"
 							/>
 						</div>
@@ -273,7 +296,12 @@ export function AgencyCombobox({
 							<Input
 								id="ac-position"
 								value={createForm.supervisorPosition}
-								onChange={(e) => setCreateForm((f) => ({ ...f, supervisorPosition: e.target.value }))}
+								onChange={(e) =>
+									setCreateForm((f) => ({
+										...f,
+										supervisorPosition: e.target.value,
+									}))
+								}
 								placeholder="e.g. Permanent Secretary"
 							/>
 						</div>
@@ -282,7 +310,9 @@ export function AgencyCombobox({
 							<Input
 								id="ac-phone"
 								value={createForm.phone}
-								onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
+								onChange={(e) =>
+									setCreateForm((f) => ({ ...f, phone: e.target.value }))
+								}
 								placeholder="e.g. 592-600-0000"
 							/>
 						</div>
@@ -291,20 +321,32 @@ export function AgencyCombobox({
 							<Input
 								id="ac-address"
 								value={createForm.address}
-								onChange={(e) => setCreateForm((f) => ({ ...f, address: e.target.value }))}
+								onChange={(e) =>
+									setCreateForm((f) => ({ ...f, address: e.target.value }))
+								}
 								placeholder="e.g. 6 Brickdam, Georgetown"
 							/>
 						</div>
 						{createError && (
-							<p className="text-sm text-destructive">{createError}</p>
+							<p className="text-destructive text-sm">{createError}</p>
 						)}
 						<DialogFooter>
-							<Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setCreateOpen(false)}
+							>
 								Cancel
 							</Button>
-							<Button type="submit" disabled={createMutation.isPending || !createForm.name.trim()}>
+							<Button
+								type="submit"
+								disabled={createMutation.isPending || !createForm.name.trim()}
+							>
 								{createMutation.isPending ? (
-									<><Loader2 className="mr-2 size-4 animate-spin" />Creating...</>
+									<>
+										<Loader2 className="mr-2 size-4 animate-spin" />
+										Creating...
+									</>
 								) : (
 									"Create Agency"
 								)}

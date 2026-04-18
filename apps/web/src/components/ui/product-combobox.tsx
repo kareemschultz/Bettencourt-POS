@@ -92,14 +92,14 @@ export function ProductCombobox({
 					autoComplete="off"
 				/>
 				{isFetching ? (
-					<Loader2 className="absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
+					<Loader2 className="absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
 				) : (
-					<ChevronsUpDown className="absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground opacity-40 pointer-events-none" />
+					<ChevronsUpDown className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted-foreground opacity-40" />
 				)}
 			</div>
 
 			{open && (results as ProductHit[]).length > 0 && (
-				<div className="absolute z-50 mt-1 min-w-[320px] w-full rounded-md border border-border bg-popover shadow-lg">
+				<div className="absolute z-50 mt-1 w-full min-w-[320px] rounded-md border border-border bg-popover shadow-lg">
 					<Command>
 						<CommandList>
 							<CommandGroup heading="Products">
@@ -118,8 +118,8 @@ export function ProductCombobox({
 											)}
 										/>
 										<div className="flex flex-col">
-											<span className="text-sm font-medium">{hit.name}</span>
-											<span className="text-xs text-muted-foreground">
+											<span className="font-medium text-sm">{hit.name}</span>
+											<span className="text-muted-foreground text-xs">
 												GYD ${Number(hit.price).toLocaleString()}
 												{hit.sku ? ` · ${hit.sku}` : ""}
 											</span>
@@ -136,8 +136,8 @@ export function ProductCombobox({
 				(results as ProductHit[]).length === 0 &&
 				debouncedQuery.length >= 2 &&
 				!isFetching && (
-					<div className="absolute z-50 mt-1 min-w-[280px] w-full rounded-md border border-border bg-popover shadow-md">
-						<div className="px-3 py-2.5 text-xs text-muted-foreground">
+					<div className="absolute z-50 mt-1 w-full min-w-[280px] rounded-md border border-border bg-popover shadow-md">
+						<div className="px-3 py-2.5 text-muted-foreground text-xs">
 							No match —{" "}
 							<span className="font-medium text-foreground">"{query}"</span>{" "}
 							will be used as entered.

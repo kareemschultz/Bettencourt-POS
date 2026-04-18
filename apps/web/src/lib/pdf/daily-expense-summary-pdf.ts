@@ -16,8 +16,8 @@ export interface DailyExpenseSummaryOptions {
 			category: string;
 			amount: string;
 			description: string;
-			expenseDate?: string;  // YYYY-MM-DD — when the expense occurred
-			createdAt: string;     // ISO timestamp — when the entry was recorded
+			expenseDate?: string; // YYYY-MM-DD — when the expense occurred
+			createdAt: string; // ISO timestamp — when the entry was recorded
 		}>;
 	}>;
 	preparedBy?: string;
@@ -46,12 +46,12 @@ async function fetchLogoBase64(): Promise<string> {
 		const resp = await fetch("/logo.png");
 		const buf = await resp.arrayBuffer();
 		const b64 = (() => {
-		const bytes = new Uint8Array(buf);
-		let binary = "";
-		for (let i = 0; i < bytes.length; i += 8192)
-			binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-		return btoa(binary);
-	})();
+			const bytes = new Uint8Array(buf);
+			let binary = "";
+			for (let i = 0; i < bytes.length; i += 8192)
+				binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+			return btoa(binary);
+		})();
 		return `data:image/png;base64,${b64}`;
 	} catch {
 		return "";
@@ -122,16 +122,22 @@ function buildSummaryHtml(
 					// distinguish the period the cost belongs to vs. when it was recorded.
 					const enteredNote = (() => {
 						if (!item.expenseDate) return "";
-						const enteredDateGYT = new Date(item.createdAt).toLocaleDateString("en-CA", { timeZone: "America/Guyana" });
+						const enteredDateGYT = new Date(item.createdAt).toLocaleDateString(
+							"en-CA",
+							{ timeZone: "America/Guyana" },
+						);
 						if (item.expenseDate === enteredDateGYT) return "";
-						const enteredFmt = new Date(item.createdAt).toLocaleString("en-GY", {
-							timeZone: "America/Guyana",
-							month: "short",
-							day: "numeric",
-							hour: "2-digit",
-							minute: "2-digit",
-							hour12: false,
-						});
+						const enteredFmt = new Date(item.createdAt).toLocaleString(
+							"en-GY",
+							{
+								timeZone: "America/Guyana",
+								month: "short",
+								day: "numeric",
+								hour: "2-digit",
+								minute: "2-digit",
+								hour12: false,
+							},
+						);
 						return `<div style="font-size:9px;color:#f59e0b;margin-top:2px;font-style:italic">&#9432; Entered: ${escHtml(enteredFmt)}</div>`;
 					})();
 					return `

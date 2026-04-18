@@ -252,8 +252,12 @@ export default function BudgetsPage() {
 		setForm({
 			name: budget.name,
 			period: budget.period as "monthly" | "quarterly" | "annually",
-			startDate: budget.startDate ? (new Date(budget.startDate).toISOString().split("T")[0] ?? "") : "",
-			endDate: budget.endDate ? (new Date(budget.endDate).toISOString().split("T")[0] ?? "") : "",
+			startDate: budget.startDate
+				? (new Date(budget.startDate).toISOString().split("T")[0] ?? "")
+				: "",
+			endDate: budget.endDate
+				? (new Date(budget.endDate).toISOString().split("T")[0] ?? "")
+				: "",
 			categories: Array.isArray(budget.categories) ? budget.categories : [],
 		});
 		setDialogOpen(true);
@@ -648,7 +652,7 @@ export default function BudgetsPage() {
 								<h3 className="font-semibold">
 									Budget vs Actual — {monthlyBudgetData.month}
 								</h3>
-								<p className="text-xs text-muted-foreground">
+								<p className="text-muted-foreground text-xs">
 									Current month spending vs budget
 								</p>
 							</div>
@@ -667,9 +671,7 @@ export default function BudgetsPage() {
 									{new Intl.NumberFormat("en-GY", {
 										style: "currency",
 										currency: "GYD",
-									}).format(
-										Math.abs(Number(monthlyBudgetData.totalVariance)),
-									)}
+									}).format(Math.abs(Number(monthlyBudgetData.totalVariance)))}
 								</span>
 							</div>
 						</div>
@@ -689,9 +691,7 @@ export default function BudgetsPage() {
 								<CartesianGrid strokeDasharray="3 3" horizontal={false} />
 								<XAxis
 									type="number"
-									tickFormatter={(v: number) =>
-										`$${(v / 1000).toFixed(0)}k`
-									}
+									tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
 									tick={{ fontSize: 10 }}
 								/>
 								<YAxis

@@ -11,10 +11,13 @@
 			"**",
 			"!**/.next",
 			"!**/dist",
+			"!**/build",
 			"!**/.turbo",
 			"!**/dev-dist",
 			"!**/.zed",
 			"!**/.vscode",
+			"!**/.claude",
+			"!**/.worktrees",
 			"!**/routeTree.gen.ts",
 			"!**/src-tauri",
 			"!**/.nuxt",
@@ -55,7 +58,16 @@
 			"a11y": {
 				"noLabelWithoutControl": "warn",
 				"useButtonType": "warn",
-				"useSemanticElements": "warn"
+				"useSemanticElements": "warn",
+				"useKeyWithClickEvents": "warn",
+				"noStaticElementInteractions": "warn",
+				"useFocusableInteractive": "warn",
+				"useAriaPropsForRole": "warn",
+				"noInteractiveElementToNoninteractiveRole": "warn",
+				"noNoninteractiveElementToInteractiveRole": "warn"
+			},
+			"security": {
+				"noDangerouslySetInnerHtml": "warn"
 			},
 			"nursery": {
 				"useSortedClasses": {

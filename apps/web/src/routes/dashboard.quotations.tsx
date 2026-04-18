@@ -18,9 +18,22 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	AgencyCombobox,
+	type AgencyHit,
+} from "@/components/ui/agency-combobox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+	CustomerCombobox,
+	type CustomerHit,
+} from "@/components/ui/customer-combobox";
 import {
 	Dialog,
 	DialogContent,
@@ -37,6 +50,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ProductCombobox } from "@/components/ui/product-combobox";
 import {
 	Select,
 	SelectContent,
@@ -58,14 +72,6 @@ import { openQuotationPdf } from "@/lib/pdf/quotation-pdf";
 import { statusBadgeClass } from "@/lib/status-colors";
 import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { AgencyCombobox, type AgencyHit } from "@/components/ui/agency-combobox";
-import { CustomerCombobox, type CustomerHit } from "@/components/ui/customer-combobox";
-import { ProductCombobox } from "@/components/ui/product-combobox";
 import { orpc } from "@/utils/orpc";
 
 interface LineItem {
@@ -130,7 +136,15 @@ const emptyForm: QuotationForm = {
 	brand: "foods_inc",
 };
 
-const QUOT_STATUS_FILTERS = ["All", "Draft", "Sent", "Accepted", "Rejected", "Converted", "Expired"] as const;
+const QUOT_STATUS_FILTERS = [
+	"All",
+	"Draft",
+	"Sent",
+	"Accepted",
+	"Rejected",
+	"Converted",
+	"Expired",
+] as const;
 
 type QuotationRow = {
 	id: string;
@@ -204,9 +218,7 @@ export default function QuotationsPage() {
 		raw as unknown as { quotations: QuotationRow[]; total: number }
 	).quotations;
 
-	const upsertAgencyMut = useMutation(
-		orpc.agencies.create.mutationOptions({}),
-	);
+	const upsertAgencyMut = useMutation(orpc.agencies.create.mutationOptions({}));
 
 	const createMut = useMutation(
 		orpc.quotations.create.mutationOptions({
@@ -306,7 +318,8 @@ export default function QuotationsPage() {
 		setForm({
 			...emptyForm,
 			taxRate: String(docSettings?.defaultTaxRate ?? "14"),
-			taxMode: (docSettings?.defaultTaxMode as "invoice" | "line" | "incl") ?? "incl",
+			taxMode:
+				(docSettings?.defaultTaxMode as "invoice" | "line" | "incl") ?? "incl",
 			discountType:
 				(docSettings?.defaultDiscountType as "percent" | "fixed") ?? "percent",
 			termsAndConditions: docSettings?.defaultQuotationTerms ?? "",
@@ -325,7 +338,9 @@ export default function QuotationsPage() {
 			agencyName: q.agencyName ?? "",
 			contactPersonName: q.contactPersonName ?? "",
 			contactPersonPosition: q.contactPersonPosition ?? "",
-			validUntil: q.validUntil ? (new Date(q.validUntil).toISOString().split("T")[0] ?? "") : "",
+			validUntil: q.validUntil
+				? (new Date(q.validUntil).toISOString().split("T")[0] ?? "")
+				: "",
 			notes: q.notes ?? "",
 			items: Array.isArray(q.items)
 				? (q.items as LineItem[])
@@ -337,8 +352,11 @@ export default function QuotationsPage() {
 			termsAndConditions: q.termsAndConditions ?? "",
 			preparedBy: q.preparedBy ?? "",
 			department: q.department ?? "",
-			brand: (q.brand === "home_style" ? "home_style" : "foods_inc"),
-		noteMode: (q.notes && !PREDEFINED_NOTES_QUOT.includes(q.notes) ? "custom" : "preset"),
+			brand: q.brand === "home_style" ? "home_style" : "foods_inc",
+			noteMode:
+				q.notes && !PREDEFINED_NOTES_QUOT.includes(q.notes)
+					? "custom"
+					: "preset",
 		});
 		setDialogOpen(true);
 	}
@@ -382,9 +400,10 @@ export default function QuotationsPage() {
 				: Number(form.discountValue || 0);
 		const taxableBase = subtotal - discountAmt;
 		const rate = Number(form.taxRate || 0);
-		const taxAmt = form.taxMode === "incl"
-			? taxableBase * (rate / (100 + rate))
-			: taxableBase * (rate / 100);
+		const taxAmt =
+			form.taxMode === "incl"
+				? taxableBase * (rate / (100 + rate))
+				: taxableBase * (rate / 100);
 		const total = form.taxMode === "incl" ? taxableBase : taxableBase + taxAmt;
 		const userId = session?.user?.id ?? "";
 
@@ -438,10 +457,12 @@ export default function QuotationsPage() {
 			: Number(form.discountValue || 0);
 	const formTaxableBase = subtotal - formDiscountAmt;
 	const formRate = Number(form.taxRate || 0);
-	const formTaxAmt = form.taxMode === "incl"
-		? formTaxableBase * (formRate / (100 + formRate))
-		: formTaxableBase * (formRate / 100);
-	const formTotal = form.taxMode === "incl" ? formTaxableBase : formTaxableBase + formTaxAmt;
+	const formTaxAmt =
+		form.taxMode === "incl"
+			? formTaxableBase * (formRate / (100 + formRate))
+			: formTaxableBase * (formRate / 100);
+	const formTotal =
+		form.taxMode === "incl" ? formTaxableBase : formTaxableBase + formTaxAmt;
 
 	return (
 		<div className="flex flex-col gap-6 p-4 md:p-6">
@@ -560,7 +581,10 @@ export default function QuotationsPage() {
 													: "—"}
 											</TableCell>
 											<TableCell>
-												<div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+												<div
+													className="flex gap-1"
+													onClick={(e) => e.stopPropagation()}
+												>
 													{canUpdate && (
 														<Button
 															variant="ghost"
@@ -581,44 +605,64 @@ export default function QuotationsPage() {
 														</DropdownMenuTrigger>
 														<DropdownMenuContent align="end" className="w-48">
 															{q.status === "draft" && canUpdate && (
-																<DropdownMenuItem onClick={() => markSentMut.mutate({ id: q.id })}>
+																<DropdownMenuItem
+																	onClick={() =>
+																		markSentMut.mutate({ id: q.id })
+																	}
+																>
 																	<Send className="mr-2 size-3.5" />
 																	Mark Sent
 																</DropdownMenuItem>
 															)}
 															{canCreate && (
-																<DropdownMenuItem onClick={() =>
-																	duplicateMut.mutate({
-																		id: q.id,
-																		createdBy: session?.user?.id ?? "",
-																	})
-																}>
+																<DropdownMenuItem
+																	onClick={() =>
+																		duplicateMut.mutate({
+																			id: q.id,
+																			createdBy: session?.user?.id ?? "",
+																		})
+																	}
+																>
 																	<Copy className="mr-2 size-3.5" />
 																	Duplicate
 																</DropdownMenuItem>
 															)}
-															<DropdownMenuItem onClick={async () => { const r = await openQuotationPdf(q, docSettings ?? {}); if (r === "popup_blocked") toast.error("Allow popups to open the PDF"); }}>
+															<DropdownMenuItem
+																onClick={async () => {
+																	const r = await openQuotationPdf(
+																		q,
+																		docSettings ?? {},
+																	);
+																	if (r === "popup_blocked")
+																		toast.error("Allow popups to open the PDF");
+																}}
+															>
 																<Printer className="mr-2 size-3.5" />
 																Print / Save PDF
 															</DropdownMenuItem>
-															{canConvert && ["sent", "accepted"].includes(q.status) && (
-																<DropdownMenuItem onClick={() =>
-																	convertMut.mutate({
-																		id: q.id,
-																		createdBy: session?.user?.id ?? "",
-																	})
-																}>
-																	<ArrowRightLeft className="mr-2 size-3.5" />
-																	Convert to Invoice
-																</DropdownMenuItem>
-															)}
+															{canConvert &&
+																["sent", "accepted"].includes(q.status) && (
+																	<DropdownMenuItem
+																		onClick={() =>
+																			convertMut.mutate({
+																				id: q.id,
+																				createdBy: session?.user?.id ?? "",
+																			})
+																		}
+																	>
+																		<ArrowRightLeft className="mr-2 size-3.5" />
+																		Convert to Invoice
+																	</DropdownMenuItem>
+																)}
 															{canCreate && q.status !== "draft" && (
-																<DropdownMenuItem onClick={() =>
-																	reviseMut.mutate({
-																		id: q.id,
-																		createdBy: session?.user?.id ?? "",
-																	})
-																}>
+																<DropdownMenuItem
+																	onClick={() =>
+																		reviseMut.mutate({
+																			id: q.id,
+																			createdBy: session?.user?.id ?? "",
+																		})
+																	}
+																>
 																	<GitBranch className="mr-2 size-3.5" />
 																	Revise
 																</DropdownMenuItem>
@@ -628,7 +672,9 @@ export default function QuotationsPage() {
 																	<DropdownMenuSeparator />
 																	<DropdownMenuItem
 																		className="text-destructive focus:text-destructive"
-																		onClick={() => deleteMut.mutate({ id: q.id })}
+																		onClick={() =>
+																			deleteMut.mutate({ id: q.id })
+																		}
 																	>
 																		<Trash2 className="mr-2 size-3.5" />
 																		Cancel
@@ -665,8 +711,12 @@ export default function QuotationsPage() {
 											size="sm"
 											type="button"
 											onClick={async () => {
-												const r = await openQuotationPdf(selectedQuotation, docSettings ?? {});
-												if (r === "popup_blocked") toast.error("Allow popups to open the PDF");
+												const r = await openQuotationPdf(
+													selectedQuotation,
+													docSettings ?? {},
+												);
+												if (r === "popup_blocked")
+													toast.error("Allow popups to open the PDF");
 											}}
 											className="no-print gap-1.5"
 										>
@@ -691,12 +741,12 @@ export default function QuotationsPage() {
 											{selectedQuotation.contactPersonPosition}
 										</p>
 									)}
-								{selectedQuotation.agencyName && (
-										<p className="text-muted-foreground font-medium">
+									{selectedQuotation.agencyName && (
+										<p className="font-medium text-muted-foreground">
 											{selectedQuotation.agencyName}
 										</p>
 									)}
-								{selectedQuotation.customerAddress && (
+									{selectedQuotation.customerAddress && (
 										<p className="text-muted-foreground">
 											{selectedQuotation.customerAddress}
 										</p>
@@ -870,7 +920,7 @@ export default function QuotationsPage() {
 					}
 				}}
 			>
-				<DialogContent className="max-h-[90vh] w-full max-w-2xl sm:max-w-4xl overflow-y-auto">
+				<DialogContent className="max-h-[90vh] w-full max-w-2xl overflow-y-auto sm:max-w-4xl">
 					<DialogHeader>
 						<DialogTitle>
 							{editingId ? "Edit Quotation" : "New Quotation"}
@@ -879,19 +929,23 @@ export default function QuotationsPage() {
 					<div className="flex flex-col gap-4 py-2">
 						{/* Document Header -- brand + who prepared it */}
 						<div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3">
-							<Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">From</Label>
+							<Label className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+								From
+							</Label>
 							<div className="flex gap-2">
 								<button
 									type="button"
-									className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${form.brand === "foods_inc" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
-									onClick={() => setForm(f => ({ ...f, brand: "foods_inc" }))}
+									className={`flex-1 rounded-md border px-3 py-2 font-medium text-sm transition-colors ${form.brand === "foods_inc" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
+									onClick={() => setForm((f) => ({ ...f, brand: "foods_inc" }))}
 								>
 									Bettencourt's Food Inc.
 								</button>
 								<button
 									type="button"
-									className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${form.brand === "home_style" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
-									onClick={() => setForm(f => ({ ...f, brand: "home_style" }))}
+									className={`flex-1 rounded-md border px-3 py-2 font-medium text-sm transition-colors ${form.brand === "home_style" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}
+									onClick={() =>
+										setForm((f) => ({ ...f, brand: "home_style" }))
+									}
 								>
 									Bettencourt's Home Style
 								</button>
@@ -902,7 +956,9 @@ export default function QuotationsPage() {
 									<Input
 										placeholder="Your name"
 										value={form.preparedBy}
-										onChange={(e) => setForm(f => ({ ...f, preparedBy: e.target.value }))}
+										onChange={(e) =>
+											setForm((f) => ({ ...f, preparedBy: e.target.value }))
+										}
 									/>
 								</div>
 								<div className="flex flex-col gap-1.5">
@@ -910,7 +966,9 @@ export default function QuotationsPage() {
 									<Input
 										placeholder="e.g. Kitchen, Catering, Admin"
 										value={form.department}
-										onChange={(e) => setForm(f => ({ ...f, department: e.target.value }))}
+										onChange={(e) =>
+											setForm((f) => ({ ...f, department: e.target.value }))
+										}
 									/>
 								</div>
 							</div>
@@ -920,20 +978,28 @@ export default function QuotationsPage() {
 						<div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3">
 							{/* Toggle */}
 							<div className="flex items-center justify-between">
-								<Label className="text-xs font-medium">Bill To</Label>
+								<Label className="font-medium text-xs">Bill To</Label>
 								<div className="flex overflow-hidden rounded border text-xs">
 									<button
 										type="button"
-										className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${form.customerType === "individual" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`}
-										onClick={() => setForm(f => ({ ...f, customerType: "individual", agencyName: "" }))}
+										className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${form.customerType === "individual" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+										onClick={() =>
+											setForm((f) => ({
+												...f,
+												customerType: "individual",
+												agencyName: "",
+											}))
+										}
 									>
 										<User className="size-3" />
 										Individual
 									</button>
 									<button
 										type="button"
-										className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${form.customerType === "agency" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`}
-										onClick={() => setForm(f => ({ ...f, customerType: "agency" }))}
+										className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${form.customerType === "agency" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+										onClick={() =>
+											setForm((f) => ({ ...f, customerType: "agency" }))
+										}
 									>
 										<Building2 className="size-3" />
 										Agency / Ministry
@@ -947,21 +1013,56 @@ export default function QuotationsPage() {
 										<Label className="text-xs">Customer Name *</Label>
 										<CustomerCombobox
 											value={form.customerName}
-											onChange={(name) => setForm(f => ({ ...f, customerName: name }))}
-											onSelect={(hit) => setForm(f => ({ ...f, customerName: hit.name, customerPhone: hit.phone ?? f.customerPhone, customerAddress: hit.address ?? f.customerAddress, customerId: hit.id }))}
+											onChange={(name) =>
+												setForm((f) => ({ ...f, customerName: name }))
+											}
+											onSelect={(hit) =>
+												setForm((f) => ({
+													...f,
+													customerName: hit.name,
+													customerPhone: hit.phone ?? f.customerPhone,
+													customerAddress: hit.address ?? f.customerAddress,
+													customerId: hit.id,
+												}))
+											}
 										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Phone</Label>
-										<Input placeholder="Phone number" value={form.customerPhone} onChange={(e) => setForm(f => ({ ...f, customerPhone: e.target.value }))} />
+										<Input
+											placeholder="Phone number"
+											value={form.customerPhone}
+											onChange={(e) =>
+												setForm((f) => ({
+													...f,
+													customerPhone: e.target.value,
+												}))
+											}
+										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Valid Until</Label>
-										<Input type="date" value={form.validUntil} min={todayGY()} onChange={(e) => setForm(f => ({ ...f, validUntil: e.target.value }))} />
+										<Input
+											type="date"
+											value={form.validUntil}
+											min={todayGY()}
+											onChange={(e) =>
+												setForm((f) => ({ ...f, validUntil: e.target.value }))
+											}
+										/>
 									</div>
 									<div className="col-span-2 flex flex-col gap-1.5">
 										<Label className="text-xs">Address</Label>
-										<Input placeholder="Customer address" value={form.customerAddress} onChange={(e) => setForm(f => ({ ...f, customerAddress: e.target.value }))} />
+										<Input
+											placeholder="Customer address"
+											value={form.customerAddress}
+											onChange={(e) =>
+												setForm((f) => ({
+													...f,
+													customerAddress: e.target.value,
+												}))
+											}
+										/>
 									</div>
 								</div>
 							) : (
@@ -970,40 +1071,94 @@ export default function QuotationsPage() {
 										<Label className="text-xs">Agency / Ministry Name *</Label>
 										<AgencyCombobox
 											value={form.agencyName}
-											onChange={(name) => setForm(f => ({ ...f, agencyName: name }))}
-											onSelect={(hit: AgencyHit) => setForm(f => ({
-												...f,
-												agencyName: hit.name,
-												customerName: hit.supervisorName ?? f.customerName,
-												contactPersonPosition: hit.supervisorPosition ?? f.contactPersonPosition,
-												customerPhone: hit.phone ?? f.customerPhone,
-												customerAddress: hit.address ?? f.customerAddress,
-											}))}
+											onChange={(name) =>
+												setForm((f) => ({ ...f, agencyName: name }))
+											}
+											onSelect={(hit: AgencyHit) =>
+												setForm((f) => ({
+													...f,
+													agencyName: hit.name,
+													customerName: hit.supervisorName ?? f.customerName,
+													contactPersonPosition:
+														hit.supervisorPosition ?? f.contactPersonPosition,
+													customerPhone: hit.phone ?? f.customerPhone,
+													customerAddress: hit.address ?? f.customerAddress,
+												}))
+											}
 										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Supervisor Name</Label>
-										<Input placeholder="e.g. John Smith" value={form.customerName} onChange={(e) => setForm(f => ({ ...f, customerName: e.target.value }))} />
+										<Input
+											placeholder="e.g. John Smith"
+											value={form.customerName}
+											onChange={(e) =>
+												setForm((f) => ({ ...f, customerName: e.target.value }))
+											}
+										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Position / Title</Label>
-										<Input placeholder="e.g. Permanent Secretary" value={form.contactPersonPosition} onChange={(e) => setForm(f => ({ ...f, contactPersonPosition: e.target.value }))} />
+										<Input
+											placeholder="e.g. Permanent Secretary"
+											value={form.contactPersonPosition}
+											onChange={(e) =>
+												setForm((f) => ({
+													...f,
+													contactPersonPosition: e.target.value,
+												}))
+											}
+										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Order Placed By</Label>
-										<Input placeholder="Name of person who called" value={form.contactPersonName} onChange={(e) => setForm(f => ({ ...f, contactPersonName: e.target.value }))} />
+										<Input
+											placeholder="Name of person who called"
+											value={form.contactPersonName}
+											onChange={(e) =>
+												setForm((f) => ({
+													...f,
+													contactPersonName: e.target.value,
+												}))
+											}
+										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Phone</Label>
-										<Input placeholder="Phone number" value={form.customerPhone} onChange={(e) => setForm(f => ({ ...f, customerPhone: e.target.value }))} />
+										<Input
+											placeholder="Phone number"
+											value={form.customerPhone}
+											onChange={(e) =>
+												setForm((f) => ({
+													...f,
+													customerPhone: e.target.value,
+												}))
+											}
+										/>
 									</div>
 									<div className="col-span-2 flex flex-col gap-1.5">
 										<Label className="text-xs">Address</Label>
-										<Input placeholder="Agency address" value={form.customerAddress} onChange={(e) => setForm(f => ({ ...f, customerAddress: e.target.value }))} />
+										<Input
+											placeholder="Agency address"
+											value={form.customerAddress}
+											onChange={(e) =>
+												setForm((f) => ({
+													...f,
+													customerAddress: e.target.value,
+												}))
+											}
+										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Valid Until</Label>
-										<Input type="date" value={form.validUntil} min={todayGY()} onChange={(e) => setForm(f => ({ ...f, validUntil: e.target.value }))} />
+										<Input
+											type="date"
+											value={form.validUntil}
+											min={todayGY()}
+											onChange={(e) =>
+												setForm((f) => ({ ...f, validUntil: e.target.value }))
+											}
+										/>
 									</div>
 								</div>
 							)}
@@ -1032,7 +1187,9 @@ export default function QuotationsPage() {
 													<ProductCombobox
 														className="h-8 w-full"
 														value={item.description}
-														onChange={(desc) => updateItem(i, "description", desc)}
+														onChange={(desc) =>
+															updateItem(i, "description", desc)
+														}
 														onSelect={(product) => {
 															updateItem(i, "description", product.name);
 															updateItem(i, "unitPrice", Number(product.price));
@@ -1096,14 +1253,22 @@ export default function QuotationsPage() {
 
 						{/* Tax & Discount Settings */}
 						<div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3">
-							<Collapsible open={taxSettingsOpen} onOpenChange={setTaxSettingsOpen}>
+							<Collapsible
+								open={taxSettingsOpen}
+								onOpenChange={setTaxSettingsOpen}
+							>
 								<CollapsibleTrigger asChild>
 									<button
 										type="button"
-										className="flex w-full items-center gap-2 text-left text-muted-foreground text-xs hover:text-foreground transition-colors"
+										className="flex w-full items-center gap-2 text-left text-muted-foreground text-xs transition-colors hover:text-foreground"
 									>
-										<span className="font-medium text-foreground">VAT: {parseFloat(String(form.taxRate))}% · {form.taxMode === "incl" ? "Incl." : "Excl."}</span>
-										<ChevronDown className={`ml-auto size-3 transition-transform ${taxSettingsOpen ? "rotate-180" : ""}`} />
+										<span className="font-medium text-foreground">
+											VAT: {Number.parseFloat(String(form.taxRate))}% ·{" "}
+											{form.taxMode === "incl" ? "Incl." : "Excl."}
+										</span>
+										<ChevronDown
+											className={`ml-auto size-3 transition-transform ${taxSettingsOpen ? "rotate-180" : ""}`}
+										/>
 									</button>
 								</CollapsibleTrigger>
 								<CollapsibleContent>
@@ -1126,14 +1291,18 @@ export default function QuotationsPage() {
 												<button
 													type="button"
 													className={`flex-1 px-2 py-1.5 transition-colors ${form.taxMode !== "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-													onClick={() => setForm((f) => ({ ...f, taxMode: "invoice" }))}
+													onClick={() =>
+														setForm((f) => ({ ...f, taxMode: "invoice" }))
+													}
 												>
 													Excl.
 												</button>
 												<button
 													type="button"
 													className={`flex-1 px-2 py-1.5 transition-colors ${form.taxMode === "incl" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-													onClick={() => setForm((f) => ({ ...f, taxMode: "incl" }))}
+													onClick={() =>
+														setForm((f) => ({ ...f, taxMode: "incl" }))
+													}
 												>
 													Incl.
 												</button>
@@ -1142,39 +1311,39 @@ export default function QuotationsPage() {
 									</div>
 								</CollapsibleContent>
 							</Collapsible>
-							<div className="grid grid-cols-2 gap-3 border-t border-border pt-2">
-							<div className="flex flex-col gap-1.5">
-								<Label className="text-xs">Discount Type</Label>
-								<Select
-									value={form.discountType}
-									onValueChange={(v) =>
-										setForm((f) => ({
-											...f,
-											discountType: v as "percent" | "fixed",
-										}))
-									}
-								>
-									<SelectTrigger>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="percent">Percent (%)</SelectItem>
-										<SelectItem value="fixed">Fixed (GYD)</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-							<div className="flex flex-col gap-1.5">
-								<Label className="text-xs">Discount Value</Label>
-								<Input
-									type="number"
-									min={0}
-									step="0.01"
-									value={form.discountValue === "0" ? "" : form.discountValue}
-									onChange={(e) =>
-										setForm((f) => ({ ...f, discountValue: e.target.value }))
-									}
-								/>
-							</div>
+							<div className="grid grid-cols-2 gap-3 border-border border-t pt-2">
+								<div className="flex flex-col gap-1.5">
+									<Label className="text-xs">Discount Type</Label>
+									<Select
+										value={form.discountType}
+										onValueChange={(v) =>
+											setForm((f) => ({
+												...f,
+												discountType: v as "percent" | "fixed",
+											}))
+										}
+									>
+										<SelectTrigger>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="percent">Percent (%)</SelectItem>
+											<SelectItem value="fixed">Fixed (GYD)</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="flex flex-col gap-1.5">
+									<Label className="text-xs">Discount Value</Label>
+									<Input
+										type="number"
+										min={0}
+										step="0.01"
+										value={form.discountValue === "0" ? "" : form.discountValue}
+										onChange={(e) =>
+											setForm((f) => ({ ...f, discountValue: e.target.value }))
+										}
+									/>
+								</div>
 							</div>
 						</div>
 
@@ -1199,7 +1368,10 @@ export default function QuotationsPage() {
 							)}
 							{formTaxAmt > 0 && (
 								<div className="flex w-64 justify-between text-muted-foreground">
-									<span>VAT {form.taxRate}%{form.taxMode === "incl" ? " (incl.)" : ""}</span>
+									<span>
+										VAT {form.taxRate}%
+										{form.taxMode === "incl" ? " (incl.)" : ""}
+									</span>
 									<span className="font-mono">{formatGYD(formTaxAmt)}</span>
 								</div>
 							)}
@@ -1213,18 +1385,29 @@ export default function QuotationsPage() {
 							<CollapsibleTrigger asChild>
 								<button
 									type="button"
-									className="flex w-full items-center gap-2 text-left text-xs text-muted-foreground hover:text-foreground transition-colors"
+									className="flex w-full items-center gap-2 text-left text-muted-foreground text-xs transition-colors hover:text-foreground"
 								>
-									<span className="font-medium text-foreground">Terms &amp; Conditions</span>
-									{form.termsAndConditions && <span className="text-muted-foreground">(set)</span>}
-									<ChevronDown className={`ml-auto size-3 transition-transform ${termsOpen ? "rotate-180" : ""}`} />
+									<span className="font-medium text-foreground">
+										Terms &amp; Conditions
+									</span>
+									{form.termsAndConditions && (
+										<span className="text-muted-foreground">(set)</span>
+									)}
+									<ChevronDown
+										className={`ml-auto size-3 transition-transform ${termsOpen ? "rotate-180" : ""}`}
+									/>
 								</button>
 							</CollapsibleTrigger>
 							<CollapsibleContent>
 								<Textarea
 									placeholder="Enter terms and conditions..."
 									value={form.termsAndConditions}
-									onChange={(e) => setForm((f) => ({ ...f, termsAndConditions: e.target.value }))}
+									onChange={(e) =>
+										setForm((f) => ({
+											...f,
+											termsAndConditions: e.target.value,
+										}))
+									}
 									className="mt-2 h-20 resize-none"
 								/>
 							</CollapsibleContent>
@@ -1233,7 +1416,11 @@ export default function QuotationsPage() {
 						<div className="flex flex-col gap-1.5">
 							<Label>Notes</Label>
 							<Select
-								value={form.noteMode === "custom" ? "__custom__" : (form.notes || "__none__")}
+								value={
+									form.noteMode === "custom"
+										? "__custom__"
+										: form.notes || "__none__"
+								}
 								onValueChange={(v) => {
 									if (v === "__custom__") {
 										setForm((f) => ({ ...f, noteMode: "custom", notes: "" }));
@@ -1250,7 +1437,9 @@ export default function QuotationsPage() {
 								<SelectContent>
 									<SelectItem value="__none__">No note</SelectItem>
 									{PREDEFINED_NOTES_QUOT.map((n) => (
-										<SelectItem key={n} value={n}>{n}</SelectItem>
+										<SelectItem key={n} value={n}>
+											{n}
+										</SelectItem>
 									))}
 									<SelectItem value="__custom__">Custom note...</SelectItem>
 								</SelectContent>
@@ -1268,7 +1457,11 @@ export default function QuotationsPage() {
 						</div>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
+						<Button
+							variant="outline"
+							type="button"
+							onClick={() => setDialogOpen(false)}
+						>
 							Cancel
 						</Button>
 						<Button

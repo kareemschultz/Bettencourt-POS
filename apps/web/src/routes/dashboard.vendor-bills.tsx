@@ -50,6 +50,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SupplierCombobox } from "@/components/ui/supplier-combobox";
 import {
 	Table,
 	TableBody,
@@ -59,11 +60,10 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { openVendorBillPdf } from "@/lib/pdf/vendor-bill-pdf";
 import { statusBadgeClass } from "@/lib/status-colors";
 import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
-import { openVendorBillPdf } from "@/lib/pdf/vendor-bill-pdf";
-import { SupplierCombobox } from "@/components/ui/supplier-combobox";
 import { orpc } from "@/utils/orpc";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -686,7 +686,11 @@ export default function VendorBillsPage() {
 																</DropdownMenuItem>
 															)}
 															<DropdownMenuItem
-																onClick={async () => { const r = await openVendorBillPdf(bill); if (r === "popup_blocked") toast.error("Allow popups to open the PDF"); }}
+																onClick={async () => {
+																	const r = await openVendorBillPdf(bill);
+																	if (r === "popup_blocked")
+																		toast.error("Allow popups to open the PDF");
+																}}
 															>
 																<FileDown className="mr-2 size-3.5" />
 																Print / Save PDF
@@ -947,9 +951,7 @@ export default function VendorBillsPage() {
 							type="button"
 							onClick={handleSave}
 							disabled={
-								!form.supplierName ||
-								createMut.isPending ||
-								updateMut.isPending
+								!form.supplierName || createMut.isPending || updateMut.isPending
 							}
 						>
 							{createMut.isPending || updateMut.isPending

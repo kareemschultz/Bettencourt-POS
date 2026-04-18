@@ -131,7 +131,7 @@ export default function VoidsReportPage() {
 				<div className="grid grid-cols-2 gap-4 md:grid-cols-4">
 					<Card>
 						<CardHeader className="pb-1">
-							<CardTitle className="text-muted-foreground text-xs font-normal">
+							<CardTitle className="font-normal text-muted-foreground text-xs">
 								Total Voids
 							</CardTitle>
 						</CardHeader>
@@ -141,7 +141,7 @@ export default function VoidsReportPage() {
 					</Card>
 					<Card>
 						<CardHeader className="pb-1">
-							<CardTitle className="text-muted-foreground text-xs font-normal">
+							<CardTitle className="font-normal text-muted-foreground text-xs">
 								Total Voided Amount
 							</CardTitle>
 						</CardHeader>
@@ -153,7 +153,7 @@ export default function VoidsReportPage() {
 					</Card>
 					<Card>
 						<CardHeader className="pb-1">
-							<CardTitle className="text-muted-foreground text-xs font-normal">
+							<CardTitle className="font-normal text-muted-foreground text-xs">
 								Avg per Void
 							</CardTitle>
 						</CardHeader>
@@ -167,7 +167,7 @@ export default function VoidsReportPage() {
 					</Card>
 					<Card>
 						<CardHeader className="pb-1">
-							<CardTitle className="text-muted-foreground text-xs font-normal">
+							<CardTitle className="font-normal text-muted-foreground text-xs">
 								Employees with Voids
 							</CardTitle>
 						</CardHeader>
@@ -206,9 +206,7 @@ export default function VoidsReportPage() {
 							) : (
 								summary.map((s) => (
 									<TableRow key={s.user_id}>
-										<TableCell className="font-medium">
-											{s.user_name}
-										</TableCell>
+										<TableCell className="font-medium">{s.user_name}</TableCell>
 										<TableCell className="text-right">
 											{s.void_count}
 											{s.void_count >= 5 && (
@@ -261,7 +259,7 @@ export default function VoidsReportPage() {
 							) : (
 								details.map((d, i) => (
 									<TableRow key={i}>
-										<TableCell className="font-mono font-medium">
+										<TableCell className="font-medium font-mono">
 											#{d.order_number}
 										</TableCell>
 										<TableCell>

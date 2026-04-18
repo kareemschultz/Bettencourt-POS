@@ -95,7 +95,10 @@ export default function KitchenPage() {
 						Kitchen Display
 					</h1>
 					<p className="flex items-center gap-1.5 text-muted-foreground text-sm">
-						<Wifi className={`size-3.5 ${realtimeStatus === "open" ? "text-emerald-500" : "text-amber-500"}`} /> Live updates via WebSocket
+						<Wifi
+							className={`size-3.5 ${realtimeStatus === "open" ? "text-emerald-500" : "text-amber-500"}`}
+						/>{" "}
+						Live updates via WebSocket
 					</p>
 				</div>
 				<div

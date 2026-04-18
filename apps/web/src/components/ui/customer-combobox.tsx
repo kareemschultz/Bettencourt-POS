@@ -3,19 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronsUpDown, Loader2, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
 	Command,
 	CommandGroup,
 	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
-import { Input } from "@/components/ui/input";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
@@ -23,7 +17,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
 
@@ -61,7 +61,11 @@ export function CustomerCombobox({
 	const [debouncedQuery, setDebouncedQuery] = useState("");
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const [createOpen, setCreateOpen] = useState(false);
-	const [createForm, setCreateForm] = useState({ name: "", phone: "", address: "" });
+	const [createForm, setCreateForm] = useState({
+		name: "",
+		phone: "",
+		address: "",
+	});
 	const [createError, setCreateError] = useState("");
 	const queryClient = useQueryClient();
 
@@ -81,7 +85,8 @@ export function CustomerCombobox({
 		orpc.customers.create.mutationOptions({
 			onSuccess: (newCustomer) => {
 				queryClient.invalidateQueries({
-					queryKey: orpc.customers.search.queryOptions({ input: { query: "" } }).queryKey,
+					queryKey: orpc.customers.search.queryOptions({ input: { query: "" } })
+						.queryKey,
 				});
 				const hit: CustomerHit = {
 					id: newCustomer.id,
@@ -95,8 +100,13 @@ export function CustomerCombobox({
 				setCreateError("");
 			},
 			onError: (err) => {
-				const msg = err instanceof Error ? err.message : "Failed to create customer";
-				setCreateError(msg.includes("CONFLICT") ? "A customer with that phone already exists." : msg);
+				const msg =
+					err instanceof Error ? err.message : "Failed to create customer";
+				setCreateError(
+					msg.includes("CONFLICT")
+						? "A customer with that phone already exists."
+						: msg,
+				);
 			},
 		}),
 	);
@@ -156,9 +166,9 @@ export function CustomerCombobox({
 						autoComplete="off"
 					/>
 					{isFetching ? (
-						<Loader2 className="absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
+						<Loader2 className="absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
 					) : (
-						<ChevronsUpDown className="absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground opacity-40 pointer-events-none" />
+						<ChevronsUpDown className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted-foreground opacity-40" />
 					)}
 				</div>
 
@@ -192,9 +202,9 @@ export function CustomerCombobox({
 												)}
 											/>
 											<div className="flex flex-col">
-												<span className="text-sm font-medium">{hit.name}</span>
+												<span className="font-medium text-sm">{hit.name}</span>
 												{hit.phone && (
-													<span className="text-xs text-muted-foreground">
+													<span className="text-muted-foreground text-xs">
 														{hit.phone}
 													</span>
 												)}
@@ -204,12 +214,12 @@ export function CustomerCombobox({
 								</CommandGroup>
 							</CommandList>
 						</Command>
-						<div className="border-t border-border px-3 py-2">
+						<div className="border-border border-t px-3 py-2">
 							<button
 								type="button"
 								onMouseDown={(e) => e.preventDefault()}
 								onClick={openCreateModal}
-								className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+								className="flex items-center gap-1.5 text-primary text-xs hover:underline"
 							>
 								<UserPlus className="size-3" />
 								Add new customer
@@ -223,17 +233,17 @@ export function CustomerCombobox({
 					debouncedQuery.length >= 2 &&
 					!isFetching && (
 						<div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md">
-							<div className="px-3 py-2.5 text-xs text-muted-foreground">
+							<div className="px-3 py-2.5 text-muted-foreground text-xs">
 								No match —{" "}
-								<span className="font-medium text-foreground">"{query}"</span> will
-								be saved as entered.
+								<span className="font-medium text-foreground">"{query}"</span>{" "}
+								will be saved as entered.
 							</div>
-							<div className="border-t border-border px-3 py-2">
+							<div className="border-border border-t px-3 py-2">
 								<button
 									type="button"
 									onMouseDown={(e) => e.preventDefault()}
 									onClick={openCreateModal}
-									className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+									className="flex items-center gap-1.5 text-primary text-xs hover:underline"
 								>
 									<UserPlus className="size-3" />
 									Add new customer
@@ -250,11 +260,15 @@ export function CustomerCombobox({
 					</DialogHeader>
 					<form onSubmit={handleCreate} className="grid gap-4 py-2">
 						<div className="grid gap-1.5">
-							<Label htmlFor="cc-name">Name <span className="text-destructive">*</span></Label>
+							<Label htmlFor="cc-name">
+								Name <span className="text-destructive">*</span>
+							</Label>
 							<Input
 								id="cc-name"
 								value={createForm.name}
-								onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+								onChange={(e) =>
+									setCreateForm((f) => ({ ...f, name: e.target.value }))
+								}
 								placeholder="Full name"
 								autoFocus
 							/>
@@ -264,7 +278,9 @@ export function CustomerCombobox({
 							<Input
 								id="cc-phone"
 								value={createForm.phone}
-								onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
+								onChange={(e) =>
+									setCreateForm((f) => ({ ...f, phone: e.target.value }))
+								}
 								placeholder="e.g. 592-600-0000"
 							/>
 						</div>
@@ -273,20 +289,32 @@ export function CustomerCombobox({
 							<Input
 								id="cc-address"
 								value={createForm.address}
-								onChange={(e) => setCreateForm((f) => ({ ...f, address: e.target.value }))}
+								onChange={(e) =>
+									setCreateForm((f) => ({ ...f, address: e.target.value }))
+								}
 								placeholder="e.g. 123 Main Street, Georgetown"
 							/>
 						</div>
 						{createError && (
-							<p className="text-sm text-destructive">{createError}</p>
+							<p className="text-destructive text-sm">{createError}</p>
 						)}
 						<DialogFooter>
-							<Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setCreateOpen(false)}
+							>
 								Cancel
 							</Button>
-							<Button type="submit" disabled={createMutation.isPending || !createForm.name.trim()}>
+							<Button
+								type="submit"
+								disabled={createMutation.isPending || !createForm.name.trim()}
+							>
 								{createMutation.isPending ? (
-									<><Loader2 className="mr-2 size-4 animate-spin" />Creating...</>
+									<>
+										<Loader2 className="mr-2 size-4 animate-spin" />
+										Creating...
+									</>
 								) : (
 									"Create Customer"
 								)}
@@ -315,7 +343,11 @@ export function CustomerComboboxSelect({
 	const [debouncedQuery, setDebouncedQuery] = useState("");
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const [createOpen, setCreateOpen] = useState(false);
-	const [createForm, setCreateForm] = useState({ name: "", phone: "", address: "" });
+	const [createForm, setCreateForm] = useState({
+		name: "",
+		phone: "",
+		address: "",
+	});
 	const [createError, setCreateError] = useState("");
 	const queryClient = useQueryClient();
 
@@ -330,7 +362,8 @@ export function CustomerComboboxSelect({
 		orpc.customers.create.mutationOptions({
 			onSuccess: (newCustomer) => {
 				queryClient.invalidateQueries({
-					queryKey: orpc.customers.search.queryOptions({ input: { query: "" } }).queryKey,
+					queryKey: orpc.customers.search.queryOptions({ input: { query: "" } })
+						.queryKey,
 				});
 				onChange(newCustomer.name);
 				onSelect?.({
@@ -346,8 +379,13 @@ export function CustomerComboboxSelect({
 				setCreateError("");
 			},
 			onError: (err) => {
-				const msg = err instanceof Error ? err.message : "Failed to create customer";
-				setCreateError(msg.includes("CONFLICT") ? "A customer with that phone already exists." : msg);
+				const msg =
+					err instanceof Error ? err.message : "Failed to create customer";
+				setCreateError(
+					msg.includes("CONFLICT")
+						? "A customer with that phone already exists."
+						: msg,
+				);
 			},
 		}),
 	);
@@ -355,10 +393,7 @@ export function CustomerComboboxSelect({
 	function handleSearch(raw: string) {
 		setInputValue(raw);
 		if (debounceRef.current) clearTimeout(debounceRef.current);
-		debounceRef.current = setTimeout(
-			() => setDebouncedQuery(raw.trim()),
-			250,
-		);
+		debounceRef.current = setTimeout(() => setDebouncedQuery(raw.trim()), 250);
 	}
 
 	function openCreateModal() {
@@ -398,9 +433,12 @@ export function CustomerComboboxSelect({
 						)}
 					</Button>
 				</PopoverTrigger>
-				<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+				<PopoverContent
+					className="w-[--radix-popover-trigger-width] p-0"
+					align="start"
+				>
 					<Command>
-						<div className="flex items-center border-b border-border px-3">
+						<div className="flex items-center border-border border-b px-3">
 							<Input
 								placeholder="Search customers…"
 								value={inputValue}
@@ -413,7 +451,7 @@ export function CustomerComboboxSelect({
 							{(results as CustomerHit[]).length === 0 &&
 								debouncedQuery.length >= 1 &&
 								!isFetching && (
-									<div className="py-3 text-center text-xs text-muted-foreground">
+									<div className="py-3 text-center text-muted-foreground text-xs">
 										"{inputValue}" will be saved as typed.
 									</div>
 								)}
@@ -437,9 +475,9 @@ export function CustomerComboboxSelect({
 												)}
 											/>
 											<div>
-												<div className="text-sm font-medium">{hit.name}</div>
+												<div className="font-medium text-sm">{hit.name}</div>
 												{hit.phone && (
-													<div className="text-xs text-muted-foreground">
+													<div className="text-muted-foreground text-xs">
 														{hit.phone}
 													</div>
 												)}
@@ -448,11 +486,11 @@ export function CustomerComboboxSelect({
 									))}
 								</CommandGroup>
 							)}
-							<div className="border-t border-border px-3 py-2">
+							<div className="border-border border-t px-3 py-2">
 								<button
 									type="button"
 									onClick={openCreateModal}
-									className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+									className="flex items-center gap-1.5 text-primary text-xs hover:underline"
 								>
 									<UserPlus className="size-3" />
 									Add new customer
@@ -470,11 +508,15 @@ export function CustomerComboboxSelect({
 					</DialogHeader>
 					<form onSubmit={handleCreate} className="grid gap-4 py-2">
 						<div className="grid gap-1.5">
-							<Label htmlFor="ccs-name">Name <span className="text-destructive">*</span></Label>
+							<Label htmlFor="ccs-name">
+								Name <span className="text-destructive">*</span>
+							</Label>
 							<Input
 								id="ccs-name"
 								value={createForm.name}
-								onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+								onChange={(e) =>
+									setCreateForm((f) => ({ ...f, name: e.target.value }))
+								}
 								placeholder="Full name"
 								autoFocus
 							/>
@@ -484,7 +526,9 @@ export function CustomerComboboxSelect({
 							<Input
 								id="ccs-phone"
 								value={createForm.phone}
-								onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
+								onChange={(e) =>
+									setCreateForm((f) => ({ ...f, phone: e.target.value }))
+								}
 								placeholder="e.g. 592-600-0000"
 							/>
 						</div>
@@ -493,20 +537,32 @@ export function CustomerComboboxSelect({
 							<Input
 								id="ccs-address"
 								value={createForm.address}
-								onChange={(e) => setCreateForm((f) => ({ ...f, address: e.target.value }))}
+								onChange={(e) =>
+									setCreateForm((f) => ({ ...f, address: e.target.value }))
+								}
 								placeholder="e.g. 123 Main Street, Georgetown"
 							/>
 						</div>
 						{createError && (
-							<p className="text-sm text-destructive">{createError}</p>
+							<p className="text-destructive text-sm">{createError}</p>
 						)}
 						<DialogFooter>
-							<Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setCreateOpen(false)}
+							>
 								Cancel
 							</Button>
-							<Button type="submit" disabled={createMutation.isPending || !createForm.name.trim()}>
+							<Button
+								type="submit"
+								disabled={createMutation.isPending || !createForm.name.trim()}
+							>
 								{createMutation.isPending ? (
-									<><Loader2 className="mr-2 size-4 animate-spin" />Creating...</>
+									<>
+										<Loader2 className="mr-2 size-4 animate-spin" />
+										Creating...
+									</>
 								) : (
 									"Create Customer"
 								)}

@@ -15,12 +15,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import {
-	Tabs,
-	TabsContent,
-	TabsList,
-	TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { downloadCsv } from "@/lib/csv-export";
 import { formatGYD } from "@/lib/types";
 import { todayGY } from "@/lib/utils";
@@ -166,19 +161,17 @@ export default function CustomerAnalyticsPage() {
 				<div className="grid grid-cols-2 gap-4 md:grid-cols-5">
 					<Card>
 						<CardHeader className="pb-1">
-							<CardTitle className="flex items-center gap-1.5 text-muted-foreground text-xs font-normal">
+							<CardTitle className="flex items-center gap-1.5 font-normal text-muted-foreground text-xs">
 								<Users className="size-3.5" /> Total Customers
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<p className="font-bold text-2xl">
-								{kpi?.total_customers ?? 0}
-							</p>
+							<p className="font-bold text-2xl">{kpi?.total_customers ?? 0}</p>
 						</CardContent>
 					</Card>
 					<Card>
 						<CardHeader className="pb-1">
-							<CardTitle className="flex items-center gap-1.5 text-muted-foreground text-xs font-normal">
+							<CardTitle className="flex items-center gap-1.5 font-normal text-muted-foreground text-xs">
 								<UserPlus className="size-3.5" /> New (Period)
 							</CardTitle>
 						</CardHeader>
@@ -190,7 +183,7 @@ export default function CustomerAnalyticsPage() {
 					</Card>
 					<Card>
 						<CardHeader className="pb-1">
-							<CardTitle className="flex items-center gap-1.5 text-muted-foreground text-xs font-normal">
+							<CardTitle className="flex items-center gap-1.5 font-normal text-muted-foreground text-xs">
 								<UserCheck className="size-3.5" /> Retention Rate
 							</CardTitle>
 						</CardHeader>
@@ -200,7 +193,7 @@ export default function CustomerAnalyticsPage() {
 					</Card>
 					<Card>
 						<CardHeader className="pb-1">
-							<CardTitle className="flex items-center gap-1.5 text-muted-foreground text-xs font-normal">
+							<CardTitle className="flex items-center gap-1.5 font-normal text-muted-foreground text-xs">
 								<TrendingUp className="size-3.5" /> Avg Visits
 							</CardTitle>
 						</CardHeader>
@@ -212,7 +205,7 @@ export default function CustomerAnalyticsPage() {
 					</Card>
 					<Card>
 						<CardHeader className="pb-1">
-							<CardTitle className="text-muted-foreground text-xs font-normal">
+							<CardTitle className="font-normal text-muted-foreground text-xs">
 								Avg Lifetime Spend
 							</CardTitle>
 						</CardHeader>
@@ -236,9 +229,7 @@ export default function CustomerAnalyticsPage() {
 					<CardContent>
 						<div className="flex items-end gap-2">
 							{distribution.map((d) => {
-								const maxCount = Math.max(
-									...distribution.map((r) => r.count),
-								);
+								const maxCount = Math.max(...distribution.map((r) => r.count));
 								const heightPct = maxCount > 0 ? (d.count / maxCount) * 100 : 0;
 								return (
 									<div

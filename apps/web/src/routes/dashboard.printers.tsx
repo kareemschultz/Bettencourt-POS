@@ -6,12 +6,13 @@ import {
 	Monitor,
 	Plus,
 	Printer,
+	Smartphone,
 	TestTube2,
 	Trash2,
 	Wifi,
 	WifiOff,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,9 +38,51 @@ import { Switch } from "@/components/ui/switch";
 import { printClient } from "@/lib/print/print-client";
 import { orpc } from "@/utils/orpc";
 
+type BeforeInstallPromptEvent = Event & {
+	prompt: () => Promise<void>;
+	userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+};
+
 export default function PrintersPage() {
 	const qc = useQueryClient();
 	const [createOpen, setCreateOpen] = useState(false);
+	const [pwaPrompt, setPwaPrompt] = useState<BeforeInstallPromptEvent | null>(
+		null,
+	);
+	const [isPwa, setIsPwa] = useState(false);
+
+	useEffect(() => {
+		const standalone =
+			window.matchMedia("(display-mode: standalone)").matches ||
+			window.matchMedia("(display-mode: fullscreen)").matches;
+		setIsPwa(standalone);
+
+		const onPrompt = (e: Event) => {
+			e.preventDefault();
+			setPwaPrompt(e as BeforeInstallPromptEvent);
+		};
+		const onInstalled = () => {
+			setIsPwa(true);
+			setPwaPrompt(null);
+			toast.success("App installed — reopen from the desktop shortcut");
+		};
+		window.addEventListener("beforeinstallprompt", onPrompt);
+		window.addEventListener("appinstalled", onInstalled);
+		return () => {
+			window.removeEventListener("beforeinstallprompt", onPrompt);
+			window.removeEventListener("appinstalled", onInstalled);
+		};
+	}, []);
+
+	const installPwa = async () => {
+		if (!pwaPrompt) return;
+		await pwaPrompt.prompt();
+		const { outcome } = await pwaPrompt.userChoice;
+		if (outcome === "accepted") {
+			setIsPwa(true);
+			setPwaPrompt(null);
+		}
+	};
 
 	const { data: printers = [], isLoading } = useQuery(
 		orpc.printers.list.queryOptions({ input: {} }),
@@ -317,30 +360,75 @@ export default function PrintersPage() {
 
 			{/* Terminal Setup */}
 			<Card>
-				<CardContent className="flex items-start gap-4 py-5">
-					<Monitor className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-					<div className="flex-1">
-						<p className="font-medium text-sm">Terminal Setup</p>
-						<p className="mt-0.5 text-muted-foreground text-xs">
-							Configure this Windows terminal for silent receipt printing and
-							fullscreen kiosk mode. Run the setup script once on the POS
-							computer — it patches the desktop shortcut automatically.
-						</p>
-						<ol className="mt-2 list-inside list-decimal space-y-0.5 text-muted-foreground text-xs">
-							<li>Download and run the setup script below</li>
-							<li>Fully close Chrome (system tray → Exit)</li>
-							<li>Reopen Bettencourt's POS from the desktop shortcut</li>
-						</ol>
+				<CardContent className="space-y-4 py-5">
+					{/* Header row */}
+					<div className="flex items-start gap-3">
+						<Monitor className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+						<div className="flex-1">
+							<p className="font-medium text-sm">Terminal Setup</p>
+							<p className="mt-0.5 text-muted-foreground text-xs">
+								Configure this Windows terminal for silent receipt printing and
+								fullscreen kiosk mode. Works with both the installed PWA and
+								Chrome browser shortcuts.
+							</p>
+						</div>
 					</div>
-					<a
-						href="/downloads/BettencourtPOS-SilentPrint-Setup.bat"
-						download="BettencourtPOS-SilentPrint-Setup.bat"
-					>
-						<Button variant="outline" size="sm">
-							<Download className="mr-1.5 size-3.5" />
-							Download Setup Script
-						</Button>
-					</a>
+
+					{/* Option A — Install as app (PWA) */}
+					<div className="rounded-md border bg-muted/30 p-3">
+						<p className="mb-1 font-medium text-xs">
+							Option A — Install as App (recommended)
+						</p>
+						<p className="mb-2 text-muted-foreground text-xs">
+							Install the POS directly from Chrome. No script needed — the app
+							opens fullscreen automatically.
+						</p>
+						{isPwa ? (
+							<p className="flex items-center gap-1.5 text-[11px] text-green-600 dark:text-green-400">
+								<Check className="size-3" /> Already installed as an app on this
+								device
+							</p>
+						) : pwaPrompt ? (
+							<Button size="sm" onClick={installPwa} className="h-7 text-xs">
+								<Smartphone className="mr-1.5 size-3.5" />
+								Install App Now
+							</Button>
+						) : (
+							<p className="text-[11px] text-muted-foreground">
+								To install: click the{" "}
+								<span className="font-medium">install icon</span> (⊕) in
+								Chrome's address bar, then reopen from the desktop shortcut.
+							</p>
+						)}
+					</div>
+
+					{/* Option B — Setup script (Chrome / existing shortcut) */}
+					<div className="rounded-md border bg-muted/30 p-3">
+						<p className="mb-1 font-medium text-xs">
+							Option B — Setup Script (Chrome or existing shortcut)
+						</p>
+						<p className="mb-2 text-muted-foreground text-xs">
+							Run once on the POS computer. Auto-detects PWA or Chrome shortcuts
+							and patches them. If no shortcut exists, it creates one.
+						</p>
+						<div className="flex flex-wrap items-center gap-2">
+							<a
+								href="/downloads/BettencourtPOS-SilentPrint-Setup.bat"
+								download="BettencourtPOS-SilentPrint-Setup.bat"
+							>
+								<Button variant="outline" size="sm" className="h-7 text-xs">
+									<Download className="mr-1.5 size-3" />
+									Download Setup Script
+								</Button>
+							</a>
+						</div>
+						<p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
+							Windows will show &quot;Publisher could not be verified&quot; —
+							this is expected. Click <span className="font-semibold">Run</span>{" "}
+							to proceed. The script will request administrator access
+							automatically.
+						</p>
+					</div>
 				</CardContent>
 			</Card>
 

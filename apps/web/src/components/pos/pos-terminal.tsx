@@ -2,8 +2,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
 	Barcode,
 	Clock,
-	Gift,
 	FileText,
+	Gift,
 	Keyboard,
 	Lock,
 	ReceiptText,
@@ -61,11 +61,11 @@ import { CartPanel } from "./cart-panel";
 import { DiscountDialog } from "./discount-dialog";
 import { ItemNotesDialog } from "./item-notes-dialog";
 import { PaymentDialog } from "./payment-dialog";
-import { TabListDialog } from "./tab-list-dialog";
 import { ProductGrid } from "./product-grid";
 import { ReceiptPreview } from "./receipt-preview";
 import { SellGiftCardDialog } from "./sell-gift-card-dialog";
 import { SplitBillDialog } from "./split-bill-dialog";
+import { TabListDialog } from "./tab-list-dialog";
 
 const BEVERAGE_REGISTER = "c0000000-0000-4000-8000-000000000003";
 
@@ -781,7 +781,11 @@ export function POSTerminal({
 						<PopoverTrigger asChild>
 							{selectedCustomer ? (
 								<div className="flex items-center gap-1">
-									<Button variant="outline" size="sm" className="gap-1.5 text-xs">
+									<Button
+										variant="outline"
+										size="sm"
+										className="gap-1.5 text-xs"
+									>
 										<UserSearch className="size-3.5" />
 										{selectedCustomer.name}
 										{loyaltyData && (
@@ -967,7 +971,7 @@ export function POSTerminal({
 			)}
 
 			{/* Order type bar */}
-			{(
+			{
 				<div className="flex flex-wrap items-end gap-2 border-border border-b bg-muted/30 px-3 py-2 md:gap-3 md:px-4">
 					<div className="flex items-center gap-0.5 rounded-lg border border-border bg-background p-0.5">
 						<Button
@@ -1000,7 +1004,9 @@ export function POSTerminal({
 					</div>
 
 					<div className="flex items-center gap-1 rounded-md border p-1">
-						<span className="px-1 text-[10px] text-muted-foreground uppercase">Course</span>
+						<span className="px-1 text-[10px] text-muted-foreground uppercase">
+							Course
+						</span>
 						{[1, 2, 3, 4].map((course) => (
 							<Button
 								key={course}
@@ -1113,12 +1119,14 @@ export function POSTerminal({
 						</div>
 					)}
 				</div>
-			)}
+			}
 
 			{/* Course selector (visible on all terminals for dine-in) */}
 			{!isBeverageTerminal && (
 				<div className="flex items-center gap-2 border-border border-b bg-muted/20 px-3 py-1.5">
-					<span className="text-[10px] text-muted-foreground uppercase">Course</span>
+					<span className="text-[10px] text-muted-foreground uppercase">
+						Course
+					</span>
 					<div className="flex items-center gap-0.5 rounded-md border p-0.5">
 						{[1, 2, 3, 4].map((course) => (
 							<Button

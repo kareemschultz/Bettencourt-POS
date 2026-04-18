@@ -56,7 +56,9 @@ export function TableShape({
 		>
 			<p className="truncate font-semibold text-xs">{table.name}</p>
 			<p className="text-[10px] text-muted-foreground">
-				{table.currentGuests ? `${table.currentGuests}/${table.seats}` : `${table.seats} seats`}
+				{table.currentGuests
+					? `${table.currentGuests}/${table.seats}`
+					: `${table.seats} seats`}
 			</p>
 		</button>
 	);

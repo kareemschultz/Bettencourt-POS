@@ -180,10 +180,10 @@ export default function KioskPage() {
 							</p>
 						</div>
 					)}
+					<p className="text-muted-foreground">Your order is being prepared</p>
 					<p className="text-muted-foreground">
-						Your order is being prepared
+						We'll call your name when it's ready
 					</p>
-					<p className="text-muted-foreground">We'll call your name when it's ready</p>
 				</div>
 				<Button
 					variant="outline"

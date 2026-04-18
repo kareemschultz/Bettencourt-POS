@@ -8,16 +8,18 @@ import {
 	Map as MapIcon,
 	Pencil,
 	Plus,
+	QrCode,
 	Sparkles,
 	Timer,
 	Trash2,
 	Users,
-	QrCode,
 	UtensilsCrossed,
 	X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { FloorPlanEditor } from "@/components/tables/floor-plan-editor";
+import type { FloorPlanTable } from "@/components/tables/table-shape";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,11 +41,9 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FloorPlanEditor } from "@/components/tables/floor-plan-editor";
-import type { FloorPlanTable } from "@/components/tables/table-shape";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { formatGYD } from "@/lib/types";
 import { printTableQrCodes } from "@/lib/qr-code";
+import { formatGYD } from "@/lib/types";
 import { orpc } from "@/utils/orpc";
 
 // ── Status config ────────────────────────────────────────────────────────
@@ -319,7 +319,6 @@ export default function TablesPage() {
 		return c;
 	}, [tables]);
 
-
 	useWebSocket({
 		channels: ["pos:tables"],
 		onMessage: () => {
@@ -397,7 +396,9 @@ export default function TablesPage() {
 						size="sm"
 						className="h-8 gap-1"
 						onClick={() => {
-							const tableList = (tables as Array<{ id: string; name: string }>).map((t) => ({
+							const tableList = (
+								tables as Array<{ id: string; name: string }>
+							).map((t) => ({
 								id: t.id,
 								name: t.name,
 							}));
@@ -444,31 +445,72 @@ export default function TablesPage() {
 					<div className="flex flex-wrap items-end gap-2">
 						<div className="w-44">
 							<Label className="mb-1 block text-xs">Location</Label>
-							<Select value={selectedLocationId || defaultLocationId} onValueChange={setSelectedLocationId}>
-								<SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+							<Select
+								value={selectedLocationId || defaultLocationId}
+								onValueChange={setSelectedLocationId}
+							>
+								<SelectTrigger className="h-8">
+									<SelectValue />
+								</SelectTrigger>
 								<SelectContent>
 									{locations.map((loc) => (
-										<SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+										<SelectItem key={loc.id} value={loc.id}>
+											{loc.name}
+										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
 						</div>
 						<div className="w-44">
 							<Label className="mb-1 block text-xs">Floor</Label>
-							<Select value={selectedFloorId ?? "__none__"} onValueChange={(v) => setSelectedFloorId(v === "__none__" ? null : v)}>
-								<SelectTrigger className="h-8"><SelectValue placeholder="No floor" /></SelectTrigger>
+							<Select
+								value={selectedFloorId ?? "__none__"}
+								onValueChange={(v) =>
+									setSelectedFloorId(v === "__none__" ? null : v)
+								}
+							>
+								<SelectTrigger className="h-8">
+									<SelectValue placeholder="No floor" />
+								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="__none__">No floor</SelectItem>
 									{floors.map((f) => (
-										<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+										<SelectItem key={f.id} value={f.id}>
+											{f.name}
+										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
 						</div>
 						<div className="flex items-center gap-2">
-							<Input className="h-8 w-40" value={newFloorName} onChange={(e)=>setNewFloorName(e.target.value)} placeholder="New floor" />
-							<Button size="sm" variant="outline" className="h-8" onClick={() => createFloorMut.mutate({ locationId: selectedLocationId || defaultLocationId, name: newFloorName })} disabled={!newFloorName.trim() || createFloorMut.isPending}>Create floor</Button>
-							<Button size="sm" className="h-8" variant={editFloorMode ? "default" : "outline"} onClick={() => setEditFloorMode((v)=>!v)}>{editFloorMode ? "Live mode" : "Edit mode"}</Button>
+							<Input
+								className="h-8 w-40"
+								value={newFloorName}
+								onChange={(e) => setNewFloorName(e.target.value)}
+								placeholder="New floor"
+							/>
+							<Button
+								size="sm"
+								variant="outline"
+								className="h-8"
+								onClick={() =>
+									createFloorMut.mutate({
+										locationId: selectedLocationId || defaultLocationId,
+										name: newFloorName,
+									})
+								}
+								disabled={!newFloorName.trim() || createFloorMut.isPending}
+							>
+								Create floor
+							</Button>
+							<Button
+								size="sm"
+								className="h-8"
+								variant={editFloorMode ? "default" : "outline"}
+								onClick={() => setEditFloorMode((v) => !v)}
+							>
+								{editFloorMode ? "Live mode" : "Edit mode"}
+							</Button>
 						</div>
 					</div>
 					<FloorPlanEditor
@@ -557,7 +599,10 @@ export default function TablesPage() {
 					open={showAddDialog}
 					onClose={() => setShowAddDialog(false)}
 					onSubmit={(data) =>
-						createTableMut.mutate({ ...data, locationId: selectedLocationId || defaultLocationId })
+						createTableMut.mutate({
+							...data,
+							locationId: selectedLocationId || defaultLocationId,
+						})
 					}
 					isProcessing={createTableMut.isPending}
 				/>

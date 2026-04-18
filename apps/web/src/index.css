@@ -255,16 +255,26 @@
 		gap: 0.5rem;
 	}
 
-	nav, aside, header, .no-print { display: none !important; }
+	nav,
+	aside,
+	header,
+	.no-print {
+		display: none !important;
+	}
 	/* Hide POS sidebar and dashboard header during page prints (reports, EOD, etc.) */
 	[data-slot="sidebar"],
 	[data-slot="sidebar-gap"],
 	[data-sidebar="sidebar"],
 	[data-slot="sidebar-wrapper"] > [data-slot="sidebar-inner"],
 	[data-sidebar="trigger"],
-	[data-sidebar="rail"] { display: none !important; }
+	[data-sidebar="rail"] {
+		display: none !important;
+	}
 	/* Make sidebar-inset (content area) full width when printing */
-	[data-slot="sidebar-inset"] { margin-left: 0 !important; width: 100% !important; }
+	[data-slot="sidebar-inset"] {
+		margin-left: 0 !important;
+		width: 100% !important;
+	}
 
 	.print-area {
 		display: block !important;
@@ -279,7 +289,8 @@
 		width: 100%;
 	}
 
-	th, td {
+	th,
+	td {
 		border-bottom: 1px solid #e5e5e5;
 	}
 

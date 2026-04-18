@@ -17,7 +17,13 @@ function passwordStrength(pw: string): number {
 	return score;
 }
 const STRENGTH_LABELS = ["Very Weak", "Weak", "Fair", "Good", "Strong"];
-const STRENGTH_COLORS = ["bg-destructive", "bg-orange-500", "bg-yellow-500", "bg-blue-500", "bg-green-500"];
+const STRENGTH_COLORS = [
+	"bg-destructive",
+	"bg-orange-500",
+	"bg-yellow-500",
+	"bg-blue-500",
+	"bg-green-500",
+];
 
 function StrengthMeter({ password }: { password: string }) {
 	if (!password) return null;
@@ -32,7 +38,9 @@ function StrengthMeter({ password }: { password: string }) {
 					/>
 				))}
 			</div>
-			<p className="text-muted-foreground text-xs">{STRENGTH_LABELS[Math.max(0, score - 1)]}</p>
+			<p className="text-muted-foreground text-xs">
+				{STRENGTH_LABELS[Math.max(0, score - 1)]}
+			</p>
 		</div>
 	);
 }
@@ -73,7 +81,10 @@ export default function ResetPasswordPage() {
 				token,
 			});
 			if (result?.error) {
-				setError(result.error.message || "Failed to reset password. The link may have expired.");
+				setError(
+					result.error.message ||
+						"Failed to reset password. The link may have expired.",
+				);
 				setLoading(false);
 			} else {
 				setDone(true);
@@ -109,7 +120,9 @@ export default function ResetPasswordPage() {
 						<h1 className="text-balance font-bold text-3xl text-[#D4A843] tracking-tight">
 							{"Bettencourt's Food Inc."}
 						</h1>
-						<p className="text-[#D4A843]/70 text-lg italic">{"'A True Guyanese Gem'"}</p>
+						<p className="text-[#D4A843]/70 text-lg italic">
+							{"'A True Guyanese Gem'"}
+						</p>
 					</div>
 				</div>
 			</div>
@@ -119,8 +132,15 @@ export default function ResetPasswordPage() {
 				<div className="w-full max-w-md">
 					{/* Mobile logo */}
 					<div className="mb-6 flex flex-col items-center lg:hidden">
-						<img src="/images/bettencourts-logo.png" alt="Bettencourt's Food Inc. logo" width={200} height={130} />
-						<h1 className="mt-2 text-balance font-bold text-foreground text-xl">{"Bettencourt's POS"}</h1>
+						<img
+							src="/images/bettencourts-logo.png"
+							alt="Bettencourt's Food Inc. logo"
+							width={200}
+							height={130}
+						/>
+						<h1 className="mt-2 text-balance font-bold text-foreground text-xl">
+							{"Bettencourt's POS"}
+						</h1>
 					</div>
 
 					{done ? (
@@ -129,9 +149,12 @@ export default function ResetPasswordPage() {
 								<Check className="size-6 text-green-600" />
 							</div>
 							<div>
-								<h2 className="font-bold text-2xl text-foreground tracking-tight">Password Reset</h2>
+								<h2 className="font-bold text-2xl text-foreground tracking-tight">
+									Password Reset
+								</h2>
 								<p className="mt-2 text-muted-foreground text-sm">
-									Your password has been updated successfully. You will be redirected to the login page shortly.
+									Your password has been updated successfully. You will be
+									redirected to the login page shortly.
 								</p>
 							</div>
 							<Button onClick={() => navigate("/login", { replace: true })}>
@@ -178,12 +201,17 @@ export default function ResetPasswordPage() {
 										placeholder="Re-enter your password"
 									/>
 									{confirmPassword && newPassword !== confirmPassword && (
-										<p className="text-destructive text-xs">Passwords do not match</p>
+										<p className="text-destructive text-xs">
+											Passwords do not match
+										</p>
 									)}
 								</div>
 
 								{error && (
-									<p className="rounded-md bg-destructive/10 px-3 py-2 text-destructive text-sm" role="alert">
+									<p
+										className="rounded-md bg-destructive/10 px-3 py-2 text-destructive text-sm"
+										role="alert"
+									>
 										{error}
 									</p>
 								)}
@@ -197,7 +225,9 @@ export default function ResetPasswordPage() {
 										newPassword !== confirmPassword
 									}
 								>
-									{loading ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+									{loading ? (
+										<Loader2 className="mr-2 size-4 animate-spin" />
+									) : null}
 									{loading ? "Updating..." : "Update Password"}
 								</Button>
 							</form>

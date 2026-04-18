@@ -1,5 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, DollarSign, Pencil, Printer, Unlock } from "lucide-react";
+import {
+	ArrowDown,
+	ArrowUp,
+	DollarSign,
+	Pencil,
+	Printer,
+	Unlock,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -22,8 +29,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { printCashSessionReport } from "@/lib/pdf/cash-session-pdf";
 import { getOnlineStatus } from "@/lib/offline";
+import { printCashSessionReport } from "@/lib/pdf/cash-session-pdf";
 import { formatGYD } from "@/lib/types";
 import { orpc } from "@/utils/orpc";
 
@@ -102,9 +109,7 @@ export function CashControlPanel({
 						"A shift is already open for this register. Please close the existing shift first.",
 					);
 				} else {
-					toast.error(
-						(orpcErr?.message as string) || "Failed to open shift",
-					);
+					toast.error((orpcErr?.message as string) || "Failed to open shift");
 				}
 			},
 		}),
@@ -114,7 +119,9 @@ export function CashControlPanel({
 		orpc.cash.closeSession.mutationOptions({
 			onSuccess: () => {
 				setCloseShiftDialog(false);
-				setDenomCounts(Object.fromEntries(GYD_DENOMINATIONS.map((d) => [d, 0])));
+				setDenomCounts(
+					Object.fromEntries(GYD_DENOMINATIONS.map((d) => [d, 0])),
+				);
 				invalidateCash();
 				toast.success("Shift closed");
 			},
@@ -185,7 +192,9 @@ export function CashControlPanel({
 
 	function requireOnline(action: string): boolean {
 		if (!getOnlineStatus()) {
-			toast.error(`Cannot ${action} while offline — connect to the network first.`);
+			toast.error(
+				`Cannot ${action} while offline — connect to the network first.`,
+			);
 			return false;
 		}
 		return true;
@@ -277,7 +286,9 @@ export function CashControlPanel({
 								</div>
 								<div>
 									<div className="flex items-center gap-2">
-										<p className="text-muted-foreground text-sm">Opening Float</p>
+										<p className="text-muted-foreground text-sm">
+											Opening Float
+										</p>
 										<Button
 											variant="ghost"
 											size="sm"
@@ -392,7 +403,7 @@ export function CashControlPanel({
 									<TableHead>Actual</TableHead>
 									<TableHead>Variance</TableHead>
 									<TableHead>Status</TableHead>
-									<TableHead></TableHead>
+									<TableHead />
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -507,7 +518,9 @@ export function CashControlPanel({
 				open={closeShiftDialog}
 				onOpenChange={(open) => {
 					if (!open) {
-						setDenomCounts(Object.fromEntries(GYD_DENOMINATIONS.map((d) => [d, 0])));
+						setDenomCounts(
+							Object.fromEntries(GYD_DENOMINATIONS.map((d) => [d, 0])),
+						);
 					}
 					setCloseShiftDialog(open);
 				}}
@@ -522,9 +535,13 @@ export function CashControlPanel({
 							<table className="w-full text-sm">
 								<thead>
 									<tr className="border-b bg-muted/50">
-										<th className="px-3 py-2 text-left font-medium">Denomination</th>
+										<th className="px-3 py-2 text-left font-medium">
+											Denomination
+										</th>
 										<th className="px-3 py-2 text-center font-medium">Qty</th>
-										<th className="px-3 py-2 text-right font-medium">Subtotal</th>
+										<th className="px-3 py-2 text-right font-medium">
+											Subtotal
+										</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -541,8 +558,14 @@ export function CashControlPanel({
 													value={denomCounts[denom] || ""}
 													placeholder="0"
 													onChange={(e) => {
-														const qty = Math.max(0, parseInt(e.target.value) || 0);
-														setDenomCounts((prev) => ({ ...prev, [denom]: qty }));
+														const qty = Math.max(
+															0,
+															Number.parseInt(e.target.value) || 0,
+														);
+														setDenomCounts((prev) => ({
+															...prev,
+															[denom]: qty,
+														}));
 													}}
 												/>
 											</td>
@@ -554,7 +577,9 @@ export function CashControlPanel({
 								</tbody>
 								<tfoot>
 									<tr className="bg-muted/50 font-semibold">
-										<td className="px-3 py-2" colSpan={2}>Total Cash Count</td>
+										<td className="px-3 py-2" colSpan={2}>
+											Total Cash Count
+										</td>
 										<td className="px-3 py-2 text-right tabular-nums">
 											GYD {totalDenomAmount.toLocaleString()}
 										</td>

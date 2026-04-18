@@ -19,12 +19,10 @@ const deptColors: Record<string, string> = {
 	Beef: "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800",
 	Duck: "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800",
 	Mutton: "bg-rose-50 border-rose-200 dark:bg-rose-950/30 dark:border-rose-800",
-	Veg:
-		"bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800",
+	Veg: "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800",
 	Specials:
 		"bg-violet-50 border-violet-200 dark:bg-violet-950/30 dark:border-violet-800",
-	Pastry:
-		"bg-pink-50 border-pink-200 dark:bg-pink-950/30 dark:border-pink-800",
+	Pastry: "bg-pink-50 border-pink-200 dark:bg-pink-950/30 dark:border-pink-800",
 	Snacks:
 		"bg-yellow-50 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800",
 	Beverages:
@@ -112,7 +110,8 @@ export function ProductGrid({
 							"hover:shadow-md hover:brightness-105 active:scale-[0.97] sm:min-h-[76px] sm:gap-1 sm:p-3",
 							colorClass,
 							qty > 0 && !is86 && "ring-2 ring-primary ring-offset-1",
-							is86 && "cursor-not-allowed opacity-50 grayscale hover:shadow-none hover:brightness-100 active:scale-100",
+							is86 &&
+								"cursor-not-allowed opacity-50 grayscale hover:shadow-none hover:brightness-100 active:scale-100",
 						)}
 					>
 						{is86 && (
@@ -125,16 +124,20 @@ export function ProductGrid({
 								{qty}
 							</span>
 						)}
-						<span className={cn(
-							"line-clamp-2 font-medium text-xs leading-tight sm:text-sm",
-							is86 ? "text-muted-foreground line-through" : "text-foreground",
-						)}>
+						<span
+							className={cn(
+								"line-clamp-2 font-medium text-xs leading-tight sm:text-sm",
+								is86 ? "text-muted-foreground line-through" : "text-foreground",
+							)}
+						>
 							{product.name}
 						</span>
-						<span className={cn(
-							"font-bold text-sm sm:text-base",
-							is86 ? "text-muted-foreground" : "text-foreground",
-						)}>
+						<span
+							className={cn(
+								"font-bold text-sm sm:text-base",
+								is86 ? "text-muted-foreground" : "text-foreground",
+							)}
+						>
 							{formatGYD(product.price)}
 						</span>
 						{product.department_name && (

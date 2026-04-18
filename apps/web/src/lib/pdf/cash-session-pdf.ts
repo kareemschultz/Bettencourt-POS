@@ -36,12 +36,12 @@ async function fetchLogoBase64(): Promise<string> {
 		const resp = await fetch("/logo.png");
 		const buf = await resp.arrayBuffer();
 		const b64 = (() => {
-		const bytes = new Uint8Array(buf);
-		let binary = "";
-		for (let i = 0; i < bytes.length; i += 8192)
-			binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-		return btoa(binary);
-	})();
+			const bytes = new Uint8Array(buf);
+			let binary = "";
+			for (let i = 0; i < bytes.length; i += 8192)
+				binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+			return btoa(binary);
+		})();
 		return `data:image/png;base64,${b64}`;
 	} catch {
 		return "";
@@ -78,19 +78,15 @@ function esc(str: string | null | undefined): string {
 		.replace(/"/g, "&quot;");
 }
 
-function buildSessionHtml(
-	opts: CashSessionPdfOptions,
-	logo: string,
-): string {
+function buildSessionHtml(opts: CashSessionPdfOptions, logo: string): string {
 	const { session, organizationName } = opts;
-	const logoHtml = logo
-		? `<img src="${logo}" class="logo" alt="Logo" />`
-		: "";
+	const logoHtml = logo ? `<img src="${logo}" class="logo" alt="Logo" />` : "";
 
 	const expected = Number(session.expectedCash ?? session.openingFloat);
 	const actual = Number(session.closingCount ?? 0);
 	const variance = Number(session.variance ?? actual - expected);
-	const varianceColor = variance < 0 ? "#dc2626" : variance > 0 ? "#16a34a" : "#1e293b";
+	const varianceColor =
+		variance < 0 ? "#dc2626" : variance > 0 ? "#16a34a" : "#1e293b";
 
 	const generatedAt = new Date().toLocaleString("en-GY", {
 		timeZone: "America/Guyana",

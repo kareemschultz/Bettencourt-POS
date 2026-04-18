@@ -76,12 +76,12 @@ async function fetchLogoBase64(brand?: string | null): Promise<string> {
 		if (!resp.ok) throw new Error("not found");
 		const buf = await resp.arrayBuffer();
 		const b64 = (() => {
-		const bytes = new Uint8Array(buf);
-		let binary = "";
-		for (let i = 0; i < bytes.length; i += 8192)
-			binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-		return btoa(binary);
-	})();
+			const bytes = new Uint8Array(buf);
+			let binary = "";
+			for (let i = 0; i < bytes.length; i += 8192)
+				binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+			return btoa(binary);
+		})();
 		return `data:${mime};base64,${b64}`;
 	} catch {
 		return "";
@@ -127,7 +127,9 @@ function buildQuotationHtml(
 	}
 
 	const isHomeStyle = quot.brand === "home_style";
-	const companyName = isHomeStyle ? "Bettencourt's Home Style" : "Bettencourt's Food Inc.";
+	const companyName = isHomeStyle
+		? "Bettencourt's Home Style"
+		: "Bettencourt's Food Inc.";
 	const isRevision = quot.parentQuotationId != null;
 
 	const logoHtml = logo
@@ -149,7 +151,8 @@ function buildQuotationHtml(
 		)
 		.join("");
 
-	const termsContent = quot.termsAndConditions || settings.defaultQuotationTerms;
+	const termsContent =
+		quot.termsAndConditions || settings.defaultQuotationTerms;
 	const tcBlock = termsContent
 		? `<div class="tc-section"><div class="section-label">Terms &amp; Conditions</div><div class="tc-text">${escHtml(termsContent)}</div></div>`
 		: "";
@@ -166,10 +169,14 @@ function buildQuotationHtml(
 		quot.agencyName ? escHtml(quot.customerName) : null,
 		quot.contactPersonName
 			? `${escHtml(quot.contactPersonName)}${quot.contactPersonPosition ? `, ${escHtml(quot.contactPersonPosition)}` : ""}`
-			: quot.contactPersonPosition ? escHtml(quot.contactPersonPosition) : null,
+			: quot.contactPersonPosition
+				? escHtml(quot.contactPersonPosition)
+				: null,
 		quot.customerPhone ? escHtml(quot.customerPhone) : null,
 		quot.customerAddress ? escHtml(quot.customerAddress) : null,
-	].filter(Boolean).join("<br>");
+	]
+		.filter(Boolean)
+		.join("<br>");
 
 	return `<!DOCTYPE html>
 <html lang="en">

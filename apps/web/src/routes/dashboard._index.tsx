@@ -240,8 +240,10 @@ function ExecutiveDashboard({ user }: { user: AppUser }) {
 			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
 				<Card>
 					<CardContent className="p-4">
-						<p className="text-xs font-medium text-muted-foreground">Expenses Today</p>
-						<p className="mt-1 text-xl font-bold text-destructive">
+						<p className="font-medium text-muted-foreground text-xs">
+							Expenses Today
+						</p>
+						<p className="mt-1 font-bold text-destructive text-xl">
 							{formatGYD(expensesToday)}
 						</p>
 					</CardContent>
@@ -249,22 +251,35 @@ function ExecutiveDashboard({ user }: { user: AppUser }) {
 
 				<Card>
 					<CardContent className="p-4">
-						<p className="text-xs font-medium text-muted-foreground">AR Outstanding</p>
-						<p className="mt-1 text-xl font-bold text-violet-600">
+						<p className="font-medium text-muted-foreground text-xs">
+							AR Outstanding
+						</p>
+						<p className="mt-1 font-bold text-violet-600 text-xl">
 							{formatGYD(openInvoicesTotal)}
 						</p>
-						<p className="text-xs text-muted-foreground">{openInvoicesCount} invoice(s)</p>
+						<p className="text-muted-foreground text-xs">
+							{openInvoicesCount} invoice(s)
+						</p>
 					</CardContent>
 				</Card>
 
-				<Card className={overdueInvoicesCount > 0 ? "border-destructive/40" : ""}>
+				<Card
+					className={overdueInvoicesCount > 0 ? "border-destructive/40" : ""}
+				>
 					<CardContent className="p-4">
-						<p className="text-xs font-medium text-muted-foreground">Overdue Invoices</p>
-						<p className={`mt-1 text-xl font-bold ${overdueInvoicesCount > 0 ? "text-destructive" : ""}`}>
+						<p className="font-medium text-muted-foreground text-xs">
+							Overdue Invoices
+						</p>
+						<p
+							className={`mt-1 font-bold text-xl ${overdueInvoicesCount > 0 ? "text-destructive" : ""}`}
+						>
 							{overdueInvoicesCount}
 						</p>
 						{overdueInvoicesCount > 0 && (
-							<Link to="/dashboard/invoices" className="text-xs text-destructive hover:underline">
+							<Link
+								to="/dashboard/invoices"
+								className="text-destructive text-xs hover:underline"
+							>
 								View →
 							</Link>
 						)}
@@ -274,12 +289,16 @@ function ExecutiveDashboard({ user }: { user: AppUser }) {
 				<Card className={lowStockCount > 0 ? "border-amber-400/40" : ""}>
 					<CardContent className="p-4">
 						<Link to="/dashboard/stock-alerts" className="block">
-							<p className="text-xs font-medium text-muted-foreground">Low Stock</p>
-							<p className={`mt-1 text-xl font-bold ${lowStockCount > 0 ? "text-amber-600" : ""}`}>
+							<p className="font-medium text-muted-foreground text-xs">
+								Low Stock
+							</p>
+							<p
+								className={`mt-1 font-bold text-xl ${lowStockCount > 0 ? "text-amber-600" : ""}`}
+							>
 								{lowStockCount}
 							</p>
 							{lowStockCount > 0 && (
-								<p className="text-xs text-amber-600">Need attention</p>
+								<p className="text-amber-600 text-xs">Need attention</p>
 							)}
 						</Link>
 					</CardContent>

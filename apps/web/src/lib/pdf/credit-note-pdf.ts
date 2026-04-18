@@ -47,12 +47,12 @@ async function fetchLogoBase64(): Promise<string> {
 		const resp = await fetch("/images/bettencourts-logo.png");
 		const buf = await resp.arrayBuffer();
 		const b64 = (() => {
-		const bytes = new Uint8Array(buf);
-		let binary = "";
-		for (let i = 0; i < bytes.length; i += 8192)
-			binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-		return btoa(binary);
-	})();
+			const bytes = new Uint8Array(buf);
+			let binary = "";
+			for (let i = 0; i < bytes.length; i += 8192)
+				binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+			return btoa(binary);
+		})();
 		return `data:image/png;base64,${b64}`;
 	} catch {
 		return "";
@@ -85,7 +85,9 @@ function buildCreditNoteHtml(
 	const subtotal = Number(creditNote.subtotal);
 	const taxAmt = Number(creditNote.taxTotal);
 	const total = Number(creditNote.total);
-	const applied = Number(creditNote.amountApplied ?? creditNote.appliedAmount ?? 0);
+	const applied = Number(
+		creditNote.amountApplied ?? creditNote.appliedAmount ?? 0,
+	);
 	const remaining = Math.max(total - applied, 0);
 
 	const issuedStr = new Date(creditNote.createdAt).toLocaleDateString("en-GY");
@@ -205,14 +207,18 @@ function buildCreditNoteHtml(
     </div>
   </div>
 
-  ${creditNote.reason ? `
+  ${
+		creditNote.reason
+			? `
   <!-- Reason box -->
   <div style="padding: 20px 36px 0 36px;">
     <div class="reason-box">
       <div class="reason-label">Reason for Credit</div>
       ${escHtml(creditNote.reason)}
     </div>
-  </div>` : ""}
+  </div>`
+			: ""
+	}
 
   <!-- Line Items -->
   <table class="items-table">

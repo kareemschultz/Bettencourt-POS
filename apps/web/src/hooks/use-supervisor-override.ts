@@ -25,13 +25,18 @@ interface SupervisorInfo {
  * }
  * ```
  */
-function selfHasPermission(perms: Record<string, string[]>, required: string): boolean {
+function selfHasPermission(
+	perms: Record<string, string[]>,
+	required: string,
+): boolean {
 	const [resource, action] = required.split(".");
 	if (!resource || !action) return false;
 	return perms[resource]?.includes(action) ?? false;
 }
 
-export function useSupervisorOverride(userPermissions?: Record<string, string[]>) {
+export function useSupervisorOverride(
+	userPermissions?: Record<string, string[]>,
+) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [permission, setPermission] = useState("");
 	const [permissionLabel, setPermissionLabel] = useState<string | undefined>();
@@ -42,7 +47,10 @@ export function useSupervisorOverride(userPermissions?: Record<string, string[]>
 		requiredPermission: string,
 		label?: string,
 	): Promise<SupervisorInfo> {
-		if (userPermissions && selfHasPermission(userPermissions, requiredPermission)) {
+		if (
+			userPermissions &&
+			selfHasPermission(userPermissions, requiredPermission)
+		) {
 			return Promise.resolve({ supervisorId: "self", supervisorName: "self" });
 		}
 		setPermission(requiredPermission);

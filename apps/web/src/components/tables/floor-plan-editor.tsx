@@ -1,7 +1,7 @@
 import { Plus, Save } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { TableShape, type FloorPlanTable } from "./table-shape";
+import { type FloorPlanTable, TableShape } from "./table-shape";
 
 export function FloorPlanEditor({
 	tables,
@@ -26,8 +26,14 @@ export function FloorPlanEditor({
 	} | null>(null);
 
 	const viewSize = useMemo(() => {
-		const maxX = Math.max(1200, ...tables.map((t) => t.positionX + t.width + 40));
-		const maxY = Math.max(700, ...tables.map((t) => t.positionY + t.height + 40));
+		const maxX = Math.max(
+			1200,
+			...tables.map((t) => t.positionX + t.width + 40),
+		);
+		const maxY = Math.max(
+			700,
+			...tables.map((t) => t.positionY + t.height + 40),
+		);
 		return { width: maxX, height: maxY };
 	}, [tables]);
 
@@ -53,8 +59,10 @@ export function FloorPlanEditor({
 	return (
 		<div className="space-y-3">
 			<div className="flex items-center justify-between gap-2">
-				<div className="text-sm text-muted-foreground">
-					{editable ? "Edit mode: drag tables, then save layout" : "Live floor plan"}
+				<div className="text-muted-foreground text-sm">
+					{editable
+						? "Edit mode: drag tables, then save layout"
+						: "Live floor plan"}
 				</div>
 				<div className="flex items-center gap-2">
 					{editable && (
@@ -76,8 +84,14 @@ export function FloorPlanEditor({
 				onPointerMove={(event) => {
 					if (!editable || !dragRef.current) return;
 					const parent = event.currentTarget.getBoundingClientRect();
-					const x = Math.max(0, Math.round(event.clientX - parent.left - dragRef.current.offsetX));
-					const y = Math.max(0, Math.round(event.clientY - parent.top - dragRef.current.offsetY));
+					const x = Math.max(
+						0,
+						Math.round(event.clientX - parent.left - dragRef.current.offsetX),
+					);
+					const y = Math.max(
+						0,
+						Math.round(event.clientY - parent.top - dragRef.current.offsetY),
+					);
 					onTablesChange(
 						tables.map((table) => {
 							const id = table.id ?? table.name;

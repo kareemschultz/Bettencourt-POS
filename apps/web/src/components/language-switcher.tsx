@@ -13,7 +13,7 @@ export function LanguageSwitcher() {
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger className="inline-flex min-h-[44px] items-center gap-2 rounded-md px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground focus-visible:outline-none">
+			<DropdownMenuTrigger className="inline-flex min-h-[44px] items-center gap-2 rounded-md px-3 font-medium text-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none">
 				<Globe className="h-4 w-4" />
 				<span className="hidden sm:inline">{currentLang.flag}</span>
 				<span className="hidden md:inline">{currentLang.label}</span>
@@ -28,7 +28,9 @@ export function LanguageSwitcher() {
 						<span>{lang.flag}</span>
 						<span>{lang.label}</span>
 						{lang.code !== "en" && (
-							<span className="ml-auto text-xs text-muted-foreground">Soon</span>
+							<span className="ml-auto text-muted-foreground text-xs">
+								Soon
+							</span>
 						)}
 					</DropdownMenuItem>
 				))}

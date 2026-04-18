@@ -3,9 +3,9 @@ import * as schema from "@Bettencourt-POS/db/schema";
 import { eq, sql } from "drizzle-orm";
 import {
 	computeNextFailureState,
+	type FailureState,
 	getLockoutRemainingSecondsFromState,
 	PIN_MAX_ATTEMPTS,
-	type FailureState,
 } from "./pin-rate-limit-state";
 
 const fallbackStore = new Map<string, FailureState>();
@@ -74,7 +74,9 @@ export function getClientIp(headers: Headers): string {
 	);
 }
 
-export async function getPinLockoutRemainingSeconds(ip: string): Promise<number> {
+export async function getPinLockoutRemainingSeconds(
+	ip: string,
+): Promise<number> {
 	return runDbOrFallback(
 		async () => {
 			const rows = await db
