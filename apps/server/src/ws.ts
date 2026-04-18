@@ -3,7 +3,6 @@ import {
 	loadUserPermissions,
 } from "@Bettencourt-POS/api/lib/permissions";
 import { auth } from "@Bettencourt-POS/auth";
-import type { Context } from "hono";
 import { createBunWebSocket } from "hono/bun";
 
 export type PosChannel =
@@ -69,55 +68,58 @@ export function publishPosEvent(input: Partial<PosRealtimeMessage>) {
 	}
 }
 
-export const { upgradeWebSocket, websocket, injectWebSocket } =
-	createBunWebSocket();
+export const { upgradeWebSocket, websocket } = createBunWebSocket();
 
-export function wsHandler(c: Context, rawHeaders: Headers) {
-	return upgradeWebSocket((_ctx) => ({
-		async onOpen(_event, ws) {
-			const session = await auth.api.getSession({ headers: rawHeaders });
-			if (!session?.user) {
-				ws.close(1008, "Unauthorized");
-				return;
-			}
-			const permissions = await loadUserPermissions(session.user.id);
-			if (!hasPermission(permissions, "orders.read")) {
-				ws.close(1008, "Forbidden");
-				return;
-			}
+// WebSocket route handler registered directly as Hono middleware so that
+// upgradeWebSocket(factory)(c, next) is actually invoked with the Hono context.
+// Bun passes `server` as the second arg to app.fetch(req, server), which Hono
+// stores as c.env — getBunServer(c) reads it to call server.upgrade().
+export const wsRoute = upgradeWebSocket((c) => ({
+	async onOpen(_event, ws) {
+		const session = await auth.api.getSession({
+			headers: c.req.raw.headers,
+		});
+		if (!session?.user) {
+			ws.close(1008, "Unauthorized");
+			return;
+		}
+		const permissions = await loadUserPermissions(session.user.id);
+		if (!hasPermission(permissions, "orders.read")) {
+			ws.close(1008, "Forbidden");
+			return;
+		}
 
-			const subscribed = parseChannelList(
-				new URL(c.req.url).searchParams
-					.get("channels")
-					?.split(",")
-					.map((value) => value.trim()),
+		const subscribed = parseChannelList(
+			new URL(c.req.url).searchParams
+				.get("channels")
+				?.split(",")
+				.map((value) => value.trim()),
+		);
+		clientChannels.set(ws.raw as WebSocket, new Set(subscribed));
+		safeSend(ws.raw as WebSocket, {
+			channel: "pos:session",
+			event: "connected",
+			payload: { channels: subscribed },
+			timestamp: new Date().toISOString(),
+			source: "server",
+		});
+	},
+	onMessage(event, ws) {
+		try {
+			const parsed = JSON.parse(String(event.data)) as {
+				type?: string;
+				channels?: unknown;
+			};
+			if (parsed.type !== "subscribe") return;
+			clientChannels.set(
+				ws.raw as WebSocket,
+				new Set(parseChannelList(parsed.channels)),
 			);
-			clientChannels.set(ws.raw as WebSocket, new Set(subscribed));
-			safeSend(ws.raw as WebSocket, {
-				channel: "pos:session",
-				event: "connected",
-				payload: { channels: subscribed },
-				timestamp: new Date().toISOString(),
-				source: "server",
-			});
-		},
-		onMessage(event, ws) {
-			try {
-				const parsed = JSON.parse(String(event.data)) as {
-					type?: string;
-					channels?: unknown;
-				};
-				if (parsed.type !== "subscribe") return;
-				clientChannels.set(
-					ws.raw as WebSocket,
-					new Set(parseChannelList(parsed.channels)),
-				);
-			} catch {
-				// Ignore invalid frames from clients.
-			}
-		},
-		onClose(_event, ws) {
-			clientChannels.delete(ws.raw as WebSocket);
-		},
-	})) as unknown as Response;
-}
+		} catch {
+			// Ignore invalid frames from clients.
+		}
+	},
+	onClose(_event, ws) {
+		clientChannels.delete(ws.raw as WebSocket);
+	},
+}));

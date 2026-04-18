@@ -33,7 +33,7 @@ import {
 	recordPinFailure,
 } from "./pin-rate-limit";
 import { backupsRouter } from "./routes/backups";
-import { injectWebSocket, publishPosEvent, websocket, wsHandler } from "./ws";
+import { publishPosEvent, websocket, wsRoute } from "./ws";
 
 // BetterAuth uses 32-char alphanumeric IDs (not UUIDs) for sessions.
 // Rejection sampling avoids modulo bias across the 62-char alphabet.
@@ -243,10 +243,7 @@ app.post("/api/print/network", async (c) => {
 	}
 });
 
-app.get("/ws", (c) => {
-	// Auth is verified in onOpen — upgrade must be called synchronously.
-	return wsHandler(c, c.req.raw.headers);
-});
+app.get("/ws", wsRoute);
 
 // ── Receipt photo upload ───────────────────────────────────────────────
 const ALLOWED_MIME: Record<string, string> = {
@@ -493,16 +490,8 @@ process.on("SIGTERM", () => {
 	process.exit(0);
 });
 
-let _wsInjected = false;
-
 export default {
 	port: process.env.PORT ? Number(process.env.PORT) : 3000,
-	fetch(req: Request, server: Parameters<typeof injectWebSocket>[0]) {
-		if (!_wsInjected) {
-			injectWebSocket(server);
-			_wsInjected = true;
-		}
-		return app.fetch(req);
-	},
+	fetch: app.fetch,
 	websocket,
 };
