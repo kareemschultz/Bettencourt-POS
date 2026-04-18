@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	Check,
+	Download,
 	Loader2,
+	Monitor,
 	Plus,
 	Printer,
 	TestTube2,
@@ -50,7 +52,9 @@ export default function PrintersPage() {
 	const createMutation = useMutation(
 		orpc.printers.create.mutationOptions({
 			onSuccess: () => {
-				qc.invalidateQueries({ queryKey: orpc.printers.list.queryOptions({ input: {} }).queryKey });
+				qc.invalidateQueries({
+					queryKey: orpc.printers.list.queryOptions({ input: {} }).queryKey,
+				});
 				setCreateOpen(false);
 				toast.success("Printer created");
 			},
@@ -60,7 +64,9 @@ export default function PrintersPage() {
 	const updateMutation = useMutation(
 		orpc.printers.update.mutationOptions({
 			onSuccess: () => {
-				qc.invalidateQueries({ queryKey: orpc.printers.list.queryOptions({ input: {} }).queryKey });
+				qc.invalidateQueries({
+					queryKey: orpc.printers.list.queryOptions({ input: {} }).queryKey,
+				});
 				toast.success("Printer updated");
 			},
 		}),
@@ -69,7 +75,9 @@ export default function PrintersPage() {
 	const removeMutation = useMutation(
 		orpc.printers.remove.mutationOptions({
 			onSuccess: () => {
-				qc.invalidateQueries({ queryKey: orpc.printers.list.queryOptions({ input: {} }).queryKey });
+				qc.invalidateQueries({
+					queryKey: orpc.printers.list.queryOptions({ input: {} }).queryKey,
+				});
 				toast.success("Printer removed");
 			},
 		}),
@@ -86,7 +94,9 @@ export default function PrintersPage() {
 					});
 					toast.success(`Test print sent to ${data.name}`);
 				} catch (err) {
-					toast.error(`Print failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+					toast.error(
+						`Print failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+					);
 				}
 			},
 		}),
@@ -95,7 +105,9 @@ export default function PrintersPage() {
 	const setRoutesMutation = useMutation(
 		orpc.printers.setRoutes.mutationOptions({
 			onSuccess: () => {
-				qc.invalidateQueries({ queryKey: orpc.printers.list.queryOptions({ input: {} }).queryKey });
+				qc.invalidateQueries({
+					queryKey: orpc.printers.list.queryOptions({ input: {} }).queryKey,
+				});
 				toast.success("Routes updated");
 			},
 		}),
@@ -140,17 +152,25 @@ export default function PrintersPage() {
 				</Card>
 			) : (
 				<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-					{(printers as Array<{
-						id: string;
-						name: string;
-						connectionType: string;
-						address: string | null;
-						paperWidth: string;
-						isActive: boolean;
-						autoCut: boolean;
-						routes: Array<{ reportingCategoryId: string; categoryName: string | null }>;
-					}>).map((printer) => (
-						<Card key={printer.id} className={!printer.isActive ? "opacity-50" : ""}>
+					{(
+						printers as Array<{
+							id: string;
+							name: string;
+							connectionType: string;
+							address: string | null;
+							paperWidth: string;
+							isActive: boolean;
+							autoCut: boolean;
+							routes: Array<{
+								reportingCategoryId: string;
+								categoryName: string | null;
+							}>;
+						}>
+					).map((printer) => (
+						<Card
+							key={printer.id}
+							className={!printer.isActive ? "opacity-50" : ""}
+						>
 							<CardHeader className="pb-3">
 								<div className="flex items-start justify-between">
 									<div className="flex items-center gap-2">
@@ -165,7 +185,7 @@ export default function PrintersPage() {
 								</div>
 							</CardHeader>
 							<CardContent className="space-y-3">
-								<div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+								<div className="flex flex-wrap gap-2 text-muted-foreground text-xs">
 									<span className="flex items-center gap-1">
 										{printer.connectionType === "network" ? (
 											<Wifi className="size-3" />
@@ -182,10 +202,16 @@ export default function PrintersPage() {
 								{/* Category routes */}
 								{printer.routes.length > 0 && (
 									<div>
-										<p className="mb-1 text-[10px] text-muted-foreground uppercase">Routes</p>
+										<p className="mb-1 text-[10px] text-muted-foreground uppercase">
+											Routes
+										</p>
 										<div className="flex flex-wrap gap-1">
 											{printer.routes.map((r) => (
-												<Badge key={r.reportingCategoryId} variant="outline" className="text-[10px]">
+												<Badge
+													key={r.reportingCategoryId}
+													variant="outline"
+													className="text-[10px]"
+												>
 													{r.categoryName}
 												</Badge>
 											))}
@@ -199,39 +225,47 @@ export default function PrintersPage() {
 										Assign Categories
 									</p>
 									<div className="flex flex-wrap gap-1">
-										{(categories as Array<{ id: string; name: string }>).map((cat) => {
-											const isAssigned = printer.routes.some(
-												(r) => r.reportingCategoryId === cat.id,
-											);
-											return (
-												<button
-													key={cat.id}
-													type="button"
-													onClick={() => {
-														const newIds = isAssigned
-															? printer.routes
-																	.filter((r) => r.reportingCategoryId !== cat.id)
-																	.map((r) => r.reportingCategoryId)
-															: [
-																	...printer.routes.map((r) => r.reportingCategoryId),
-																	cat.id,
-																];
-														setRoutesMutation.mutate({
-															printerId: printer.id,
-															reportingCategoryIds: newIds,
-														});
-													}}
-													className={`rounded-full border px-2 py-0.5 text-[10px] transition-colors ${
-														isAssigned
-															? "border-primary bg-primary/10 text-primary"
-															: "border-border text-muted-foreground hover:border-primary/50"
-													}`}
-												>
-													{isAssigned && <Check className="mr-0.5 inline size-2.5" />}
-													{cat.name}
-												</button>
-											);
-										})}
+										{(categories as Array<{ id: string; name: string }>).map(
+											(cat) => {
+												const isAssigned = printer.routes.some(
+													(r) => r.reportingCategoryId === cat.id,
+												);
+												return (
+													<button
+														key={cat.id}
+														type="button"
+														onClick={() => {
+															const newIds = isAssigned
+																? printer.routes
+																		.filter(
+																			(r) => r.reportingCategoryId !== cat.id,
+																		)
+																		.map((r) => r.reportingCategoryId)
+																: [
+																		...printer.routes.map(
+																			(r) => r.reportingCategoryId,
+																		),
+																		cat.id,
+																	];
+															setRoutesMutation.mutate({
+																printerId: printer.id,
+																reportingCategoryIds: newIds,
+															});
+														}}
+														className={`rounded-full border px-2 py-0.5 text-[10px] transition-colors ${
+															isAssigned
+																? "border-primary bg-primary/10 text-primary"
+																: "border-border text-muted-foreground hover:border-primary/50"
+														}`}
+													>
+														{isAssigned && (
+															<Check className="mr-0.5 inline size-2.5" />
+														)}
+														{cat.name}
+													</button>
+												);
+											},
+										)}
 									</div>
 								</div>
 
@@ -241,16 +275,23 @@ export default function PrintersPage() {
 										<Switch
 											checked={printer.isActive}
 											onCheckedChange={(checked) =>
-												updateMutation.mutate({ id: printer.id, isActive: checked })
+												updateMutation.mutate({
+													id: printer.id,
+													isActive: checked,
+												})
 											}
 										/>
-										<span className="text-xs">{printer.isActive ? "Enabled" : "Disabled"}</span>
+										<span className="text-xs">
+											{printer.isActive ? "Enabled" : "Disabled"}
+										</span>
 									</div>
 									<div className="flex gap-1">
 										<Button
 											variant="outline"
 											size="sm"
-											onClick={() => testMutation.mutate({ printerId: printer.id })}
+											onClick={() =>
+												testMutation.mutate({ printerId: printer.id })
+											}
 											disabled={testMutation.isPending}
 										>
 											<TestTube2 className="mr-1 size-3" /> Test
@@ -273,6 +314,35 @@ export default function PrintersPage() {
 					))}
 				</div>
 			)}
+
+			{/* Terminal Setup */}
+			<Card>
+				<CardContent className="flex items-start gap-4 py-5">
+					<Monitor className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+					<div className="flex-1">
+						<p className="font-medium text-sm">Terminal Setup</p>
+						<p className="mt-0.5 text-muted-foreground text-xs">
+							Configure this Windows terminal for silent receipt printing and
+							fullscreen kiosk mode. Run the setup script once on the POS
+							computer — it patches the desktop shortcut automatically.
+						</p>
+						<ol className="mt-2 list-inside list-decimal space-y-0.5 text-muted-foreground text-xs">
+							<li>Download and run the setup script below</li>
+							<li>Fully close Chrome (system tray → Exit)</li>
+							<li>Reopen Bettencourt's POS from the desktop shortcut</li>
+						</ol>
+					</div>
+					<a
+						href="/downloads/BettencourtPOS-SilentPrint-Setup.bat"
+						download="BettencourtPOS-SilentPrint-Setup.bat"
+					>
+						<Button variant="outline" size="sm">
+							<Download className="mr-1.5 size-3.5" />
+							Download Setup Script
+						</Button>
+					</a>
+				</CardContent>
+			</Card>
 
 			{/* WebUSB info */}
 			{printClient.isWebUsbAvailable && (
@@ -325,7 +395,9 @@ function CreatePrinterForm({
 	isSubmitting: boolean;
 }) {
 	const [name, setName] = useState("");
-	const [connectionType, setConnectionType] = useState<"usb" | "network" | "mock">("network");
+	const [connectionType, setConnectionType] = useState<
+		"usb" | "network" | "mock"
+	>("network");
 	const [address, setAddress] = useState("");
 	const [paperWidth, setPaperWidth] = useState<"58mm" | "80mm">("80mm");
 	const [autoCut, setAutoCut] = useState(true);
@@ -354,7 +426,9 @@ function CreatePrinterForm({
 					<Label>Connection Type</Label>
 					<Select
 						value={connectionType}
-						onValueChange={(v) => setConnectionType(v as "usb" | "network" | "mock")}
+						onValueChange={(v) =>
+							setConnectionType(v as "usb" | "network" | "mock")
+						}
 					>
 						<SelectTrigger>
 							<SelectValue />
