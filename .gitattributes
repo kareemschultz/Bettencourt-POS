@@ -1,0 +1,7 @@
+# Normalise line endings on checkout
+* text=auto
+
+# Windows scripts must have CRLF — cmd.exe ^ continuation requires it
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
