@@ -181,7 +181,7 @@ export function ReceiptPreview({
 				<div className="flex justify-between">
 					<span>Receipt #</span>
 					<span className="font-bold">
-						{`BET-${now.toLocaleDateString("en-US", { month: "short" }).toUpperCase()}${now.getFullYear()}-${String(order.daily_number ?? 0).padStart(3, "0")}`}
+						{`BET-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}-${String(order.daily_number ?? 0).padStart(3, "0")}`}
 					</span>
 				</div>
 				<div className="flex justify-between">
