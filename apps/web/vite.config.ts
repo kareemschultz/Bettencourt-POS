@@ -45,7 +45,7 @@ export default defineConfig({
 					"Enterprise Point of Sale for Bettencourt's Food Inc. — manage registers, inventory, kitchen operations, and reporting.",
 				theme_color: "#0c0c0c",
 				background_color: "#0c0c0c",
-				display: "standalone",
+				display: "fullscreen",
 				orientation: "any",
 				start_url: "/dashboard",
 				scope: "/",
