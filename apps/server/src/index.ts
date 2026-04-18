@@ -33,7 +33,7 @@ import {
 	recordPinFailure,
 } from "./pin-rate-limit";
 import { backupsRouter } from "./routes/backups";
-import { publishPosEvent, websocket, wsHandler } from "./ws";
+import { injectWebSocket, publishPosEvent, websocket, wsHandler } from "./ws";
 
 // BetterAuth uses 32-char alphanumeric IDs (not UUIDs) for sessions.
 // Rejection sampling avoids modulo bias across the 62-char alphabet.
@@ -493,8 +493,16 @@ process.on("SIGTERM", () => {
 	process.exit(0);
 });
 
+let _wsInjected = false;
+
 export default {
 	port: process.env.PORT ? Number(process.env.PORT) : 3000,
-	fetch: app.fetch,
+	fetch(req: Request, server: Parameters<typeof injectWebSocket>[0]) {
+		if (!_wsInjected) {
+			injectWebSocket(server);
+			_wsInjected = true;
+		}
+		return app.fetch(req);
+	},
 	websocket,
 };

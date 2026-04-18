@@ -69,7 +69,8 @@ export function publishPosEvent(input: Partial<PosRealtimeMessage>) {
 	}
 }
 
-export const { upgradeWebSocket, websocket } = createBunWebSocket();
+export const { upgradeWebSocket, websocket, injectWebSocket } =
+	createBunWebSocket();
 
 export function wsHandler(c: Context, rawHeaders: Headers) {
 	return upgradeWebSocket((_ctx) => ({
