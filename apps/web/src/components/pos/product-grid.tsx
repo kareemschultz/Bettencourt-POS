@@ -60,7 +60,7 @@ const ProductCard = memo(function ProductCard({
 		? "bg-muted border-muted-foreground/20 dark:bg-muted/30"
 		: deptColors[product.department_name || ""] || "bg-secondary border-border";
 
-	let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+	const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	return (
 		<button
@@ -69,22 +69,22 @@ const ProductCard = memo(function ProductCard({
 			}}
 			onPointerDown={() => {
 				if (onLongPress) {
-					longPressTimer = setTimeout(() => {
+					longPressTimerRef.current = setTimeout(() => {
 						onLongPress(product);
-						longPressTimer = null;
+						longPressTimerRef.current = null;
 					}, 600);
 				}
 			}}
 			onPointerUp={() => {
-				if (longPressTimer) {
-					clearTimeout(longPressTimer);
-					longPressTimer = null;
+				if (longPressTimerRef.current) {
+					clearTimeout(longPressTimerRef.current);
+					longPressTimerRef.current = null;
 				}
 			}}
 			onPointerLeave={() => {
-				if (longPressTimer) {
-					clearTimeout(longPressTimer);
-					longPressTimer = null;
+				if (longPressTimerRef.current) {
+					clearTimeout(longPressTimerRef.current);
+					longPressTimerRef.current = null;
 				}
 			}}
 			className={cn(

@@ -106,7 +106,6 @@ export async function offlineFetch(
 				maxRetries: 5,
 			};
 			await addOperation(op);
-			console.log("[Offline] Queued operation:", op.id);
 
 			// Return a synthetic response
 			return new Response(
@@ -147,7 +146,6 @@ export async function syncPendingOperations(): Promise<{
 				if (op.retries >= op.maxRetries) {
 					await removeOperation(op.id);
 					failed++;
-					console.error("[Offline] Max retries reached for:", op.id);
 				} else {
 					await updateOperation(op);
 					failed++;

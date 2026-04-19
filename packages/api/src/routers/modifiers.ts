@@ -4,13 +4,17 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
+import { requireOrganizationId } from "../lib/org-context";
 
 // ── listGroups ──────────────────────────────────────────────────────────
-// Returns all modifier groups with their modifiers nested.
+// Returns all modifier groups with their modifiers nested, scoped to org.
 const listGroups = permissionProcedure("modifiers.read")
 	.input(z.object({}).optional())
-	.handler(async () => {
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+
 		const groups = await db.query.modifierGroup.findMany({
+			where: eq(schema.modifierGroup.organizationId, orgId),
 			orderBy: [asc(schema.modifierGroup.name)],
 			with: {
 				modifiers: {
@@ -44,18 +48,8 @@ const createGroup = permissionProcedure("modifiers.create")
 			required: z.boolean().default(false),
 		}),
 	)
-	.handler(async ({ input }) => {
-		// Determine organizationId from the org table
-		const orgRows = await db
-			.select({ id: schema.organization.id })
-			.from(schema.organization)
-			.limit(1);
-
-		if (orgRows.length === 0) {
-			throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
-		}
-
-		const organizationId = orgRows[0]!.id;
+	.handler(async ({ input, context }) => {
+		const organizationId = requireOrganizationId(context);
 		const maxSelect = input.selectionType === "single" ? 1 : 10;
 		const minSelect = input.required ? 1 : 0;
 
@@ -83,11 +77,18 @@ const updateGroup = permissionProcedure("modifiers.update")
 			required: z.boolean().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+
 		const existing = await db
 			.select()
 			.from(schema.modifierGroup)
-			.where(eq(schema.modifierGroup.id, input.id))
+			.where(
+				and(
+					eq(schema.modifierGroup.id, input.id),
+					eq(schema.modifierGroup.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0) {
@@ -107,7 +108,12 @@ const updateGroup = permissionProcedure("modifiers.update")
 		await db
 			.update(schema.modifierGroup)
 			.set(updates)
-			.where(eq(schema.modifierGroup.id, input.id));
+			.where(
+				and(
+					eq(schema.modifierGroup.id, input.id),
+					eq(schema.modifierGroup.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -116,11 +122,18 @@ const updateGroup = permissionProcedure("modifiers.update")
 // Cascade is handled by the DB foreign key (modifiers + productModifierGroup).
 const deleteGroup = permissionProcedure("modifiers.delete")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+
 		const existing = await db
 			.select({ id: schema.modifierGroup.id })
 			.from(schema.modifierGroup)
-			.where(eq(schema.modifierGroup.id, input.id))
+			.where(
+				and(
+					eq(schema.modifierGroup.id, input.id),
+					eq(schema.modifierGroup.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0) {
@@ -129,7 +142,12 @@ const deleteGroup = permissionProcedure("modifiers.delete")
 
 		await db
 			.delete(schema.modifierGroup)
-			.where(eq(schema.modifierGroup.id, input.id));
+			.where(
+				and(
+					eq(schema.modifierGroup.id, input.id),
+					eq(schema.modifierGroup.organizationId, orgId),
+				),
+			);
 
 		return { success: true };
 	});
@@ -143,11 +161,18 @@ const createModifier = permissionProcedure("modifiers.create")
 			priceAdjustment: z.number().default(0),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+
 		const groupExists = await db
 			.select({ id: schema.modifierGroup.id })
 			.from(schema.modifierGroup)
-			.where(eq(schema.modifierGroup.id, input.groupId))
+			.where(
+				and(
+					eq(schema.modifierGroup.id, input.groupId),
+					eq(schema.modifierGroup.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (groupExists.length === 0) {
@@ -175,11 +200,23 @@ const updateModifier = permissionProcedure("modifiers.update")
 			priceAdjustment: z.number().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+
+		// Fetch modifier with its group to verify org ownership
 		const existing = await db
 			.select({ id: schema.modifier.id })
 			.from(schema.modifier)
-			.where(eq(schema.modifier.id, input.id))
+			.innerJoin(
+				schema.modifierGroup,
+				eq(schema.modifier.modifierGroupId, schema.modifierGroup.id),
+			)
+			.where(
+				and(
+					eq(schema.modifier.id, input.id),
+					eq(schema.modifierGroup.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0) {
@@ -202,11 +239,23 @@ const updateModifier = permissionProcedure("modifiers.update")
 // ── deleteModifier ──────────────────────────────────────────────────────
 const deleteModifier = permissionProcedure("modifiers.delete")
 	.input(z.object({ id: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+
+		// Fetch modifier with its group to verify org ownership
 		const existing = await db
 			.select({ id: schema.modifier.id })
 			.from(schema.modifier)
-			.where(eq(schema.modifier.id, input.id))
+			.innerJoin(
+				schema.modifierGroup,
+				eq(schema.modifier.modifierGroupId, schema.modifierGroup.id),
+			)
+			.where(
+				and(
+					eq(schema.modifier.id, input.id),
+					eq(schema.modifierGroup.organizationId, orgId),
+				),
+			)
 			.limit(1);
 
 		if (existing.length === 0) {
@@ -226,7 +275,40 @@ const linkGroupToProduct = permissionProcedure("modifiers.update")
 			productId: z.string().uuid(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+
+		// Verify both product and group belong to this org
+		const [groupRows, productRows] = await Promise.all([
+			db
+				.select({ id: schema.modifierGroup.id })
+				.from(schema.modifierGroup)
+				.where(
+					and(
+						eq(schema.modifierGroup.id, input.groupId),
+						eq(schema.modifierGroup.organizationId, orgId),
+					),
+				)
+				.limit(1),
+			db
+				.select({ id: schema.product.id })
+				.from(schema.product)
+				.where(
+					and(
+						eq(schema.product.id, input.productId),
+						eq(schema.product.organizationId, orgId),
+					),
+				)
+				.limit(1),
+		]);
+
+		if (groupRows.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Modifier group not found" });
+		}
+		if (productRows.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Product not found" });
+		}
+
 		await db
 			.insert(schema.productModifierGroup)
 			.values({
@@ -246,7 +328,40 @@ const unlinkGroupFromProduct = permissionProcedure("modifiers.update")
 			productId: z.string().uuid(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+
+		// Verify both product and group belong to this org
+		const [groupRows, productRows] = await Promise.all([
+			db
+				.select({ id: schema.modifierGroup.id })
+				.from(schema.modifierGroup)
+				.where(
+					and(
+						eq(schema.modifierGroup.id, input.groupId),
+						eq(schema.modifierGroup.organizationId, orgId),
+					),
+				)
+				.limit(1),
+			db
+				.select({ id: schema.product.id })
+				.from(schema.product)
+				.where(
+					and(
+						eq(schema.product.id, input.productId),
+						eq(schema.product.organizationId, orgId),
+					),
+				)
+				.limit(1),
+		]);
+
+		if (groupRows.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Modifier group not found" });
+		}
+		if (productRows.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Product not found" });
+		}
+
 		await db
 			.delete(schema.productModifierGroup)
 			.where(

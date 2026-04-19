@@ -871,7 +871,7 @@ const checkout = permissionProcedure("orders.create")
 				targets: printTargets.map((t) => t.printerName),
 			});
 		} catch (err) {
-			console.error("[pos] Print dispatch failed:", err);
+			console.error("print dispatch failed:", err);
 		}
 
 		return result;
@@ -881,7 +881,9 @@ const checkout = permissionProcedure("orders.create")
 // Scan barcode: check product_barcode table first, then fall back to product.sku
 const lookupBarcode = permissionProcedure("orders.create")
 	.input(z.object({ barcode: z.string().min(1).max(100) }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+
 		// First check product_barcode table
 		const barcodeRows = await db
 			.select({
@@ -900,7 +902,12 @@ const lookupBarcode = permissionProcedure("orders.create")
 				schema.reportingCategory,
 				eq(schema.product.reportingCategoryId, schema.reportingCategory.id),
 			)
-			.where(eq(schema.productBarcode.barcode, input.barcode));
+			.where(
+				and(
+					eq(schema.productBarcode.barcode, input.barcode),
+					eq(schema.product.organizationId, orgId),
+				),
+			);
 
 		if (barcodeRows.length > 0) {
 			return barcodeRows[0]!;
@@ -920,7 +927,12 @@ const lookupBarcode = permissionProcedure("orders.create")
 				schema.reportingCategory,
 				eq(schema.product.reportingCategoryId, schema.reportingCategory.id),
 			)
-			.where(eq(schema.product.sku, input.barcode));
+			.where(
+				and(
+					eq(schema.product.sku, input.barcode),
+					eq(schema.product.organizationId, orgId),
+				),
+			);
 
 		if (skuRows.length > 0) {
 			return skuRows[0]!;
@@ -941,7 +953,40 @@ const toggle86 = permissionProcedure("orders.update")
 		}),
 	)
 	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const { productId, locationId, isAvailable } = input;
+
+		// Verify the location belongs to this org
+		const locationRows = await db
+			.select({ id: schema.location.id })
+			.from(schema.location)
+			.where(
+				and(
+					eq(schema.location.id, locationId),
+					eq(schema.location.organizationId, orgId),
+				),
+			)
+			.limit(1);
+
+		if (locationRows.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Location not found" });
+		}
+
+		// Verify the product belongs to this org
+		const productOrgRows = await db
+			.select({ id: schema.product.id })
+			.from(schema.product)
+			.where(
+				and(
+					eq(schema.product.id, productId),
+					eq(schema.product.organizationId, orgId),
+				),
+			)
+			.limit(1);
+
+		if (productOrgRows.length === 0) {
+			throw new ORPCError("NOT_FOUND", { message: "Product not found" });
+		}
 
 		// Upsert productLocation row
 		await db
