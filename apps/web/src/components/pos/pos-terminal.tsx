@@ -290,6 +290,8 @@ export function POSTerminal({
 	const departments: { id: string; name: string; pinProtected: boolean }[] =
 		posData?.departments || [];
 	const liveProducts = posData?.products || [];
+	const defaultTaxRate = posData?.defaultTaxRate ?? 0;
+	const defaultTaxName = posData?.defaultTaxName ?? "Tax";
 	const effectiveProducts =
 		liveProducts.length > 0
 			? liveProducts
