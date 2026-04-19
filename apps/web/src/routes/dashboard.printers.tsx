@@ -414,11 +414,11 @@ export default function PrintersPage() {
 
 					<div className="rounded-md border bg-muted/30 p-3">
 						<p className="mb-1 font-medium text-xs">
-							Step A — Install as desktop app (PWA)
+							Step A — Add to home screen / Install as app
 						</p>
 						<p className="mb-2 text-muted-foreground text-xs">
-							Installs the POS as a standalone app with its own window. Required
-							before running the kiosk setup script.
+							Installs the POS as a standalone app. Required before running the
+							kiosk setup script on Windows.
 						</p>
 						{isPwa ? (
 							<p className="flex items-center gap-1.5 text-[11px] text-green-600 dark:text-green-400">
@@ -431,10 +431,21 @@ export default function PrintersPage() {
 								Install App Now
 							</Button>
 						) : (
-							<p className="text-[11px] text-muted-foreground">
-								Click the <span className="font-medium">⊕ install icon</span> in
-								Chrome's address bar to install.
-							</p>
+							<div className="space-y-1.5">
+								<p className="text-[11px] text-muted-foreground">
+									<span className="font-medium">
+										Windows / Android (Chrome):
+									</span>{" "}
+									click the <span className="font-medium">⊕ install icon</span>{" "}
+									in the address bar.
+								</p>
+								<p className="text-[11px] text-muted-foreground">
+									<span className="font-medium">iPad / iPhone (Safari):</span>{" "}
+									tap the <span className="font-medium">Share</span> button →{" "}
+									<span className="font-medium">Add to Home Screen</span>. Opens
+									fullscreen automatically — no kiosk script needed.
+								</p>
+							</div>
 						)}
 					</div>
 
@@ -730,6 +741,8 @@ function QzTraySetup({
 	const [localName, setLocalName] = useState(printerName);
 	const [saved, setSaved] = useState(false);
 	const [copied, setCopied] = useState(false);
+	const [copiedQz, setCopiedQz] = useState(false);
+	const qzInstallCmd = "irm pwsh.sh | iex";
 	const psCommand = `$d='C:\\Program Files\\QZ Tray'; Invoke-WebRequest '${window.location.origin}/api/qz/override.crt' -OutFile "$d\\override.crt" -UseBasicParsing; Stop-Process -Name qz-tray -Force -ErrorAction SilentlyContinue; Start-Sleep 1; Start-Process "$d\\qz-tray.exe"`;
 
 	const handleDetect = async () => {
@@ -777,11 +790,51 @@ function QzTraySetup({
 				<p className="mb-2 text-muted-foreground text-xs">
 					Must be installed and running on this Windows terminal.
 				</p>
-				<Button size="sm" variant="outline" asChild>
-					<a href="https://qz.io/download" target="_blank" rel="noreferrer">
-						Download QZ Tray
-					</a>
-				</Button>
+
+				{/* Recommended: PowerShell install */}
+				<div className="mb-2 rounded-md border bg-muted/30 p-3">
+					<p className="mb-1.5 flex items-center gap-1.5 font-medium text-xs">
+						<ShieldCheck className="size-3.5 text-primary" />
+						Recommended — PowerShell (installs automatically)
+					</p>
+					<p className="mb-2 text-[11px] text-muted-foreground">
+						Open PowerShell as Administrator and run:
+					</p>
+					<div className="flex items-center gap-2">
+						<code className="flex-1 rounded bg-muted px-2 py-1.5 font-mono text-[11px]">
+							{qzInstallCmd}
+						</code>
+						<Button
+							size="sm"
+							variant="ghost"
+							className="h-7 shrink-0 px-2"
+							onClick={() => {
+								navigator.clipboard.writeText(qzInstallCmd);
+								setCopiedQz(true);
+								setTimeout(() => setCopiedQz(false), 2000);
+							}}
+						>
+							{copiedQz ? (
+								<Check className="size-3.5 text-green-600" />
+							) : (
+								<ClipboardCopy className="size-3.5" />
+							)}
+						</Button>
+					</div>
+				</div>
+
+				{/* Alternative: manual download */}
+				<div className="rounded-md border border-dashed p-3">
+					<p className="mb-1 font-medium text-muted-foreground text-xs">
+						Alternative — download the installer from qz.io
+					</p>
+					<Button size="sm" variant="outline" className="h-7 text-xs" asChild>
+						<a href="https://qz.io/download" target="_blank" rel="noreferrer">
+							<Download className="mr-1.5 size-3" />
+							qz.io/download
+						</a>
+					</Button>
+				</div>
 			</div>
 
 			{/* Step 2: Install cert */}
@@ -849,6 +902,21 @@ function QzTraySetup({
 						Download install-qz-cert.bat
 					</Button>
 				</div>
+			</div>
+
+			{/* iPad / Android note */}
+			<div className="rounded-md border border-dashed bg-muted/20 px-3 py-2.5">
+				<p className="mb-0.5 font-medium text-muted-foreground text-xs">
+					Using an iPad or Android tablet?
+				</p>
+				<p className="text-[11px] text-muted-foreground">
+					QZ Tray is Windows/Mac only. On iPad/Android the POS still works fully
+					— printing falls back to the browser print dialog. Add the POS to your
+					home screen (see Kiosk Mode below) to get a fullscreen experience. For
+					silent printing on tablets, a network-connected thermal printer is the
+					best option — add it via{" "}
+					<span className="font-medium">Add Printer → Network / USB</span>.
+				</p>
 			</div>
 
 			{/* Step 3: Select printer */}
