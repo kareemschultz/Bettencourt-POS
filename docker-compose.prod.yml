@@ -14,6 +14,8 @@ services:
       BETTER_AUTH_URL: https://pos.karetechsolutions.com
       CORS_ORIGIN: https://pos.karetechsolutions.com,https://pos.bettencourtgy.com,tauri://localhost
       VITE_SERVER_URL: https://pos.karetechsolutions.com
+      QZ_TRAY_CERT: ${QZ_TRAY_CERT}
+      QZ_TRAY_PRIVATE_KEY: ${QZ_TRAY_PRIVATE_KEY}
     deploy:
       resources:
         limits:

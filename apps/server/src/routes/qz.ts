@@ -4,8 +4,19 @@ import { Hono } from "hono";
 
 export const qzRouter = new Hono();
 
+// Env vars store the PEM files as base64 to avoid multiline issues in
+// Docker Compose env_file handling (which doesn't expand \n escapes).
+function decodePem(b64: string | undefined): string {
+	if (!b64) return "";
+	try {
+		return Buffer.from(b64, "base64").toString("utf8");
+	} catch {
+		return "";
+	}
+}
+
 qzRouter.get("/api/qz/certificate", (c) => {
-	return c.text(env.QZ_TRAY_CERT ?? "");
+	return c.text(decodePem(env.QZ_TRAY_CERT));
 });
 
 qzRouter.get("/api/qz/sign", (c) => {
@@ -14,7 +25,7 @@ qzRouter.get("/api/qz/sign", (c) => {
 	try {
 		const sign = createSign("SHA512");
 		sign.update(request);
-		return c.text(sign.sign(env.QZ_TRAY_PRIVATE_KEY, "base64"));
+		return c.text(sign.sign(decodePem(env.QZ_TRAY_PRIVATE_KEY), "base64"));
 	} catch {
 		return c.text("", 200);
 	}
