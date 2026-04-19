@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	Check,
+	ClipboardCopy,
 	Download,
 	Loader2,
 	Monitor,
@@ -393,36 +394,36 @@ export default function PrintersPage() {
 				</CardContent>
 			</Card>
 
-			{/* Terminal Setup */}
-			<Card>
+			{/* Kiosk Mode — optional, clearly separated */}
+			<Card className="border-dashed">
 				<CardContent className="space-y-4 py-5">
-					{/* Header row */}
 					<div className="flex items-start gap-3">
 						<Monitor className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
 						<div className="flex-1">
-							<p className="font-medium text-sm">Terminal Setup</p>
+							<p className="font-medium text-sm">
+								Optional — Fullscreen Kiosk Mode
+							</p>
 							<p className="mt-0.5 text-muted-foreground text-xs">
-								Configure this Windows terminal for silent receipt printing and
-								fullscreen kiosk mode. Works with both the installed PWA and
-								Chrome browser shortcuts.
+								This is separate from printing. Skip this if you only need
+								silent printing — the steps above are all that's required for
+								that. Kiosk mode hides the Windows taskbar and locks the
+								terminal into fullscreen POS view.
 							</p>
 						</div>
 					</div>
 
-					{/* Option A — Install as app (PWA) */}
 					<div className="rounded-md border bg-muted/30 p-3">
 						<p className="mb-1 font-medium text-xs">
-							Option A — Install as App (recommended)
+							Step A — Install as desktop app (PWA)
 						</p>
 						<p className="mb-2 text-muted-foreground text-xs">
-							Installs the POS as a desktop app. After installing, run the Setup
-							Script below once to enable fullscreen kiosk mode and silent
-							printing.
+							Installs the POS as a standalone app with its own window. Required
+							before running the kiosk setup script.
 						</p>
 						{isPwa ? (
 							<p className="flex items-center gap-1.5 text-[11px] text-green-600 dark:text-green-400">
-								<Check className="size-3" /> Installed as an app on this device
-								— run the setup script below if not yet in kiosk mode
+								<Check className="size-3" /> Already installed as an app on this
+								device
 							</p>
 						) : pwaPrompt ? (
 							<Button size="sm" onClick={installPwa} className="h-7 text-xs">
@@ -431,41 +432,33 @@ export default function PrintersPage() {
 							</Button>
 						) : (
 							<p className="text-[11px] text-muted-foreground">
-								To install: click the{" "}
-								<span className="font-medium">⊕ install icon</span> in Chrome's
-								address bar. If you just removed the app, stay on this page for
-								30 seconds — Chrome will re-enable the install option.
+								Click the <span className="font-medium">⊕ install icon</span> in
+								Chrome's address bar to install.
 							</p>
 						)}
 					</div>
 
-					{/* Option B — Setup script */}
 					<div className="rounded-md border bg-muted/30 p-3">
 						<p className="mb-1 font-medium text-xs">
-							Setup Script — Kiosk Mode + Silent Printing
+							Step B — Run kiosk setup script (after installing the app above)
 						</p>
 						<p className="mb-2 text-muted-foreground text-xs">
-							Run once on the POS computer (after installing the app above).
-							Patches the Desktop shortcut with kiosk flags and sets Windows
-							taskbar to auto-hide. Creates a shortcut automatically if none
-							exists.
+							Patches the desktop shortcut with fullscreen kiosk flags and
+							auto-hides the Windows taskbar. Run once per terminal.
 						</p>
-						<div className="flex flex-wrap items-center gap-2">
-							<a
-								href="/downloads/BettencourtPOS-SilentPrint-Setup.bat"
-								download="BettencourtPOS-SilentPrint-Setup.bat"
-							>
-								<Button variant="outline" size="sm" className="h-7 text-xs">
-									<Download className="mr-1.5 size-3" />
-									Download Setup Script
-								</Button>
-							</a>
-						</div>
+						<a
+							href="/downloads/BettencourtPOS-SilentPrint-Setup.bat"
+							download="BettencourtPOS-SilentPrint-Setup.bat"
+						>
+							<Button variant="outline" size="sm" className="h-7 text-xs">
+								<Download className="mr-1.5 size-3" />
+								Download Kiosk Setup Script
+							</Button>
+						</a>
 						<p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
-							Windows will show &quot;Publisher could not be verified&quot; —
+							Windows may show &quot;Publisher could not be verified&quot; —
 							this is expected. Click <span className="font-semibold">Run</span>{" "}
-							to proceed. The script will request administrator access
-							automatically.
+							and approve the admin prompt.
 						</p>
 					</div>
 				</CardContent>
@@ -736,6 +729,8 @@ function QzTraySetup({
 	const [detecting, setDetecting] = useState(false);
 	const [localName, setLocalName] = useState(printerName);
 	const [saved, setSaved] = useState(false);
+	const [copied, setCopied] = useState(false);
+	const psCommand = `$d='C:\\Program Files\\QZ Tray'; Invoke-WebRequest '${window.location.origin}/api/qz/override.crt' -OutFile "$d\\override.crt" -UseBasicParsing; Stop-Process -Name qz-tray -Force -ErrorAction SilentlyContinue; Start-Sleep 1; Start-Process "$d\\qz-tray.exe"`;
 
 	const handleDetect = async () => {
 		setDetecting(true);
@@ -795,27 +790,65 @@ function QzTraySetup({
 					Step 2 — Trust this POS server (run once per terminal)
 				</p>
 				<p className="mb-3 text-muted-foreground text-xs">
-					Downloads and installs the signing certificate so QZ Tray never shows
-					a dialog again.
+					Installs the signing certificate so QZ Tray never shows a security
+					prompt again. Both options below do the exact same thing.
 				</p>
-				<div className="flex flex-wrap gap-2">
-					<Button size="sm" onClick={downloadBat} className="gap-2">
-						<Download className="size-4" />
+
+				{/* Recommended: PowerShell */}
+				<div className="mb-2 rounded-md border bg-muted/30 p-3">
+					<p className="mb-1.5 flex items-center gap-1.5 font-medium text-xs">
+						<ShieldCheck className="size-3.5 text-primary" />
+						Recommended — PowerShell (no download needed)
+					</p>
+					<p className="mb-2 text-[11px] text-muted-foreground">
+						Open PowerShell as Administrator, paste this, press Enter:
+					</p>
+					<div className="flex items-start gap-2">
+						<code className="flex-1 break-all rounded bg-muted px-2 py-1.5 font-mono text-[11px] leading-relaxed">
+							{psCommand}
+						</code>
+						<Button
+							size="sm"
+							variant="ghost"
+							className="h-7 shrink-0 px-2"
+							onClick={() => {
+								navigator.clipboard.writeText(psCommand);
+								setCopied(true);
+								setTimeout(() => setCopied(false), 2000);
+							}}
+						>
+							{copied ? (
+								<Check className="size-3.5 text-green-600" />
+							) : (
+								<ClipboardCopy className="size-3.5" />
+							)}
+						</Button>
+					</div>
+					<p className="mt-2 text-[11px] text-muted-foreground">
+						After it runs, reload this page and click{" "}
+						<span className="font-medium">Always Allow</span> once. Done.
+					</p>
+				</div>
+
+				{/* Alternative: BAT file */}
+				<div className="rounded-md border border-dashed p-3">
+					<p className="mb-1 font-medium text-muted-foreground text-xs">
+						Alternative — .bat file (same as above, just a downloadable file)
+					</p>
+					<p className="mb-2 text-[11px] text-muted-foreground">
+						Prefer a file you can save and run? Download and run as
+						Administrator. It does exactly what the PowerShell command does.
+					</p>
+					<Button
+						size="sm"
+						variant="outline"
+						onClick={downloadBat}
+						className="h-7 gap-1.5 text-xs"
+					>
+						<Download className="size-3" />
 						Download install-qz-cert.bat
 					</Button>
-					<Button size="sm" variant="outline" asChild>
-						<a href="/api/qz/override.crt" download="override.crt">
-							Download override.crt
-						</a>
-					</Button>
 				</div>
-				<p className="mt-2 text-muted-foreground text-xs">
-					Run the .bat as Administrator. Or manually copy override.crt to{" "}
-					<code className="rounded bg-muted px-1 text-xs">
-						C:\Program Files\QZ Tray\
-					</code>{" "}
-					and restart QZ Tray.
-				</p>
 			</div>
 
 			{/* Step 3: Select printer */}
