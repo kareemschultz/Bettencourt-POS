@@ -1074,24 +1074,6 @@ export function POSTerminal({
 						</Button>
 					</div>
 
-					<div className="flex items-center gap-1 rounded-md border p-1">
-						<span className="px-1 text-[10px] text-muted-foreground uppercase">
-							Course
-						</span>
-						{[1, 2, 3, 4].map((course) => (
-							<Button
-								key={course}
-								type="button"
-								size="sm"
-								variant={selectedCourse === course ? "default" : "ghost"}
-								className="h-7 px-2 text-xs"
-								onClick={() => setSelectedCourse(course)}
-							>
-								{course}
-							</Button>
-						))}
-					</div>
-
 					{(orderMode === "pickup" || orderMode === "delivery") && (
 						<>
 							<div className="flex flex-col gap-1">
@@ -1219,14 +1201,14 @@ export function POSTerminal({
 			<div className="flex flex-1 overflow-hidden">
 				<div className="flex flex-col flex-1 overflow-hidden">
 					{/* Product search */}
-					<div className="px-2 pt-2 pb-1 sm:px-3">
+					<div className="px-2 pt-2 pb-2 sm:px-3">
 						<div className="relative">
-							<Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+							<Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary/60" />
 							<Input
 								placeholder="Search menu..."
 								value={productSearch}
 								onChange={(e) => setProductSearch(e.target.value)}
-								className="h-8 pl-8 pr-8 text-sm"
+								className="h-9 pl-9 pr-8 text-sm rounded-lg border-2 border-border bg-muted/30 placeholder:text-muted-foreground/60 focus-visible:border-primary focus-visible:bg-background transition-colors"
 							/>
 							{productSearch && (
 								<Button
