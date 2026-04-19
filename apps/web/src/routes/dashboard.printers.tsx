@@ -414,11 +414,11 @@ export default function PrintersPage() {
 
 					<div className="rounded-md border bg-muted/30 p-3">
 						<p className="mb-1 font-medium text-xs">
-							Step A — Add to home screen / Install as app
+							Step A — Install as desktop app (PWA)
 						</p>
 						<p className="mb-2 text-muted-foreground text-xs">
-							Installs the POS as a standalone app. Required before running the
-							kiosk setup script on Windows.
+							Installs the POS as a standalone app with its own window. Required
+							before running the kiosk setup script.
 						</p>
 						{isPwa ? (
 							<p className="flex items-center gap-1.5 text-[11px] text-green-600 dark:text-green-400">
@@ -431,21 +431,10 @@ export default function PrintersPage() {
 								Install App Now
 							</Button>
 						) : (
-							<div className="space-y-1.5">
-								<p className="text-[11px] text-muted-foreground">
-									<span className="font-medium">
-										Windows / Android (Chrome):
-									</span>{" "}
-									click the <span className="font-medium">⊕ install icon</span>{" "}
-									in the address bar.
-								</p>
-								<p className="text-[11px] text-muted-foreground">
-									<span className="font-medium">iPad / iPhone (Safari):</span>{" "}
-									tap the <span className="font-medium">Share</span> button →{" "}
-									<span className="font-medium">Add to Home Screen</span>. Opens
-									fullscreen automatically — no kiosk script needed.
-								</p>
-							</div>
+							<p className="text-[11px] text-muted-foreground">
+								Click the <span className="font-medium">⊕ install icon</span> in
+								Chrome's address bar to install.
+							</p>
 						)}
 					</div>
 
@@ -847,14 +836,38 @@ function QzTraySetup({
 					prompt again. Both options below do the exact same thing.
 				</p>
 
-				{/* Recommended: PowerShell */}
+				{/* Recommended: BAT file */}
 				<div className="mb-2 rounded-md border bg-muted/30 p-3">
 					<p className="mb-1.5 flex items-center gap-1.5 font-medium text-xs">
 						<ShieldCheck className="size-3.5 text-primary" />
-						Recommended — PowerShell (no download needed)
+						Recommended — Download install-qz-cert.bat
 					</p>
 					<p className="mb-2 text-[11px] text-muted-foreground">
-						Open PowerShell as Administrator, paste this, press Enter:
+						Download and run as Administrator. Downloads the certificate,
+						installs it, and restarts QZ Tray automatically.
+					</p>
+					<Button
+						size="sm"
+						onClick={downloadBat}
+						className="h-7 gap-1.5 text-xs"
+					>
+						<Download className="size-3" />
+						Download install-qz-cert.bat
+					</Button>
+					<p className="mt-2 text-[11px] text-muted-foreground">
+						After it runs, reload this page and click{" "}
+						<span className="font-medium">Always Allow</span> once. Done.
+					</p>
+				</div>
+
+				{/* Alternative: PowerShell */}
+				<div className="rounded-md border border-dashed p-3">
+					<p className="mb-1 font-medium text-muted-foreground text-xs">
+						Alternative — PowerShell (same as above, just a one-liner)
+					</p>
+					<p className="mb-2 text-[11px] text-muted-foreground">
+						Open PowerShell as Administrator and paste this. Does exactly what
+						the .bat does.
 					</p>
 					<div className="flex items-start gap-2">
 						<code className="flex-1 break-all rounded bg-muted px-2 py-1.5 font-mono text-[11px] leading-relaxed">
@@ -877,46 +890,7 @@ function QzTraySetup({
 							)}
 						</Button>
 					</div>
-					<p className="mt-2 text-[11px] text-muted-foreground">
-						After it runs, reload this page and click{" "}
-						<span className="font-medium">Always Allow</span> once. Done.
-					</p>
 				</div>
-
-				{/* Alternative: BAT file */}
-				<div className="rounded-md border border-dashed p-3">
-					<p className="mb-1 font-medium text-muted-foreground text-xs">
-						Alternative — .bat file (same as above, just a downloadable file)
-					</p>
-					<p className="mb-2 text-[11px] text-muted-foreground">
-						Prefer a file you can save and run? Download and run as
-						Administrator. It does exactly what the PowerShell command does.
-					</p>
-					<Button
-						size="sm"
-						variant="outline"
-						onClick={downloadBat}
-						className="h-7 gap-1.5 text-xs"
-					>
-						<Download className="size-3" />
-						Download install-qz-cert.bat
-					</Button>
-				</div>
-			</div>
-
-			{/* iPad / Android note */}
-			<div className="rounded-md border border-dashed bg-muted/20 px-3 py-2.5">
-				<p className="mb-0.5 font-medium text-muted-foreground text-xs">
-					Using an iPad or Android tablet?
-				</p>
-				<p className="text-[11px] text-muted-foreground">
-					QZ Tray is Windows/Mac only. On iPad/Android the POS still works fully
-					— printing falls back to the browser print dialog. Add the POS to your
-					home screen (see Kiosk Mode below) to get a fullscreen experience. For
-					silent printing on tablets, a network-connected thermal printer is the
-					best option — add it via{" "}
-					<span className="font-medium">Add Printer → Network / USB</span>.
-				</p>
 			</div>
 
 			{/* Step 3: Select printer */}
