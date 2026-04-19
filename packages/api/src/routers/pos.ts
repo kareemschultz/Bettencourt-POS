@@ -410,14 +410,19 @@ const checkout = permissionProcedure("orders.create")
 							message: `Price mismatch for product ${item.productId}: expected ${serverPrice}, got ${item.unitPrice}`,
 						});
 					}
-					if (Math.abs(item.taxRate - serverTax) > 0.001) {
+					// Validate taxRate only when client sends a non-zero value (VAT-exclusive mode).
+					// taxRate=0 is accepted for VAT-inclusive pricing where tax is baked into the price.
+					if (
+						item.taxRate > 0.001 &&
+						Math.abs(item.taxRate - serverTax) > 0.001
+					) {
 						throw new ORPCError("BAD_REQUEST", {
 							message: `Tax rate mismatch for product ${item.productId}: expected ${serverTax}, got ${item.taxRate}`,
 						});
 					}
 					// Override with server-canonical values
 					item.unitPrice = serverPrice;
-					item.taxRate = serverTax;
+					if (item.taxRate > 0.001) item.taxRate = serverTax;
 				}
 			}
 		}
