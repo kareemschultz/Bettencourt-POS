@@ -377,7 +377,7 @@ export function CartPanel({
 					{onQuickCashTender && items.length > 0 && (
 						<div className="flex gap-1.5">
 							{(() => {
-								const denominations = [500, 1000, 2000, 5000, 10000, 20000];
+								const denominations = [100, 500, 1000, 2000, 5000];
 								const quickAmounts = [
 									grandTotal,
 									...denominations.filter((d) => d > grandTotal).slice(0, 3),
