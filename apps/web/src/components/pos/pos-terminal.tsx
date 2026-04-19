@@ -1,6 +1,8 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
 	Barcode,
+	ChevronLeft,
+	ChevronRight,
 	Clock,
 	FileText,
 	Gift,
@@ -14,7 +16,7 @@ import {
 	UserSearch,
 	X as XIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -123,6 +125,29 @@ export function POSTerminal({
 	} | null>(null);
 
 	const { requestOverride, SupervisorDialog } = useSupervisorOverride();
+
+	const categoryScrollRef = useRef<HTMLDivElement>(null);
+	const [catScrollState, setCatScrollState] = useState({
+		canLeft: false,
+		canRight: false,
+	});
+	useEffect(() => {
+		const el = categoryScrollRef.current;
+		if (!el) return;
+		const update = () =>
+			setCatScrollState({
+				canLeft: el.scrollLeft > 4,
+				canRight: el.scrollLeft < el.scrollWidth - el.clientWidth - 4,
+			});
+		update();
+		el.addEventListener("scroll", update, { passive: true });
+		const ro = new ResizeObserver(update);
+		ro.observe(el);
+		return () => {
+			el.removeEventListener("scroll", update);
+			ro.disconnect();
+		};
+	}, []);
 
 	// Loyalty points for selected customer
 	const { data: loyaltyData } = useQuery({
@@ -709,77 +734,113 @@ export function POSTerminal({
 				</Select>
 
 				{/* Department filter */}
-				<div className="flex flex-1 items-center gap-1.5 overflow-x-auto py-0.5">
-					<button
-						type="button"
-						className={`shrink-0 touch-manipulation rounded-full border px-2.5 py-1 font-medium text-xs sm:px-3 ${selectedDepartment === "all" ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background hover:bg-accent"}`}
-						onClick={() => setSelectedDepartment("all")}
+				<div className="relative flex min-w-0 flex-1 items-center">
+					{catScrollState.canLeft && (
+						<button
+							type="button"
+							aria-label="Scroll categories left"
+							className="absolute left-0 z-10 flex h-full items-center bg-gradient-to-r from-background via-background/90 to-transparent pr-3 pl-0.5"
+							onClick={() =>
+								categoryScrollRef.current?.scrollBy({
+									left: -160,
+									behavior: "smooth",
+								})
+							}
+						>
+							<ChevronLeft className="size-4 text-foreground" />
+						</button>
+					)}
+					<div
+						ref={categoryScrollRef}
+						className="scrollbar-none flex flex-1 items-center gap-1.5 overflow-x-auto py-0.5"
+						style={{ scrollbarWidth: "none" }}
 					>
-						All
-					</button>
-					{departments.map((dept) => {
-						const isLocked =
-							dept.pinProtected && !unlockedCategories.has(dept.id);
-						return (
-							<button
-								key={dept.id}
-								type="button"
-								className={`flex shrink-0 touch-manipulation items-center gap-1 rounded-full border px-2.5 py-1 font-medium text-xs sm:px-3 ${selectedDepartment === dept.id ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background hover:bg-accent"}`}
-								onClick={async () => {
-									if (isLocked) {
-										try {
-											await requestOverride(
-												"pos.unlock_category",
-												`Unlock ${dept.name}`,
-											);
-											setUnlockedCategories((prev) => {
-												const next = new Set(prev);
-												next.add(dept.id);
-												return next;
-											});
+						<button
+							type="button"
+							className={`shrink-0 touch-manipulation rounded-full border px-2.5 py-1 font-medium text-xs sm:px-3 ${selectedDepartment === "all" ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background hover:bg-accent"}`}
+							onClick={() => setSelectedDepartment("all")}
+						>
+							All
+						</button>
+						{departments.map((dept) => {
+							const isLocked =
+								dept.pinProtected && !unlockedCategories.has(dept.id);
+							return (
+								<button
+									key={dept.id}
+									type="button"
+									className={`flex shrink-0 touch-manipulation items-center gap-1 rounded-full border px-2.5 py-1 font-medium text-xs sm:px-3 ${selectedDepartment === dept.id ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background hover:bg-accent"}`}
+									onClick={async () => {
+										if (isLocked) {
+											try {
+												await requestOverride(
+													"pos.unlock_category",
+													`Unlock ${dept.name}`,
+												);
+												setUnlockedCategories((prev) => {
+													const next = new Set(prev);
+													next.add(dept.id);
+													return next;
+												});
+												setSelectedDepartment(dept.id);
+											} catch {
+												// cancelled
+											}
+										} else {
 											setSelectedDepartment(dept.id);
-										} catch {
-											// cancelled
 										}
-									} else {
-										setSelectedDepartment(dept.id);
+									}}
+								>
+									{dept.name}
+									{isLocked && <Lock className="size-3 opacity-60" />}
+								</button>
+							);
+						})}
+						{departmentOverrideActive ? (
+							<button
+								type="button"
+								className="shrink-0 touch-manipulation rounded-full border border-amber-400 bg-amber-50 px-2.5 py-1 font-medium text-amber-700 text-xs sm:px-3 dark:bg-amber-900/20 dark:text-amber-400"
+								onClick={() => {
+									setDepartmentOverrideActive(false);
+									setSelectedDepartment("all");
+								}}
+							>
+								Override Active ✕
+							</button>
+						) : (
+							<button
+								type="button"
+								className="shrink-0 touch-manipulation rounded-full border border-input border-dashed bg-background px-2.5 py-1 font-medium text-xs hover:bg-accent sm:px-3"
+								onClick={async () => {
+									try {
+										await requestOverride(
+											"departments.override",
+											"Access All Departments",
+										);
+										setDepartmentOverrideActive(true);
+										setSelectedDepartment("all");
+									} catch {
+										// cancelled
 									}
 								}}
 							>
-								{dept.name}
-								{isLocked && <Lock className="size-3 opacity-60" />}
+								+ Other Depts
 							</button>
-						);
-					})}
-					{departmentOverrideActive ? (
+						)}
+					</div>
+					{catScrollState.canRight && (
 						<button
 							type="button"
-							className="shrink-0 touch-manipulation rounded-full border border-amber-400 bg-amber-50 px-2.5 py-1 font-medium text-amber-700 text-xs sm:px-3 dark:bg-amber-900/20 dark:text-amber-400"
-							onClick={() => {
-								setDepartmentOverrideActive(false);
-								setSelectedDepartment("all");
-							}}
+							aria-label="Scroll categories right"
+							className="absolute right-0 z-10 flex h-full items-center bg-gradient-to-l from-background via-background/90 to-transparent pr-0.5 pl-3"
+							onClick={() =>
+								categoryScrollRef.current?.scrollBy({
+									left: 160,
+									behavior: "smooth",
+								})
+							}
 						>
-							Override Active ✕
-						</button>
-					) : (
-						<button
-							type="button"
-							className="shrink-0 touch-manipulation rounded-full border border-input border-dashed bg-background px-2.5 py-1 font-medium text-xs hover:bg-accent sm:px-3"
-							onClick={async () => {
-								try {
-									await requestOverride(
-										"departments.override",
-										"Access All Departments",
-									);
-									setDepartmentOverrideActive(true);
-									setSelectedDepartment("all");
-								} catch {
-									// cancelled
-								}
-							}}
-						>
-							+ Other Depts
+							<ChevronRight className="size-4 text-foreground" />
 						</button>
 					)}
 				</div>
@@ -1038,24 +1099,6 @@ export function POSTerminal({
 						</Button>
 					</div>
 
-					<div className="flex items-center gap-1 rounded-md border p-1">
-						<span className="px-1 text-[10px] text-muted-foreground uppercase">
-							Course
-						</span>
-						{[1, 2, 3, 4].map((course) => (
-							<Button
-								key={course}
-								type="button"
-								size="sm"
-								variant={selectedCourse === course ? "default" : "ghost"}
-								className="h-7 px-2 text-xs"
-								onClick={() => setSelectedCourse(course)}
-							>
-								{course}
-							</Button>
-						))}
-					</div>
-
 					{(orderMode === "pickup" || orderMode === "delivery") && (
 						<>
 							<div className="flex flex-col gap-1">
@@ -1183,7 +1226,7 @@ export function POSTerminal({
 			<div className="flex flex-1 overflow-hidden">
 				<div className="flex-1 overflow-y-auto p-2 sm:p-3">
 					<ProductGrid
-						products={products}
+						products={products.filter((p) => p.price > 0)}
 						isLoading={isLoading}
 						onProductTap={handleProductTap}
 						onProductLongPress={handleProductLongPress}
@@ -1191,13 +1234,13 @@ export function POSTerminal({
 						eightySixedIds={eightySixedIds}
 					/>
 				</div>
-				<div className="hidden h-full w-72 shrink-0 border-border border-l md:block lg:w-80 xl:w-96">
+				<div className="hidden h-full w-72 shrink-0 border-border border-l lg:block lg:w-80 xl:w-96">
 					{cartContent}
 				</div>
 			</div>
 
-			{/* Mobile floating cart button */}
-			<div className="fixed right-4 bottom-4 z-30 md:hidden">
+			{/* Mobile/tablet floating cart button */}
+			<div className="fixed right-4 bottom-4 z-30 lg:hidden">
 				<Sheet open={mobileCartOpen} onOpenChange={setMobileCartOpen}>
 					<SheetTrigger asChild>
 						<Button size="lg" className="h-14 w-14 rounded-full shadow-lg">
@@ -1224,9 +1267,9 @@ export function POSTerminal({
 				</Sheet>
 			</div>
 
-			{/* Mobile bottom bar */}
+			{/* Mobile/tablet bottom bar */}
 			{cartItemCount > 0 && (
-				<div className="flex items-center justify-between border-border border-t bg-card px-4 py-2.5 md:hidden">
+				<div className="flex items-center justify-between border-border border-t bg-card px-4 py-2.5 lg:hidden">
 					<div>
 						<p className="text-muted-foreground text-xs">
 							{cartItemCount} items

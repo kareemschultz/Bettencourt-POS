@@ -10,7 +10,7 @@ import { auth } from "@Bettencourt-POS/auth";
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { env } from "@Bettencourt-POS/env/server";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
@@ -33,6 +33,7 @@ import {
 	recordPinFailure,
 } from "./pin-rate-limit";
 import { backupsRouter } from "./routes/backups";
+import { qzRouter } from "./routes/qz";
 import { publishPosEvent, websocket, wsRoute } from "./ws";
 
 // BetterAuth uses 32-char alphanumeric IDs (not UUIDs) for sessions.
@@ -191,6 +192,7 @@ app.post("/api/auth/demo-login", async (c) => {
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 app.route("/api/backups", backupsRouter);
+app.route("/", qzRouter);
 
 // ── Network print proxy ─────────────────────────────────────────────────
 // Forwards ESC/POS data to a TCP printer on the local network

@@ -250,9 +250,6 @@ function PinLogin({ onSwitchToEmail }: { onSwitchToEmail: () => void }) {
 				>
 					<Mail className="size-3.5" /> Admin Login (Email)
 				</button>
-				<p className="text-[10px] text-muted-foreground/60">
-					Default PIN: 1234
-				</p>
 			</div>
 		</div>
 	);
@@ -306,7 +303,7 @@ function EmailLogin({ onSwitchToPin }: { onSwitchToPin: () => void }) {
 					<Input
 						id="email"
 						type="email"
-						placeholder="admin@bettencourt.com"
+						placeholder="Email address"
 						value={email}
 						onChange={(e) => setEmail(e.target.value)}
 						required
@@ -319,18 +316,11 @@ function EmailLogin({ onSwitchToPin }: { onSwitchToPin: () => void }) {
 						<Label htmlFor="password" className="font-medium text-sm">
 							Password
 						</Label>
-						<button
-							type="button"
-							className="text-muted-foreground text-xs transition-colors hover:text-foreground"
-							onClick={() => setShowForgot(true)}
-						>
-							Forgot password?
-						</button>
 					</div>
 					<Input
 						id="password"
 						type="password"
-						placeholder="Enter your password"
+						placeholder="Password"
 						value={password}
 						onChange={(e) => setPassword(e.target.value)}
 						required
@@ -450,7 +440,7 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
 					<Input
 						id="forgot-email"
 						type="email"
-						placeholder="admin@bettencourt.com"
+						placeholder="Email address"
 						value={email}
 						onChange={(e) => setEmail(e.target.value)}
 						required

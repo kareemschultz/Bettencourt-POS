@@ -22,6 +22,8 @@ export const env = createEnv({
 		SMTP_DIGEST_TO: z.string().optional(),
 		REMINDER_INTERVAL_DAYS: z.coerce.number().default(7),
 		UPLOADS_DIR: z.string().default("/app/uploads"),
+		QZ_TRAY_CERT: z.string().optional(),
+		QZ_TRAY_PRIVATE_KEY: z.string().optional(),
 	},
 	runtimeEnv: process.env,
 	emptyStringAsUndefined: true,

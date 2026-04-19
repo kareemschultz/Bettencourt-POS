@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	Check,
+	Copy,
 	Download,
 	Loader2,
 	Monitor,
@@ -433,6 +434,37 @@ export default function PrintersPage() {
 							automatically.
 						</p>
 					</div>
+
+					{/* QZ Tray silent printing */}
+					<div className="rounded-md border bg-muted/30 p-3">
+						<p className="mb-1 font-medium text-xs">
+							QZ Tray — Zero-Flash Silent Printing
+						</p>
+						<p className="mb-3 text-muted-foreground text-xs">
+							Eliminates the Windows print dialog entirely. Install once on this
+							PC. QZ Tray runs silently in the system tray and starts
+							automatically on login. Free and open-source.
+						</p>
+						<div className="flex flex-wrap gap-2">
+							<QzInstallButton />
+							<a
+								href="https://github.com/qzind/tray/releases/download/v2.2.6/qz-tray-2.2.6-x86_64.exe"
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								<Button variant="outline" size="sm" className="h-7 text-xs">
+									<Download className="mr-1.5 size-3" />
+									Download EXE Installer
+								</Button>
+							</a>
+						</div>
+						<p className="mt-2 text-[11px] text-muted-foreground">
+							PowerShell option opens an admin prompt and installs
+							automatically. EXE option downloads the installer for manual
+							setup. After install, a one-time &quot;Allow&quot; prompt will
+							appear — tick &quot;Remember this decision&quot; and click Allow.
+						</p>
+					</div>
 				</CardContent>
 			</Card>
 
@@ -466,6 +498,43 @@ export default function PrintersPage() {
 					</CardContent>
 				</Card>
 			)}
+		</div>
+	);
+}
+
+// ── QZ Tray PowerShell install button ──────────────────────────────────
+
+const QZ_POWERSHELL_CMD = "irm https://qz.io/pwsh | iex";
+
+function QzInstallButton() {
+	const [copied, setCopied] = useState(false);
+
+	function copyCommand() {
+		navigator.clipboard.writeText(QZ_POWERSHELL_CMD).then(() => {
+			setCopied(true);
+			setTimeout(() => setCopied(false), 2000);
+		});
+	}
+
+	return (
+		<div className="flex items-center gap-1 rounded-md border bg-background">
+			<code className="px-2 text-[11px] text-muted-foreground">
+				{QZ_POWERSHELL_CMD}
+			</code>
+			<Button
+				variant="ghost"
+				size="sm"
+				className="h-7 gap-1 rounded-l-none border-l px-2 text-xs"
+				onClick={copyCommand}
+				title="Copy PowerShell command"
+			>
+				{copied ? (
+					<Check className="size-3 text-green-500" />
+				) : (
+					<Copy className="size-3" />
+				)}
+				{copied ? "Copied" : "Copy"}
+			</Button>
 		</div>
 	);
 }

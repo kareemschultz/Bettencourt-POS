@@ -58,3 +58,5 @@ apps/desktop/src-tauri/gen/
 apps/desktop/src-tauri/icons/*.png
 apps/desktop/src-tauri/icons/*.ico
 apps/desktop/src-tauri/icons/*.icns
+# Claude Code worktrees
+.claude/worktrees/

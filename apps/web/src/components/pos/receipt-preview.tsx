@@ -1,5 +1,7 @@
 import { Printer, Split, X } from "lucide-react";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
+import { useQzPrinter } from "@/hooks/use-qz-printer";
+import { buildEscPosReceipt } from "@/lib/escpos";
 
 const RECEIPT_STYLES = `
 	* { margin: 0; padding: 0; box-sizing: border-box; }
@@ -100,7 +102,6 @@ interface ReceiptPreviewProps {
 	userName: string;
 	receiptConfig?: ReceiptConfig | null;
 	onSplitBill?: () => void;
-	/** When true: print silently without showing the dialog at all. */
 	autoPrint?: boolean;
 }
 
@@ -115,16 +116,7 @@ export function ReceiptPreview({
 	onSplitBill,
 	autoPrint = false,
 }: ReceiptPreviewProps) {
-	useEffect(() => {
-		if (!open) return;
-		const timer = setTimeout(() => {
-			printReceiptPopup(document.getElementById("receipt-content"));
-			if (autoPrint) onOpenChange(false);
-		}, 150);
-		return () => clearTimeout(timer);
-	}, [open, autoPrint, onOpenChange]);
-
-	if (!order) return null;
+	const { status: qzStatus, print: qzPrint } = useQzPrinter();
 
 	const rc = receiptConfig ?? {
 		businessName: "Bettencourt's Homestyle Diner",
@@ -136,6 +128,27 @@ export function ReceiptPreview({
 		promoMessage: null,
 		showLogo: false,
 	};
+
+	const handlePrint = useCallback(async () => {
+		if (!order) return;
+		const printerName = localStorage.getItem("pos-printer-name") ?? "";
+		if (qzStatus === "ready" && printerName) {
+			const data = buildEscPosReceipt(order, items, change, userName, rc);
+			const ok = await qzPrint(printerName, data);
+			if (ok) return;
+		}
+		printReceiptPopup(document.getElementById("receipt-content"));
+	}, [order, items, change, userName, rc, qzStatus, qzPrint]);
+
+	useEffect(() => {
+		if (!open || !autoPrint) return;
+		const timer = setTimeout(() => {
+			handlePrint();
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [open, autoPrint, handlePrint]);
+
+	if (!order) return null;
 
 	const now = new Date((order.created_at as string) || Date.now());
 	const subtotal = items.reduce((s, i) => s + i.line_total, 0);
@@ -345,22 +358,6 @@ export function ReceiptPreview({
 		</div>
 	);
 
-	if (autoPrint) {
-		return (
-			<div
-				aria-hidden="true"
-				style={{
-					position: "fixed",
-					left: "-9999px",
-					top: 0,
-					visibility: "hidden",
-				}}
-			>
-				{receiptContent}
-			</div>
-		);
-	}
-
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent aria-describedby={undefined} className="max-w-sm">
@@ -382,12 +379,7 @@ export function ReceiptPreview({
 				{receiptContent}
 
 				<div className="flex gap-2">
-					<Button
-						className="flex-1 gap-2"
-						onClick={() =>
-							printReceiptPopup(document.getElementById("receipt-content"))
-						}
-					>
+					<Button className="flex-1 gap-2" onClick={handlePrint}>
 						<Printer className="size-4" />
 						Print
 					</Button>

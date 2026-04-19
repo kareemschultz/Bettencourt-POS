@@ -33,6 +33,7 @@ import {
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QzPrinterProvider } from "@/contexts/qz-printer-context";
 import { authClient } from "@/lib/auth-client";
 import { getActiveModule, PAGE_TITLES } from "@/lib/modules";
 import { getOnlineStatus } from "@/lib/offline";
@@ -283,88 +284,90 @@ export default function DashboardLayout() {
 	}
 
 	return (
-		<SidebarProvider>
-			<CommandPalette user={user} />
-			<AppSidebar user={user} />
-			<SidebarInset>
-				<header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-4">
-					<SidebarTrigger className="-ml-1" />
-					<Separator orientation="vertical" className="mr-2 h-4" />
-					<nav
-						className="hidden items-center gap-1 text-sm sm:flex"
-						aria-label="Breadcrumb"
-					>
-						{(() => {
-							const activeModule = getActiveModule(pathname);
-							const pageTitle = getPageTitle(pathname);
-							if (activeModule && pathname !== "/dashboard") {
-								return (
-									<>
-										<Link
-											to={activeModule.defaultUrl}
-											className="text-muted-foreground hover:text-foreground"
-										>
-											{activeModule.label}
-										</Link>
-										<span className="text-muted-foreground">/</span>
-										<span className="font-medium">{pageTitle}</span>
-									</>
-								);
-							}
-							return <span className="font-medium">{pageTitle}</span>;
-						})()}
-					</nav>
-					<Separator orientation="vertical" className="hidden h-4 sm:block" />
-					<div className="flex flex-1 items-center gap-2">
-						{locations.filter((l) => l.isActive).length > 0 ? (
-							<Select
-								value={selectedLocationId ?? ""}
-								onValueChange={handleLocationChange}
-							>
-								<SelectTrigger className="h-8 w-[180px] border-none bg-transparent text-muted-foreground text-sm shadow-none focus:ring-0">
-									<SelectValue placeholder="Select location" />
-								</SelectTrigger>
-								<SelectContent>
-									{locations
-										.filter((l) => l.isActive)
-										.map((loc) => (
-											<SelectItem key={loc.id} value={loc.id}>
-												{loc.name}
-											</SelectItem>
-										))}
-								</SelectContent>
-							</Select>
-						) : (
-							<span className="text-muted-foreground text-sm">
-								No locations
-							</span>
-						)}
-					</div>
-					<LanguageSwitcher />
-					<SyncIndicator />
-				</header>
-				<main className="flex-1 overflow-auto">
-					<LocationContext.Provider value={locationContext}>
-						{hasRouteAccess(pathname, user.permissions) ? (
-							<Outlet context={locationContext} />
-						) : (
-							<div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
-								<div className="font-bold text-4xl text-destructive">403</div>
-								<h1 className="font-semibold text-xl">Access Denied</h1>
-								<p className="text-muted-foreground text-sm">
-									You do not have permission to view this page.
-								</p>
-								<Link
-									to="/dashboard"
-									className="text-primary text-sm underline underline-offset-4"
+		<QzPrinterProvider>
+			<SidebarProvider>
+				<CommandPalette user={user} />
+				<AppSidebar user={user} />
+				<SidebarInset>
+					<header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-4">
+						<SidebarTrigger className="-ml-1" />
+						<Separator orientation="vertical" className="mr-2 h-4" />
+						<nav
+							className="hidden items-center gap-1 text-sm sm:flex"
+							aria-label="Breadcrumb"
+						>
+							{(() => {
+								const activeModule = getActiveModule(pathname);
+								const pageTitle = getPageTitle(pathname);
+								if (activeModule && pathname !== "/dashboard") {
+									return (
+										<>
+											<Link
+												to={activeModule.defaultUrl}
+												className="text-muted-foreground hover:text-foreground"
+											>
+												{activeModule.label}
+											</Link>
+											<span className="text-muted-foreground">/</span>
+											<span className="font-medium">{pageTitle}</span>
+										</>
+									);
+								}
+								return <span className="font-medium">{pageTitle}</span>;
+							})()}
+						</nav>
+						<Separator orientation="vertical" className="hidden h-4 sm:block" />
+						<div className="flex flex-1 items-center gap-2">
+							{locations.filter((l) => l.isActive).length > 0 ? (
+								<Select
+									value={selectedLocationId ?? ""}
+									onValueChange={handleLocationChange}
 								>
-									Return to Dashboard
-								</Link>
-							</div>
-						)}
-					</LocationContext.Provider>
-				</main>
-			</SidebarInset>
-		</SidebarProvider>
+									<SelectTrigger className="h-8 w-[180px] border-none bg-transparent text-muted-foreground text-sm shadow-none focus:ring-0">
+										<SelectValue placeholder="Select location" />
+									</SelectTrigger>
+									<SelectContent>
+										{locations
+											.filter((l) => l.isActive)
+											.map((loc) => (
+												<SelectItem key={loc.id} value={loc.id}>
+													{loc.name}
+												</SelectItem>
+											))}
+									</SelectContent>
+								</Select>
+							) : (
+								<span className="text-muted-foreground text-sm">
+									No locations
+								</span>
+							)}
+						</div>
+						<LanguageSwitcher />
+						<SyncIndicator />
+					</header>
+					<main className="flex-1 overflow-auto">
+						<LocationContext.Provider value={locationContext}>
+							{hasRouteAccess(pathname, user.permissions) ? (
+								<Outlet context={locationContext} />
+							) : (
+								<div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+									<div className="font-bold text-4xl text-destructive">403</div>
+									<h1 className="font-semibold text-xl">Access Denied</h1>
+									<p className="text-muted-foreground text-sm">
+										You do not have permission to view this page.
+									</p>
+									<Link
+										to="/dashboard"
+										className="text-primary text-sm underline underline-offset-4"
+									>
+										Return to Dashboard
+									</Link>
+								</div>
+							)}
+						</LocationContext.Provider>
+					</main>
+				</SidebarInset>
+			</SidebarProvider>
+		</QzPrinterProvider>
 	);
 }

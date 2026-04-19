@@ -2371,7 +2371,67 @@ function ReceiptConfigTab() {
 					</div>
 				</CardContent>
 			</Card>
+
+			<PrinterSetupCard />
 		</div>
+	);
+}
+
+function PrinterSetupCard() {
+	const [printerName, setPrinterName] = useState(
+		() => localStorage.getItem("pos-printer-name") ?? "",
+	);
+	const [saved, setSaved] = useState(false);
+
+	const handleSave = () => {
+		localStorage.setItem("pos-printer-name", printerName.trim());
+		setSaved(true);
+		toast.success("Printer name saved");
+		setTimeout(() => setSaved(false), 2000);
+	};
+
+	const isConfigured = !!localStorage.getItem("pos-printer-name");
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="flex items-center gap-2 text-base">
+					Silent Printing (QZ Tray)
+					<span
+						className={`inline-flex items-center rounded-full px-2 py-0.5 font-medium text-xs ${isConfigured ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-muted text-muted-foreground"}`}
+					>
+						{isConfigured ? "Configured" : "Not set"}
+					</span>
+				</CardTitle>
+				<CardDescription>
+					Enter the exact Windows printer name to enable zero-flash silent
+					printing via QZ Tray. Find it in Windows Settings → Bluetooth &amp;
+					devices → Printers.
+				</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<div className="flex max-w-sm gap-2">
+					<Input
+						value={printerName}
+						onChange={(e) => setPrinterName(e.target.value)}
+						placeholder="e.g. OFFICELAB PR02002"
+						className="h-9 text-sm"
+					/>
+					<Button
+						size="sm"
+						onClick={handleSave}
+						disabled={saved}
+						className="shrink-0"
+					>
+						{saved ? <Check className="size-4" /> : "Save"}
+					</Button>
+				</div>
+				<p className="mt-2 text-muted-foreground text-xs">
+					QZ Tray must be installed and running on the Windows POS machine.
+					Falls back to browser print if unavailable.
+				</p>
+			</CardContent>
+		</Card>
 	);
 }
 
