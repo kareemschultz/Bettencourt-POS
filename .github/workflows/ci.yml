@@ -66,16 +66,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Write secrets to a .env file for docker compose.
-      # Secrets are set in GitHub repo Settings → Secrets → Actions.
-      # Using env: then $VAR pattern (not ${{ secrets.X }} in run shell) — safe from injection.
+      # Copy the production .env already on Titan — single source of truth for secrets.
       - name: Create environment file
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-        run: |
-          printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > .env
-          printf 'BETTER_AUTH_SECRET=%s\n' "$BETTER_AUTH_SECRET" >> .env
+        run: cp /home/karetech/projects/bettencourt/Bettencourt-POS/.env .env
 
       # Build new image and restart container.
       # Docker layer caching persists on the self-hosted runner between builds,
