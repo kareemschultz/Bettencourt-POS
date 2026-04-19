@@ -8,20 +8,28 @@ import { orpc } from "@/utils/orpc";
 
 interface PinLockScreenProps {
 	userName: string;
+	/** Current user's pinHash from the server — passed directly so offline
+	 *  verification always uses fresh data instead of a potentially stale
+	 *  localStorage value. */
+	pinHash?: string | null;
 	onUnlock: () => void;
 }
 
-export function PinLockScreen({ userName, onUnlock }: PinLockScreenProps) {
+export function PinLockScreen({
+	userName,
+	pinHash,
+	onUnlock,
+}: PinLockScreenProps) {
 	const [pin, setPin] = useState("");
 	const [error, setError] = useState("");
 	const [shake, setShake] = useState(false);
 	const [verifyingOffline, setVerifyingOffline] = useState(false);
-	// Ref so the offline verify closure always sees the submitted value
-	const pinRef = useRef("");
+	// Tracks whether submitPin has been called for the current pin value so the
+	// useEffect doesn't fire twice if React replays the effect.
+	const hasSubmittedRef = useRef(false);
 
 	const onError = useCallback((message: string) => {
 		setPin("");
-		pinRef.current = "";
 		setError(message);
 		setShake(true);
 		setTimeout(() => setShake(false), 500);
@@ -31,7 +39,6 @@ export function PinLockScreen({ userName, onUnlock }: PinLockScreenProps) {
 		orpc.settings.verifyPin.mutationOptions({
 			onSuccess: () => {
 				setPin("");
-				pinRef.current = "";
 				setError("");
 				onUnlock();
 			},
@@ -39,14 +46,17 @@ export function PinLockScreen({ userName, onUnlock }: PinLockScreenProps) {
 		}),
 	);
 
-	// Offline verification using SubtleCrypto — identical to server sha256 check
+	// Offline verification — prefers the pinHash prop (fresh from React Query)
+	// over the localStorage fallback to avoid stale-cache failures.
 	const verifyOffline = useCallback(
 		async (pinValue: string) => {
 			setVerifyingOffline(true);
 			try {
-				const cached = localStorage.getItem("pos-pin-hash");
+				const cached = pinHash ?? localStorage.getItem("pos-pin-hash");
 				if (!cached) {
-					// No PIN set on this device — allow unlock
+					// No PIN configured — allow unlock
+					setPin("");
+					setError("");
 					onUnlock();
 					return;
 				}
@@ -59,7 +69,6 @@ export function PinLockScreen({ userName, onUnlock }: PinLockScreenProps) {
 					.join("");
 				if (hex === cached) {
 					setPin("");
-					pinRef.current = "";
 					setError("");
 					onUnlock();
 				} else {
@@ -71,12 +80,11 @@ export function PinLockScreen({ userName, onUnlock }: PinLockScreenProps) {
 				setVerifyingOffline(false);
 			}
 		},
-		[onUnlock, onError],
+		[pinHash, onUnlock, onError],
 	);
 
 	const submitPin = useCallback(
 		(pinValue: string) => {
-			pinRef.current = pinValue;
 			if (!getOnlineStatus()) {
 				verifyOffline(pinValue);
 			} else {
@@ -86,22 +94,24 @@ export function PinLockScreen({ userName, onUnlock }: PinLockScreenProps) {
 		[verifyOffline, verifyPinMutation],
 	);
 
-	const handleDigit = useCallback(
-		(digit: string) => {
-			setError("");
-			setPin((prev) => {
-				const next = prev + digit;
-				if (next.length >= 4) {
-					// Side-effect in setState callback is intentional here — same
-					// pattern as the existing mutation call. Runs synchronously after
-					// the state update is queued.
-					submitPin(next);
-				}
-				return next.length <= 8 ? next : prev;
-			});
-		},
-		[submitPin],
-	);
+	// Trigger submission via useEffect, NOT inside the setPin updater callback.
+	// Calling side effects inside setState updaters is unsafe in React 18
+	// concurrent mode — the updater can be replayed, firing the mutation twice.
+	useEffect(() => {
+		if (pin.length < 4) {
+			hasSubmittedRef.current = false;
+			return;
+		}
+		if (!hasSubmittedRef.current) {
+			hasSubmittedRef.current = true;
+			submitPin(pin);
+		}
+	}, [pin, submitPin]);
+
+	const handleDigit = useCallback((digit: string) => {
+		setError("");
+		setPin((prev) => (prev.length >= 8 ? prev : prev + digit));
+	}, []);
 
 	const handleBackspace = useCallback(() => {
 		setPin((prev) => prev.slice(0, -1));
@@ -115,13 +125,11 @@ export function PinLockScreen({ userName, onUnlock }: PinLockScreenProps) {
 				handleDigit(e.key);
 			} else if (e.key === "Backspace") {
 				handleBackspace();
-			} else if (e.key === "Enter" && pin.length >= 4) {
-				submitPin(pin);
 			}
 		}
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [handleDigit, handleBackspace, pin, submitPin]);
+	}, [handleDigit, handleBackspace]);
 
 	const isVerifying = verifyPinMutation.isPending || verifyingOffline;
 	const isOffline = !getOnlineStatus();

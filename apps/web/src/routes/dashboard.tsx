@@ -275,6 +275,7 @@ export default function DashboardLayout() {
 		return (
 			<PinLockScreen
 				userName={user.name}
+				pinHash={userProfile?.pinHash ?? null}
 				onUnlock={() => {
 					setLocked(false);
 					resetTimer();
