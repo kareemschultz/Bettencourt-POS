@@ -1256,7 +1256,7 @@ export function POSTerminal({
 
 			{/* Main area: product grid + cart */}
 			<div className="flex flex-1 overflow-hidden">
-				<div className="flex-1 overflow-y-auto p-2 sm:p-3">
+				<div className="flex-1 overflow-hidden">
 					<ProductGrid
 						products={products.filter((p) => p.price > 0)}
 						isLoading={isLoading}
