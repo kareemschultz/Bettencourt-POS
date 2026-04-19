@@ -19,9 +19,7 @@ import {
 	Percent,
 	Plus,
 	Power,
-	Printer,
 	ReceiptText,
-	RefreshCw,
 	Settings,
 	Shield,
 	SlidersHorizontal,
@@ -85,7 +83,6 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useQzPrinter } from "@/hooks/use-qz-printer";
 import { SUPPORTED_LANGUAGES } from "@/i18n/index";
 import { hasRouteAccess } from "@/lib/route-access";
 import { todayGY } from "@/lib/utils";
@@ -164,10 +161,6 @@ export default function SettingsPage() {
 						<Settings className="size-3.5" />
 						<span className="hidden sm:inline">Language</span>
 					</TabsTrigger>
-					<TabsTrigger value="printers" className="gap-1.5">
-						<Printer className="size-3.5" />
-						<span className="hidden sm:inline">Printers</span>
-					</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="organization" className="mt-4">
@@ -205,9 +198,6 @@ export default function SettingsPage() {
 				</TabsContent>
 				<TabsContent value="language" className="mt-4">
 					<LanguageTab />
-				</TabsContent>
-				<TabsContent value="printers" className="mt-4">
-					<PrintersTab />
 				</TabsContent>
 			</Tabs>
 		</div>
@@ -2378,236 +2368,6 @@ function ReceiptConfigTab() {
 								</p>
 							)}
 						</div>
-					</div>
-				</CardContent>
-			</Card>
-		</div>
-	);
-}
-
-function PrintersTab() {
-	const [printerName, setPrinterName] = useState(
-		() => localStorage.getItem("pos-printer-name") ?? "",
-	);
-	const [saved, setSaved] = useState(false);
-	const [detected, setDetected] = useState<string[]>([]);
-	const [detecting, setDetecting] = useState(false);
-	const { status: qzStatus } = useQzPrinter();
-
-	const handleDetect = async () => {
-		setDetecting(true);
-		try {
-			const qz = await import("qz-tray");
-			const result = await qz.printers.find();
-			const list = (Array.isArray(result) ? result : [result]).filter(Boolean);
-			setDetected(list);
-			if (list.length === 0) toast.info("No printers found");
-		} catch {
-			toast.error("Could not detect printers. Is QZ Tray running?");
-		} finally {
-			setDetecting(false);
-		}
-	};
-
-	const savePrinter = (name: string) => {
-		const value = name.trim();
-		if (!value) return;
-		localStorage.setItem("pos-printer-name", value);
-		setPrinterName(value);
-		setSaved(true);
-		toast.success("Printer saved");
-		setTimeout(() => setSaved(false), 2000);
-	};
-
-	const downloadBat = () => {
-		const origin = window.location.origin;
-		const content = `@echo off
-:: QZ Tray Certificate Installer for Bettencourt POS
-:: Run as Administrator.
-set POS_URL=${origin}/api/qz/override.crt
-set QZ_DIR=C:\\Program Files\\QZ Tray
-set CERT_PATH=%QZ_DIR%\\override.crt
-echo Bettencourt POS - QZ Tray Certificate Installer
-net session >nul 2>&1
-if %errorlevel% neq 0 (echo ERROR: Run as Administrator & pause & exit /b 1)
-if not exist "%QZ_DIR%" (echo ERROR: Install QZ Tray first & pause & exit /b 1)
-echo Downloading certificate...
-powershell -Command "Invoke-WebRequest -Uri '%POS_URL%' -OutFile '%CERT_PATH%' -UseBasicParsing"
-if %errorlevel% neq 0 (echo ERROR: Download failed & pause & exit /b 1)
-taskkill /f /im qz-tray.exe >nul 2>&1
-timeout /t 2 /nobreak >nul
-start "" "%QZ_DIR%\\qz-tray.exe"
-echo Done! Reload the POS and click Always Allow once.
-pause`;
-		const blob = new Blob([content], { type: "text/plain" });
-		const a = document.createElement("a");
-		a.href = URL.createObjectURL(blob);
-		a.download = "install-qz-cert.bat";
-		a.click();
-		URL.revokeObjectURL(a.href);
-	};
-
-	const isConfigured = !!localStorage.getItem("pos-printer-name");
-
-	return (
-		<div className="space-y-4">
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2 text-base">
-						QZ Tray
-						<span
-							className={`inline-flex items-center rounded-full px-2 py-0.5 font-medium text-xs ${qzStatus === "ready" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-muted text-muted-foreground"}`}
-						>
-							{qzStatus === "ready"
-								? "Connected"
-								: qzStatus === "connecting"
-									? "Connecting..."
-									: "Not connected"}
-						</span>
-					</CardTitle>
-					<CardDescription>
-						QZ Tray must be installed and running on each Windows POS terminal
-						to enable silent printing.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-3">
-					<div className="flex flex-wrap gap-2">
-						<Button size="sm" variant="outline" asChild>
-							<a href="https://qz.io/download" target="_blank" rel="noreferrer">
-								Download QZ Tray
-							</a>
-						</Button>
-					</div>
-					<p className="text-muted-foreground text-xs">
-						After installing, QZ Tray runs silently in the system tray. No
-						configuration needed beyond the steps below.
-					</p>
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader>
-					<CardTitle className="text-base">Certificate Setup</CardTitle>
-					<CardDescription>
-						Run once per terminal so QZ Tray trusts this POS server. After
-						setup, printing is completely silent.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					<div>
-						<p className="mb-2 font-medium text-sm">
-							Option A — Automatic (recommended)
-						</p>
-						<p className="mb-3 text-muted-foreground text-xs">
-							Download and run this script as Administrator. It installs the
-							certificate and restarts QZ Tray automatically.
-						</p>
-						<Button size="sm" onClick={downloadBat} className="gap-2">
-							<Printer className="size-4" />
-							Download install-qz-cert.bat
-						</Button>
-					</div>
-					<div className="border-t pt-4">
-						<p className="mb-2 font-medium text-sm">
-							Option B — Manual (PowerShell)
-						</p>
-						<p className="mb-2 text-muted-foreground text-xs">
-							Run in an Administrator PowerShell window:
-						</p>
-						<code className="block select-all break-all rounded-md bg-muted px-3 py-2 text-xs">
-							{`Invoke-WebRequest -Uri "${window.location.origin}/api/qz/override.crt" -OutFile "C:\\Program Files\\QZ Tray\\override.crt"; Stop-Process -Name qz-tray -Force -ErrorAction SilentlyContinue; Start-Sleep 2; Start-Process "C:\\Program Files\\QZ Tray\\qz-tray.exe"`}
-						</code>
-					</div>
-					<div className="border-t pt-4">
-						<p className="mb-2 font-medium text-sm">
-							Option C — Manual file copy
-						</p>
-						<p className="mb-2 text-muted-foreground text-xs">
-							Download the cert file and place it yourself:
-						</p>
-						<Button size="sm" variant="outline" asChild>
-							<a href="/api/qz/override.crt" download="override.crt">
-								Download override.crt
-							</a>
-						</Button>
-						<p className="mt-1 text-muted-foreground text-xs">
-							Copy to:{" "}
-							<code className="rounded bg-muted px-1 text-xs">
-								C:\Program Files\QZ Tray\override.crt
-							</code>{" "}
-							then restart QZ Tray.
-						</p>
-					</div>
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2 text-base">
-						Receipt Printer
-						<span
-							className={`inline-flex items-center rounded-full px-2 py-0.5 font-medium text-xs ${isConfigured ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-muted text-muted-foreground"}`}
-						>
-							{isConfigured ? "Configured" : "Not set"}
-						</span>
-					</CardTitle>
-					<CardDescription>
-						Select the receipt printer QZ Tray should send jobs to.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-3">
-					<Button
-						size="sm"
-						variant="outline"
-						onClick={handleDetect}
-						disabled={detecting || qzStatus !== "ready"}
-						className="gap-2"
-					>
-						{detecting ? (
-							<Loader2 className="size-4 animate-spin" />
-						) : (
-							<RefreshCw className="size-4" />
-						)}
-						{detecting
-							? "Detecting..."
-							: qzStatus === "ready"
-								? "Detect Printers"
-								: "QZ Tray not connected"}
-					</Button>
-
-					{detected.length > 0 && (
-						<div className="max-w-sm space-y-1">
-							<p className="text-muted-foreground text-xs">
-								Click a printer to select it:
-							</p>
-							{detected.map((p) => (
-								<button
-									key={p}
-									type="button"
-									onClick={() => savePrinter(p)}
-									className={`w-full rounded-md border px-3 py-1.5 text-left text-sm transition-colors ${printerName === p ? "border-primary bg-primary/5 font-medium" : "border-border hover:bg-muted"}`}
-								>
-									{p}
-								</button>
-							))}
-						</div>
-					)}
-
-					<div className="flex max-w-sm gap-2">
-						<Input
-							value={printerName}
-							onChange={(e) => setPrinterName(e.target.value)}
-							placeholder="e.g. OFFICELAB PR02002"
-							className="h-9 text-sm"
-						/>
-						<Button
-							size="sm"
-							onClick={() => savePrinter(printerName)}
-							disabled={saved || !printerName.trim()}
-							className="shrink-0"
-						>
-							{saved ? <Check className="size-4" /> : "Save"}
-						</Button>
 					</div>
 				</CardContent>
 			</Card>

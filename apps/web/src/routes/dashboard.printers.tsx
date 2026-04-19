@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	Check,
-	Copy,
 	Download,
 	Loader2,
 	Monitor,
 	Plus,
 	Printer,
+	RefreshCw,
+	ShieldCheck,
 	Smartphone,
 	TestTube2,
 	Trash2,
@@ -36,6 +37,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useQzPrinter } from "@/hooks/use-qz-printer";
 import { printClient } from "@/lib/print/print-client";
 import { orpc } from "@/utils/orpc";
 
@@ -51,6 +53,10 @@ export default function PrintersPage() {
 		null,
 	);
 	const [isPwa, setIsPwa] = useState(false);
+	const [qzPrinterName, setQzPrinterName] = useState(
+		() => localStorage.getItem("pos-printer-name") ?? "",
+	);
+	const { status: qzStatus } = useQzPrinter();
 
 	useEffect(() => {
 		const standalone =
@@ -162,8 +168,19 @@ export default function PrintersPage() {
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="font-bold text-2xl tracking-tight">Printers</h1>
-					<p className="text-muted-foreground text-sm">
+					<p className="flex items-center gap-2 text-muted-foreground text-sm">
 						Configure receipt and kitchen printers
+						<span
+							className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium text-xs ${qzStatus === "ready" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-muted text-muted-foreground"}`}
+						>
+							<Printer className="size-3" />
+							QZ Tray{" "}
+							{qzStatus === "ready"
+								? "connected"
+								: qzStatus === "connecting"
+									? "connecting..."
+									: "not connected"}
+						</span>
 					</p>
 				</div>
 				<Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -359,6 +376,23 @@ export default function PrintersPage() {
 				</div>
 			)}
 
+			{/* QZ Tray Receipt Printer */}
+			<Card>
+				<CardHeader className="pb-3">
+					<CardTitle className="flex items-center gap-2 text-base">
+						<ShieldCheck className="size-4 text-muted-foreground" />
+						QZ Tray — Silent Receipt Printing
+					</CardTitle>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					<QzTraySetup
+						qzStatus={qzStatus}
+						printerName={qzPrinterName}
+						onSave={setQzPrinterName}
+					/>
+				</CardContent>
+			</Card>
+
 			{/* Terminal Setup */}
 			<Card>
 				<CardContent className="space-y-4 py-5">
@@ -434,37 +468,6 @@ export default function PrintersPage() {
 							automatically.
 						</p>
 					</div>
-
-					{/* QZ Tray silent printing */}
-					<div className="rounded-md border bg-muted/30 p-3">
-						<p className="mb-1 font-medium text-xs">
-							QZ Tray — Zero-Flash Silent Printing
-						</p>
-						<p className="mb-3 text-muted-foreground text-xs">
-							Eliminates the Windows print dialog entirely. Install once on this
-							PC. QZ Tray runs silently in the system tray and starts
-							automatically on login. Free and open-source.
-						</p>
-						<div className="flex flex-wrap gap-2">
-							<QzInstallButton />
-							<a
-								href="https://github.com/qzind/tray/releases/download/v2.2.6/qz-tray-2.2.6-x86_64.exe"
-								target="_blank"
-								rel="noopener noreferrer"
-							>
-								<Button variant="outline" size="sm" className="h-7 text-xs">
-									<Download className="mr-1.5 size-3" />
-									Download EXE Installer
-								</Button>
-							</a>
-						</div>
-						<p className="mt-2 text-[11px] text-muted-foreground">
-							PowerShell option opens an admin prompt and installs
-							automatically. EXE option downloads the installer for manual
-							setup. After install, a one-time &quot;Allow&quot; prompt will
-							appear — tick &quot;Remember this decision&quot; and click Allow.
-						</p>
-					</div>
 				</CardContent>
 			</Card>
 
@@ -502,43 +505,6 @@ export default function PrintersPage() {
 	);
 }
 
-// ── QZ Tray PowerShell install button ──────────────────────────────────
-
-const QZ_POWERSHELL_CMD = "irm https://qz.io/pwsh | iex";
-
-function QzInstallButton() {
-	const [copied, setCopied] = useState(false);
-
-	function copyCommand() {
-		navigator.clipboard.writeText(QZ_POWERSHELL_CMD).then(() => {
-			setCopied(true);
-			setTimeout(() => setCopied(false), 2000);
-		});
-	}
-
-	return (
-		<div className="flex items-center gap-1 rounded-md border bg-background">
-			<code className="px-2 text-[11px] text-muted-foreground">
-				{QZ_POWERSHELL_CMD}
-			</code>
-			<Button
-				variant="ghost"
-				size="sm"
-				className="h-7 gap-1 rounded-l-none border-l px-2 text-xs"
-				onClick={copyCommand}
-				title="Copy PowerShell command"
-			>
-				{copied ? (
-					<Check className="size-3 text-green-500" />
-				) : (
-					<Copy className="size-3" />
-				)}
-				{copied ? "Copied" : "Copy"}
-			</Button>
-		</div>
-	);
-}
-
 // ── Create Printer Form ─────────────────────────────────────────────────
 
 function CreatePrinterForm({
@@ -555,6 +521,7 @@ function CreatePrinterForm({
 	}) => void;
 	isSubmitting: boolean;
 }) {
+	const [tab, setTab] = useState<"manual" | "qz">("manual");
 	const [name, setName] = useState("");
 	const [connectionType, setConnectionType] = useState<
 		"usb" | "network" | "mock"
@@ -562,93 +529,357 @@ function CreatePrinterForm({
 	const [address, setAddress] = useState("");
 	const [paperWidth, setPaperWidth] = useState<"58mm" | "80mm">("80mm");
 	const [autoCut, setAutoCut] = useState(true);
+	const [detected, setDetected] = useState<string[]>([]);
+	const [detecting, setDetecting] = useState(false);
+	const [qzSaved, setQzSaved] = useState(false);
+	const { status: qzStatus } = useQzPrinter();
 
-	// Use a default location ID (first available)
 	const { data: locations = [] } = useQuery(
 		orpc.locations.listLocations.queryOptions({ input: {} }),
 	);
 	const locationId = (locations as Array<{ id: string }>)[0]?.id ?? "";
+
+	const handleDetect = async () => {
+		setDetecting(true);
+		try {
+			const qz = await import("qz-tray");
+			const result = await qz.printers.find();
+			const list = (Array.isArray(result) ? result : [result]).filter(Boolean);
+			setDetected(list);
+			if (list.length === 0) toast.info("No printers found");
+		} catch {
+			toast.error("Could not detect printers. Is QZ Tray running?");
+		} finally {
+			setDetecting(false);
+		}
+	};
+
+	const saveQzPrinter = (printerName: string) => {
+		localStorage.setItem("pos-printer-name", printerName);
+		setQzSaved(true);
+		toast.success(`Receipt printer set to "${printerName}"`);
+		setTimeout(() => setQzSaved(false), 2000);
+	};
 
 	return (
 		<>
 			<DialogHeader>
 				<DialogTitle>Add Printer</DialogTitle>
 			</DialogHeader>
-			<div className="space-y-4 py-4">
-				<div className="space-y-1.5">
-					<Label>Name</Label>
-					<Input
-						value={name}
-						onChange={(e) => setName(e.target.value)}
-						placeholder="Kitchen Printer"
-					/>
-				</div>
-				<div className="space-y-1.5">
-					<Label>Connection Type</Label>
-					<Select
-						value={connectionType}
-						onValueChange={(v) =>
-							setConnectionType(v as "usb" | "network" | "mock")
-						}
-					>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="network">Network (TCP/IP)</SelectItem>
-							<SelectItem value="usb">USB (WebUSB)</SelectItem>
-							<SelectItem value="mock">Mock (Console)</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-				{connectionType === "network" && (
+
+			<div className="mt-2 flex gap-1 rounded-lg bg-muted p-1">
+				<button
+					type="button"
+					onClick={() => setTab("manual")}
+					className={`flex-1 rounded-md px-3 py-1.5 font-medium text-sm transition-colors ${tab === "manual" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+				>
+					Network / USB
+				</button>
+				<button
+					type="button"
+					onClick={() => {
+						setTab("qz");
+						if (detected.length === 0 && qzStatus === "ready") handleDetect();
+					}}
+					className={`flex-1 rounded-md px-3 py-1.5 font-medium text-sm transition-colors ${tab === "qz" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+				>
+					Windows (QZ Tray)
+				</button>
+			</div>
+
+			{tab === "manual" ? (
+				<div className="space-y-4 py-4">
 					<div className="space-y-1.5">
-						<Label>IP Address</Label>
+						<Label>Name</Label>
 						<Input
-							value={address}
-							onChange={(e) => setAddress(e.target.value)}
-							placeholder="192.168.1.100:9100"
+							value={name}
+							onChange={(e) => setName(e.target.value)}
+							placeholder="Kitchen Printer"
 						/>
 					</div>
-				)}
-				<div className="space-y-1.5">
-					<Label>Paper Width</Label>
-					<Select
-						value={paperWidth}
-						onValueChange={(v) => setPaperWidth(v as "58mm" | "80mm")}
-					>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="80mm">80mm (Standard)</SelectItem>
-							<SelectItem value="58mm">58mm (Narrow)</SelectItem>
-						</SelectContent>
-					</Select>
+					<div className="space-y-1.5">
+						<Label>Connection Type</Label>
+						<Select
+							value={connectionType}
+							onValueChange={(v) =>
+								setConnectionType(v as "usb" | "network" | "mock")
+							}
+						>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="network">Network (TCP/IP)</SelectItem>
+								<SelectItem value="usb">USB (WebUSB)</SelectItem>
+								<SelectItem value="mock">Mock (Console)</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+					{connectionType === "network" && (
+						<div className="space-y-1.5">
+							<Label>IP Address</Label>
+							<Input
+								value={address}
+								onChange={(e) => setAddress(e.target.value)}
+								placeholder="192.168.1.100:9100"
+							/>
+						</div>
+					)}
+					<div className="space-y-1.5">
+						<Label>Paper Width</Label>
+						<Select
+							value={paperWidth}
+							onValueChange={(v) => setPaperWidth(v as "58mm" | "80mm")}
+						>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="80mm">80mm (Standard)</SelectItem>
+								<SelectItem value="58mm">58mm (Narrow)</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="flex items-center gap-2">
+						<Switch checked={autoCut} onCheckedChange={setAutoCut} />
+						<Label>Auto-cut paper</Label>
+					</div>
 				</div>
-				<div className="flex items-center gap-2">
-					<Switch checked={autoCut} onCheckedChange={setAutoCut} />
-					<Label>Auto-cut paper</Label>
+			) : (
+				<div className="space-y-3 py-4">
+					<p className="text-muted-foreground text-sm">
+						Detects Windows printers via QZ Tray and sets it as the receipt
+						printer for this terminal.
+					</p>
+					<Button
+						size="sm"
+						variant="outline"
+						onClick={handleDetect}
+						disabled={detecting || qzStatus !== "ready"}
+						className="gap-2"
+					>
+						{detecting ? (
+							<Loader2 className="size-4 animate-spin" />
+						) : (
+							<RefreshCw className="size-4" />
+						)}
+						{detecting
+							? "Detecting..."
+							: qzStatus === "ready"
+								? "Detect Printers"
+								: "QZ Tray not connected"}
+					</Button>
+					{detected.length > 0 && (
+						<div className="space-y-1">
+							<p className="text-muted-foreground text-xs">
+								Click a printer to select it as the receipt printer:
+							</p>
+							{detected.map((p) => (
+								<button
+									key={p}
+									type="button"
+									onClick={() => saveQzPrinter(p)}
+									className="flex w-full items-center justify-between rounded-md border border-border px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+								>
+									<span>{p}</span>
+									{qzSaved &&
+										localStorage.getItem("pos-printer-name") === p && (
+											<Check className="size-4 text-green-600" />
+										)}
+								</button>
+							))}
+						</div>
+					)}
+					{qzStatus !== "ready" && (
+						<p className="text-amber-600 text-xs dark:text-amber-400">
+							QZ Tray must be installed and running on this terminal. See the QZ
+							Tray setup section below.
+						</p>
+					)}
+				</div>
+			)}
+
+			{tab === "manual" && (
+				<DialogFooter>
+					<Button
+						onClick={() =>
+							onSubmit({
+								locationId,
+								name,
+								connectionType,
+								address: connectionType === "network" ? address : null,
+								paperWidth,
+								autoCut,
+							})
+						}
+						disabled={!name.trim() || !locationId || isSubmitting}
+					>
+						{isSubmitting && <Loader2 className="mr-1 size-4 animate-spin" />}
+						Create
+					</Button>
+				</DialogFooter>
+			)}
+		</>
+	);
+}
+
+function QzTraySetup({
+	qzStatus,
+	printerName,
+	onSave,
+}: {
+	qzStatus: string;
+	printerName: string;
+	onSave: (name: string) => void;
+}) {
+	const [detected, setDetected] = useState<string[]>([]);
+	const [detecting, setDetecting] = useState(false);
+	const [localName, setLocalName] = useState(printerName);
+	const [saved, setSaved] = useState(false);
+
+	const handleDetect = async () => {
+		setDetecting(true);
+		try {
+			const qz = await import("qz-tray");
+			const result = await qz.printers.find();
+			const list = (Array.isArray(result) ? result : [result]).filter(Boolean);
+			setDetected(list);
+			if (list.length === 0) toast.info("No printers found");
+		} catch {
+			toast.error("Could not detect printers. Is QZ Tray running?");
+		} finally {
+			setDetecting(false);
+		}
+	};
+
+	const savePrinter = (name: string) => {
+		localStorage.setItem("pos-printer-name", name);
+		setLocalName(name);
+		onSave(name);
+		setSaved(true);
+		toast.success("Receipt printer saved");
+		setTimeout(() => setSaved(false), 2000);
+	};
+
+	const downloadBat = () => {
+		const origin = window.location.origin;
+		const content = `@echo off\n:: QZ Tray Certificate Installer for Bettencourt POS\n:: Run as Administrator.\nset POS_URL=${origin}/api/qz/override.crt\nset QZ_DIR=C:\\Program Files\\QZ Tray\nset CERT_PATH=%QZ_DIR%\\override.crt\necho Bettencourt POS - QZ Tray Certificate Installer\nnet session >nul 2>&1\nif %errorlevel% neq 0 (echo ERROR: Run as Administrator & pause & exit /b 1)\nif not exist "%QZ_DIR%" (echo ERROR: Install QZ Tray first from https://qz.io/download & pause & exit /b 1)\necho Downloading certificate...\npowershell -Command "Invoke-WebRequest -Uri '%POS_URL%' -OutFile '%CERT_PATH%' -UseBasicParsing"\nif %errorlevel% neq 0 (echo ERROR: Download failed & pause & exit /b 1)\ntaskkill /f /im qz-tray.exe >nul 2>&1\ntimeout /t 2 /nobreak >nul\nstart "" "%QZ_DIR%\\qz-tray.exe"\necho Done! Reload the POS and click Always Allow once.\npause`;
+		const blob = new Blob([content], { type: "text/plain" });
+		const a = document.createElement("a");
+		a.href = URL.createObjectURL(blob);
+		a.download = "install-qz-cert.bat";
+		a.click();
+		URL.revokeObjectURL(a.href);
+	};
+
+	const configured = !!localStorage.getItem("pos-printer-name");
+
+	return (
+		<div className="space-y-4">
+			{/* Step 1: Install QZ Tray */}
+			<div>
+				<p className="mb-1 font-medium text-sm">Step 1 — Install QZ Tray</p>
+				<p className="mb-2 text-muted-foreground text-xs">
+					Must be installed and running on this Windows terminal.
+				</p>
+				<Button size="sm" variant="outline" asChild>
+					<a href="https://qz.io/download" target="_blank" rel="noreferrer">
+						Download QZ Tray
+					</a>
+				</Button>
+			</div>
+
+			{/* Step 2: Install cert */}
+			<div className="border-t pt-4">
+				<p className="mb-1 font-medium text-sm">
+					Step 2 — Trust this POS server (run once per terminal)
+				</p>
+				<p className="mb-3 text-muted-foreground text-xs">
+					Downloads and installs the signing certificate so QZ Tray never shows
+					a dialog again.
+				</p>
+				<div className="flex flex-wrap gap-2">
+					<Button size="sm" onClick={downloadBat} className="gap-2">
+						<Download className="size-4" />
+						Download install-qz-cert.bat
+					</Button>
+					<Button size="sm" variant="outline" asChild>
+						<a href="/api/qz/override.crt" download="override.crt">
+							Download override.crt
+						</a>
+					</Button>
+				</div>
+				<p className="mt-2 text-muted-foreground text-xs">
+					Run the .bat as Administrator. Or manually copy override.crt to{" "}
+					<code className="rounded bg-muted px-1 text-xs">
+						C:\Program Files\QZ Tray\
+					</code>{" "}
+					and restart QZ Tray.
+				</p>
+			</div>
+
+			{/* Step 3: Select printer */}
+			<div className="border-t pt-4">
+				<p className="mb-1 flex items-center gap-2 font-medium text-sm">
+					Step 3 — Select receipt printer
+					{configured && (
+						<span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700 text-xs dark:bg-green-900/30 dark:text-green-400">
+							<Check className="size-3" />{" "}
+							{localName || localStorage.getItem("pos-printer-name")}
+						</span>
+					)}
+				</p>
+				<div className="space-y-2">
+					<Button
+						size="sm"
+						variant="outline"
+						onClick={handleDetect}
+						disabled={detecting || qzStatus !== "ready"}
+						className="gap-2"
+					>
+						{detecting ? (
+							<Loader2 className="size-4 animate-spin" />
+						) : (
+							<RefreshCw className="size-4" />
+						)}
+						{detecting
+							? "Detecting..."
+							: qzStatus === "ready"
+								? "Detect Printers"
+								: "QZ Tray not connected"}
+					</Button>
+					{detected.length > 0 && (
+						<div className="max-w-sm space-y-1">
+							{detected.map((p) => (
+								<button
+									key={p}
+									type="button"
+									onClick={() => savePrinter(p)}
+									className={`w-full rounded-md border px-3 py-1.5 text-left text-sm transition-colors ${localName === p ? "border-primary bg-primary/5 font-medium" : "border-border hover:bg-muted"}`}
+								>
+									{p}
+								</button>
+							))}
+						</div>
+					)}
+					<div className="flex max-w-sm gap-2">
+						<Input
+							value={localName}
+							onChange={(e) => setLocalName(e.target.value)}
+							placeholder="e.g. OFFICELAB PR02002"
+							className="h-9 text-sm"
+						/>
+						<Button
+							size="sm"
+							onClick={() => savePrinter(localName)}
+							disabled={saved || !localName.trim()}
+							className="shrink-0"
+						>
+							{saved ? <Check className="size-4" /> : "Save"}
+						</Button>
+					</div>
 				</div>
 			</div>
-			<DialogFooter>
-				<Button
-					onClick={() =>
-						onSubmit({
-							locationId,
-							name,
-							connectionType,
-							address: connectionType === "network" ? address : null,
-							paperWidth,
-							autoCut,
-						})
-					}
-					disabled={!name.trim() || !locationId || isSubmitting}
-				>
-					{isSubmitting && <Loader2 className="mr-1 size-4 animate-spin" />}
-					Create
-				</Button>
-			</DialogFooter>
-		</>
+		</div>
 	);
 }
