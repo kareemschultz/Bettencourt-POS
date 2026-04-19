@@ -584,7 +584,7 @@ export function POSTerminal({
 		return products.filter(
 			(p) =>
 				p.name.toLowerCase().includes(q) ||
-				p.department.toLowerCase().includes(q),
+				(p.department_name ?? "").toLowerCase().includes(q),
 		);
 	}, [products, productSearch]);
 
