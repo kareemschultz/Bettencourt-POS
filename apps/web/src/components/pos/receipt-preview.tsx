@@ -103,6 +103,8 @@ interface ReceiptPreviewProps {
 	receiptConfig?: ReceiptConfig | null;
 	onSplitBill?: () => void;
 	autoPrint?: boolean;
+	defaultTaxRate?: number;
+	defaultTaxName?: string;
 }
 
 export function ReceiptPreview({
@@ -115,6 +117,8 @@ export function ReceiptPreview({
 	receiptConfig,
 	onSplitBill,
 	autoPrint = false,
+	defaultTaxRate = 0,
+	defaultTaxName = "Tax",
 }: ReceiptPreviewProps) {
 	const { status: qzStatus, print: qzPrint } = useQzPrinter();
 
@@ -133,7 +137,15 @@ export function ReceiptPreview({
 		if (!order) return;
 		const printerName = localStorage.getItem("pos-printer-name") ?? "";
 		if (qzStatus === "ready" && printerName) {
-			const data = buildEscPosReceipt(order, items, change, userName, rc);
+			const data = buildEscPosReceipt(
+				order,
+				items,
+				change,
+				userName,
+				rc,
+				defaultTaxRate,
+				defaultTaxName,
+			);
 			const ok = await qzPrint(printerName, data);
 			if (ok) return;
 		}
@@ -152,8 +164,13 @@ export function ReceiptPreview({
 
 	const now = new Date((order.created_at as string) || Date.now());
 	const subtotal = items.reduce((s, i) => s + i.line_total, 0);
-	const tax = items.reduce((s, i) => s + i.line_total * i.product.tax_rate, 0);
-	const total = Number(order.total || subtotal + tax);
+	const tax =
+		defaultTaxRate > 0
+			? Math.round(((subtotal * defaultTaxRate) / (1 + defaultTaxRate)) * 100) /
+				100
+			: items.reduce((s, i) => s + i.line_total * i.product.tax_rate, 0);
+	const total = Number(order.total || subtotal);
+	const taxLabel = defaultTaxRate > 0 ? `Incl. ${defaultTaxName}` : "Tax";
 
 	const receiptContent = (
 		<div
@@ -305,7 +322,7 @@ export function ReceiptPreview({
 				</div>
 				{tax > 0 && (
 					<div className="flex justify-between">
-						<span>Tax</span>
+						<span>{taxLabel}</span>
 						<span>{formatGYD(tax)}</span>
 					</div>
 				)}

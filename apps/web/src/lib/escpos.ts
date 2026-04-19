@@ -36,6 +36,8 @@ export function buildEscPosReceipt(
 	change: number,
 	userName: string,
 	rc: ReceiptConfig,
+	defaultTaxRate = 0,
+	defaultTaxName = "Tax",
 ): string[] {
 	const lines: string[] = [CMD.INIT];
 
@@ -92,10 +94,15 @@ export function buildEscPosReceipt(
 
 	// Totals
 	const subtotal = items.reduce((s, i) => s + i.line_total, 0);
-	const tax = items.reduce((s, i) => s + i.line_total * i.product.tax_rate, 0);
-	const total = Number(order.total || subtotal + tax);
+	const extractedTax =
+		defaultTaxRate > 0
+			? Math.round(((subtotal * defaultTaxRate) / (1 + defaultTaxRate)) * 100) /
+				100
+			: items.reduce((s, i) => s + i.line_total * i.product.tax_rate, 0);
+	const total = Number(order.total || subtotal);
+	const taxLabel = defaultTaxRate > 0 ? `Incl. ${defaultTaxName}` : "Tax";
 	lines.push(pad("Subtotal", fmt(subtotal)) + "\n");
-	if (tax > 0) lines.push(pad("Tax", fmt(tax)) + "\n");
+	if (extractedTax > 0) lines.push(pad(taxLabel, fmt(extractedTax)) + "\n");
 	if (Number(order.discount_total ?? 0) > 0) {
 		lines.push(pad("Discount", "-" + fmt(Number(order.discount_total))) + "\n");
 	}

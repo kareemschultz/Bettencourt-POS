@@ -226,7 +226,29 @@ const getProducts = permissionProcedure("orders.read")
 				: [],
 		}));
 
-		return { departments, products: productsWithCombos };
+		// Fetch org default tax rate for VAT-inclusive display
+		const defaultTaxRows = await db
+			.select({ rate: schema.taxRate.rate, name: schema.taxRate.name })
+			.from(schema.taxRate)
+			.where(
+				and(
+					eq(schema.taxRate.organizationId, orgId),
+					eq(schema.taxRate.isDefault, true),
+					eq(schema.taxRate.isActive, true),
+				),
+			)
+			.limit(1);
+		const defaultTaxRate =
+			defaultTaxRows.length > 0 ? Number(defaultTaxRows[0]!.rate) : 0;
+		const defaultTaxName =
+			defaultTaxRows.length > 0 ? (defaultTaxRows[0]!.name ?? "Tax") : "Tax";
+
+		return {
+			departments,
+			products: productsWithCombos,
+			defaultTaxRate,
+			defaultTaxName,
+		};
 	});
 
 // ── getModifiers ────────────────────────────────────────────────────────

@@ -502,8 +502,15 @@ export function POSTerminal({
 
 	const cartItemCount = cart.reduce((s, i) => s + i.quantity, 0);
 	const cartTotal = cart.reduce((sum, item) => sum + item.line_total, 0);
-	// VAT-inclusive pricing: product prices already include tax — no tax added on top
-	const cartTax = 0;
+	const defaultTaxRate = posData?.defaultTaxRate ?? 0;
+	const defaultTaxName = posData?.defaultTaxName ?? "Tax";
+	// VAT-inclusive: extracted tax is informational only, does not affect total
+	const cartTax =
+		defaultTaxRate > 0
+			? Math.round(
+					((cartTotal * defaultTaxRate) / (1 + defaultTaxRate)) * 100,
+				) / 100
+			: 0;
 	const grandTotal = cartTotal - discount;
 
 	async function handlePaymentComplete(
@@ -1341,6 +1348,8 @@ export function POSTerminal({
 				userName={userName}
 				receiptConfig={receiptConfig ?? null}
 				autoPrint={autoPrintReceipt}
+				defaultTaxRate={defaultTaxRate}
+				defaultTaxName={defaultTaxName}
 				onSplitBill={
 					lastOrder?.id
 						? () => {
