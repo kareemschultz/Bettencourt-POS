@@ -20,6 +20,7 @@ import {
 	Plus,
 	Power,
 	ReceiptText,
+	RefreshCw,
 	Settings,
 	Shield,
 	SlidersHorizontal,
@@ -83,6 +84,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useQzPrinter } from "@/hooks/use-qz-printer";
 import { SUPPORTED_LANGUAGES } from "@/i18n/index";
 import { hasRouteAccess } from "@/lib/route-access";
 import { todayGY } from "@/lib/utils";
@@ -2382,11 +2384,32 @@ function PrinterSetupCard() {
 		() => localStorage.getItem("pos-printer-name") ?? "",
 	);
 	const [saved, setSaved] = useState(false);
+	const [detected, setDetected] = useState<string[]>([]);
+	const [detecting, setDetecting] = useState(false);
+	const { status: qzStatus } = useQzPrinter();
 
-	const handleSave = () => {
-		localStorage.setItem("pos-printer-name", printerName.trim());
+	const handleDetect = async () => {
+		setDetecting(true);
+		try {
+			const qz = await import("qz-tray");
+			const result = await qz.printers.find();
+			const list = (Array.isArray(result) ? result : [result]).filter(Boolean);
+			setDetected(list);
+			if (list.length === 0) toast.info("No printers found");
+		} catch {
+			toast.error("Could not detect printers. Is QZ Tray running?");
+		} finally {
+			setDetecting(false);
+		}
+	};
+
+	const savePrinter = (name: string) => {
+		const value = name.trim();
+		if (!value) return;
+		localStorage.setItem("pos-printer-name", value);
+		setPrinterName(value);
 		setSaved(true);
-		toast.success("Printer name saved");
+		toast.success("Printer saved");
 		setTimeout(() => setSaved(false), 2000);
 	};
 
@@ -2404,12 +2427,47 @@ function PrinterSetupCard() {
 					</span>
 				</CardTitle>
 				<CardDescription>
-					Enter the exact Windows printer name to enable zero-flash silent
-					printing via QZ Tray. Find it in Windows Settings → Bluetooth &amp;
-					devices → Printers.
+					Detect available printers via QZ Tray or enter the name manually.
 				</CardDescription>
 			</CardHeader>
-			<CardContent>
+			<CardContent className="space-y-3">
+				<Button
+					size="sm"
+					variant="outline"
+					onClick={handleDetect}
+					disabled={detecting || qzStatus !== "ready"}
+					className="gap-2"
+				>
+					{detecting ? (
+						<Loader2 className="size-4 animate-spin" />
+					) : (
+						<RefreshCw className="size-4" />
+					)}
+					{detecting
+						? "Detecting..."
+						: qzStatus === "ready"
+							? "Detect Printers"
+							: "QZ Tray not connected"}
+				</Button>
+
+				{detected.length > 0 && (
+					<div className="max-w-sm space-y-1">
+						<p className="text-muted-foreground text-xs">
+							Click a printer to select it:
+						</p>
+						{detected.map((p) => (
+							<button
+								key={p}
+								type="button"
+								onClick={() => savePrinter(p)}
+								className={`w-full rounded-md border px-3 py-1.5 text-left text-sm transition-colors ${printerName === p ? "border-primary bg-primary/5 font-medium" : "border-border hover:bg-muted"}`}
+							>
+								{p}
+							</button>
+						))}
+					</div>
+				)}
+
 				<div className="flex max-w-sm gap-2">
 					<Input
 						value={printerName}
@@ -2419,16 +2477,16 @@ function PrinterSetupCard() {
 					/>
 					<Button
 						size="sm"
-						onClick={handleSave}
-						disabled={saved}
+						onClick={() => savePrinter(printerName)}
+						disabled={saved || !printerName.trim()}
 						className="shrink-0"
 					>
 						{saved ? <Check className="size-4" /> : "Save"}
 					</Button>
 				</div>
-				<p className="mt-2 text-muted-foreground text-xs">
-					QZ Tray must be installed and running on the Windows POS machine.
-					Falls back to browser print if unavailable.
+				<p className="text-muted-foreground text-xs">
+					QZ Tray must be installed and running. Falls back to browser print if
+					unavailable.
 				</p>
 			</CardContent>
 		</Card>
