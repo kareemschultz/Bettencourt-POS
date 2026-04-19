@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import {
+	ChevronDown,
 	Clock,
 	Loader2,
 	Minus,
@@ -41,6 +42,8 @@ interface CartPanelProps {
 	onQuickCashTender?: (amount: number) => void;
 	orderMode?: "dine_in" | "pickup" | "delivery";
 	customerName?: string;
+	defaultTaxRate?: number;
+	defaultTaxName?: string;
 }
 
 export function CartPanel({
@@ -62,6 +65,8 @@ export function CartPanel({
 	onQuickCashTender,
 	orderMode,
 	customerName,
+	defaultTaxRate = 0,
+	defaultTaxName = "VAT",
 }: CartPanelProps) {
 	const modeLabel =
 		orderMode === "pickup"
@@ -84,6 +89,10 @@ export function CartPanel({
 		value: string;
 		code: string;
 	} | null>(null);
+
+	const [showVatBreakdown, setShowVatBreakdown] = useState(
+		() => localStorage.getItem("pos-show-vat") !== "false",
+	);
 
 	const validatePromo = useMutation(
 		orpc.discounts.validatePromo.mutationOptions({
@@ -362,9 +371,67 @@ export function CartPanel({
 						</div>
 					)}
 					{tax > 0 && (
-						<div className="flex justify-between">
-							<span className="text-muted-foreground">Tax</span>
-							<span>{formatGYD(tax)}</span>
+						<div className="flex flex-col gap-0.5">
+							<button
+								type="button"
+								className="flex w-full items-center justify-between text-left hover:opacity-80"
+								onClick={() =>
+									setShowVatBreakdown((v) => {
+										const next = !v;
+										localStorage.setItem("pos-show-vat", String(next));
+										return next;
+									})
+								}
+							>
+								<span className="flex items-center gap-1 text-muted-foreground">
+									Incl. {defaultTaxName}
+									<ChevronDown
+										className={`size-3 transition-transform duration-150 ${showVatBreakdown ? "rotate-180" : ""}`}
+									/>
+								</span>
+								<span>{formatGYD(tax)}</span>
+							</button>
+							{showVatBreakdown && items.length > 0 && (
+								<div className="ml-1 flex flex-col gap-0.5 border-muted border-l-2 pl-2">
+									{items.length === 1 ? (
+										<div className="flex justify-between text-[10px] text-muted-foreground/70">
+											<span className="truncate">{items[0].product.name}</span>
+											<span>
+												{formatGYD(
+													Math.round(
+														((items[0].line_total * defaultTaxRate) /
+															(1 + defaultTaxRate)) *
+															100,
+													) / 100,
+												)}
+											</span>
+										</div>
+									) : (
+										items.map((item) => {
+											const vatAmt =
+												defaultTaxRate > 0
+													? Math.round(
+															((item.line_total * defaultTaxRate) /
+																(1 + defaultTaxRate)) *
+																100,
+														) / 100
+													: 0;
+											return (
+												<div
+													key={item.id}
+													className="flex justify-between text-[10px] text-muted-foreground/70"
+												>
+													<span className="truncate">
+														{item.quantity > 1 ? `${item.quantity}× ` : ""}
+														{item.product.name}
+													</span>
+													<span>{formatGYD(vatAmt)}</span>
+												</div>
+											);
+										})
+									)}
+								</div>
+							)}
 						</div>
 					)}
 					<div className="flex justify-between border-border border-t pt-1 font-bold text-lg">

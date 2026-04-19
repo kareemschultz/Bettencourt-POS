@@ -165,6 +165,24 @@ export function POSTerminal({
 		orpc.settings.getReceiptConfig.queryOptions({ input: {} }),
 	);
 
+	// POS behaviour settings
+	const { data: posSettings } = useQuery(
+		orpc.settings.getPosSettings.queryOptions({ input: {} }),
+	);
+
+	// Apply defaultOrderType once when settings load
+	const defaultOrderTypeApplied = useRef(false);
+	useEffect(() => {
+		if (posSettings && !defaultOrderTypeApplied.current) {
+			defaultOrderTypeApplied.current = true;
+			const t = posSettings.defaultOrderType as
+				| "dine_in"
+				| "pickup"
+				| "delivery";
+			if (t && t !== "dine_in") setOrderMode(t);
+		}
+	}, [posSettings]);
+
 	// Customer search
 	const { data: customerResults = [] } = useQuery({
 		...orpc.customers.search.queryOptions({
@@ -366,7 +384,7 @@ export function POSTerminal({
 					mode: orderMode,
 				});
 				setPaymentOpen(false);
-				setAutoPrintReceipt(true);
+				setAutoPrintReceipt(posSettings?.autoPrintReceipt ?? false);
 				setReceiptOpen(true);
 				setMobileCartOpen(false);
 				setCart([]);
@@ -712,6 +730,8 @@ export function POSTerminal({
 			grandTotal={grandTotal}
 			discount={discount}
 			discountLabel={discountLabel}
+			defaultTaxRate={defaultTaxRate}
+			defaultTaxName={defaultTaxName}
 			onUpdateQuantity={handleUpdateQuantity}
 			onRemoveItem={handleRemoveItem}
 			onCheckout={() => {
@@ -925,7 +945,7 @@ export function POSTerminal({
 									>
 										<UserSearch className="size-3.5" />
 										{selectedCustomer.name}
-										{loyaltyData && (
+										{loyaltyData && posSettings?.enableLoyalty !== false && (
 											<span className="flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 font-semibold text-[10px] text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
 												<Star className="size-2.5" />
 												{loyaltyData.membership.currentPoints} pts
@@ -1001,15 +1021,17 @@ export function POSTerminal({
 							)}
 						</PopoverContent>
 					</Popover>
-					<Button
-						variant="ghost"
-						size="sm"
-						className="hidden gap-1.5 text-xs sm:flex"
-						onClick={() => setSellGiftCardOpen(true)}
-					>
-						<Gift className="size-3.5" />
-						Sell Gift Card
-					</Button>
+					{posSettings?.enableGiftCards !== false && (
+						<Button
+							variant="ghost"
+							size="sm"
+							className="hidden gap-1.5 text-xs sm:flex"
+							onClick={() => setSellGiftCardOpen(true)}
+						>
+							<Gift className="size-3.5" />
+							Sell Gift Card
+						</Button>
+					)}
 					{lastOrder && (
 						<Button
 							variant="ghost"
