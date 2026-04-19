@@ -38,6 +38,7 @@ interface CartPanelProps {
 	canApplyDiscount?: boolean;
 	onOpenNotes: (id: string) => void;
 	onApplyPromo?: (amount: number, label: string) => void;
+	onQuickCashTender?: (amount: number) => void;
 	orderMode?: "dine_in" | "pickup" | "delivery";
 	customerName?: string;
 }
@@ -58,6 +59,7 @@ export function CartPanel({
 	canApplyDiscount = true,
 	onOpenNotes,
 	onApplyPromo,
+	onQuickCashTender,
 	orderMode,
 	customerName,
 }: CartPanelProps) {
@@ -372,6 +374,28 @@ export function CartPanel({
 				</div>
 
 				<div className="mt-3 flex flex-col gap-2">
+					{onQuickCashTender && items.length > 0 && (
+						<div className="flex gap-1.5">
+							{(() => {
+								const denominations = [500, 1000, 2000, 5000, 10000, 20000];
+								const quickAmounts = [
+									grandTotal,
+									...denominations.filter((d) => d > grandTotal).slice(0, 3),
+								];
+								return quickAmounts.map((amount, i) => (
+									<Button
+										key={amount}
+										variant="outline"
+										size="sm"
+										className="h-9 flex-1 font-medium text-xs"
+										onClick={() => onQuickCashTender(amount)}
+									>
+										{i === 0 ? "Exact" : formatGYD(amount)}
+									</Button>
+								));
+							})()}
+						</div>
+					)}
 					<Button
 						className="min-h-[56px] w-full font-bold text-lg"
 						onClick={onCheckout}

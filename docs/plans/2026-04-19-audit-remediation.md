@@ -56,35 +56,35 @@ All Wave 1 items were implemented on 2026-04-19 in a single commit.
 
 ## Wave 2 -- Financial Correctness (1-4 weeks)
 
-### F-004 ⏳ -- Checkout trusts client-supplied prices
+### F-004 ✅ -- Checkout trusts client-supplied prices
 
 - **File:** `packages/api/src/routers/pos.ts` (`checkout`)
 - **Fix:** In checkout transaction, re-fetch canonical `unitPrice`, `taxRate`, `productName` from DB using `productId`; reject or override client snapshot if mismatch exceeds tolerance.
 - **Risk:** Breaking change to checkout input contract -- requires client-side coordination before shipping.
 
-### F-005 ⏳ -- Floating-point money math
+### F-005 ✅ -- Floating-point money math
 
 - **Files:** `packages/api/src/routers/pos.ts`, `split-bill.ts`, `orders.ts`
 - **Fix:** Introduce integer-cent helpers (`toCents(n)`, `fromCents(n)`) in a shared `packages/api/src/lib/money.ts` module. Replace all `Number()` + `.toFixed()` money operations.
 - **Risk:** Large refactor; requires thorough test coverage before shipping.
 
-### F-006 ⏳ -- Offline queue clears cart before server ack
+### F-006 ✅ -- Offline queue clears cart before server ack
 
 - **Files:** `apps/web/src/components/pos/pos-terminal.tsx`, `apps/web/src/lib/offline.ts`
 - **Fix:** Keep cart in `pending` state until `checkout` RPC returns `2xx` with order ID; only then clear. Offline queue tracks per-ticket sync state and surfaces unsynced tickets.
 
-### F-007 ⏳ -- Gift card payment does not debit balance
+### F-007 ✅ -- Gift card payment does not debit balance
 
 - **File:** `packages/api/src/routers/pos.ts` (`checkout`)
 - **Fix:** In checkout transaction, when `payment.method === "gift_card"`, call gift card ledger to debit `payment.amount`; rollback if insufficient balance.
 - **Note:** Verify gift card schema and router exist with a balance field before implementing.
 
-### F-011 ⏳ -- Order number race condition
+### F-011 ✅ -- Order number race condition
 
 - **Files:** `packages/api/src/routers/pos.ts`, `packages/db/src/schema/*.ts`
 - **Fix:** Add `UNIQUE` constraint on `order_number`; wrap sequence fetch + insert in single SQL expression; add unique index to enforce at DB level.
 
-### F-012 ⏳ -- Free-text status columns
+### F-012 ✅ -- Free-text status columns
 
 - **Files:** `packages/db/src/schema/*.ts` + migrations
 - **Fix:** Convert `order.status`, `payment.status`, `payment.method` columns to Postgres enums or add `CHECK` constraints.
@@ -93,21 +93,21 @@ All Wave 1 items were implemented on 2026-04-19 in a single commit.
 
 ## Wave 3 -- Performance & UX (Ongoing)
 
-### F-013 ⏳ -- POS menu query performance
+### F-013 ✅ -- POS menu query performance
 
 - **File:** `packages/api/src/routers/pos.ts`
 - **Fix:** Add pagination (`limit`/`offset`) to `getProducts`; consider a materialized menu cache invalidated on product writes.
 
-### F-014 ⏳ -- Non-virtualized product grid
+### F-014 🗓 -- Non-virtualized product grid
 
 - **File:** `apps/web/src/components/pos/product-grid.tsx`
 - **Fix:** Replace render-all approach with `@tanstack/react-virtual` row virtualization; memoize product cards.
 
-### F-016 ⏳ -- Inconsistent POS terminology
+### F-016 ✅ -- Inconsistent POS terminology
 
 - Standardize to: "Ticket" (in-progress), "Pay" (tender), "Hold Ticket" / "Recall Ticket", "Split Check".
 
-### F-020 ⏳ -- No fast cash tender buttons
+### F-020 ✅ -- No fast cash tender buttons
 
 - Add one-tap cash buttons (Exact, +100, +500, +1000 GYD) to checkout footer.
 
@@ -115,16 +115,16 @@ All Wave 1 items were implemented on 2026-04-19 in a single commit.
 
 ## Wave 4 -- Tests & Documentation (Ongoing)
 
-### F-017 ⏳ -- No tests for checkout / org-scope / split invariants
+### F-017 🗓 -- No tests for checkout / org-scope / split invariants
 
 - Add integration tests: checkout rollback, cross-org forbidden mutations, gift-card tender math, split total invariant.
 
-### F-018 ⏳ -- Dead code
+### F-018 ✅ -- Dead code
 
 - Remove `packages/server/services/print-service.ts` if confirmed unused.
 - Add `apps/server/index.js.map` to `.gitignore`.
 
-### F-019 ⏳ -- Stale docs
+### F-019 🗓 -- Stale docs
 
 - Update `docs/DEVELOPER.md` and `README.md` router/table/plugin counts from source.
 

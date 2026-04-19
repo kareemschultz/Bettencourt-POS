@@ -11,7 +11,7 @@ import {
 	Search,
 	Split,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +31,7 @@ interface PaymentDialogProps {
 	total: number;
 	items: CartItem[];
 	onClose: () => void;
+	initialCashAmount?: number;
 	onComplete: (
 		payments: {
 			method: "cash" | "card" | "mobile_money" | "gift_card" | "credit";
@@ -54,6 +55,7 @@ export function PaymentDialog({
 	total,
 	items: _items,
 	onClose,
+	initialCashAmount,
 	onComplete,
 }: PaymentDialogProps) {
 	const [step, setStep] = useState<PaymentStep>("method");
@@ -71,6 +73,13 @@ export function PaymentDialog({
 		isActive: boolean;
 	} | null>(null);
 	const [_giftCardApplied, setGiftCardApplied] = useState(false);
+
+	useEffect(() => {
+		if (open && initialCashAmount != null && initialCashAmount > 0) {
+			setStep("cash");
+			setCashTendered(String(Math.ceil(initialCashAmount)));
+		}
+	}, [open, initialCashAmount]);
 
 	const lookupGiftCard = useMutation(
 		orpc.giftcards.lookup.mutationOptions({

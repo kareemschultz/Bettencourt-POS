@@ -94,6 +94,9 @@ export function POSTerminal({
 		"c0000000-0000-4000-8000-000000000001",
 	);
 	const [paymentOpen, setPaymentOpen] = useState(false);
+	const [quickCashAmount, setQuickCashAmount] = useState<number | undefined>(
+		undefined,
+	);
 	const [receiptOpen, setReceiptOpen] = useState(false);
 	const [autoPrintReceipt, setAutoPrintReceipt] = useState(false);
 	const [discountOpen, setDiscountOpen] = useState(false);
@@ -573,23 +576,28 @@ export function POSTerminal({
 			fulfillmentStatus: isPickupOrDelivery ? "pending" : "none",
 		};
 
-		// If offline, queue the sale directly and clear the cart — no receipt until sync
+		// If offline, queue the sale — keep cart visible until cashier confirms clear (F-006)
 		if (!getOnlineStatus()) {
 			await offlineFetch("/rpc/pos.checkout", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(checkoutPayload),
 			});
-			setCart([]);
-			setDiscount(0);
-			setDiscountLabel("");
-			setSelectedCustomer(null);
-			setCustomerName("");
-			setCustomerPhone("");
-			setDeliveryAddress("");
-			setTabName("");
 			toast.warning("Sale queued — will sync when back online", {
-				duration: 5000,
+				duration: 10000,
+				action: {
+					label: "Clear Cart",
+					onClick: () => {
+						setCart([]);
+						setDiscount(0);
+						setDiscountLabel("");
+						setSelectedCustomer(null);
+						setCustomerName("");
+						setCustomerPhone("");
+						setDeliveryAddress("");
+						setTabName("");
+					},
+				},
 			});
 			return;
 		}
@@ -688,6 +696,11 @@ export function POSTerminal({
 			onUpdateQuantity={handleUpdateQuantity}
 			onRemoveItem={handleRemoveItem}
 			onCheckout={() => {
+				setPaymentOpen(true);
+				setMobileCartOpen(false);
+			}}
+			onQuickCashTender={(amount) => {
+				setQuickCashAmount(amount);
 				setPaymentOpen(true);
 				setMobileCartOpen(false);
 			}}
@@ -1310,10 +1323,14 @@ export function POSTerminal({
 
 			<PaymentDialog
 				open={paymentOpen}
-				onClose={() => setPaymentOpen(false)}
+				onClose={() => {
+					setPaymentOpen(false);
+					setQuickCashAmount(undefined);
+				}}
 				total={grandTotal}
 				items={cart}
 				onComplete={handlePaymentComplete}
+				initialCashAmount={quickCashAmount}
 			/>
 			<ReceiptPreview
 				open={receiptOpen}

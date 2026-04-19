@@ -222,7 +222,7 @@ export function SplitBillDialog({
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						<Split className="size-5" />
-						Split Bill - {formatGYD(orderTotal)}
+						Split Check - {formatGYD(orderTotal)}
 					</DialogTitle>
 				</DialogHeader>
 

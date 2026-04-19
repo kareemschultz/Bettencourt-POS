@@ -32,11 +32,13 @@ const getProducts = permissionProcedure("orders.read")
 				registerId: z.string().uuid().optional(),
 				departmentId: z.string().uuid().optional(),
 				locationId: z.string().uuid().optional(),
+				limit: z.number().int().positive().max(1000).default(500),
+				offset: z.number().int().nonnegative().default(0),
 			})
 			.optional(),
 	)
 	.handler(async ({ input: rawInput, context }) => {
-		const input = rawInput ?? {};
+		const input = rawInput ?? { limit: 500, offset: 0 };
 		const orgId = requireOrganizationId(context);
 		// If register specified, get its allowed department IDs
 		let departmentFilter: string[] = [];
@@ -159,7 +161,9 @@ const getProducts = permissionProcedure("orders.read")
 				eq(schema.product.reportingCategoryId, schema.reportingCategory.id),
 			)
 			.where(and(...conditions))
-			.orderBy(asc(schema.product.sortOrder), asc(schema.product.name));
+			.orderBy(asc(schema.product.sortOrder), asc(schema.product.name))
+			.limit(input.limit)
+			.offset(input.offset);
 
 		// Get combo products and their components
 		const comboProductRows = await db
@@ -346,7 +350,7 @@ const checkout = permissionProcedure("orders.create")
 	)
 	.handler(async ({ input, context }) => {
 		const {
-			items,
+			items: rawItems,
 			payments,
 			orderType,
 			locationId,
@@ -363,11 +367,59 @@ const checkout = permissionProcedure("orders.create")
 			estimatedReadyAt,
 			fulfillmentStatus,
 		} = input;
+		const items = rawItems.map((i) => ({ ...i }));
 		const organizationId = requireOrganizationId(context);
 		const actorUserId = context.session.user.id;
 
 		if (!items || items.length === 0) {
 			throw new ORPCError("BAD_REQUEST", { message: "No items" });
+		}
+
+		// F-004: Validate and override client-supplied prices with server-canonical values
+		{
+			const nonComboItems = items.filter((item) => !item.isCombo);
+			if (nonComboItems.length > 0) {
+				const productIds = [...new Set(nonComboItems.map((i) => i.productId))];
+				const dbProducts = await db
+					.select({
+						id: schema.product.id,
+						price: schema.product.price,
+						taxRate: schema.product.taxRate,
+					})
+					.from(schema.product)
+					.where(
+						and(
+							inArray(schema.product.id, productIds),
+							eq(schema.product.organizationId, organizationId),
+						),
+					);
+
+				const priceMap = new Map(dbProducts.map((p) => [p.id, p]));
+				for (const item of items) {
+					if (item.isCombo) continue;
+					const dbProduct = priceMap.get(item.productId);
+					if (!dbProduct) {
+						throw new ORPCError("BAD_REQUEST", {
+							message: `Product not found: ${item.productId}`,
+						});
+					}
+					const serverPrice = Number(dbProduct.price);
+					const serverTax = Number(dbProduct.taxRate);
+					if (Math.abs(item.unitPrice - serverPrice) > 0.01) {
+						throw new ORPCError("BAD_REQUEST", {
+							message: `Price mismatch for product ${item.productId}: expected ${serverPrice}, got ${item.unitPrice}`,
+						});
+					}
+					if (Math.abs(item.taxRate - serverTax) > 0.001) {
+						throw new ORPCError("BAD_REQUEST", {
+							message: `Tax rate mismatch for product ${item.productId}: expected ${serverTax}, got ${item.taxRate}`,
+						});
+					}
+					// Override with server-canonical values
+					item.unitPrice = serverPrice;
+					item.taxRate = serverTax;
+				}
+			}
 		}
 
 		// Calculate totals
@@ -395,6 +447,46 @@ const checkout = permissionProcedure("orders.create")
 			throw new ORPCError("BAD_REQUEST", {
 				message: `Payment total (${paymentSum.toFixed(2)}) is less than order total (${total.toFixed(2)})`,
 			});
+		}
+
+		// F-007: Pre-validate gift card balances before opening the transaction
+		{
+			const gcPayments = payments.filter(
+				(p) => p.method === "gift_card" && p.reference,
+			);
+			if (gcPayments.length > 0) {
+				let gcRemaining = total;
+				for (const pmt of payments) {
+					const allocated = Math.min(pmt.amount, gcRemaining);
+					gcRemaining -= allocated;
+					if (pmt.method === "gift_card" && pmt.reference) {
+						const gcRows = await db
+							.select({
+								id: schema.giftCard.id,
+								currentBalance: schema.giftCard.currentBalance,
+								isActive: schema.giftCard.isActive,
+							})
+							.from(schema.giftCard)
+							.where(
+								and(
+									eq(schema.giftCard.code, pmt.reference.toUpperCase()),
+									eq(schema.giftCard.organizationId, organizationId),
+								),
+							)
+							.limit(1);
+						if (gcRows.length === 0 || !gcRows[0]!.isActive) {
+							throw new ORPCError("BAD_REQUEST", {
+								message: `Gift card not found or inactive: ${pmt.reference}`,
+							});
+						}
+						if (Number(gcRows[0]!.currentBalance) < allocated - 0.01) {
+							throw new ORPCError("BAD_REQUEST", {
+								message: `Insufficient gift card balance for card ${pmt.reference}`,
+							});
+						}
+					}
+				}
+			}
 		}
 
 		// Ensure the order number sequence exists OUTSIDE the transaction.
@@ -544,6 +636,47 @@ const checkout = permissionProcedure("orders.create")
 					reference: pmt.reference ?? null,
 					status: "completed",
 				});
+			}
+
+			// F-007: Debit gift card balances atomically inside transaction
+			{
+				let gcRemainingTx = total;
+				for (const pmt of payments) {
+					const allocatedTx = Math.min(pmt.amount, gcRemainingTx);
+					gcRemainingTx -= allocatedTx;
+					if (pmt.method === "gift_card" && pmt.reference && allocatedTx > 0) {
+						const updated = await tx
+							.update(schema.giftCard)
+							.set({
+								currentBalance: sql`current_balance - ${allocatedTx.toFixed(2)}::numeric`,
+							})
+							.where(
+								and(
+									eq(schema.giftCard.code, pmt.reference.toUpperCase()),
+									eq(schema.giftCard.organizationId, organizationId),
+									sql`current_balance >= ${allocatedTx.toFixed(2)}::numeric`,
+								),
+							)
+							.returning({
+								id: schema.giftCard.id,
+								currentBalance: schema.giftCard.currentBalance,
+							});
+						if (updated.length === 0) {
+							throw new ORPCError("BAD_REQUEST", {
+								message:
+									"Gift card balance insufficient (concurrent modification)",
+							});
+						}
+						await tx.insert(schema.giftCardTransaction).values({
+							giftCardId: updated[0]!.id,
+							orderId: createdOrder.id,
+							type: "redeem",
+							amount: allocatedTx.toFixed(2),
+							balanceAfter: updated[0]!.currentBalance!,
+							processedBy: actorUserId,
+						});
+					}
+				}
 			}
 
 			// Update cash session — sum ALL cash payments, not just first
