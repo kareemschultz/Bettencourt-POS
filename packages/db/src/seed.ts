@@ -1241,16 +1241,9 @@ async function seed() {
 			{
 				id: "af000000-0000-4000-8000-000000000001",
 				organizationId: ORG_ID,
-				name: "Sales Tax",
-				rate: "0.0875",
+				name: "VAT",
+				rate: "0.1400",
 				isDefault: true,
-			},
-			{
-				id: "af000000-0000-4000-8000-000000000002",
-				organizationId: ORG_ID,
-				name: "Alcohol Tax",
-				rate: "0.1200",
-				isDefault: false,
 			},
 		])
 		.onConflictDoNothing();
