@@ -10,7 +10,7 @@ import { auth } from "@Bettencourt-POS/auth";
 import { db } from "@Bettencourt-POS/db";
 import * as schema from "@Bettencourt-POS/db/schema";
 import { env } from "@Bettencourt-POS/env/server";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
