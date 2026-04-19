@@ -48,6 +48,7 @@
 		"@Bettencourt-POS/config": "workspace:*",
 		"@biomejs/biome": "^2.2.0",
 		"@types/bun": "catalog:",
+		"@types/qz-tray": "^2.2.2",
 		"husky": "^9.1.7",
 		"lint-staged": "^16.1.2",
 		"turbo": "^2.8.12",

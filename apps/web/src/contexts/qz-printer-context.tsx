@@ -1,3 +1,4 @@
+import type { PrintData } from "qz-tray";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 export type QzStatus = "unavailable" | "connecting" | "ready" | "error";
@@ -31,24 +32,30 @@ export function QzPrinterProvider({ children }: { children: React.ReactNode }) {
 				const qz = await getQz();
 
 				qz.security.setCertificatePromise(
-					(resolve: (v: string) => void, reject: (v: unknown) => void) => {
+					(
+						resolve: (value?: string) => void,
+						reject: (value?: string) => void,
+					) => {
 						fetch("/api/qz/certificate", { cache: "no-store" })
 							.then((r) => (r.ok ? r.text() : Promise.reject(r)))
 							.then(resolve)
-							.catch(reject);
+							.catch(() => reject());
 					},
 				);
 
 				qz.security.setSignatureAlgorithm("SHA512");
 				qz.security.setSignaturePromise(
 					(toSign: string) =>
-						(resolve: (v: string) => void, reject: (v: unknown) => void) => {
+						(
+							resolve: (value?: string) => void,
+							reject: (value?: string) => void,
+						) => {
 							fetch(`/api/qz/sign?request=${encodeURIComponent(toSign)}`, {
 								cache: "no-store",
 							})
 								.then((r) => (r.ok ? r.text() : Promise.reject(r)))
 								.then(resolve)
-								.catch(reject);
+								.catch(() => reject());
 						},
 				);
 
@@ -81,12 +88,14 @@ export function QzPrinterProvider({ children }: { children: React.ReactNode }) {
 			const config = qz.configs.create(printerName);
 			await qz.print(
 				config,
-				data.map((d) => ({
-					type: "raw",
-					format: "command",
-					flavor: "plain",
-					data: d,
-				})),
+				data.map(
+					(d): PrintData => ({
+						type: "raw",
+						format: "command",
+						flavor: "plain",
+						data: d,
+					}),
+				),
 			);
 			return true;
 		} catch {
