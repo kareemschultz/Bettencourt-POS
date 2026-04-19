@@ -33,7 +33,7 @@ import {
 	recordPinFailure,
 } from "./pin-rate-limit";
 import { backupsRouter } from "./routes/backups";
-import { qzRouter } from "./routes/qz";
+import { decodePem } from "./routes/qz";
 import { publishPosEvent, websocket, wsRoute } from "./ws";
 
 // BetterAuth uses 32-char alphanumeric IDs (not UUIDs) for sessions.
@@ -192,7 +192,20 @@ app.post("/api/auth/demo-login", async (c) => {
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 app.route("/api/backups", backupsRouter);
-app.route("/", qzRouter);
+
+// QZ Tray — inlined directly to avoid serveStatic shadowing sub-router routes in Hono v4.
+app.get("/api/qz/certificate", (c) => c.text(decodePem(env.QZ_TRAY_CERT)));
+app.get("/api/qz/sign", (c) => {
+	const request = c.req.query("request");
+	if (!request || !env.QZ_TRAY_PRIVATE_KEY) return c.text("", 200);
+	try {
+		const sign = createSign("SHA512");
+		sign.update(request);
+		return c.text(sign.sign(decodePem(env.QZ_TRAY_PRIVATE_KEY), "base64"));
+	} catch {
+		return c.text("", 200);
+	}
+});
 
 // ── Network print proxy ─────────────────────────────────────────────────
 // Forwards ESC/POS data to a TCP printer on the local network
