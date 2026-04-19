@@ -131,3 +131,49 @@ Prepared For / Bill To
 ```
 
 **No database migration needed** — columns were already present.
+
+---
+
+## Update: 2026-04-19 — Security Audit Remediation + GRA VAT + POS Settings Wiring
+
+### Security audit (all waves complete — commits `8e5247c` → `c1ae520`)
+
+**26 findings addressed:**
+- IDOR org-scoping: pos router, customers, orders, modifiers (9 procedures), reports (13 types + EOD)
+- Server-side price & tax validation; money.ts helpers (toCents/fromCents/roundMoney)
+- Offline cart UX: cart stays visible on queue; cashier manually clears after confirmation
+- Gift card debit inside DB transaction; UNIQUE index on `order_number+org`; CHECK constraints on financial columns
+- Pagination on all list endpoints; product grid virtualisation (`@tanstack/react-virtual`)
+- Path traversal + SSRF protections on print proxy and uploads
+- Dead code removed; console.log/error stripped from offline module
+
+### GRA VAT (Guyana 14%)
+- Seed updated: "VAT" at 14% (was "Sales Tax" at 9%); Alcohol Tax seed removed
+- Tax extraction formula `price × rate/(1+rate)` used throughout: CartPanel, receipt preview, ESC/POS print
+- Settings UI shows GRA formula + correct terminology
+
+### QZ Tray signed-mode printing
+- Self-signed CA cert (CA:TRUE, RSA-2048) served at `/api/qz/certificate`
+- PowerShell one-liner for Windows terminal setup (Printers settings page)
+- `scripts/install-qz-cert.bat` alternative
+
+### POS settings wired into terminal
+- `getPosSettings` now called from `pos-terminal.tsx`; `autoPrintReceipt` honours org setting (was hardcoded)
+- `defaultOrderType` applied once on load; `enableGiftCards`/`enableLoyalty` gate UI elements
+
+### CartPanel VAT breakdown toggle
+- "Incl. VAT" row clickable — expands per-item VAT breakdown
+- Single item: shows that item's VAT. Multiple items: shows each item's VAT
+- State persisted per-terminal via `localStorage` key `pos-show-vat`
+
+### GYD denomination fix
+- Quick-cash buttons: `[100, 500, 1000, 2000, 5000]` (removed non-existent $10k/$20k notes)
+
+### Courses toggle (Shakira feedback)
+- Course selector bar has "Hide / Show courses" toggle; persisted to `pos-show-courses` localStorage
+- Counter-service mode defaults to hidden
+
+### Deployment
+- All changes live on `kt-titan-01` (`pos.bettencourtgy.com`), HTTP 200 confirmed
+- DB migrations 0020 + 0021 applied (UNIQUE index, CHECK constraints)
+- GitHub: `kareemschultz/Bettencourt-POS`, branch `master`

@@ -224,3 +224,43 @@ Missing or underpowered relative to leading restaurant POS:
 - Observability for checkout latency and tender failure rates.
 - Docs-as-code pipeline to prevent drift.
 
+---
+
+## 11) Remediation Status (as of 2026-04-19)
+
+All immediate + short-term findings fully addressed. Commits `8e5247c` → `c1ae520`.
+
+| Finding | Description | Status |
+|---------|-------------|--------|
+| F-001/002/003 | IDOR — org-scoping gaps in pos, customers, orders | ✅ Fixed |
+| F-004 | Server-side price validation | ✅ Fixed |
+| F-005 | money.ts helpers (toCents, fromCents, roundMoney) | ✅ Fixed |
+| F-006 | Offline cart kept visible pending cashier confirm | ✅ Fixed |
+| F-007 | Gift card debit inside transaction | ✅ Fixed |
+| F-008 | SSRF on print proxy | ✅ Fixed |
+| F-009 | Path traversal on uploads | ✅ Fixed |
+| F-011 | UNIQUE index on order_number+org | ✅ Fixed |
+| F-012 | CHECK constraints on financial columns | ✅ Fixed |
+| F-013 | Pagination on list endpoints | ✅ Fixed |
+| F-014 | Product grid virtualisation (`@tanstack/react-virtual`) | ✅ Fixed |
+| F-015 | Cart clear undo action | ✅ Fixed |
+| F-016 | "Split Check" rename | ✅ Fixed |
+| F-018 | Dead code removed | ✅ Fixed |
+| F-020 | GYD quick-cash denominations corrected (`[100,500,1000,2000,5000]`) | ✅ Fixed |
+| F-021 | `lookupBarcode` org-scoped | ✅ Fixed |
+| F-022 | `toggle86` org-scoped | ✅ Fixed |
+| F-023 | All 9 modifier procedures org-scoped | ✅ Fixed |
+| F-024 | `longPressTimerRef` moved to `useRef` (was leaked on re-render) | ✅ Fixed |
+| F-025 | Offline console.log/error removed | ✅ Fixed |
+| F-026 | `reports.ts` IDOR — all 13 report types + EOD report org-scoped | ✅ Fixed |
+| F-017 | Integration tests | 🗓 Backlog |
+| F-019 | DEVELOPER.md + README.md docs | 🗓 Backlog |
+
+**Additional session work (2026-04-19):**
+- VAT: seed updated to 14% Guyana GRA rate; escpos/receipt/cart all show "Incl. VAT" extraction (VAT-inclusive pricing); tax settings UI shows GRA formula.
+- Courses toggle: per-terminal localStorage `pos-show-courses`; Shakira's counter-service preference.
+- `getPosSettings` wired into `pos-terminal.tsx`: `autoPrintReceipt`, `defaultOrderType`, `enableGiftCards`, `enableLoyalty` now consumed at runtime.
+- CartPanel VAT breakdown: "Incl. VAT" row clickable — expands per-item VAT; persisted to `pos-show-vat` localStorage.
+- QZ Tray: self-signed CA cert (CA:TRUE) served from `/api/qz/certificate`; PowerShell one-liner for Windows setup; override.crt mechanism documented.
+- All changes deployed to Titan, HTTP 200 confirmed on `pos.bettencourtgy.com`.
+
