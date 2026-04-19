@@ -1,14 +1,13 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
 	Barcode,
-	ChevronLeft,
-	ChevronRight,
 	Clock,
 	FileText,
 	Gift,
 	Keyboard,
 	Lock,
 	ReceiptText,
+	Search,
 	ShoppingBag,
 	ShoppingCart,
 	Star,
@@ -16,7 +15,7 @@ import {
 	UserSearch,
 	X as XIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -94,9 +93,6 @@ export function POSTerminal({
 		"c0000000-0000-4000-8000-000000000001",
 	);
 	const [paymentOpen, setPaymentOpen] = useState(false);
-	const [quickCashAmount, setQuickCashAmount] = useState<number | undefined>(
-		undefined,
-	);
 	const [receiptOpen, setReceiptOpen] = useState(false);
 	const [autoPrintReceipt, setAutoPrintReceipt] = useState(false);
 	const [discountOpen, setDiscountOpen] = useState(false);
@@ -112,6 +108,7 @@ export function POSTerminal({
 	const [discount, setDiscount] = useState(0);
 	const [discountLabel, setDiscountLabel] = useState("");
 	const [showShortcuts, setShowShortcuts] = useState(false);
+	const [productSearch, setProductSearch] = useState("");
 	const [selectedCustomer, setSelectedCustomer] = useState<{
 		id: string;
 		name: string;
@@ -128,29 +125,6 @@ export function POSTerminal({
 	} | null>(null);
 
 	const { requestOverride, SupervisorDialog } = useSupervisorOverride();
-
-	const categoryScrollRef = useRef<HTMLDivElement>(null);
-	const [catScrollState, setCatScrollState] = useState({
-		canLeft: false,
-		canRight: false,
-	});
-	useEffect(() => {
-		const el = categoryScrollRef.current;
-		if (!el) return;
-		const update = () =>
-			setCatScrollState({
-				canLeft: el.scrollLeft > 4,
-				canRight: el.scrollLeft < el.scrollWidth - el.clientWidth - 4,
-			});
-		update();
-		el.addEventListener("scroll", update, { passive: true });
-		const ro = new ResizeObserver(update);
-		ro.observe(el);
-		return () => {
-			el.removeEventListener("scroll", update);
-			ro.disconnect();
-		};
-	}, []);
 
 	// Loyalty points for selected customer
 	const { data: loyaltyData } = useQuery({
@@ -203,18 +177,6 @@ export function POSTerminal({
 	const [tabName, setTabName] = useState("");
 	const [tabDialogOpen, setTabDialogOpen] = useState(false);
 	const [selectedCourse, setSelectedCourse] = useState(1);
-	const [showCourses, setShowCourses] = useState(
-		() => localStorage.getItem("pos-show-courses") !== "false",
-	);
-
-	function toggleCourses() {
-		setShowCourses((prev) => {
-			const next = !prev;
-			localStorage.setItem("pos-show-courses", String(next));
-			if (!next) setSelectedCourse(1);
-			return next;
-		});
-	}
 
 	// Resolve effective location from the active dashboard location context/prop.
 	const effectiveLocationId = propLocationId ?? undefined;
@@ -473,25 +435,11 @@ export function POSTerminal({
 	}
 
 	function handleClearCart() {
-		const cartSnapshot = cart;
-		const discountSnapshot = discount;
-		const discountLabelSnapshot = discountLabel;
 		setCart([]);
 		setDiscount(0);
 		setDiscountLabel("");
 		setSelectedCustomer(null);
 		resetPickupFields();
-		toast("Ticket cleared", {
-			action: {
-				label: "Undo",
-				onClick: () => {
-					setCart(cartSnapshot);
-					setDiscount(discountSnapshot);
-					setDiscountLabel(discountLabelSnapshot);
-				},
-			},
-			duration: 6000,
-		});
 	}
 
 	function handleHoldOrder() {
@@ -532,15 +480,8 @@ export function POSTerminal({
 
 	const cartItemCount = cart.reduce((s, i) => s + i.quantity, 0);
 	const cartTotal = cart.reduce((sum, item) => sum + item.line_total, 0);
-	const defaultTaxRate = posData?.defaultTaxRate ?? 0;
-	const defaultTaxName = posData?.defaultTaxName ?? "Tax";
-	// VAT-inclusive: extracted tax is informational only, does not affect total
-	const cartTax =
-		defaultTaxRate > 0
-			? Math.round(
-					((cartTotal * defaultTaxRate) / (1 + defaultTaxRate)) * 100,
-				) / 100
-			: 0;
+	// VAT-inclusive pricing: product prices already include tax — no tax added on top
+	const cartTax = 0;
 	const grandTotal = cartTotal - discount;
 
 	async function handlePaymentComplete(
@@ -613,34 +554,39 @@ export function POSTerminal({
 			fulfillmentStatus: isPickupOrDelivery ? "pending" : "none",
 		};
 
-		// If offline, queue the sale — keep cart visible until cashier confirms clear (F-006)
+		// If offline, queue the sale directly and clear the cart — no receipt until sync
 		if (!getOnlineStatus()) {
 			await offlineFetch("/rpc/pos.checkout", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(checkoutPayload),
 			});
+			setCart([]);
+			setDiscount(0);
+			setDiscountLabel("");
+			setSelectedCustomer(null);
+			setCustomerName("");
+			setCustomerPhone("");
+			setDeliveryAddress("");
+			setTabName("");
 			toast.warning("Sale queued — will sync when back online", {
-				duration: 10000,
-				action: {
-					label: "Clear Cart",
-					onClick: () => {
-						setCart([]);
-						setDiscount(0);
-						setDiscountLabel("");
-						setSelectedCustomer(null);
-						setCustomerName("");
-						setCustomerPhone("");
-						setDeliveryAddress("");
-						setTabName("");
-					},
-				},
+				duration: 5000,
 			});
 			return;
 		}
 
 		checkoutMutation.mutate(checkoutPayload);
 	}
+
+	const filteredProducts = useMemo(() => {
+		if (!productSearch.trim()) return products;
+		const q = productSearch.toLowerCase().trim();
+		return products.filter(
+			(p) =>
+				p.name.toLowerCase().includes(q) ||
+				p.department.toLowerCase().includes(q),
+		);
+	}, [products, productSearch]);
 
 	// Keyboard shortcuts (F2=Pay, F3=Hold, F4=Clear, F5=Discount, F8=Reprint, F12=Shortcuts)
 	useEffect(() => {
@@ -665,7 +611,9 @@ export function POSTerminal({
 			}
 			if (e.key === "F4") {
 				e.preventDefault();
-				handleClearCart();
+				setCart([]);
+				setDiscount(0);
+				setDiscountLabel("");
 			}
 			if (e.key === "F5") {
 				e.preventDefault();
@@ -738,11 +686,6 @@ export function POSTerminal({
 				setPaymentOpen(true);
 				setMobileCartOpen(false);
 			}}
-			onQuickCashTender={(amount) => {
-				setQuickCashAmount(amount);
-				setPaymentOpen(true);
-				setMobileCartOpen(false);
-			}}
 			onClearCart={handleClearCart}
 			onHoldOrder={handleHoldOrder}
 			onOpenDiscount={async () => {
@@ -798,113 +741,77 @@ export function POSTerminal({
 				</Select>
 
 				{/* Department filter */}
-				<div className="relative flex min-w-0 flex-1 items-center">
-					{catScrollState.canLeft && (
-						<button
-							type="button"
-							aria-label="Scroll categories left"
-							className="absolute left-0 z-10 flex h-full items-center bg-gradient-to-r from-background via-background/90 to-transparent pr-3 pl-0.5"
-							onClick={() =>
-								categoryScrollRef.current?.scrollBy({
-									left: -160,
-									behavior: "smooth",
-								})
-							}
-						>
-							<ChevronLeft className="size-4 text-foreground" />
-						</button>
-					)}
-					<div
-						ref={categoryScrollRef}
-						className="scrollbar-none flex flex-1 items-center gap-1.5 overflow-x-auto py-0.5"
-						style={{ scrollbarWidth: "none" }}
+				<div className="flex flex-1 items-center gap-1.5 overflow-x-auto py-0.5">
+					<button
+						type="button"
+						className={`shrink-0 touch-manipulation rounded-full border px-2.5 py-1 font-medium text-xs sm:px-3 ${selectedDepartment === "all" ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background hover:bg-accent"}`}
+						onClick={() => setSelectedDepartment("all")}
 					>
-						<button
-							type="button"
-							className={`shrink-0 touch-manipulation rounded-full border px-2.5 py-1 font-medium text-xs sm:px-3 ${selectedDepartment === "all" ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background hover:bg-accent"}`}
-							onClick={() => setSelectedDepartment("all")}
-						>
-							All
-						</button>
-						{departments.map((dept) => {
-							const isLocked =
-								dept.pinProtected && !unlockedCategories.has(dept.id);
-							return (
-								<button
-									key={dept.id}
-									type="button"
-									className={`flex shrink-0 touch-manipulation items-center gap-1 rounded-full border px-2.5 py-1 font-medium text-xs sm:px-3 ${selectedDepartment === dept.id ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background hover:bg-accent"}`}
-									onClick={async () => {
-										if (isLocked) {
-											try {
-												await requestOverride(
-													"pos.unlock_category",
-													`Unlock ${dept.name}`,
-												);
-												setUnlockedCategories((prev) => {
-													const next = new Set(prev);
-													next.add(dept.id);
-													return next;
-												});
-												setSelectedDepartment(dept.id);
-											} catch {
-												// cancelled
-											}
-										} else {
-											setSelectedDepartment(dept.id);
-										}
-									}}
-								>
-									{dept.name}
-									{isLocked && <Lock className="size-3 opacity-60" />}
-								</button>
-							);
-						})}
-						{departmentOverrideActive ? (
+						All
+					</button>
+					{departments.map((dept) => {
+						const isLocked =
+							dept.pinProtected && !unlockedCategories.has(dept.id);
+						return (
 							<button
+								key={dept.id}
 								type="button"
-								className="shrink-0 touch-manipulation rounded-full border border-amber-400 bg-amber-50 px-2.5 py-1 font-medium text-amber-700 text-xs sm:px-3 dark:bg-amber-900/20 dark:text-amber-400"
-								onClick={() => {
-									setDepartmentOverrideActive(false);
-									setSelectedDepartment("all");
-								}}
-							>
-								Override Active ✕
-							</button>
-						) : (
-							<button
-								type="button"
-								className="shrink-0 touch-manipulation rounded-full border border-input border-dashed bg-background px-2.5 py-1 font-medium text-xs hover:bg-accent sm:px-3"
+								className={`flex shrink-0 touch-manipulation items-center gap-1 rounded-full border px-2.5 py-1 font-medium text-xs sm:px-3 ${selectedDepartment === dept.id ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background hover:bg-accent"}`}
 								onClick={async () => {
-									try {
-										await requestOverride(
-											"departments.override",
-											"Access All Departments",
-										);
-										setDepartmentOverrideActive(true);
-										setSelectedDepartment("all");
-									} catch {
-										// cancelled
+									if (isLocked) {
+										try {
+											await requestOverride(
+												"pos.unlock_category",
+												`Unlock ${dept.name}`,
+											);
+											setUnlockedCategories((prev) => {
+												const next = new Set(prev);
+												next.add(dept.id);
+												return next;
+											});
+											setSelectedDepartment(dept.id);
+										} catch {
+											// cancelled
+										}
+									} else {
+										setSelectedDepartment(dept.id);
 									}
 								}}
 							>
-								+ Other Depts
+								{dept.name}
+								{isLocked && <Lock className="size-3 opacity-60" />}
 							</button>
-						)}
-					</div>
-					{catScrollState.canRight && (
+						);
+					})}
+					{departmentOverrideActive ? (
 						<button
 							type="button"
-							aria-label="Scroll categories right"
-							className="absolute right-0 z-10 flex h-full items-center bg-gradient-to-l from-background via-background/90 to-transparent pr-0.5 pl-3"
-							onClick={() =>
-								categoryScrollRef.current?.scrollBy({
-									left: 160,
-									behavior: "smooth",
-								})
-							}
+							className="shrink-0 touch-manipulation rounded-full border border-amber-400 bg-amber-50 px-2.5 py-1 font-medium text-amber-700 text-xs sm:px-3 dark:bg-amber-900/20 dark:text-amber-400"
+							onClick={() => {
+								setDepartmentOverrideActive(false);
+								setSelectedDepartment("all");
+							}}
 						>
-							<ChevronRight className="size-4 text-foreground" />
+							Override Active ✕
+						</button>
+					) : (
+						<button
+							type="button"
+							className="shrink-0 touch-manipulation rounded-full border border-input border-dashed bg-background px-2.5 py-1 font-medium text-xs hover:bg-accent sm:px-3"
+							onClick={async () => {
+								try {
+									await requestOverride(
+										"departments.override",
+										"Access All Departments",
+									);
+									setDepartmentOverrideActive(true);
+									setSelectedDepartment("all");
+								} catch {
+									// cancelled
+								}
+							}}
+						>
+							+ Other Depts
 						</button>
 					)}
 				</div>
@@ -1143,7 +1050,7 @@ export function POSTerminal({
 							onClick={() => setOrderMode("dine_in")}
 						>
 							<ShoppingBag className="size-3" />
-							<span className="xs:inline hidden">Walk-in</span>
+							<span>Walk-in</span>
 						</Button>
 						<Button
 							variant={orderMode === "pickup" ? "default" : "ghost"}
@@ -1152,7 +1059,7 @@ export function POSTerminal({
 							onClick={() => setOrderMode("pickup")}
 						>
 							<Clock className="size-3" />
-							<span className="xs:inline hidden">Pickup</span>
+							<span>Pickup</span>
 						</Button>
 						<Button
 							variant={orderMode === "delivery" ? "default" : "ghost"}
@@ -1161,8 +1068,26 @@ export function POSTerminal({
 							onClick={() => setOrderMode("delivery")}
 						>
 							<Truck className="size-3" />
-							<span className="xs:inline hidden">Delivery</span>
+							<span>Delivery</span>
 						</Button>
+					</div>
+
+					<div className="flex items-center gap-1 rounded-md border p-1">
+						<span className="px-1 text-[10px] text-muted-foreground uppercase">
+							Course
+						</span>
+						{[1, 2, 3, 4].map((course) => (
+							<Button
+								key={course}
+								type="button"
+								size="sm"
+								variant={selectedCourse === course ? "default" : "ghost"}
+								className="h-7 px-2 text-xs"
+								onClick={() => setSelectedCourse(course)}
+							>
+								{course}
+							</Button>
+						))}
 					</div>
 
 					{(orderMode === "pickup" || orderMode === "delivery") && (
@@ -1265,59 +1190,73 @@ export function POSTerminal({
 				</div>
 			}
 
-			{/* Course selector with toggle */}
+			{/* Course selector (visible on all terminals for dine-in) */}
 			{!isBeverageTerminal && (
 				<div className="flex items-center gap-2 border-border border-b bg-muted/20 px-3 py-1.5">
 					<span className="text-[10px] text-muted-foreground uppercase">
 						Course
 					</span>
-					{showCourses && (
-						<div className="flex items-center gap-0.5 rounded-md border p-0.5">
-							{[1, 2, 3, 4].map((course) => (
-								<Button
-									key={course}
-									type="button"
-									size="sm"
-									variant={selectedCourse === course ? "default" : "ghost"}
-									className="h-6 w-6 p-0 text-xs"
-									onClick={() => setSelectedCourse(course)}
-								>
-									{course}
-								</Button>
-							))}
-						</div>
-					)}
-					<Button
-						type="button"
-						size="sm"
-						variant="ghost"
-						className="ml-auto h-6 px-2 text-[10px] text-muted-foreground"
-						onClick={toggleCourses}
-					>
-						{showCourses ? "Hide" : "Show courses"}
-					</Button>
+					<div className="flex items-center gap-0.5 rounded-md border p-0.5">
+						{[1, 2, 3, 4].map((course) => (
+							<Button
+								key={course}
+								type="button"
+								size="sm"
+								variant={selectedCourse === course ? "default" : "ghost"}
+								className="h-6 w-6 p-0 text-xs"
+								onClick={() => setSelectedCourse(course)}
+							>
+								{course}
+							</Button>
+						))}
+					</div>
 				</div>
 			)}
 
 			{/* Main area: product grid + cart */}
 			<div className="flex flex-1 overflow-hidden">
-				<div className="flex-1 overflow-hidden">
-					<ProductGrid
-						products={products.filter((p) => p.price > 0)}
-						isLoading={isLoading}
-						onProductTap={handleProductTap}
-						onProductLongPress={handleProductLongPress}
-						cart={cart}
-						eightySixedIds={eightySixedIds}
-					/>
+				<div className="flex flex-col flex-1 overflow-hidden">
+					{/* Product search */}
+					<div className="px-2 pt-2 pb-1 sm:px-3">
+						<div className="relative">
+							<Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+							<Input
+								placeholder="Search menu..."
+								value={productSearch}
+								onChange={(e) => setProductSearch(e.target.value)}
+								className="h-8 pl-8 pr-8 text-sm"
+							/>
+							{productSearch && (
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon"
+									className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+									onClick={() => setProductSearch("")}
+								>
+									<XIcon className="size-3" />
+								</Button>
+							)}
+						</div>
+					</div>
+					<div className="flex-1 overflow-y-auto px-2 pb-2 sm:px-3">
+						<ProductGrid
+							products={filteredProducts}
+							isLoading={isLoading}
+							onProductTap={handleProductTap}
+							onProductLongPress={handleProductLongPress}
+							cart={cart}
+							eightySixedIds={eightySixedIds}
+						/>
+					</div>
 				</div>
-				<div className="hidden h-full w-72 shrink-0 border-border border-l lg:block lg:w-80 xl:w-96">
+				<div className="hidden h-full w-72 shrink-0 border-border border-l md:block lg:w-80 xl:w-96">
 					{cartContent}
 				</div>
 			</div>
 
-			{/* Mobile/tablet floating cart button */}
-			<div className="fixed right-4 bottom-4 z-30 lg:hidden">
+			{/* Mobile floating cart button */}
+			<div className="fixed right-4 bottom-4 z-30 md:hidden">
 				<Sheet open={mobileCartOpen} onOpenChange={setMobileCartOpen}>
 					<SheetTrigger asChild>
 						<Button size="lg" className="h-14 w-14 rounded-full shadow-lg">
@@ -1344,9 +1283,9 @@ export function POSTerminal({
 				</Sheet>
 			</div>
 
-			{/* Mobile/tablet bottom bar */}
+			{/* Mobile bottom bar */}
 			{cartItemCount > 0 && (
-				<div className="flex items-center justify-between border-border border-t bg-card px-4 py-2.5 lg:hidden">
+				<div className="flex items-center justify-between border-border border-t bg-card px-4 py-2.5 md:hidden">
 					<div>
 						<p className="text-muted-foreground text-xs">
 							{cartItemCount} items
@@ -1375,14 +1314,10 @@ export function POSTerminal({
 
 			<PaymentDialog
 				open={paymentOpen}
-				onClose={() => {
-					setPaymentOpen(false);
-					setQuickCashAmount(undefined);
-				}}
+				onClose={() => setPaymentOpen(false)}
 				total={grandTotal}
 				items={cart}
 				onComplete={handlePaymentComplete}
-				initialCashAmount={quickCashAmount}
 			/>
 			<ReceiptPreview
 				open={receiptOpen}
@@ -1393,8 +1328,6 @@ export function POSTerminal({
 				userName={userName}
 				receiptConfig={receiptConfig ?? null}
 				autoPrint={autoPrintReceipt}
-				defaultTaxRate={defaultTaxRate}
-				defaultTaxName={defaultTaxName}
 				onSplitBill={
 					lastOrder?.id
 						? () => {
