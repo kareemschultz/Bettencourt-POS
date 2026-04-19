@@ -3,6 +3,7 @@ import { ORPCError } from "@orpc/server";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
+import { requireOrganizationId } from "../lib/org-context";
 
 // ── getReport ───────────────────────────────────────────────────────────
 // Handles multiple report types via the `type` input param
@@ -30,7 +31,8 @@ const getReport = permissionProcedure("reports.read")
 			endDate: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const startDate =
 			input.startDate ||
 			new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -47,6 +49,7 @@ const getReport = permissionProcedure("reports.read")
 					COALESCE(AVG(total), 0) as avg_order_value
 				FROM "order" o
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz`,
 			);
@@ -61,6 +64,7 @@ const getReport = permissionProcedure("reports.read")
 					COALESCE(SUM(o.total), 0) as revenue
 				FROM "order" o
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
 				GROUP BY DATE(o.created_at)
@@ -79,6 +83,7 @@ const getReport = permissionProcedure("reports.read")
 				FROM order_line_item oli
 				JOIN "order" o ON oli.order_id = o.id
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
 					AND oli.voided = false
@@ -99,6 +104,7 @@ const getReport = permissionProcedure("reports.read")
 				FROM order_line_item oli
 				JOIN "order" o ON oli.order_id = o.id
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
 					AND oli.voided = false
@@ -119,6 +125,7 @@ const getReport = permissionProcedure("reports.read")
 				FROM "order" o
 				LEFT JOIN "user" u ON o.user_id = u.id
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
 				GROUP BY u.name, o.user_id
@@ -136,6 +143,7 @@ const getReport = permissionProcedure("reports.read")
 				FROM payment p
 				JOIN "order" o ON p.order_id = o.id
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
 				GROUP BY p.method
@@ -152,6 +160,7 @@ const getReport = permissionProcedure("reports.read")
 					COALESCE(SUM(o.total), 0) as revenue
 				FROM "order" o
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
 				GROUP BY EXTRACT(HOUR FROM o.created_at)
@@ -172,6 +181,7 @@ const getReport = permissionProcedure("reports.read")
 					sql`SELECT COUNT(*) as total_orders, COALESCE(SUM(total), 0) as grand_total
 						FROM "order"
 						WHERE status IN ('completed', 'closed')
+							AND organization_id = ${orgId}::uuid
 							AND created_at >= ${startDate}::timestamptz
 							AND created_at <= ${endDate}::timestamptz`,
 				),
@@ -183,6 +193,7 @@ const getReport = permissionProcedure("reports.read")
 						FROM order_line_item oli
 						JOIN "order" o ON oli.order_id = o.id
 						WHERE o.status IN ('completed', 'closed')
+							AND o.organization_id = ${orgId}::uuid
 							AND o.created_at >= ${startDate}::timestamptz
 							AND o.created_at <= ${endDate}::timestamptz
 							AND oli.voided = false
@@ -196,6 +207,7 @@ const getReport = permissionProcedure("reports.read")
 						FROM order_line_item oli
 						JOIN "order" o ON oli.order_id = o.id
 						WHERE o.status IN ('completed', 'closed')
+							AND o.organization_id = ${orgId}::uuid
 							AND o.created_at >= ${startDate}::timestamptz
 							AND o.created_at <= ${endDate}::timestamptz
 							AND oli.voided = false
@@ -210,6 +222,7 @@ const getReport = permissionProcedure("reports.read")
 						FROM "order" o
 						LEFT JOIN "user" u ON o.user_id = u.id
 						WHERE o.status IN ('completed', 'closed')
+							AND o.organization_id = ${orgId}::uuid
 							AND o.created_at >= ${startDate}::timestamptz
 							AND o.created_at <= ${endDate}::timestamptz
 						GROUP BY u.name
@@ -220,6 +233,7 @@ const getReport = permissionProcedure("reports.read")
 						FROM payment p
 						JOIN "order" o ON p.order_id = o.id
 						WHERE o.status IN ('completed', 'closed')
+							AND o.organization_id = ${orgId}::uuid
 							AND o.created_at >= ${startDate}::timestamptz
 							AND o.created_at <= ${endDate}::timestamptz
 						GROUP BY p.method`,
@@ -245,6 +259,7 @@ const getReport = permissionProcedure("reports.read")
 					COALESCE(SUM(o.total), 0)::numeric as total_revenue
 				FROM "order" o
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz`,
 			);
@@ -260,6 +275,7 @@ const getReport = permissionProcedure("reports.read")
 				FROM "order" o
 				LEFT JOIN "user" u ON o.user_id = u.id
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
 				GROUP BY u.name, o.user_id
@@ -274,6 +290,7 @@ const getReport = permissionProcedure("reports.read")
 				FROM payment p
 				INNER JOIN "order" o ON p.order_id = o.id
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
 				GROUP BY p.method
@@ -298,6 +315,7 @@ const getReport = permissionProcedure("reports.read")
 				FROM "order" o
 				LEFT JOIN "user" u ON u.id = o.user_id
 				WHERE o.status IN ('voided', 'refunded')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
 				GROUP BY u.name, o.user_id
@@ -310,6 +328,7 @@ const getReport = permissionProcedure("reports.read")
 				FROM "order" o
 				LEFT JOIN "user" u ON u.id = o.user_id
 				WHERE o.status IN ('voided', 'refunded')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
 				ORDER BY o.created_at DESC
@@ -323,13 +342,16 @@ const getReport = permissionProcedure("reports.read")
 		}
 
 		if (input.type === "production") {
+			// production_log has no organization_id — scope via location join
 			const productionResult = await db.execute(
 				sql`SELECT
 					pl.product_id, pl.product_name,
 					COALESCE(SUM(CASE WHEN pl.entry_type IN ('opening','reorder') THEN pl.quantity ELSE 0 END), 0)::int as produced,
 					COALESCE(SUM(CASE WHEN pl.entry_type = 'closing' THEN pl.quantity ELSE 0 END), 0)::int as closing_stock
 				FROM production_log pl
-				WHERE pl.log_date >= ${startDate}::date AND pl.log_date <= ${endDate}::date
+				JOIN location loc ON loc.id = pl.location_id
+				WHERE loc.organization_id = ${orgId}::uuid
+					AND pl.log_date >= ${startDate}::date AND pl.log_date <= ${endDate}::date
 				GROUP BY pl.product_id, pl.product_name`,
 			);
 
@@ -338,6 +360,7 @@ const getReport = permissionProcedure("reports.read")
 				FROM order_line_item oli
 				JOIN "order" o ON o.id = oli.order_id
 				WHERE o.status = 'completed'
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
 				GROUP BY oli.product_id`,
@@ -370,6 +393,7 @@ const getReport = permissionProcedure("reports.read")
 					COALESCE(SUM(o.total), 0)::numeric as revenue
 				FROM "order" o
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
 				GROUP BY DATE(o.created_at)
@@ -388,7 +412,8 @@ const getReport = permissionProcedure("reports.read")
 					COALESCE(AVG(c.total_spent), 0)::numeric as avg_lifetime_spend,
 					COALESCE(SUM(c.total_spent), 0)::numeric as total_revenue_from_customers,
 					COUNT(*) FILTER (WHERE c.visit_count > 1)::int as returning_customers
-				FROM customer c`,
+				FROM customer c
+				WHERE c.organization_id = ${orgId}::uuid`,
 			);
 
 			// Top customers by spend
@@ -398,7 +423,8 @@ const getReport = permissionProcedure("reports.read")
 					c.last_visit_at,
 					CASE WHEN c.visit_count > 0 THEN (c.total_spent / c.visit_count)::numeric ELSE 0 END as avg_order_value
 				FROM customer c
-				WHERE c.total_spent > 0
+				WHERE c.organization_id = ${orgId}::uuid
+					AND c.total_spent > 0
 				ORDER BY c.total_spent DESC
 				LIMIT 20`,
 			);
@@ -410,7 +436,8 @@ const getReport = permissionProcedure("reports.read")
 					c.last_visit_at,
 					CASE WHEN c.visit_count > 0 THEN (c.total_spent / c.visit_count)::numeric ELSE 0 END as avg_order_value
 				FROM customer c
-				WHERE c.visit_count > 0
+				WHERE c.organization_id = ${orgId}::uuid
+					AND c.visit_count > 0
 				ORDER BY c.visit_count DESC
 				LIMIT 20`,
 			);
@@ -426,6 +453,7 @@ const getReport = permissionProcedure("reports.read")
 				FROM "order" o
 				LEFT JOIN customer c ON c.id = o.customer_id
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.customer_id IS NOT NULL
 					AND o.created_at >= ${startDate}::timestamptz
 					AND o.created_at <= ${endDate}::timestamptz
@@ -446,7 +474,8 @@ const getReport = permissionProcedure("reports.read")
 					COUNT(*)::int as count,
 					COALESCE(SUM(c.total_spent), 0)::numeric as total_spend
 				FROM customer c
-				WHERE c.total_spent > 0
+				WHERE c.organization_id = ${orgId}::uuid
+					AND c.total_spent > 0
 				GROUP BY bucket
 				ORDER BY MIN(c.total_spent) ASC`,
 			);
@@ -469,7 +498,8 @@ const getReport = permissionProcedure("reports.read")
 // End-of-Day report aggregating all business metrics for a single day.
 const getEodReport = permissionProcedure("reports.read")
 	.input(z.object({ date: z.string() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const dayStart = `${input.date}T00:00:00-04:00`;
 		const dayEnd = `${input.date}T23:59:59-04:00`;
 
@@ -495,6 +525,7 @@ const getEodReport = permissionProcedure("reports.read")
 					COALESCE(SUM(discount_total), 0)::numeric as total_discounts
 				FROM "order"
 				WHERE status IN ('completed', 'closed')
+					AND organization_id = ${orgId}::uuid
 					AND created_at >= ${dayStart}::timestamptz
 					AND created_at <= ${dayEnd}::timestamptz`,
 			),
@@ -508,13 +539,14 @@ const getEodReport = permissionProcedure("reports.read")
 				FROM payment p
 				JOIN "order" o ON p.order_id = o.id
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${dayStart}::timestamptz
 					AND o.created_at <= ${dayEnd}::timestamptz
 				GROUP BY p.method
 				ORDER BY total DESC`,
 			),
 
-			// Cash drawer
+			// Cash drawer — cash_session has no organization_id; scope via location join
 			db.execute(
 				sql`SELECT
 					cs.id,
@@ -527,8 +559,10 @@ const getEodReport = permissionProcedure("reports.read")
 					cs.opened_at,
 					cs.closed_at
 				FROM cash_session cs
+				JOIN location loc ON loc.id = cs.location_id
 				LEFT JOIN "user" u ON u.id = cs.opened_by
-				WHERE cs.opened_at >= ${dayStart}::timestamptz
+				WHERE loc.organization_id = ${orgId}::uuid
+					AND cs.opened_at >= ${dayStart}::timestamptz
 					AND cs.opened_at <= ${dayEnd}::timestamptz
 				ORDER BY cs.opened_at DESC`,
 			),
@@ -542,6 +576,7 @@ const getEodReport = permissionProcedure("reports.read")
 				FROM "order" o
 				LEFT JOIN "user" u ON u.id = o.user_id
 				WHERE o.status IN ('voided', 'refunded')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${dayStart}::timestamptz
 					AND o.created_at <= ${dayEnd}::timestamptz
 				GROUP BY u.name
@@ -557,6 +592,7 @@ const getEodReport = permissionProcedure("reports.read")
 				FROM order_line_item oli
 				JOIN "order" o ON oli.order_id = o.id
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${dayStart}::timestamptz
 					AND o.created_at <= ${dayEnd}::timestamptz
 					AND oli.voided = false
@@ -575,6 +611,7 @@ const getEodReport = permissionProcedure("reports.read")
 				FROM order_line_item oli
 				JOIN "order" o ON oli.order_id = o.id
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${dayStart}::timestamptz
 					AND o.created_at <= ${dayEnd}::timestamptz
 					AND oli.voided = false
@@ -594,7 +631,8 @@ const getEodReport = permissionProcedure("reports.read")
 					), 0)::numeric(10,2) as net_hours
 				FROM time_entry te
 				LEFT JOIN "user" u ON u.id = te.user_id
-				WHERE te.clock_in >= ${dayStart}::timestamptz
+				WHERE te.organization_id = ${orgId}::uuid
+					AND te.clock_in >= ${dayStart}::timestamptz
 					AND te.clock_in <= ${dayEnd}::timestamptz
 				GROUP BY u.name
 				ORDER BY net_hours DESC`,
@@ -607,20 +645,23 @@ const getEodReport = permissionProcedure("reports.read")
 					COALESCE(SUM(amount::numeric), 0)::numeric as total,
 					COUNT(*)::int as count
 				FROM expense
-				WHERE created_at >= ${dayStart}::timestamptz
+				WHERE organization_id = ${orgId}::uuid
+					AND created_at >= ${dayStart}::timestamptz
 					AND created_at <= ${dayEnd}::timestamptz
 				GROUP BY category
 				ORDER BY total DESC`,
 			),
 
-			// Production for the day (opening + reorder vs closing)
+			// Production for the day — production_log has no org_id; scope via location join
 			db.execute(
 				sql`SELECT
 					pl.product_name,
 					COALESCE(SUM(CASE WHEN pl.entry_type IN ('opening','reorder') THEN pl.quantity ELSE 0 END), 0)::int as produced,
 					COALESCE(SUM(CASE WHEN pl.entry_type = 'closing' THEN pl.quantity ELSE 0 END), 0)::int as closing_stock
 				FROM production_log pl
-				WHERE pl.log_date = ${input.date}::date
+				JOIN location loc ON loc.id = pl.location_id
+				WHERE loc.organization_id = ${orgId}::uuid
+					AND pl.log_date = ${input.date}::date
 				GROUP BY pl.product_name
 				ORDER BY produced DESC`,
 			),
@@ -633,6 +674,7 @@ const getEodReport = permissionProcedure("reports.read")
 				FROM order_line_item oli
 				JOIN "order" o ON o.id = oli.order_id
 				WHERE o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${dayStart}::timestamptz
 					AND o.created_at <= ${dayEnd}::timestamptz
 					AND oli.voided = false
@@ -697,7 +739,8 @@ const getCOGS = permissionProcedure("reports.read")
 			endDate: z.string(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const result = await db.execute(
 			sql`SELECT
 				COALESCE(SUM(
@@ -716,6 +759,7 @@ const getCOGS = permissionProcedure("reports.read")
 			JOIN "order" o ON o.id = oli.order_id
 			LEFT JOIN product p ON p.id = oli.product_id
 			WHERE o.status IN ('completed', 'closed')
+				AND o.organization_id = ${orgId}::uuid
 				AND o.created_at >= ${input.startDate}::timestamptz
 				AND o.created_at <= ${input.endDate}::timestamptz
 				AND oli.voided = false`,
@@ -734,7 +778,8 @@ const getProfitMargins = permissionProcedure("reports.read")
 			endDate: z.string(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const result = await db.execute(
 			sql`SELECT
 				oli.product_name_snapshot as product_name,
@@ -755,6 +800,7 @@ const getProfitMargins = permissionProcedure("reports.read")
 			JOIN "order" o ON o.id = oli.order_id
 			LEFT JOIN product p ON p.id = oli.product_id
 			WHERE o.status IN ('completed', 'closed')
+				AND o.organization_id = ${orgId}::uuid
 				AND o.created_at >= ${input.startDate}::timestamptz
 				AND o.created_at <= ${input.endDate}::timestamptz
 				AND oli.voided = false
@@ -767,7 +813,8 @@ const getProfitMargins = permissionProcedure("reports.read")
 // ── 7.6 getInventoryValuation ───────────────────────────────────────────
 // Current inventory value (qty on hand * avg cost).
 const getInventoryValuation = permissionProcedure("reports.read").handler(
-	async () => {
+	async ({ context }) => {
+		const orgId = requireOrganizationId(context);
 		const result = await db.execute(
 			sql`SELECT
 				ii.id,
@@ -781,6 +828,7 @@ const getInventoryValuation = permissionProcedure("reports.read").handler(
 			FROM inventory_item ii
 			LEFT JOIN inventory_stock ist ON ist.inventory_item_id = ii.id
 			WHERE ii.is_active = true
+				AND ii.organization_id = ${orgId}::uuid
 			GROUP BY ii.id, ii.name, ii.sku, ii.category, ii.unit_of_measure, ii.avg_cost
 			ORDER BY total_value DESC`,
 		);
@@ -798,7 +846,8 @@ const getMenuProfitability = permissionProcedure("reports.read")
 			departmentId: z.string().uuid().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const deptFilter = input.departmentId
 			? sql`AND p.reporting_category_id = ${input.departmentId}::uuid`
 			: sql``;
@@ -823,6 +872,7 @@ const getMenuProfitability = permissionProcedure("reports.read")
 			JOIN product p ON p.id = oli.product_id
 			LEFT JOIN reporting_category rc ON rc.id = p.reporting_category_id
 			WHERE o.status IN ('completed', 'closed')
+				AND o.organization_id = ${orgId}::uuid
 				AND o.created_at >= ${input.startDate}::timestamptz
 				AND o.created_at <= ${input.endDate}::timestamptz
 				AND oli.voided = false
@@ -858,7 +908,8 @@ const getDepartmentProfitability = permissionProcedure("reports.read")
 			endDate: z.string(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const result = await db.execute(
 			sql`SELECT
 				COALESCE(rc.name, 'Other') as department,
@@ -877,6 +928,7 @@ const getDepartmentProfitability = permissionProcedure("reports.read")
 			JOIN product p ON p.id = oli.product_id
 			LEFT JOIN reporting_category rc ON rc.id = p.reporting_category_id
 			WHERE o.status IN ('completed', 'closed')
+				AND o.organization_id = ${orgId}::uuid
 				AND o.created_at >= ${input.startDate}::timestamptz
 				AND o.created_at <= ${input.endDate}::timestamptz
 				AND oli.voided = false
@@ -895,7 +947,8 @@ const getVarianceAnalysis = permissionProcedure("reports.read")
 			endDate: z.string(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const result = await db.execute(
 			sql`WITH expected_usage AS (
 				SELECT
@@ -909,8 +962,10 @@ const getVarianceAnalysis = permissionProcedure("reports.read")
 				LEFT JOIN order_line_item oli ON oli.product_id = ri.product_id AND oli.voided = false
 				LEFT JOIN "order" o ON o.id = oli.order_id
 					AND o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${input.startDate}::timestamptz
 					AND o.created_at <= ${input.endDate}::timestamptz
+				WHERE ii.organization_id = ${orgId}::uuid
 				GROUP BY ri.inventory_item_id, ii.name, ri.unit, ii.avg_cost
 			),
 			actual_usage AS (
@@ -918,7 +973,9 @@ const getVarianceAnalysis = permissionProcedure("reports.read")
 					sl.inventory_item_id,
 					COALESCE(SUM(ABS(sl.quantity_change::numeric)), 0)::numeric as actual_qty
 				FROM stock_ledger sl
+				JOIN inventory_item ii ON ii.id = sl.inventory_item_id
 				WHERE sl.quantity_change::numeric < 0
+					AND ii.organization_id = ${orgId}::uuid
 					AND sl.created_at >= ${input.startDate}::timestamptz
 					AND sl.created_at <= ${input.endDate}::timestamptz
 				GROUP BY sl.inventory_item_id
@@ -929,6 +986,7 @@ const getVarianceAnalysis = permissionProcedure("reports.read")
 					COALESCE(SUM(wl.quantity::numeric), 0)::numeric as waste_qty
 				FROM waste_log wl
 				WHERE wl.inventory_item_id IS NOT NULL
+					AND wl.organization_id = ${orgId}::uuid
 					AND wl.created_at >= ${input.startDate}::timestamptz
 					AND wl.created_at <= ${input.endDate}::timestamptz
 				GROUP BY wl.inventory_item_id
@@ -975,7 +1033,8 @@ const getVarianceAlerts = permissionProcedure("reports.read")
 			threshold: z.number().default(10),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const result = await db.execute(
 			sql`WITH expected_usage AS (
 				SELECT
@@ -989,8 +1048,10 @@ const getVarianceAlerts = permissionProcedure("reports.read")
 				LEFT JOIN order_line_item oli ON oli.product_id = ri.product_id AND oli.voided = false
 				LEFT JOIN "order" o ON o.id = oli.order_id
 					AND o.status IN ('completed', 'closed')
+					AND o.organization_id = ${orgId}::uuid
 					AND o.created_at >= ${input.startDate}::timestamptz
 					AND o.created_at <= ${input.endDate}::timestamptz
+				WHERE ii.organization_id = ${orgId}::uuid
 				GROUP BY ri.inventory_item_id, ii.name, ri.unit, ii.avg_cost
 			),
 			actual_usage AS (
@@ -998,7 +1059,9 @@ const getVarianceAlerts = permissionProcedure("reports.read")
 					sl.inventory_item_id,
 					COALESCE(SUM(ABS(sl.quantity_change::numeric)), 0)::numeric as actual_qty
 				FROM stock_ledger sl
+				JOIN inventory_item ii ON ii.id = sl.inventory_item_id
 				WHERE sl.quantity_change::numeric < 0
+					AND ii.organization_id = ${orgId}::uuid
 					AND sl.created_at >= ${input.startDate}::timestamptz
 					AND sl.created_at <= ${input.endDate}::timestamptz
 				GROUP BY sl.inventory_item_id
@@ -1009,6 +1072,7 @@ const getVarianceAlerts = permissionProcedure("reports.read")
 					COALESCE(SUM(wl.quantity::numeric), 0)::numeric as waste_qty
 				FROM waste_log wl
 				WHERE wl.inventory_item_id IS NOT NULL
+					AND wl.organization_id = ${orgId}::uuid
 					AND wl.created_at >= ${input.startDate}::timestamptz
 					AND wl.created_at <= ${input.endDate}::timestamptz
 				GROUP BY wl.inventory_item_id
@@ -1049,12 +1113,12 @@ const getVarianceAlerts = permissionProcedure("reports.read")
 const getSvEReport = permissionProcedure("reports.read")
 	.input(
 		z.object({
-			organizationId: z.string().uuid(),
 			startDate: z.string().optional(),
 			endDate: z.string().optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const startCondition = input.startDate
 			? sql`AND o.created_at >= ${input.startDate}::timestamptz`
 			: sql``;
@@ -1073,7 +1137,7 @@ const getSvEReport = permissionProcedure("reports.read")
 				COALESCE(SUM(o.total::numeric), 0)::text as total_sales,
 				COUNT(*)::int as order_count
 			FROM "order" o
-			WHERE o.organization_id = ${input.organizationId}::uuid
+			WHERE o.organization_id = ${orgId}::uuid
 				AND o.status = 'completed'
 				${startCondition}
 				${endCondition}
@@ -1084,7 +1148,7 @@ const getSvEReport = permissionProcedure("reports.read")
 				COALESCE(SUM(e.amount::numeric), 0)::text as total_expenses,
 				COUNT(*)::int as expense_count
 			FROM expense e
-			WHERE e.organization_id = ${input.organizationId}::uuid
+			WHERE e.organization_id = ${orgId}::uuid
 				${expStartCondition}
 				${expEndCondition}
 		`);
@@ -1095,7 +1159,7 @@ const getSvEReport = permissionProcedure("reports.read")
 				SUM(e.amount::numeric)::text as total
 			FROM expense e
 			LEFT JOIN supplier s ON s.id = e.supplier_id
-			WHERE e.organization_id = ${input.organizationId}::uuid
+			WHERE e.organization_id = ${orgId}::uuid
 				${expStartCondition}
 				${expEndCondition}
 			GROUP BY s.name
