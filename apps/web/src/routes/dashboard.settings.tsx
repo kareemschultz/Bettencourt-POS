@@ -1961,8 +1961,11 @@ function TaxRatesTab() {
 	}
 
 	const previewRate = Number.parseFloat(formRate) || 0;
-	const previewTax = (1000 * previewRate) / 100;
-	const previewTotal = 1000 + previewTax;
+	// VAT-inclusive extraction: tax contained within the price
+	const previewTax =
+		previewRate > 0
+			? (1000 * (previewRate / 100)) / (1 + previewRate / 100)
+			: 0;
 
 	if (isLoading) return <LoadingCard />;
 
@@ -2051,7 +2054,7 @@ function TaxRatesTab() {
 							<Label htmlFor="tax-name">Name</Label>
 							<Input
 								id="tax-name"
-								placeholder="e.g. VAT, Sales Tax"
+								placeholder="e.g. VAT, Zero-rated VAT"
 								value={formName}
 								onChange={(e) => setFormName(e.target.value)}
 								required
@@ -2083,20 +2086,16 @@ function TaxRatesTab() {
 						</div>
 						{previewRate > 0 && (
 							<div className="rounded-md border border-border bg-muted/50 p-3 text-muted-foreground text-xs">
-								Preview: A $1,000 item → $
-								{previewTax.toLocaleString("en-US", {
-									minimumFractionDigits: 0,
-									maximumFractionDigits: 2,
-								})}{" "}
-								tax →{" "}
+								Preview: A VAT-inclusive price of $1,000 contains{" "}
 								<span className="font-bold text-foreground">
 									$
-									{previewTotal.toLocaleString("en-US", {
-										minimumFractionDigits: 0,
+									{previewTax.toLocaleString("en-US", {
+										minimumFractionDigits: 2,
 										maximumFractionDigits: 2,
 									})}{" "}
-									total
-								</span>
+									VAT
+								</span>{" "}
+								(GRA formula: price × {previewRate}/{100 + previewRate})
 							</div>
 						)}
 						<DialogFooter>
