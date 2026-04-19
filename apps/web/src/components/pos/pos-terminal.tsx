@@ -440,11 +440,25 @@ export function POSTerminal({
 	}
 
 	function handleClearCart() {
+		const cartSnapshot = cart;
+		const discountSnapshot = discount;
+		const discountLabelSnapshot = discountLabel;
 		setCart([]);
 		setDiscount(0);
 		setDiscountLabel("");
 		setSelectedCustomer(null);
 		resetPickupFields();
+		toast("Ticket cleared", {
+			action: {
+				label: "Undo",
+				onClick: () => {
+					setCart(cartSnapshot);
+					setDiscount(discountSnapshot);
+					setDiscountLabel(discountLabelSnapshot);
+				},
+			},
+			duration: 6000,
+		});
 	}
 
 	function handleHoldOrder() {
@@ -606,9 +620,7 @@ export function POSTerminal({
 			}
 			if (e.key === "F4") {
 				e.preventDefault();
-				setCart([]);
-				setDiscount(0);
-				setDiscountLabel("");
+				handleClearCart();
 			}
 			if (e.key === "F5") {
 				e.preventDefault();

@@ -4,6 +4,7 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { permissionProcedure } from "../index";
+import { requireOrganizationId } from "../lib/org-context";
 
 // ── splitEqual ──────────────────────────────────────────────────────────
 // Splits an order total equally among N ways. Creates N payment records
@@ -15,7 +16,8 @@ const splitEqual = permissionProcedure("orders.create")
 			numberOfWays: z.number().int().min(2).max(20),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const { orderId, numberOfWays } = input;
 
 		// Fetch order
@@ -26,7 +28,12 @@ const splitEqual = permissionProcedure("orders.create")
 				status: schema.order.status,
 			})
 			.from(schema.order)
-			.where(eq(schema.order.id, orderId));
+			.where(
+				and(
+					eq(schema.order.id, orderId),
+					eq(schema.order.organizationId, orgId),
+				),
+			);
 
 		if (orders.length === 0) {
 			throw new ORPCError("NOT_FOUND", { message: "Order not found" });
@@ -113,7 +120,8 @@ const splitByItems = permissionProcedure("orders.create")
 				.min(2),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const { orderId, splits } = input;
 
 		// Fetch order
@@ -124,7 +132,12 @@ const splitByItems = permissionProcedure("orders.create")
 				status: schema.order.status,
 			})
 			.from(schema.order)
-			.where(eq(schema.order.id, orderId));
+			.where(
+				and(
+					eq(schema.order.id, orderId),
+					eq(schema.order.organizationId, orgId),
+				),
+			);
 
 		if (orders.length === 0) {
 			throw new ORPCError("NOT_FOUND", { message: "Order not found" });
@@ -222,7 +235,8 @@ const splitByItems = permissionProcedure("orders.create")
 // Returns split payment info for an order
 const getSplits = permissionProcedure("orders.read")
 	.input(z.object({ orderId: z.string().uuid() }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const { orderId } = input;
 
 		// Check order exists
@@ -233,7 +247,12 @@ const getSplits = permissionProcedure("orders.read")
 				isSplit: schema.order.isSplit,
 			})
 			.from(schema.order)
-			.where(eq(schema.order.id, orderId));
+			.where(
+				and(
+					eq(schema.order.id, orderId),
+					eq(schema.order.organizationId, orgId),
+				),
+			);
 
 		if (orders.length === 0) {
 			throw new ORPCError("NOT_FOUND", { message: "Order not found" });
@@ -306,7 +325,8 @@ const splitCustom = permissionProcedure("orders.create")
 				.max(20),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
 		const { orderId, amounts } = input;
 
 		const orders = await db
@@ -316,7 +336,12 @@ const splitCustom = permissionProcedure("orders.create")
 				status: schema.order.status,
 			})
 			.from(schema.order)
-			.where(eq(schema.order.id, orderId));
+			.where(
+				and(
+					eq(schema.order.id, orderId),
+					eq(schema.order.organizationId, orgId),
+				),
+			);
 
 		if (orders.length === 0) {
 			throw new ORPCError("NOT_FOUND", { message: "Order not found" });

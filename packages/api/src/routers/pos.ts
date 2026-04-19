@@ -35,8 +35,9 @@ const getProducts = permissionProcedure("orders.read")
 			})
 			.optional(),
 	)
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
 		const input = rawInput ?? {};
+		const orgId = requireOrganizationId(context);
 		// If register specified, get its allowed department IDs
 		let departmentFilter: string[] = [];
 		if (input.registerId) {
@@ -81,6 +82,7 @@ const getProducts = permissionProcedure("orders.read")
 				.where(
 					and(
 						eq(schema.reportingCategory.isActive, true),
+						eq(schema.reportingCategory.organizationId, orgId),
 						inArray(schema.reportingCategory.id, departmentFilter),
 					),
 				)
@@ -97,7 +99,12 @@ const getProducts = permissionProcedure("orders.read")
 					pinProtected: schema.reportingCategory.pinProtected,
 				})
 				.from(schema.reportingCategory)
-				.where(eq(schema.reportingCategory.isActive, true))
+				.where(
+					and(
+						eq(schema.reportingCategory.isActive, true),
+						eq(schema.reportingCategory.organizationId, orgId),
+					),
+				)
 				.orderBy(
 					asc(schema.reportingCategory.sortOrder),
 					asc(schema.reportingCategory.name),
@@ -105,7 +112,10 @@ const getProducts = permissionProcedure("orders.read")
 		}
 
 		// Build product filter conditions
-		const conditions = [eq(schema.product.isActive, true)];
+		const conditions = [
+			eq(schema.product.isActive, true),
+			eq(schema.product.organizationId, orgId),
+		];
 		if (input.departmentId) {
 			conditions.push(
 				eq(schema.product.reportingCategoryId, input.departmentId),
@@ -218,9 +228,25 @@ const getProducts = permissionProcedure("orders.read")
 // ── getModifiers ────────────────────────────────────────────────────────
 const getModifiers = permissionProcedure("orders.read")
 	.input(z.object({ productId: z.string().uuid().optional() }).optional())
-	.handler(async ({ input: rawInput }) => {
+	.handler(async ({ input: rawInput, context }) => {
 		const input = rawInput ?? {};
+		const orgId = requireOrganizationId(context);
 		if (!input.productId) {
+			return { groups: [] };
+		}
+
+		// Verify the product belongs to this org before returning modifiers
+		const productRow = await db
+			.select({ id: schema.product.id })
+			.from(schema.product)
+			.where(
+				and(
+					eq(schema.product.id, input.productId),
+					eq(schema.product.organizationId, orgId),
+				),
+			)
+			.limit(1);
+		if (productRow.length === 0) {
 			return { groups: [] };
 		}
 

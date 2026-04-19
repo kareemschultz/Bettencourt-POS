@@ -12,7 +12,7 @@ import * as schema from "@Bettencourt-POS/db/schema";
 import { env } from "@Bettencourt-POS/env/server";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
-import { extname, join } from "node:path";
+import { extname, join, resolve } from "node:path";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
@@ -48,6 +48,17 @@ function generateBetterAuthId(): string {
 		if (b < 248) result += chars[b % 62]!;
 	}
 	return result;
+}
+
+// ── Print SSRF guard ────────────────────────────────────────────────────
+const ALLOWED_PRINT_PORTS = new Set([9100, 515, 631]);
+function isPrivateHost(h: string): boolean {
+	return (
+		/^10\./.test(h) ||
+		/^192\.168\./.test(h) ||
+		/^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
+		/^127\./.test(h)
+	);
 }
 
 const app = new Hono();
@@ -214,6 +225,11 @@ app.post("/api/print/network", async (c) => {
 		const [host, portStr] = address.split(":");
 		const port = Number(portStr) || 9100; // Default ESC/POS port
 
+		// Restrict to private network addresses only (anti-SSRF)
+		if (!isPrivateHost(host ?? "") || !ALLOWED_PRINT_PORTS.has(port)) {
+			return c.json({ error: "Printer address not allowed" }, 400);
+		}
+
 		// Connect and send via Bun's TCP socket
 		const payload = new Uint8Array(data);
 		await new Promise<void>((resolve, reject) => {
@@ -318,7 +334,13 @@ app.post("/api/uploads/receipt", async (c) => {
 app.get("/uploads/*", async (c) => {
 	const { readFile } = await import("node:fs/promises");
 	const reqPath = new URL(c.req.url).pathname;
-	const filePath = join(env.UPLOADS_DIR, reqPath.replace(/^\/uploads/, ""));
+	const uploadsBase = resolve(env.UPLOADS_DIR);
+	const filePath = resolve(
+		join(env.UPLOADS_DIR, reqPath.replace(/^\/uploads/, "")),
+	);
+	if (!filePath.startsWith(uploadsBase + "/") && filePath !== uploadsBase) {
+		return c.json({ error: "Not found" }, 404);
+	}
 	try {
 		const data = await readFile(filePath);
 		const ext2 = extname(filePath).toLowerCase();

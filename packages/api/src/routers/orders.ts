@@ -208,6 +208,7 @@ const voidOrder = permissionProcedure("orders.void")
 	)
 	.handler(async ({ input, context }) => {
 		const { id, reason } = input;
+		const orgId = requireOrganizationId(context);
 		const userId = context.session.user.id;
 		const authorizedBy = userId;
 
@@ -224,7 +225,9 @@ const voidOrder = permissionProcedure("orders.void")
 				notes: schema.order.notes,
 			})
 			.from(schema.order)
-			.where(eq(schema.order.id, id));
+			.where(
+				and(eq(schema.order.id, id), eq(schema.order.organizationId, orgId)),
+			);
 
 		if (orders.length === 0) {
 			throw new ORPCError("NOT_FOUND", { message: "Order not found" });
@@ -337,6 +340,7 @@ const refund = permissionProcedure("orders.refund")
 	)
 	.handler(async ({ input, context }) => {
 		const { id, reason, amount } = input;
+		const orgId = requireOrganizationId(context);
 		const userId = context.session.user.id;
 		const authorizedBy = userId;
 
@@ -344,7 +348,9 @@ const refund = permissionProcedure("orders.refund")
 		const orders = await db
 			.select()
 			.from(schema.order)
-			.where(eq(schema.order.id, id));
+			.where(
+				and(eq(schema.order.id, id), eq(schema.order.organizationId, orgId)),
+			);
 		if (orders.length === 0) {
 			throw new ORPCError("NOT_FOUND", { message: "Order not found" });
 		}
