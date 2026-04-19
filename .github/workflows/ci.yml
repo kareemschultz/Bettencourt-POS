@@ -76,16 +76,19 @@ jobs:
       - name: Build and deploy
         run: docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 
-      # Poll /health until the server responds (up to 60 seconds)
+      # Wait for the container to be running and have logged "Started server".
+      # Port 3000 is not host-bound (distroless, pangolin-only) so curl localhost
+      # won't work — use docker inspect + log grep instead.
       - name: Verify deployment health
         run: |
           echo "Waiting for server to be healthy..."
           for i in $(seq 1 12); do
-            if curl -sf http://localhost:3000/health > /dev/null; then
+            status=$(docker inspect --format='{{.State.Status}}' kt-bettencourt-pos 2>/dev/null || echo "not-found")
+            if [ "$status" = "running" ] && docker logs kt-bettencourt-pos 2>&1 | grep -q "Started server"; then
               echo "Health check passed on attempt $i"
               exit 0
             fi
-            echo "Attempt $i/12 failed, waiting 5s..."
+            echo "Attempt $i/12 — container status: $status, waiting 5s..."
             sleep 5
           done
           echo "Health check failed after 60s"
