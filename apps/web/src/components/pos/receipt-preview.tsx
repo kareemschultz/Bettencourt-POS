@@ -400,19 +400,10 @@ export function ReceiptPreview({
 						<Printer className="size-4" />
 						Print
 					</Button>
-					{onSplitBill && (
-						<Button
-							variant="outline"
-							className="flex-1 gap-2"
-							onClick={onSplitBill}
-						>
-							<Split className="size-4" />
-							Split
-						</Button>
-					)}
+	
 					<Button
-						variant="outline"
 						className="flex-1"
+						autoFocus
 						onClick={() => onOpenChange(false)}
 					>
 						Done
