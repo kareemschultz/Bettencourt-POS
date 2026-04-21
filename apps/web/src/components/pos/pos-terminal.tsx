@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -385,39 +384,42 @@ export function POSTerminal({
 		}),
 	);
 
-	const handleProductTap = useCallback((product: Product) => {
-		setCart((prev) => {
-			const existing = prev.find(
-				(item) =>
-					item.product.id === product.id &&
-					item.modifiers.length === 0 &&
-					!item.notes,
-			);
-			if (existing) {
-				return prev.map((item) =>
-					item.id === existing.id
-						? {
-								...item,
-								quantity: item.quantity + 1,
-								line_total: (item.quantity + 1) * item.product.price,
-							}
-						: item,
+	const handleProductTap = useCallback(
+		(product: Product) => {
+			setCart((prev) => {
+				const existing = prev.find(
+					(item) =>
+						item.product.id === product.id &&
+						item.modifiers.length === 0 &&
+						!item.notes,
 				);
-			}
-			return [
-				...prev,
-				{
-					id: crypto.randomUUID(),
-					product,
-					quantity: 1,
-					modifiers: [],
-					notes: "",
-					line_total: product.price,
-					courseNumber: selectedCourse,
-				},
-			];
-		});
-	}, []);
+				if (existing) {
+					return prev.map((item) =>
+						item.id === existing.id
+							? {
+									...item,
+									quantity: item.quantity + 1,
+									line_total: (item.quantity + 1) * item.product.price,
+								}
+							: item,
+					);
+				}
+				return [
+					...prev,
+					{
+						id: crypto.randomUUID(),
+						product,
+						quantity: 1,
+						modifiers: [],
+						notes: "",
+						line_total: product.price,
+						courseNumber: selectedCourse,
+					},
+				];
+			});
+		},
+		[selectedCourse],
+	);
 
 	function handleUpdateQuantity(id: string, delta: number) {
 		setCart((prev) =>
@@ -977,7 +979,9 @@ export function POSTerminal({
 								</Button>
 							</TooltipTrigger>
 							<TooltipContent side="bottom">
-								{skipReceiptPreview ? "Quick print ON — receipt skipped" : "Quick print OFF — tap to skip receipt preview"}
+								{skipReceiptPreview
+									? "Quick print ON — receipt skipped"
+									: "Quick print OFF — tap to skip receipt preview"}
 							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
@@ -1225,23 +1229,23 @@ export function POSTerminal({
 
 			{/* Main area: product grid + cart */}
 			<div className="flex flex-1 overflow-hidden">
-				<div className="flex flex-col flex-1 overflow-hidden">
+				<div className="flex flex-1 flex-col overflow-hidden">
 					{/* Product search */}
 					<div className="px-2 pt-2 pb-2 sm:px-3">
 						<div className="relative">
-							<Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary/60" />
+							<Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-primary/60" />
 							<Input
 								placeholder="Search menu..."
 								value={productSearch}
 								onChange={(e) => setProductSearch(e.target.value)}
-								className="h-9 pl-9 pr-8 text-sm rounded-lg border-2 border-border bg-muted/30 placeholder:text-muted-foreground/60 focus-visible:border-primary focus-visible:bg-background transition-colors"
+								className="h-9 rounded-lg border-2 border-border bg-muted/30 pr-8 pl-9 text-sm transition-colors placeholder:text-muted-foreground/60 focus-visible:border-primary focus-visible:bg-background"
 							/>
 							{productSearch && (
 								<Button
 									type="button"
 									variant="ghost"
 									size="icon"
-									className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+									className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2"
 									onClick={() => setProductSearch("")}
 								>
 									<XIcon className="size-3" />

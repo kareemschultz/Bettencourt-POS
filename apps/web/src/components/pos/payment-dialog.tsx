@@ -9,7 +9,6 @@ import {
 	Gift,
 	Loader2,
 	Search,
-	Split,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -326,46 +325,46 @@ export function PaymentDialog({
 				{step === "method" && (
 					<div className="flex flex-col gap-3 py-4">
 						<div className="flex flex-col gap-1.5">
-						<Button
-							className="flex h-16 touch-manipulation items-center justify-start gap-3 px-5 sm:h-14"
-							onClick={() => handleCashPayment()}
-							disabled={processing}
-						>
-							<Banknote className="size-6 shrink-0 sm:size-5" />
-							<div className="text-left">
-								<span className="font-medium text-base">
-									{processing ? "Processing..." : "Cash — Exact"}
-								</span>
-								<span className="block text-xs opacity-75">
-									{formatGYD(totalWithTip)}
-								</span>
-							</div>
-						</Button>
-						{quickCashAmounts.filter((a) => a > totalWithTip).length > 0 && (
-							<div className="grid grid-cols-4 gap-1.5">
-								{quickCashAmounts
-									.filter((a) => a > totalWithTip)
-									.map((amt) => (
-										<Button
-											key={amt}
-											variant="outline"
-											className="h-10 touch-manipulation px-1 text-xs font-medium"
-											disabled={processing}
-											onClick={() => handleCashPayment(amt)}
-										>
-											{formatGYD(amt)}
-										</Button>
-									))}
-							</div>
-						)}
-						<button
-							type="button"
-							className="self-end pr-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-							onClick={() => setStep("cash")}
-						>
-							Custom amount →
-						</button>
-					</div>
+							<Button
+								className="flex h-16 touch-manipulation items-center justify-start gap-3 px-5 sm:h-14"
+								onClick={() => handleCashPayment()}
+								disabled={processing}
+							>
+								<Banknote className="size-6 shrink-0 sm:size-5" />
+								<div className="text-left">
+									<span className="font-medium text-base">
+										{processing ? "Processing..." : "Cash — Exact"}
+									</span>
+									<span className="block text-xs opacity-75">
+										{formatGYD(totalWithTip)}
+									</span>
+								</div>
+							</Button>
+							{quickCashAmounts.filter((a) => a > totalWithTip).length > 0 && (
+								<div className="grid grid-cols-4 gap-1.5">
+									{quickCashAmounts
+										.filter((a) => a > totalWithTip)
+										.map((amt) => (
+											<Button
+												key={amt}
+												variant="outline"
+												className="h-10 touch-manipulation px-1 font-medium text-xs"
+												disabled={processing}
+												onClick={() => handleCashPayment(amt)}
+											>
+												{formatGYD(amt)}
+											</Button>
+										))}
+								</div>
+							)}
+							<button
+								type="button"
+								className="self-end pr-1 text-muted-foreground text-xs underline-offset-2 hover:text-foreground hover:underline"
+								onClick={() => setStep("cash")}
+							>
+								Custom amount →
+							</button>
+						</div>
 						<Button
 							variant="outline"
 							className="flex h-16 touch-manipulation items-center justify-start gap-3 px-5 sm:h-14"

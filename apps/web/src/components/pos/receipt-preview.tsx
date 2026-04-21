@@ -1,4 +1,4 @@
-import { Printer, Split, X } from "lucide-react";
+import { Printer, X } from "lucide-react";
 import { useCallback, useEffect } from "react";
 import { useQzPrinter } from "@/hooks/use-qz-printer";
 import { buildEscPosReceipt } from "@/lib/escpos";
@@ -152,7 +152,17 @@ export function ReceiptPreview({
 			if (ok) return;
 		}
 		printReceiptPopup(document.getElementById("receipt-content"));
-	}, [order, items, change, userName, rc, qzStatus, qzPrint]);
+	}, [
+		order,
+		items,
+		change,
+		userName,
+		rc,
+		qzStatus,
+		qzPrint,
+		defaultTaxRate,
+		defaultTaxName,
+	]);
 
 	useEffect(() => {
 		if (!open || !autoPrint) return;
@@ -407,7 +417,7 @@ export function ReceiptPreview({
 						<Printer className="size-4" />
 						Print
 					</Button>
-	
+
 					<Button
 						className="flex-1"
 						autoFocus
