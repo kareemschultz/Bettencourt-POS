@@ -75,7 +75,16 @@ export function PaymentDialog({
 	const [_giftCardApplied, setGiftCardApplied] = useState(false);
 
 	useEffect(() => {
-		if (open && initialCashAmount != null && initialCashAmount > 0) {
+		if (!open) {
+			setStep("method");
+			setCashTendered("");
+			setSplitCashAmount("");
+			setProcessing(false);
+			setChange(0);
+			setGiftCardCode("");
+			setGiftCardData(null);
+			setGiftCardApplied(false);
+		} else if (initialCashAmount != null && initialCashAmount > 0) {
 			setStep("cash");
 			setCashTendered(String(Math.ceil(initialCashAmount)));
 		}
@@ -123,8 +132,7 @@ export function PaymentDialog({
 	const totalWithTip = total;
 
 	async function handleCashPayment() {
-		const tendered = Number(cashTendered) || 0;
-		if (tendered < totalWithTip) return;
+		const tendered = Number(cashTendered) || totalWithTip;
 		setProcessing(true);
 		try {
 			await onComplete([{ method: "cash", amount: tendered }], { tipAmount });
@@ -346,19 +354,7 @@ export function PaymentDialog({
 								</span>
 							</div>
 						</Button>
-						<Button
-							variant="outline"
-							className="flex h-16 touch-manipulation items-center justify-start gap-3 px-5 sm:h-14"
-							onClick={() => setStep("split_cash")}
-						>
-							<Split className="size-6 shrink-0 sm:size-5" />
-							<div className="text-left">
-								<span className="font-medium text-base">Split Payment</span>
-								<span className="block text-muted-foreground text-xs">
-									Part cash + part card
-								</span>
-							</div>
-						</Button>
+
 						<Button
 							variant="outline"
 							className="flex h-16 touch-manipulation items-center justify-start gap-3 px-5 sm:h-14"
@@ -390,7 +386,7 @@ export function PaymentDialog({
 
 				{step === "cash" &&
 					(() => {
-						const tendered = Number(cashTendered) || 0;
+						const tendered = Number(cashTendered) || totalWithTip;
 						const changeAmt = tendered - totalWithTip;
 						const breakdown =
 							tendered >= totalWithTip ? calcDenominations(changeAmt) : [];
