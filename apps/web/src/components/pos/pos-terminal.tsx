@@ -14,6 +14,7 @@ import {
 	Truck,
 	UserSearch,
 	X as XIcon,
+	Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -95,6 +96,9 @@ export function POSTerminal({
 	const [paymentOpen, setPaymentOpen] = useState(false);
 	const [receiptOpen, setReceiptOpen] = useState(false);
 	const [autoPrintReceipt, setAutoPrintReceipt] = useState(false);
+	const [skipReceiptPreview, setSkipReceiptPreview] = useState(
+		() => localStorage.getItem("pos-skip-receipt") === "true",
+	);
 	const [discountOpen, setDiscountOpen] = useState(false);
 	const [splitBillOpen, setSplitBillOpen] = useState(false);
 	const [notesItemId, setNotesItemId] = useState<string | null>(null);
@@ -958,6 +962,28 @@ export function POSTerminal({
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
+								<Button
+									variant={skipReceiptPreview ? "default" : "ghost"}
+									size="icon"
+									className="size-8"
+									onClick={() => {
+										const next = !skipReceiptPreview;
+										setSkipReceiptPreview(next);
+										localStorage.setItem("pos-skip-receipt", String(next));
+									}}
+								>
+									<Zap className="size-3.5" />
+									<span className="sr-only">Quick print</span>
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent side="bottom">
+								{skipReceiptPreview ? "Quick print ON — receipt skipped" : "Quick print OFF — tap to skip receipt preview"}
+							</TooltipContent>
+						</Tooltip>
+					</TooltipProvider>
+					<TooltipProvider>
+						<Tooltip>
+							<TooltipTrigger asChild>
 								<div className="hidden size-8 items-center justify-center sm:flex">
 									<Barcode className="size-3.5 text-muted-foreground" />
 									<span className="sr-only">Scanner ready</span>
@@ -1312,6 +1338,7 @@ export function POSTerminal({
 				userName={userName}
 				receiptConfig={receiptConfig ?? null}
 				autoPrint={autoPrintReceipt}
+				skipPreview={skipReceiptPreview && autoPrintReceipt}
 				onSplitBill={
 					lastOrder?.id
 						? () => {

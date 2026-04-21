@@ -103,6 +103,7 @@ interface ReceiptPreviewProps {
 	receiptConfig?: ReceiptConfig | null;
 	onSplitBill?: () => void;
 	autoPrint?: boolean;
+	skipPreview?: boolean;
 	defaultTaxRate?: number;
 	defaultTaxName?: string;
 }
@@ -117,6 +118,7 @@ export function ReceiptPreview({
 	receiptConfig,
 	onSplitBill,
 	autoPrint = false,
+	skipPreview = false,
 	defaultTaxRate = 0,
 	defaultTaxName = "Tax",
 }: ReceiptPreviewProps) {
@@ -159,6 +161,11 @@ export function ReceiptPreview({
 		}, 300);
 		return () => clearTimeout(timer);
 	}, [open, autoPrint, handlePrint]);
+
+	useEffect(() => {
+		if (!open || !skipPreview) return;
+		handlePrint().finally(() => onOpenChange(false));
+	}, [open, skipPreview, handlePrint, onOpenChange]);
 
 	if (!order) return null;
 
@@ -376,7 +383,7 @@ export function ReceiptPreview({
 	);
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog open={open && !skipPreview} onOpenChange={onOpenChange}>
 			<DialogContent aria-describedby={undefined} className="max-w-sm">
 				<DialogHeader>
 					<DialogTitle className="flex items-center justify-between">

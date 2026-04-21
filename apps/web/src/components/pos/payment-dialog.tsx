@@ -536,7 +536,7 @@ export function PaymentDialog({
 									</Button>
 									<Button
 										className="h-12 flex-1 touch-manipulation font-bold text-base"
-										onClick={handleCashPayment}
+										onClick={() => handleCashPayment()}
 										disabled={processing || tendered < totalWithTip}
 									>
 										{processing ? "Processing..." : "Complete"}
