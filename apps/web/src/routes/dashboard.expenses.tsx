@@ -1930,7 +1930,10 @@ export default function ExpensesPage() {
 										<ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
 									</Button>
 								</PopoverTrigger>
-								<PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+								<PopoverContent
+								className="w-[--radix-popover-trigger-width] p-0"
+								onWheel={(e) => e.stopPropagation()}
+							>
 									<Command>
 										<div className="flex items-center border-border border-b px-3">
 											<input
@@ -2069,6 +2072,7 @@ export default function ExpensesPage() {
 								<PopoverContent
 									className="w-[--radix-popover-trigger-width] p-0"
 									align="start"
+									onWheel={(e) => e.stopPropagation()}
 								>
 									<Command>
 										<CommandInput placeholder="Search categories..." />
