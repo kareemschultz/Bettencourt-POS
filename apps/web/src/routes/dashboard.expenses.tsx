@@ -48,6 +48,7 @@ import {
 	Command,
 	CommandEmpty,
 	CommandGroup,
+	CommandInput,
 	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
@@ -2070,6 +2071,7 @@ export default function ExpensesPage() {
 									align="start"
 								>
 									<Command>
+										<CommandInput placeholder="Search categories..." />
 										<CommandList>
 											{categories.length === 0 ? (
 												<CommandEmpty>No categories yet</CommandEmpty>

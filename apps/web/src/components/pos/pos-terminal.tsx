@@ -749,7 +749,12 @@ export function POSTerminal({
 				</Select>
 
 				{/* Department filter */}
-				<div className="flex flex-1 items-center gap-1.5 overflow-x-auto py-0.5">
+				<div
+					className="flex flex-1 items-center gap-1.5 overflow-x-auto py-0.5"
+					onWheel={(e) => {
+						e.currentTarget.scrollLeft += e.deltaY;
+					}}
+				>
 					<button
 						type="button"
 						className={`shrink-0 touch-manipulation rounded-full border px-2.5 py-1 font-medium text-xs sm:px-3 ${selectedDepartment === "all" ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background hover:bg-accent"}`}
