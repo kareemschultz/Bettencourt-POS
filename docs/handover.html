@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bettencourt POS - System Handover Document</title>
+<style>
+  @media print {
+    body { font-size: 11pt; }
+    table { page-break-inside: avoid; }
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    line-height: 1.6;
+    color: #1a1a1a;
+  }
+  h1 { color: #b8862d; border-bottom: 2px solid #b8862d; padding-bottom: 8px; }
+  h2 { color: #2d3748; margin-top: 32px; }
+  h3 { color: #4a5568; margin-top: 24px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+  th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
+  th { background: #f7f7f7; font-weight: 600; }
+  tr:nth-child(even) { background: #fafafa; }
+  hr { border: none; border-top: 1px solid #e2e8f0; margin: 32px 0; }
+  a { color: #b8862d; }
+  em { color: #666; }
+</style>
+</head>
+<body>
+<h1>Bettencourt POS — System Handover Document</h1>
+<p><strong>Prepared by:</strong> KareTech Solutions
+<strong>Date:</strong> April 2026
+<strong>Version:</strong> 1.0</p>
+<hr />
+<h2>1. System Overview</h2>
+<p>Bettencourt POS is a cloud-based point-of-sale and business management system purpose-built for Bettencourt Foods Inc. and the Home Style restaurant brand. It is a comprehensive system covering daily sales operations, kitchen management, inventory control, financial accounting, customer loyalty, and reporting.</p>
+<p><strong>System URL:</strong> <a href="https://pos.karetechsolutions.com">pos.karetechsolutions.com</a>
+<strong>User Manual:</strong> <a href="https://pos.karetechsolutions.com/manual/">pos.karetechsolutions.com/manual/</a>
+<strong>Technology:</strong> React, Hono.js, PostgreSQL, hosted on KareTech managed infrastructure</p>
+<hr />
+<h2>2. System Access</h2>
+<h3>Login Methods</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Who Uses It</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PIN Login</strong></td>
+<td>Cashiers, kitchen staff, warehouse</td>
+<td>Enter 4-8 digit PIN on login screen</td>
+</tr>
+<tr>
+<td><strong>Email Login</strong></td>
+<td>Managers, administrators, executives</td>
+<td>Click &quot;Sign in with Email&quot;, enter email and password</td>
+</tr>
+</tbody>
+</table>
+<h3>User Management</h3>
+<p>Administrators manage all user accounts at <strong>Settings → Users</strong>:</p>
+<ul>
+<li>Create new users with name, email, role, and PIN</li>
+<li>Reset PINs for staff who forget theirs</li>
+<li>Assign built-in roles (Cashier, Kitchen, Warehouse, Accountant, Admin, Executive) or custom roles</li>
+<li>Deactivate users who leave the organisation</li>
+</ul>
+<h3>Security</h3>
+<ul>
+<li>PIN login is rate-limited: 5 failed attempts triggers a 60-second lockout per IP address</li>
+<li>All actions are recorded in the immutable Audit Log</li>
+<li>Supervisor approval (manager PIN) is required for sensitive operations like large discounts and order voids</li>
+<li>Session cookies are secure and expire after inactivity</li>
+</ul>
+<hr />
+<h2>3. Feature Summary</h2>
+<h3>Point of Sale</h3>
+<ul>
+<li>New Sale terminal with product grid, cart, modifiers, and combo products</li>
+<li>Multiple payment methods: Cash (with GYD quick-cash buttons), Card, Gift Card, Split Payment</li>
+<li>Order types: Dine In (table assignment), Takeaway, Delivery</li>
+<li>Hold and retrieve orders</li>
+<li>Discount presets with supervisor approval for large discounts</li>
+<li>Receipt printing via network thermal printers (ESC/POS)</li>
+<li>Menu schedules for time-based product availability</li>
+</ul>
+<h3>Kitchen Display System (KDS)</h3>
+<ul>
+<li>Real-time order tickets with colour-coded wait times</li>
+<li>Department filtering (Meals, Pastry, Beverages)</li>
+<li>Course-based firing for multi-course dine-in service</li>
+<li>Per-item status tracking (preparing, ready, served)</li>
+</ul>
+<h3>Production &amp; Check Off</h3>
+<ul>
+<li>Daily production logging (Opening, Reorder, Closing entries)</li>
+<li>Combo product component splitting</li>
+<li>Production vs Sales variance report</li>
+<li>Waste logging with reasons and cost tracking</li>
+</ul>
+<h3>Inventory &amp; Stock Management</h3>
+<ul>
+<li>Stock levels with reorder points and automatic low-stock alerts</li>
+<li>Stock movements (received, used, wasted, adjusted)</li>
+<li>Purchase orders with goods receipt workflow</li>
+<li>Stock counts (physical count vs expected)</li>
+<li>Inter-location transfers</li>
+<li>Barcode support for products and inventory items</li>
+<li>Labels printing</li>
+</ul>
+<h3>Cash Control</h3>
+<ul>
+<li>Open/close shifts with starting cash count</li>
+<li>Cash drops (moving excess to safe)</li>
+<li>Payouts (petty cash, delivery fees)</li>
+<li>No-sale events (drawer opens without transaction)</li>
+<li>End-of-shift reconciliation (expected vs actual cash count)</li>
+<li>Shift handoffs between managers</li>
+</ul>
+<h3>Finance &amp; Accounting</h3>
+<ul>
+<li><strong>Invoices</strong> — create, send, record payments (cash, cheque, bank transfer, mobile money), payment history with reversals, unapplied payment allocation</li>
+<li><strong>Quotations</strong> — professional PDFs with validity countdown, revisions, convert to invoice</li>
+<li><strong>Credit Notes</strong> — issue and apply to invoices, partial or full</li>
+<li><strong>Vendor Bills</strong> — accounts payable tracking with payment recording</li>
+<li><strong>Recurring Templates</strong> — auto-generate invoices, expenses, or vendor bills on schedule</li>
+<li><strong>Aging Reports</strong> — receivable and payable aging by bucket (current, 1-30, 31-60, 61-90, 90+ days)</li>
+<li><strong>Customer Statements</strong> — per-customer transaction history with running balance</li>
+<li><strong>Tax Summary</strong> — VAT collected vs VAT paid, net tax liability</li>
+<li><strong>Budgets</strong> — category budgets with actual vs budgeted tracking and alerts</li>
+<li><strong>P&amp;L Statement</strong> — revenue, COGS, gross profit, expenses, labor, net profit/loss</li>
+</ul>
+<h3>Expenses</h3>
+<ul>
+<li>Daily expense recording with categories, suppliers, payment methods, and receipt photo upload</li>
+<li>Funding source tracking (General Cash, CEO, Pastry Section, etc.)</li>
+<li>Daily Summary mode with printable branded form</li>
+<li>Duplicate expense warnings</li>
+<li>CSV export and PDF reports</li>
+<li>Feeds automatically into P&amp;L Statement</li>
+</ul>
+<h3>Customers &amp; Loyalty</h3>
+<ul>
+<li>Customer database with contact details, order history, and delivery addresses</li>
+<li>Loyalty program with tiered points (Bronze, Silver, Gold)</li>
+<li>Gift cards with balance tracking and transaction history</li>
+<li>Discount presets (percentage or fixed amount, with minimum order thresholds)</li>
+<li>Price lists for customer-specific pricing (wholesale, VIP, staff)</li>
+<li>Customer statements and payment ledger</li>
+<li>Agency/organization management for corporate clients</li>
+</ul>
+<h3>Suppliers &amp; Vendors</h3>
+<ul>
+<li>Pre-loaded vendor register (67 suppliers)</li>
+<li>Vendor detail page with spend analytics, trend charts, and category breakdowns</li>
+<li>Print vendor statements as PDF</li>
+<li>Export transactions as CSV</li>
+<li>Linked to purchase orders, inventory, expenses, and stock alerts</li>
+</ul>
+<h3>Reports &amp; Analytics</h3>
+<ul>
+<li>13 core report types (sales, department totals, cashier activity, hourly sales, Z-report, voids, production, weekly trend, tips, customer analytics, etc.)</li>
+<li>Advanced analytics: revenue trends, hourly patterns, day-of-week performance, ABC analysis</li>
+<li>Sales journal (line-by-line transaction record)</li>
+<li>Cash reconciliation with variance tracking</li>
+<li>Profitability analysis by product and department</li>
+<li>Labor cost tracking and analysis</li>
+<li>End of Day (EOD) printable report</li>
+<li>CSV export on all major reports</li>
+</ul>
+<h3>Staff &amp; Administration</h3>
+<ul>
+<li>Time clock (clock in/out with manager editing)</li>
+<li>Shift handoffs between managers</li>
+<li>Audit log (immutable, non-deletable record of all system changes)</li>
+<li>Menu schedules (time-based product availability)</li>
+<li>Custom roles with granular permissions (30+ resource categories)</li>
+</ul>
+<h3>Integrations</h3>
+<ul>
+<li><strong>Webhooks</strong> — POST events to external systems (Zapier, QuickBooks, Slack, etc.) with HMAC signature verification</li>
+<li><strong>SMS/WhatsApp Notifications</strong> — via Twilio (order ready, loyalty earned, refund processed)</li>
+<li><strong>Online Ordering</strong> — public page for customer orders (pickup/delivery)</li>
+<li><strong>Menu Board</strong> — public TV display of active products and prices</li>
+</ul>
+<h3>Additional Features</h3>
+<ul>
+<li>Floor plans and table layout management</li>
+<li>Table reservations and walk-in waitlist</li>
+<li>Delivery order management with fulfillment tracking</li>
+<li>Data backup and restore (automatic nightly + manual)</li>
+<li>Desktop app (Tauri) for offline-capable POS terminals</li>
+<li>Multi-location support</li>
+<li>Multi-brand support (Foods Inc. and Home Style)</li>
+</ul>
+<hr />
+<h2>4. Infrastructure &amp; Hosting</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Hosting</strong></td>
+<td>KareTech Solutions managed infrastructure (Hetzner Cloud, Germany)</td>
+</tr>
+<tr>
+<td><strong>Domain</strong></td>
+<td>pos.karetechsolutions.com (SSL encrypted)</td>
+</tr>
+<tr>
+<td><strong>Database</strong></td>
+<td>PostgreSQL (managed by KareTech)</td>
+</tr>
+<tr>
+<td><strong>Backups</strong></td>
+<td>Automated nightly backups, retained for 7 days, plus manual backup capability</td>
+</tr>
+<tr>
+<td><strong>Uptime</strong></td>
+<td>Monitored by KareTech Solutions</td>
+</tr>
+<tr>
+<td><strong>Reverse Proxy</strong></td>
+<td>Pangolin (SSL termination, routing, security)</td>
+</tr>
+</tbody>
+</table>
+<p>All infrastructure is managed by KareTech Solutions. No server access or technical knowledge is required from Bettencourt staff.</p>
+<hr />
+<h2>5. Support &amp; Maintenance</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Provider</strong></td>
+<td>KareTech Solutions</td>
+</tr>
+<tr>
+<td><strong>Contact</strong></td>
+<td>Kareem Schultz</td>
+</tr>
+<tr>
+<td><strong>Website</strong></td>
+<td><a href="https://karetechsolutions.com">karetechsolutions.com</a></td>
+</tr>
+<tr>
+<td><strong>Support Channels</strong></td>
+<td>Phone, WhatsApp, Email</td>
+</tr>
+<tr>
+<td><strong>Response Time</strong></td>
+<td>As per service agreement</td>
+</tr>
+<tr>
+<td><strong>System Updates</strong></td>
+<td>Deployed by KareTech with advance notice</td>
+</tr>
+<tr>
+<td><strong>Maintenance Windows</strong></td>
+<td>Non-business hours when possible</td>
+</tr>
+</tbody>
+</table>
+<h3>How to Request Support</h3>
+<ol>
+<li>Describe the issue: what were you doing, what happened, what did you expect</li>
+<li>Note the date and time</li>
+<li>Include a screenshot if possible</li>
+<li>Contact Kareem via WhatsApp or phone</li>
+</ol>
+<hr />
+<h2>6. Data Ownership</h2>
+<ul>
+<li>All business data (orders, customers, inventory, financial records, staff data) belongs to Bettencourt Foods Inc.</li>
+<li>Data can be exported via CSV from any report or list view in the system</li>
+<li>Full database backups are available on request</li>
+<li>Customer data is handled in accordance with applicable data protection requirements</li>
+</ul>
+<hr />
+<h2>7. Training Resources</h2>
+<table>
+<thead>
+<tr>
+<th>Resource</th>
+<th>Location</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>User Manual</strong></td>
+<td><a href="https://pos.karetechsolutions.com/manual/">pos.karetechsolutions.com/manual/</a></td>
+</tr>
+<tr>
+<td><strong>FAQ</strong></td>
+<td><a href="https://pos.karetechsolutions.com/manual/docs/faq">pos.karetechsolutions.com/manual/docs/faq</a></td>
+</tr>
+<tr>
+<td><strong>Role-specific guides</strong></td>
+<td>Each section of the manual is tagged by role</td>
+</tr>
+<tr>
+<td><strong>On-site training</strong></td>
+<td>Available from KareTech Solutions on request</td>
+</tr>
+<tr>
+<td><strong>Remote training</strong></td>
+<td>Available via video call</td>
+</tr>
+</tbody>
+</table>
+<h3>Quick Start by Role</h3>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>First Steps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Cashier</strong></td>
+<td>Log in with PIN → New Sale → take orders → process payments</td>
+</tr>
+<tr>
+<td><strong>Kitchen Staff</strong></td>
+<td>Log in with PIN → Kitchen Display → prepare orders → mark ready</td>
+</tr>
+<tr>
+<td><strong>Warehouse</strong></td>
+<td>Log in with PIN → Inventory → manage stock levels and purchase orders</td>
+</tr>
+<tr>
+<td><strong>Accountant</strong></td>
+<td>Log in with email → Finance Dashboard → invoices, expenses, reports</td>
+</tr>
+<tr>
+<td><strong>Manager</strong></td>
+<td>Log in with email → Dashboard → overview, settings, reports, user management</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>8. Delivered Features Summary</h2>
+<p>The following modules have been designed, built, and deployed as part of the Bettencourt POS project:</p>
+<ol>
+<li>Point of Sale (POS) terminal with full payment processing</li>
+<li>Kitchen Display System (KDS) with course-based firing</li>
+<li>Production and check-off board with combo product handling</li>
+<li>Inventory management with purchase orders, goods receipts, and stock alerts</li>
+<li>Cash control with shift management and reconciliation</li>
+<li>Complete finance suite (invoices, quotations, credit notes, vendor bills, recurring templates)</li>
+<li>Expense tracking with funding sources and daily summary forms</li>
+<li>Aging reports, customer statements, and tax summary</li>
+<li>Budget management with category tracking and alerts</li>
+<li>Customer database with loyalty program, gift cards, and price lists</li>
+<li>Supplier directory with vendor analytics and spend tracking</li>
+<li>13 report types plus advanced analytics and profitability analysis</li>
+<li>Staff management with time clock, wage tracking, and audit log</li>
+<li>Webhook and notification integrations (SMS/WhatsApp via Twilio)</li>
+<li>Online ordering and public menu board</li>
+<li>Floor plan and table management with reservations and waitlist</li>
+<li>Data backup and restore with automatic nightly backups</li>
+<li>Desktop application for offline-capable POS terminals</li>
+<li>Multi-location and multi-brand support</li>
+<li>Custom roles with granular permission control</li>
+</ol>
+<hr />
+<h2>9. Glossary</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>POS</strong></td>
+<td>Point of Sale — the screen where orders are taken and payments processed</td>
+</tr>
+<tr>
+<td><strong>KDS</strong></td>
+<td>Kitchen Display System — the kitchen screen showing active orders</td>
+</tr>
+<tr>
+<td><strong>EOD</strong></td>
+<td>End of Day — the daily closing report</td>
+</tr>
+<tr>
+<td><strong>GYD</strong></td>
+<td>Guyana Dollar — the currency used throughout the system</td>
+</tr>
+<tr>
+<td><strong>VAT</strong></td>
+<td>Value Added Tax — included in product prices (Guyana uses VAT-inclusive pricing)</td>
+</tr>
+<tr>
+<td><strong>P&amp;L</strong></td>
+<td>Profit and Loss Statement</td>
+</tr>
+<tr>
+<td><strong>COGS</strong></td>
+<td>Cost of Goods Sold — raw material/ingredient costs</td>
+</tr>
+<tr>
+<td><strong>AR</strong></td>
+<td>Accounts Receivable — money owed to you by customers</td>
+</tr>
+<tr>
+<td><strong>AP</strong></td>
+<td>Accounts Payable — money you owe to suppliers</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>This document was prepared by KareTech Solutions as part of the Bettencourt POS system handover. For questions or clarifications, contact Kareem Schultz at KareTech Solutions.</em></p>
+
+</body>
+</html>

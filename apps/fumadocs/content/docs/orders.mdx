@@ -139,3 +139,30 @@ The order status changes to **Voided**, all payments are voided, and if there wa
 The order status changes to **Refunded** and a negative payment record is created in the system for accounting purposes.
 
 > Refunds and voids both appear in the **P&L Statement** and **Sales Reports** so the numbers always balance.
+
+---
+
+## Open Tabs
+
+An open tab keeps an order active so items can be added over time (e.g., a bar tab or a table running a long service).
+
+1. At the POS, start a new order and give the tab a name (customer name or table)
+2. Add items throughout the service
+3. When the customer is ready to pay, find the tab in **Orders** (status: Open) and complete payment
+
+Open tabs appear with status **Open** in the Orders list and can be filtered with the status dropdown.
+
+---
+
+## Fulfillment Status
+
+Orders with delivery or pickup types track fulfillment through these stages:
+
+| Status | Meaning |
+|--------|---------|
+| **Preparing** | Kitchen has received the order |
+| **Ready** | Order is ready for pickup or dispatch |
+| **Dispatched** | Driver has collected the order |
+| **Delivered** | Customer has received the order |
+
+Update fulfillment status from the order detail dialog using the status dropdown at the top.

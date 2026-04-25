@@ -1,0 +1,3840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bettencourt POS User Manual</title>
+<style>
+  @media print {
+    body { font-size: 11pt; }
+    h1 { page-break-before: always; }
+    h1:first-of-type { page-break-before: avoid; }
+    table { page-break-inside: avoid; }
+    .cover { page-break-after: always; text-align: center; padding-top: 200px; }
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    line-height: 1.6;
+    color: #1a1a1a;
+  }
+  h1 { color: #b8862d; border-bottom: 2px solid #b8862d; padding-bottom: 8px; margin-top: 48px; }
+  h2 { color: #2d3748; margin-top: 32px; }
+  h3 { color: #4a5568; margin-top: 24px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+  th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
+  th { background: #f7f7f7; font-weight: 600; }
+  tr:nth-child(even) { background: #fafafa; }
+  code { background: #f1f1f1; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; }
+  blockquote { border-left: 4px solid #b8862d; margin: 16px 0; padding: 8px 16px; background: #fffbf0; }
+  hr { border: none; border-top: 1px solid #e2e8f0; margin: 32px 0; }
+  a { color: #b8862d; }
+  .cover-title { font-size: 36pt; color: #b8862d; margin-bottom: 8px; }
+  .cover-subtitle { font-size: 14pt; color: #666; }
+</style>
+</head>
+<body>
+<h1>Bettencourt POS</h1>
+<h1>User Manual</h1>
+<p><strong>Version:</strong> April 2026
+<strong>System URL:</strong> pos.karetechsolutions.com
+<strong>Prepared by:</strong> KareTech Solutions</p>
+<hr />
+<h2>Logging In</h2>
+<h3>PIN Login (All Staff)</h3>
+<ol>
+<li>Open <strong>pos.karetechsolutions.com</strong> in your browser (or launch the desktop app)</li>
+<li>Enter your <strong>PIN</strong> (4–8 digits assigned by your manager)</li>
+<li>Click <strong>Log In</strong></li>
+</ol>
+<blockquote>
+<p><strong>Note:</strong>
+After <strong>5 failed PIN attempts</strong>, your IP is locked out for 60 seconds. Wait and try again, or use email login if you are a manager.</p>
+</blockquote>
+<h3>Email Login (Managers &amp; Administrators)</h3>
+<ol>
+<li>Click <strong>Sign in with Email</strong> below the PIN field</li>
+<li>Enter your email address and password</li>
+<li>Click <strong>Log In</strong></li>
+</ol>
+<hr />
+<h2>Dashboard Overview</h2>
+<p>After logging in, you land on your <strong>default start page</strong> (configurable in Settings → My Workspace). The dashboard shows summary cards and quick links relevant to your role.</p>
+<h3>Sidebar Navigation</h3>
+<p>The sidebar is organised into groups:</p>
+<ul>
+<li><strong>Operations</strong> — New Sale, Orders, Cash Control, Kitchen Display</li>
+<li><strong>Inventory</strong> — Stock, Purchase Orders, Transfers, Stock Alerts, Suppliers</li>
+<li><strong>Finance</strong> — Finance Dashboard, Invoices, Credit Notes, Vendor Bills, Recurring, Quotations, Aging, Statements, Tax Summary, Budgets</li>
+<li><strong>Insights</strong> — Reports, Analytics</li>
+<li><strong>Customers</strong> — Customer List, Loyalty Program, Gift Cards</li>
+<li><strong>Sales</strong> — Public Menu Board, Online Ordering</li>
+<li><strong>System</strong> — Settings, Users, Webhooks, Notifications, Audit Log, Backup</li>
+</ul>
+<blockquote>
+<p>The sidebar only shows sections your role has access to.</p>
+</blockquote>
+<h3>Command Palette (Ctrl+K)</h3>
+<p>Press <strong>Ctrl+K</strong> to open a quick search. Type the name of any page (e.g., &quot;Inventory&quot;, &quot;Reports&quot;, &quot;Settings&quot;) to jump there instantly.</p>
+<hr />
+<h2>Staff Roles</h2>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Access</th>
+<th>Default Start Page</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Cashier</strong></td>
+<td>POS, orders, time clock</td>
+<td>New Sale</td>
+</tr>
+<tr>
+<td><strong>Kitchen / Checkoff</strong></td>
+<td>KDS and production</td>
+<td>Kitchen Display</td>
+</tr>
+<tr>
+<td><strong>Warehouse</strong></td>
+<td>Inventory, purchase orders, stock alerts</td>
+<td>Inventory</td>
+</tr>
+<tr>
+<td><strong>Accountant</strong></td>
+<td>Reports, expenses, invoices, vendor bills</td>
+<td>Finance Dashboard</td>
+</tr>
+<tr>
+<td><strong>Admin / Manager</strong></td>
+<td>All of the above + settings, products, users</td>
+<td>Dashboard</td>
+</tr>
+<tr>
+<td><strong>Executive / Owner</strong></td>
+<td>Full unrestricted access</td>
+<td>Dashboard</td>
+</tr>
+<tr>
+<td><strong>Custom Roles</strong></td>
+<td>Tailored permissions across 30+ categories</td>
+<td>As configured</td>
+</tr>
+</tbody>
+</table>
+<p>Custom roles can be created by administrators in Settings → Roles. See <a href="/docs/settings">Settings</a> for details.</p>
+<hr />
+<h2>Desktop App</h2>
+<p>For dedicated POS terminals or locations with intermittent internet, the <strong>desktop app</strong> provides the same interface as a standalone Windows application with offline capability. See <a href="/docs/desktop-app">Desktop App</a>.</p>
+<hr />
+<h2>Sync Status Indicator</h2>
+<p>A small dot in the top bar shows the system's connection status:</p>
+<ul>
+<li><strong>Green</strong> — fully connected, all data in sync</li>
+<li><strong>Yellow</strong> — connection intermittent, some actions may be delayed</li>
+<li><strong>Red</strong> — offline, limited functionality (desktop app only)</li>
+</ul>
+<hr />
+<h2>Desktop App</h2>
+<p>For dedicated POS terminals, the <strong>Bettencourt POS Desktop App</strong> runs as a standalone Windows application with offline capability. It provides the same interface as the browser but runs without browser distractions and can continue taking orders when internet connectivity drops.</p>
+<p>See <a href="/docs/desktop-app">Desktop App</a> for installation and offline mode details.</p>
+<hr />
+<h2>Custom Roles</h2>
+<p>In addition to the six built-in roles, administrators can create <strong>custom roles</strong> with granular permissions across 30+ resource categories. This allows for combinations like &quot;Senior Cashier&quot; (cashier + limited report access) or &quot;Finance Manager&quot; (invoices + reports + no POS).</p>
+<p>Custom roles are managed at <strong>Settings → Roles</strong>. See <a href="/docs/settings#custom-roles">Settings</a> for the full guide.</p>
+<hr />
+<p><strong>Navigate to:</strong> New Sale (Operations → New Sale, or click &quot;Open POS&quot; from the Dashboard)</p>
+<p>The POS has two main parts:</p>
+<ul>
+<li><strong>Left/Center</strong> — product grid organized by category</li>
+<li><strong>Right panel</strong> — the current order cart</li>
+</ul>
+<hr />
+<h2>Starting a New Order</h2>
+<p>The POS opens with an empty cart ready to go. If you have an order in progress, click <strong>+ New</strong> (top of cart) to start a fresh order.</p>
+<hr />
+<h2>Browsing Products</h2>
+<ul>
+<li>Category tabs run across the top of the product grid</li>
+<li>Click a category tab to filter to those products</li>
+<li>Use the <strong>Search</strong> bar above the grid to find a product by name</li>
+<li>Products with a stacked layers icon are <strong>combo products</strong> (e.g., a meal deal with multiple components)</li>
+</ul>
+<h3>Menu Schedules</h3>
+<p>Products may be restricted to certain times of day (e.g., breakfast items only show before 11:00 AM). Menu schedules are configured by managers in Settings → Menu Schedules. The POS automatically shows only products available for the current time window.</p>
+<hr />
+<h2>Adding Items to the Cart</h2>
+<ul>
+<li>Click any product button to add it once</li>
+<li>Click again to add another unit</li>
+<li>If a product has <strong>modifiers</strong> (e.g., spice level, size, add-ons), a popup appears — select your options and click <strong>Add to Cart</strong></li>
+</ul>
+<h3>Combo Products</h3>
+<p>Combo products bundle multiple items together (e.g., &quot;Lunch Special: Main + Side + Drink&quot;). When you add a combo:</p>
+<ul>
+<li>The combo appears as a single line item in the cart at the combo price</li>
+<li>Production tracking automatically splits the combo into its individual components for the kitchen</li>
+</ul>
+<hr />
+<h2>Editing Cart Items</h2>
+<p>In the cart on the right:</p>
+<ul>
+<li>Click <strong>+</strong> or <strong>−</strong> next to an item to change quantity</li>
+<li>Click the <strong>pencil icon</strong> (or the item name) to edit quantity or add a note</li>
+<li>Click the <strong>trash icon</strong> to remove an item</li>
+<li>Click <strong>Add Note</strong> on a line item to add a special instruction (e.g., &quot;no onions&quot;)</li>
+</ul>
+<hr />
+<h2>Applying a Discount</h2>
+<ol>
+<li>With items in the cart, click <strong>Discount</strong></li>
+<li>Choose from your saved discount presets (e.g., Staff Discount 10%, Senior 10%), or enter a custom amount (percentage or fixed GYD)</li>
+<li>The discount appears in the cart total</li>
+</ol>
+<blockquote>
+<p>Discounts exceeding the cashier's limit require <strong>supervisor approval</strong> — a dialog prompts for a manager PIN.</p>
+</blockquote>
+<hr />
+<h2>Supervisor Approval</h2>
+<p>Certain actions require manager authorization:</p>
+<ul>
+<li>Discounts exceeding the cashier's configured limit</li>
+<li>Price overrides on products</li>
+<li>Voiding items after they have been sent to the kitchen</li>
+</ul>
+<p>When required, a dialog appears asking for a <strong>Manager PIN</strong> or email login. Once approved, the action proceeds and is logged in the audit trail.</p>
+<hr />
+<h2>Selecting Order Type</h2>
+<p>At the top of the cart, select the order type:</p>
+<ul>
+<li><strong>Walk-in / Dine In</strong> — for table orders (select a table from the dropdown or floor plan)</li>
+<li><strong>Takeaway</strong> — for counter pickup</li>
+<li><strong>Delivery</strong> — prompts for customer name, phone, and delivery address</li>
+</ul>
+<h3>Table Assignment (Dine In)</h3>
+<p>When order type is <strong>Dine In</strong>, select a table from the dropdown. The table status changes to &quot;Occupied&quot; on the floor plan. See <a href="/docs/floor-plan">Floor Plans &amp; Table Layout</a> for more on table management.</p>
+<hr />
+<h2>Processing Payment</h2>
+<ol>
+<li>Review the cart items and total</li>
+<li>Click <strong>Charge</strong></li>
+<li>The payment dialog opens — choose method(s):
+<ul>
+<li><strong>Cash</strong> — enter the amount the customer hands you; the system shows the change due. Quick-cash buttons for common GYD denominations: <strong>$100, $500, $1,000, $2,000, $5,000</strong></li>
+<li><strong>Card</strong> — confirm the amount, process on your physical card terminal</li>
+<li><strong>Gift Card</strong> — enter the gift card number; it deducts from the card balance</li>
+<li><strong>Split Payment</strong> — click <strong>Add Payment</strong> to split across multiple methods</li>
+</ul>
+</li>
+<li>Click <strong>Complete Order</strong></li>
+</ol>
+<p>The order is saved and a receipt preview appears.</p>
+<h3>VAT Display</h3>
+<p>Guyana uses VAT-inclusive pricing. The cart shows &quot;Incl. VAT: $X&quot; as an informational line — it does not change the total. This can be toggled per terminal via the VAT display setting.</p>
+<hr />
+<h2>Printing a Receipt</h2>
+<p>After payment, click <strong>Print</strong> on the receipt preview. Receipts print to the configured receipt printer (see <a href="/docs/printers">Printers</a>).</p>
+<hr />
+<h2>Split Bill</h2>
+<p>After completing an order, the receipt preview has a <strong>Split</strong> button:</p>
+<ol>
+<li>Click <strong>Split</strong></li>
+<li>Choose how to split:
+<ul>
+<li><strong>Equal Split</strong> — divide total evenly among N people</li>
+<li><strong>By Item</strong> — assign specific items to each person</li>
+<li><strong>Custom Amounts</strong> — enter custom dollar amounts per person</li>
+</ul>
+</li>
+<li>Each split portion can be paid separately</li>
+</ol>
+<hr />
+<h2>Holding an Order</h2>
+<p>Click <strong>Hold</strong> (at the bottom of the cart) to save the order without charging. Retrieve held orders by clicking the <strong>Held Orders</strong> button (stack icon at top of cart).</p>
+<hr />
+<h2>Voiding Items</h2>
+<ul>
+<li><strong>Before payment:</strong> Click the trash icon next to a cart item to remove it. No void record is created.</li>
+<li><strong>After payment:</strong> Go to <strong>Orders</strong>, open the order, and click <strong>Void Order</strong>. See <a href="/docs/orders">Orders</a>.</li>
+</ul>
+<hr />
+<h2>Linking a Customer to an Order</h2>
+<p>Click <strong>Add Customer</strong> in the cart, search by name or phone, and select the customer. Benefits:</p>
+<ul>
+<li>Loyalty points earned automatically when the order completes</li>
+<li>If the customer has a <strong>price list</strong> assigned, their custom prices apply immediately</li>
+<li>Delivery address is pulled from the customer profile for delivery orders</li>
+</ul>
+<hr />
+<p><strong>Navigate to:</strong> Dashboard → Orders</p>
+<hr />
+<h2>Order List</h2>
+<p>The orders table shows all transactions for the selected filters. Each row displays:</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Order #</td>
+<td>Unique order number (e.g. ORD-0042)</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Completed, Open, Held, Voided, or Refunded</td>
+</tr>
+<tr>
+<td>Type</td>
+<td>Walk-in / Dine-in, Pickup, or Delivery</td>
+</tr>
+<tr>
+<td>Cashier</td>
+<td>Staff member who processed the order</td>
+</tr>
+<tr>
+<td>Customer</td>
+<td>Customer name and phone (if provided)</td>
+</tr>
+<tr>
+<td>Total</td>
+<td>Order total in GYD</td>
+</tr>
+<tr>
+<td>Time</td>
+<td>Time the order was created</td>
+</tr>
+</tbody>
+</table>
+<p>Click any row to open the full order detail dialog.</p>
+<hr />
+<h2>Filtering Orders</h2>
+<p>Use the controls above the table to narrow results:</p>
+<ul>
+<li><strong>Search</strong> — by order number or customer name</li>
+<li><strong>Type filter</strong> — All Types, Walk-in/Dine-in, Pickup, Delivery</li>
+<li><strong>Status filter</strong> — All, Completed, Open, Voided, Refunded, Held</li>
+<li><strong>From / To date</strong> — view orders for a specific day or range</li>
+</ul>
+<p>The order count at the right of the filter bar updates instantly as you type.</p>
+<hr />
+<h2>Order Detail Dialog</h2>
+<p>Click any row to open the full detail view. The dialog is organised into sections:</p>
+<h3>Header</h3>
+<ul>
+<li>Order number and creation timestamp</li>
+<li>Status badge (Completed / Voided / Refunded / etc.)</li>
+<li>Fulfillment status badge (Preparing / Ready / Picked Up / Delivered) when applicable</li>
+</ul>
+<h3>Transaction Information</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cashier</td>
+<td>Staff member who rang up the order</td>
+</tr>
+<tr>
+<td>Location</td>
+<td>Which branch the order was taken at</td>
+</tr>
+<tr>
+<td>Register</td>
+<td>Which register (e.g. Register 1)</td>
+</tr>
+<tr>
+<td>Order Type</td>
+<td>Walk-in, Pickup, or Delivery</td>
+</tr>
+<tr>
+<td>Table</td>
+<td>Table number (dine-in only)</td>
+</tr>
+<tr>
+<td>Split Order</td>
+<td>Shown if the bill was split</td>
+</tr>
+<tr>
+<td>Closed At</td>
+<td>Timestamp when the order was finalised</td>
+</tr>
+</tbody>
+</table>
+<h3>Customer (shown when available)</h3>
+<ul>
+<li>Customer name, phone number, and delivery address</li>
+</ul>
+<h3>Notes</h3>
+<ul>
+<li>Order-level notes shown in an amber box (if any were added)</li>
+</ul>
+<h3>Items</h3>
+<p>A table of every line item:</p>
+<ul>
+<li>Product name with modifiers shown as grey chips</li>
+<li>Item-level notes in italics below the product</li>
+<li>Voided items shown with a strikethrough and a red <strong>Voided</strong> badge</li>
+<li>Columns: Product, Qty, Price, Disc. (discount), Total</li>
+</ul>
+<h3>Payments</h3>
+<p>Each payment shows:</p>
+<ul>
+<li>Method (Cash or Card) with an icon</li>
+<li>Amount</li>
+<li>For cash payments: <strong>Tendered</strong> amount and <strong>Change given</strong></li>
+<li>Voided payments are dimmed with a red <strong>Voided</strong> badge</li>
+</ul>
+<h3>Totals</h3>
+<ul>
+<li>Subtotal</li>
+<li>Discount (shown in red, only if applied)</li>
+<li>Tax / 16.5% VAT (only if non-zero)</li>
+<li><strong>Total</strong> (bold)</li>
+</ul>
+<h3>Void Information (voided orders only)</h3>
+<p>A red box showing:</p>
+<ul>
+<li>Void reason</li>
+<li>Authorized by (manager who approved it)</li>
+<li>Date and time voided</li>
+</ul>
+<hr />
+<h2>Printing / Exporting</h2>
+<h3>Print PDF</h3>
+<p>In the order detail dialog, click <strong>Print PDF</strong> (bottom left) to open a formatted receipt in a new browser tab. Click <strong>Print / Save as PDF</strong> inside that tab to save it or send it to a printer.</p>
+<p>The PDF includes: order number, date, cashier, location, register, customer info, all line items with modifiers, payment breakdown with change given, totals, and void information if applicable.</p>
+<h3>Print Orders PDF (List Report)</h3>
+<p>On the main Orders page, click <strong>Print PDF</strong> (top right) to open a formatted orders report in a new tab. The report includes:</p>
+<ul>
+<li>Total order count and grand total</li>
+<li>Breakdown by status (Completed, Voided, Refunded, etc.)</li>
+<li>Full orders table with order #, date/time, type, cashier, customer, status, and total</li>
+<li>Active filters shown at the top of the report</li>
+</ul>
+<p>Click <strong>Print / Save as PDF</strong> inside the tab to save or print.</p>
+<h3>Export CSV</h3>
+<p>On the main Orders page, click <strong>Export</strong> (top right) to download the currently filtered orders as a CSV file with: Order #, Status, Type, Total, Cashier, Customer, Date.</p>
+<hr />
+<h2>Voiding an Order</h2>
+<blockquote>
+<p>Only admins and executives can void orders. Voiding is final and logged in the audit trail.</p>
+</blockquote>
+<ol>
+<li>Click the order row to open the detail dialog</li>
+<li>Click <strong>Void</strong> (bottom right — only visible on Completed orders)</li>
+<li>Enter a <strong>reason</strong> in the text field (required)</li>
+<li>Click <strong>Confirm Void</strong></li>
+</ol>
+<p>The order status changes to <strong>Voided</strong>, all payments are voided, and if there was a cash payment, the cash session expected total is adjusted automatically.</p>
+<hr />
+<h2>Refunding an Order</h2>
+<blockquote>
+<p>Only completed orders can be refunded.</p>
+</blockquote>
+<ol>
+<li>Click the order row to open the detail dialog</li>
+<li>Click <strong>Refund</strong> (bottom right)</li>
+<li>The full order total is pre-filled — change the amount for a <strong>partial refund</strong></li>
+<li>Enter a <strong>reason</strong> (required)</li>
+<li>Click <strong>Confirm Refund</strong></li>
+</ol>
+<p>The order status changes to <strong>Refunded</strong> and a negative payment record is created in the system for accounting purposes.</p>
+<blockquote>
+<p>Refunds and voids both appear in the <strong>P&amp;L Statement</strong> and <strong>Sales Reports</strong> so the numbers always balance.</p>
+</blockquote>
+<hr />
+<h2>Open Tabs</h2>
+<p><strong>Navigate to:</strong> Dashboard → Orders (filter by Open status)</p>
+<p>Open tabs are orders that have been started but not yet completed or paid. They stay active until the customer is ready to settle.</p>
+<ul>
+<li>View all open tabs from the Orders page by filtering to <strong>Open</strong> status</li>
+<li>Each tab shows items added so far, running total, and the cashier who started it</li>
+<li>Add items to an open tab by retrieving it from the <strong>Held Orders</strong> list in the POS</li>
+</ul>
+<hr />
+<h2>Order Transfers</h2>
+<p>Orders can be transferred between registers or locations:</p>
+<ol>
+<li>Open the order detail</li>
+<li>Click <strong>Transfer</strong></li>
+<li>Select the target register or location</li>
+<li>The order moves and appears on the target register</li>
+</ol>
+<p>This is useful when a customer starts an order at one counter and moves to another, or for centralised order management across registers.</p>
+<hr />
+<h2>Fulfillment Status</h2>
+<p>Delivery and pickup orders show a <strong>fulfillment status</strong> alongside the payment status:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Preparing</strong></td>
+<td>Kitchen is working on the order</td>
+</tr>
+<tr>
+<td><strong>Ready</strong></td>
+<td>Order is prepared and waiting for pickup/dispatch</td>
+</tr>
+<tr>
+<td><strong>Dispatched</strong></td>
+<td>Order has left the premises (delivery only)</td>
+</tr>
+<tr>
+<td><strong>Delivered</strong></td>
+<td>Order has been delivered to the customer</td>
+</tr>
+</tbody>
+</table>
+<p>Update the fulfillment status from the order detail view as the order progresses through preparation and delivery.</p>
+<hr />
+<h2>Kitchen Display System (KDS)</h2>
+<p><strong>Navigate to:</strong> Dashboard → Kitchen Display</p>
+<p>The Kitchen Display shows all active orders as tickets in real time. Kitchen staff use it to track what needs to be prepared and mark items as ready.</p>
+<h3>Layout</h3>
+<p>Each ticket shows:</p>
+<ul>
+<li>Order number and time received</li>
+<li>All items in the order with special notes</li>
+<li>Modifiers shown as grey chips below item names</li>
+</ul>
+<h3>Department Filter</h3>
+<p>Use the filter tabs at the top of the KDS to view only orders for a specific department (e.g., &quot;Meals&quot;, &quot;Pastry&quot;, &quot;Beverages&quot;). This is useful when different kitchen stations handle different departments.</p>
+<h3>Colour Coding by Wait Time</h3>
+<table>
+<thead>
+<tr>
+<th>Colour</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Grey/White</td>
+<td>Fresh order, just received</td>
+</tr>
+<tr>
+<td>Yellow</td>
+<td>Order is waiting longer than expected</td>
+</tr>
+<tr>
+<td>Red</td>
+<td>Order has been waiting too long — needs immediate attention</td>
+</tr>
+</tbody>
+</table>
+<h3>Marking Items as Prepared</h3>
+<p>Click an item on a ticket to mark it as prepared (dims/checks off the item). When all items are prepared, click <strong>Mark Ready</strong> — the ticket turns green and the front-of-house is notified.</p>
+<h3>Course-Based Ordering</h3>
+<p>For multi-course meals, items are grouped by course on the KDS. Kitchen staff can <strong>fire</strong> items by course — preparing starters first, then mains when the table is ready.</p>
+<h3>Auto-Refresh</h3>
+<p>The KDS refreshes automatically every few seconds. No manual refresh is needed.</p>
+<hr />
+<h2>Tables</h2>
+<p><strong>Navigate to:</strong> Dashboard → Tables</p>
+<h3>Table Layout View</h3>
+<p>View your dining area visually with tables showing their status:</p>
+<ul>
+<li><strong>Available</strong> (green) — ready for seating</li>
+<li><strong>Occupied</strong> (red) — active order in progress</li>
+<li><strong>Reserved</strong> (blue) — booked for an upcoming reservation</li>
+</ul>
+<h3>Assigning Orders to Tables</h3>
+<p>When creating a <strong>Dine In</strong> order at the POS, select a table from the dropdown. The table status changes to &quot;Occupied&quot; on the floor plan.</p>
+<h3>Moving Orders Between Tables</h3>
+<p>If a party needs to move:</p>
+<ol>
+<li>Click the occupied table</li>
+<li>Click <strong>Move Order</strong></li>
+<li>Select the new table</li>
+<li>Table statuses update automatically</li>
+</ol>
+<h3>Clearing Tables</h3>
+<p>After a party leaves and the bill is settled, click the occupied table → <strong>Clear Table</strong> to return it to &quot;Available&quot; status.</p>
+<h3>Configuring Tables</h3>
+<p>Add and manage tables in <strong>Settings → Tables</strong>. Set table names/numbers and capacity. See <a href="/docs/floor-plan">Floor Plans &amp; Table Layout</a> for the full guide on floor configuration.</p>
+<hr />
+<h2>Production Dashboard (Check Off)</h2>
+<p><strong>Navigate to:</strong> Dashboard → Production</p>
+<p>Used by kitchen and bakery managers to log how much was produced each day and compare it against what the POS actually sold.</p>
+<h3>Workflow Tabs</h3>
+<p>At the top there are two tabs:</p>
+<ul>
+<li><strong>Restaurant → Food</strong> — soups, mains, sides, drinks</li>
+<li><strong>Bakery → Pastry</strong> — all bakery and pastry products</li>
+</ul>
+<p>Only products belonging to the selected workflow are shown, so the kitchen and bakery teams can work independently.</p>
+<h3>Entry Types</h3>
+<table>
+<thead>
+<tr>
+<th>Button</th>
+<th>Colour</th>
+<th>When to use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Opening</strong></td>
+<td>Blue</td>
+<td>First thing in the morning — how much you made for the day</td>
+</tr>
+<tr>
+<td><strong>Reorder</strong></td>
+<td>Amber</td>
+<td>Mid-day top-up when you cook more</td>
+</tr>
+<tr>
+<td><strong>Closing</strong></td>
+<td>Green</td>
+<td>End of day — leftover / damage / spoilage</td>
+</tr>
+</tbody>
+</table>
+<h3>Logging a Product</h3>
+<ol>
+<li>Tap the entry type (Opening / Reorder / Closing)</li>
+<li>Optionally use the department pills to filter to a specific section</li>
+<li>Tap any product card — a number pad dialog opens</li>
+<li>Enter the quantity using the numpad, quick-quantity buttons (5 / 10 / 20 / 25 / 50), or +/− fine-tune buttons</li>
+<li>Add a note if needed (e.g., &quot;burnt batch&quot;)</li>
+<li>Tap <strong>Log</strong> to save</li>
+</ol>
+<p>After saving, the product card shows a badge with the running total for the day.</p>
+<h3>Combo Products (Split Items)</h3>
+<p>Some products — like &quot;Fried Rice and Baked Chicken&quot; or &quot;Cookup Baked Snapper&quot; — are combos made up of two individual items. These cards show an amber <strong>stacked layers</strong> icon.</p>
+<p><strong>Opening entries</strong> always split automatically into all components:</p>
+<blockquote>
+<p><em>Example: Log 10 × &quot;Fried Rice and Baked Chicken&quot; (Opening)</em>
+The system records:
+→ 10 × Fried Rice (Opening)
+→ 10 × Baked Chicken (Opening)</p>
+</blockquote>
+<p><strong>Reorder and Closing entries</strong> give you a choice — sometimes you only topped up one component, not both. After tapping the quantity, you will see:</p>
+<ul>
+<li><strong>All equally</strong> — splits the quantity across all components, same as Opening</li>
+<li><strong>Individual component buttons</strong> (e.g. &quot;Fried Rice&quot;, &quot;Baked Chicken&quot;) — tap one to log only that component</li>
+</ul>
+<blockquote>
+<p><em>Example: You made 5 more Baked Chicken mid-day (no extra Fried Rice needed)</em>
+Tap <strong>Baked Chicken</strong> → logs 5 × Baked Chicken (Reorder) only</p>
+</blockquote>
+<p>The button label updates to show exactly what will be recorded (e.g. &quot;Log 5 → Baked Chicken&quot;) so there is no ambiguity before you confirm.</p>
+<hr />
+<h2>Production Report</h2>
+<p><strong>Navigate to:</strong> Dashboard → Production Report</p>
+<p>Compares what the kitchen logged against what the POS actually sold.</p>
+<h3>Columns</h3>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Opening</td>
+<td>Quantity made at start of day</td>
+</tr>
+<tr>
+<td>Reorder</td>
+<td>Mid-day top-up batches</td>
+</tr>
+<tr>
+<td>Closing</td>
+<td>Leftover / unsold at end of day</td>
+</tr>
+<tr>
+<td>Expected</td>
+<td>Opening + Reorder − Closing</td>
+</tr>
+<tr>
+<td>Actual</td>
+<td>What the POS actually sold</td>
+</tr>
+<tr>
+<td><strong>% Sold</strong></td>
+<td>Actual ÷ Expected × 100</td>
+</tr>
+<tr>
+<td>Variance</td>
+<td>Actual − Expected</td>
+</tr>
+</tbody>
+</table>
+<h3>Row Sorting</h3>
+<p>Rows are sorted by urgency:</p>
+<ol>
+<li><strong>Shortages</strong> (negative variance) — appear first so you can spot problems immediately</li>
+<li><strong>Overages</strong> (positive variance) — produced more than sold</li>
+<li><strong>Balanced</strong> (zero variance) — at the bottom</li>
+</ol>
+<h3>Variance Colour Codes</h3>
+<table>
+<thead>
+<tr>
+<th>Colour</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Grey (0)</strong></td>
+<td>Balanced — sales match production exactly</td>
+</tr>
+<tr>
+<td><strong>Red (negative)</strong></td>
+<td>Short — more was rung up than produced</td>
+</tr>
+<tr>
+<td><strong>Amber (positive)</strong></td>
+<td>Over — more was produced than sold (possible waste)</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>Closing column</strong> is highlighted in amber whenever there is unsold stock remaining at end of day.</p>
+<p>A <strong>Totals row</strong> at the bottom sums all columns for an at-a-glance overview.</p>
+<blockquote>
+<p><strong>Legend (shown below the table):</strong> Closing = leftover at end of day. % Sold = Actual ÷ Expected. Combo sales are split into components in both columns.</p>
+</blockquote>
+<p>Click <strong>Print</strong> to print the report.</p>
+<hr />
+<h2>Waste Log</h2>
+<p><strong>Navigate to:</strong> Dashboard → Waste Log</p>
+<p>Tracks food and ingredient waste in detail for cost control.</p>
+<h3>Recording Waste</h3>
+<ol>
+<li>Click <strong>Log Waste</strong></li>
+<li>Select the item (product or ingredient)</li>
+<li>Enter the quantity wasted</li>
+<li>Select the reason:
+<ul>
+<li>Expired</li>
+<li>Overcooked</li>
+<li>Dropped/Damaged</li>
+<li>Overproduced</li>
+<li>Other</li>
+</ul>
+</li>
+<li>Optionally add a note</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<h3>Viewing Waste History</h3>
+<p>The waste log table shows all recorded waste events with date, item, quantity, reason, who recorded it, and estimated cost value.</p>
+<p>A <strong>summary at the top</strong> shows total waste cost for the selected period. Use the date filter to compare week-over-week or month-over-month.</p>
+<hr />
+<h2>Variance Report</h2>
+<p><strong>Navigate to:</strong> Dashboard → Variance</p>
+<p>Compares <strong>expected</strong> stock (calculated from sales and production) vs. <strong>actual</strong> stock (from physical counts). Unexplained differences may indicate waste, theft, or data entry errors.</p>
+<ul>
+<li><strong>Green</strong> = within tolerance</li>
+<li><strong>Red</strong> = significant variance requiring investigation</li>
+</ul>
+<p>Click any item to see the detailed movement history and identify where the variance occurred.</p>
+<hr />
+<p><strong>Navigate to:</strong> Dashboard → Cash Control</p>
+<p>Manages cash drawer sessions (shifts), cash drops, payouts, and no-sale events.</p>
+<hr />
+<h2>Opening a Shift</h2>
+<p>Do this at the start of each working day or when a new cashier takes over:</p>
+<ol>
+<li>Click <strong>Open Shift</strong></li>
+<li>Count the starting cash in the drawer and enter the amount</li>
+<li>Click <strong>Open Shift</strong></li>
+</ol>
+<blockquote>
+<p>The system tracks all sales and cash movements during the shift.</p>
+</blockquote>
+<hr />
+<h2>Recording a Cash Drop</h2>
+<p>When the drawer has too much cash and you want to move some to the safe:</p>
+<ol>
+<li>Click <strong>Cash Drop</strong></li>
+<li>Enter the amount you're removing</li>
+<li>Enter a reason (e.g., &quot;moved to safe&quot;)</li>
+<li>Click <strong>Record Drop</strong></li>
+</ol>
+<hr />
+<h2>Recording a Payout</h2>
+<p>When you pay someone from the cash drawer (e.g., petty cash for a delivery fee):</p>
+<ol>
+<li>Click <strong>Payout</strong></li>
+<li>Enter the amount paid out</li>
+<li>Enter who/why (e.g., &quot;supplier delivery fee&quot;)</li>
+<li>Click <strong>Record Payout</strong></li>
+</ol>
+<hr />
+<h2>No Sale / Opening the Drawer Without a Transaction</h2>
+<p>When you need to open the drawer without processing a sale:</p>
+<ol>
+<li>Click <strong>No Sale</strong></li>
+<li>Enter a reason (optional but recommended)</li>
+<li>Click <strong>Log No Sale</strong></li>
+</ol>
+<blockquote>
+<p>Every drawer-open event is logged for security. All no-sale events appear in the Cash Control audit trail.</p>
+</blockquote>
+<hr />
+<h2>Closing a Shift</h2>
+<p>At the end of the day or shift:</p>
+<ol>
+<li>Click <strong>Close Shift</strong></li>
+<li>Count all the cash in the drawer</li>
+<li>Enter the actual cash count</li>
+<li>The system shows <strong>Expected</strong> vs. <strong>Actual</strong> cash</li>
+<li>Any difference is recorded as overage (too much) or shortage (too little)</li>
+<li>Click <strong>Close Shift</strong></li>
+</ol>
+<hr />
+<h2>Shift History</h2>
+<p>Below the current shift, a table shows all past shifts with:</p>
+<ul>
+<li>Who opened/closed</li>
+<li>Opening float</li>
+<li>Expected cash</li>
+<li>Actual cash counted</li>
+<li>Variance (over/short)</li>
+</ul>
+<p>Use the date range filters to view shifts from specific periods.</p>
+<hr />
+<h2>Inventory</h2>
+<p><strong>Navigate to:</strong> Dashboard → Inventory</p>
+<p>Manages raw materials and ingredients (not finished food products — those are in <strong>Settings → Products</strong>).</p>
+<h3>Viewing Stock Levels</h3>
+<p>The main inventory tab shows all items with current stock on hand, unit of measure, reorder point, and status indicator.</p>
+<h3>Adding a Stock Movement</h3>
+<ol>
+<li>Click <strong>Add Movement</strong></li>
+<li>Select the item</li>
+<li>Choose movement type:
+<ul>
+<li><strong>Received</strong> — new stock delivered from supplier</li>
+<li><strong>Used</strong> — consumed in cooking/production</li>
+<li><strong>Wasted</strong> — spoiled or thrown out</li>
+<li><strong>Adjustment</strong> — manual correction to match physical count</li>
+</ul>
+</li>
+<li>Enter the quantity and a note/reason</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<h3>Stock Ledger</h3>
+<p>Click any inventory item to see its full ledger — a history of every movement with timestamps and the person who recorded it.</p>
+<h3>Barcode Support</h3>
+<p>Inventory items can have barcodes assigned. When scanning a barcode at the POS or during stock counts, the system looks up the item automatically. Add barcodes under the item's detail view.</p>
+<hr />
+<h2>Stock Counts</h2>
+<p><strong>Tab: Stock Counts</strong></p>
+<p>Used for physical counts (counting actual stock on hand):</p>
+<ol>
+<li>Click <strong>New Count</strong></li>
+<li>Select the items to count</li>
+<li>Enter the physical quantity for each item</li>
+<li>Submit — the system records the variance between expected and actual</li>
+</ol>
+<hr />
+<h2>Purchase Orders</h2>
+<p><strong>Tab: Purchase Orders</strong></p>
+<ol>
+<li>Click <strong>New Purchase Order</strong></li>
+<li>Select the supplier</li>
+<li>Add items and quantities needed</li>
+<li>Save as <strong>Draft</strong> or set to <strong>Ordered</strong> (sent to supplier)</li>
+<li>When goods arrive, click <strong>Receive</strong> on the order to update inventory</li>
+</ol>
+<h3>Goods Receipts</h3>
+<p>When receiving a purchase order:</p>
+<ol>
+<li>Click <strong>Receive</strong> on an ordered PO</li>
+<li>Enter the actual quantities received (may differ from ordered quantities)</li>
+<li>Submit — inventory levels are updated immediately</li>
+<li>The goods receipt is recorded with a timestamp and the receiving user</li>
+</ol>
+<hr />
+<h2>Transfers</h2>
+<p><strong>Tab: Transfers</strong></p>
+<p>Move stock between locations:</p>
+<ol>
+<li>Click <strong>New Transfer</strong></li>
+<li>Select: From Location → To Location</li>
+<li>Add items and quantities</li>
+<li>Submit</li>
+</ol>
+<hr />
+<h2>Waste Logging</h2>
+<p><strong>Navigate to:</strong> Dashboard → Waste Log (or via Inventory → Waste tab)</p>
+<p>Track and manage food waste for cost control:</p>
+<ol>
+<li>Click <strong>Log Waste</strong></li>
+<li>Select the item</li>
+<li>Enter quantity</li>
+<li>Choose a reason: Expired, Overcooked, Dropped/Damaged, Overproduced, or Other</li>
+<li>Add an optional note</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>The waste log table shows: date, item, quantity, reason, recorded by, and estimated cost value. You can <strong>edit</strong> or <strong>delete</strong> waste entries if corrections are needed.</p>
+<h3>Waste Summary</h3>
+<p>View waste totals at the top of the page:</p>
+<ul>
+<li><strong>Total waste cost</strong> for the selected period</li>
+<li><strong>By department</strong> breakdown to identify which areas generate the most waste</li>
+<li>Use date filters for week-over-week or month-over-month comparison</li>
+</ul>
+<hr />
+<h2>Inventory Valuation</h2>
+<p>View the total value of your current stock based on item costs and quantities on hand. This feeds into the P&amp;L Statement under Cost of Goods Sold.</p>
+<hr />
+<h2>Stock Alerts</h2>
+<p><strong>Navigate to:</strong> Dashboard → Stock Alerts</p>
+<blockquote>
+<p>You will see a <strong>number badge</strong> on this menu item in the sidebar when there are unacknowledged alerts.</p>
+</blockquote>
+<p>When an inventory item falls to or below its <strong>reorder point</strong>, an alert is automatically generated.</p>
+<h3>Viewing &amp; Acknowledging Alerts</h3>
+<p>Alerts show the item name, current stock level, reorder point, and alert type (Low Stock or Out of Stock).</p>
+<ul>
+<li>Use the filter to toggle between All and Unacknowledged alerts</li>
+<li>Click <strong>Acknowledge</strong> to mark an alert as seen/handled — this removes the sidebar badge</li>
+</ul>
+<h3>Auto-Generate Purchase Order</h3>
+<p>For items with a preferred supplier set, click <strong>Auto PO</strong> to automatically create a purchase order with the item and suggested reorder quantity.</p>
+<hr />
+<h2>Product Recipes &amp; Components</h2>
+<p>Products can have <strong>recipes</strong> (ingredient lists) that link to inventory items. When a product is sold, the recipe components can be used to track ingredient consumption.</p>
+<p><strong>Combo products</strong> (e.g., &quot;Fried Rice &amp; Chicken Meal&quot;) are products composed of multiple sub-products. Components are:</p>
+<ul>
+<li>Automatically split for production tracking on the checkoff board</li>
+<li>Used for inventory deduction calculations</li>
+<li>Managed under the product's detail view in Settings → Products</li>
+</ul>
+<hr />
+<h2>Labels</h2>
+<p><strong>Navigate to:</strong> Dashboard → Labels</p>
+<p>Print price labels or shelf labels for products.</p>
+<ol>
+<li>Search for or select products to label</li>
+<li>Choose a label format (price tag, shelf label, etc.)</li>
+<li>Click <strong>Print Labels</strong></li>
+</ol>
+<hr />
+<p><strong>Navigate to:</strong> Dashboard → Expenses</p>
+<p>Track business expenses (non-COGS) such as utilities, rent, staff meals, repairs, etc.</p>
+<hr />
+<h2>Summary Cards (Quick Filter)</h2>
+<p>At the top of the page are <strong>clickable summary cards</strong> showing your expense totals for the selected period:</p>
+<ul>
+<li><strong>All Expenses</strong> card — shows the grand total and a <strong>&quot;+X% vs last month&quot;</strong> badge so you can instantly see whether spending is up or down compared to the previous month. Click it to reset to viewing all entries.</li>
+<li><strong>Supplier cards</strong> (up to 3) — show the total spent with each top supplier.</li>
+</ul>
+<p><strong>Click any supplier card to instantly filter the expense table to show only that supplier's entries.</strong> The active card is highlighted with a ring so you always know which filter is in effect.</p>
+<hr />
+<h2>Category Breakdown</h2>
+<p>Below the supplier cards is a <strong>spending-by-category</strong> row showing the total for each category as clickable pills. Click any pill to filter the table to that category only. Click again to clear.</p>
+<hr />
+<h2>Filtering Expenses</h2>
+<p>Use the controls at the top to narrow down what you see:</p>
+<ul>
+<li><strong>From / To</strong> date fields — the page opens showing <strong>the current month</strong> by default so you always see relevant data</li>
+<li><strong>Quick range</strong> buttons — <strong>Today</strong>, <strong>This Week</strong>, <strong>This Month</strong>, <strong>Last Month</strong> — instantly set the date range with one click</li>
+<li><strong>Supplier</strong> dropdown — filter by a specific supplier</li>
+<li><strong>Category</strong> dropdown — filter by a specific expense category</li>
+</ul>
+<hr />
+<h2>Managing Categories</h2>
+<p>Your expense categories are fully customisable. Click the <strong>Categories</strong> button (top right) to open the category manager:</p>
+<ul>
+<li><strong>Add a category</strong> — type the name and click <strong>Add</strong> (or press Enter)</li>
+<li><strong>Delete a category</strong> — click the trash icon next to any category; a confirmation prompt appears before deletion</li>
+</ul>
+<p>Default categories provided out-of-the-box:</p>
+<ul>
+<li>Food &amp; Beverage Supplies</li>
+<li>Cleaning Supplies</li>
+<li>Office Supplies</li>
+<li>Repairs &amp; Maintenance</li>
+<li>Delivery &amp; Transport</li>
+<li>Utilities</li>
+<li>Marketing &amp; Advertising</li>
+<li>Staff Meals</li>
+<li>Vehicle Maintenance</li>
+<li>CEO Drawings</li>
+<li>GM Drawings</li>
+<li>Owner Drawings</li>
+<li>COO Drawings</li>
+<li>Miscellaneous</li>
+</ul>
+<blockquote>
+<p><strong>Drawings</strong> categories (CEO / GM / Owner / COO) are used to record money taken out of the business by executives or owners. These appear in the P&amp;L under Operating Expenses.</p>
+</blockquote>
+<p>Category names must be unique per organisation.</p>
+<hr />
+<h2>Adding an Expense</h2>
+<ol>
+<li>Click <strong>Add Expense</strong> (top right)</li>
+<li>Enter the <strong>amount</strong> (GYD)</li>
+<li>Select the <strong>supplier</strong> (optional) — the system will <strong>auto-fill the category</strong> based on your most recent expense for that supplier</li>
+<li>Select the <strong>category</strong> from your managed list</li>
+<li>Enter a <strong>description</strong> of what the expense was for</li>
+<li>Select the <strong>payment method</strong> — Cash, Card, Bank Transfer, Cheque, or Other</li>
+<li>Enter the <strong>receipt or reference number</strong> (invoice # or receipt # from the supplier — optional but recommended for audit)</li>
+<li>Add any <strong>notes</strong> — e.g. &quot;receipt in green folder&quot;, &quot;approved verbally by Shakira&quot; (optional)</li>
+<li><strong>Upload a receipt photo</strong> — click the upload area to attach a JPEG, PNG, or WebP image (max 5 MB). A thumbnail preview appears; click <strong>Remove</strong> to clear it.</li>
+<li>Click <strong>Save Expense</strong></li>
+</ol>
+<blockquote>
+<p><strong>Duplicate warning:</strong> If you enter an expense with the same amount and supplier on the same day as an existing entry, the system will warn you before saving. This helps prevent accidental double-entry.</p>
+</blockquote>
+<hr />
+<h2>Viewing Full Transaction Details</h2>
+<p>Click anywhere on an expense row to open a read-only details dialog showing:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Date &amp; Time</td>
+<td>Full timestamp including weekday</td>
+</tr>
+<tr>
+<td>Amount</td>
+<td>Large, bold GYD amount</td>
+</tr>
+<tr>
+<td>Category</td>
+<td>Expense category</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Supplier name (if linked)</td>
+</tr>
+<tr>
+<td>Payment Method</td>
+<td>How the expense was paid</td>
+</tr>
+<tr>
+<td>Receipt / Ref #</td>
+<td>Invoice or receipt number</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Full description (no truncation)</td>
+</tr>
+<tr>
+<td>Notes</td>
+<td>Internal notes (only shown if present)</td>
+</tr>
+<tr>
+<td>Receipt Photo</td>
+<td>Attached photo (click to open full size) — only shown if uploaded</td>
+</tr>
+<tr>
+<td>Recorded By</td>
+<td>Staff member who entered it</td>
+</tr>
+<tr>
+<td>Authorized By</td>
+<td>Manager who approved it</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>Edit</strong> button in the details dialog opens the edit form directly.</p>
+<hr />
+<h2>Editing or Deleting an Expense</h2>
+<p>Each row in the expense table has:</p>
+<ul>
+<li><strong>Pencil icon</strong> — click to open the edit dialog and correct any field (all fields including payment method, ref #, and notes are editable)</li>
+<li><strong>Trash icon</strong> — click to delete; a confirmation prompt appears before deletion</li>
+</ul>
+<hr />
+<h2>Exporting</h2>
+<p><strong>Export CSV</strong> (top right) — downloads the current filtered expenses as a CSV file including all fields: date, category, description, amount, supplier, payment method, ref #, notes, recorded by, authorized by.</p>
+<p><strong>Print PDF</strong> — opens a <strong>professional branded expense report</strong> in a new browser tab featuring:</p>
+<ul>
+<li>Dark slate header with logo and period</li>
+<li>KPI summary row: Total Spent, # Entries, Top Category, Top Supplier</li>
+<li>Color-coded category breakdown bars with percentages</li>
+<li>Grouped or flat expense table with category dot indicators</li>
+<li>Grand total strip and signature lines (Prepared By / Checked By / Authorized By)</li>
+<li>In-page Print and Close buttons (no automatic print dialog)</li>
+</ul>
+<hr />
+<h2>Expense Table</h2>
+<p>The table shows every entry for the selected period with:</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Date</td>
+<td>Date and time the expense was recorded</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Supplier name (if linked), shown as a colour-coded badge — <strong>click the badge</strong> to open the <a href="/docs/suppliers#vendor-detail-page">Vendor Detail page</a> for that supplier</td>
+</tr>
+<tr>
+<td>Category</td>
+<td>Expense category</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>What the expense was for (truncated — click row for full text)</td>
+</tr>
+<tr>
+<td>Amount</td>
+<td>Expense amount in GYD</td>
+</tr>
+<tr>
+<td>Authorized By</td>
+<td>The manager who authorized it</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<blockquote>
+<p>Expenses feed into the <strong>P&amp;L Statement</strong> automatically under &quot;Operating Expenses&quot;.</p>
+</blockquote>
+<hr />
+<p><strong>Navigate to:</strong> Dashboard → Finance section (sidebar)</p>
+<p>Bettencourt Finance is a full accounting and billing suite built into the POS. It covers everything from customer invoices and vendor bills to aging reports, budgets, and Shakira's daily expense summary form.</p>
+<hr />
+<h2>Finance Dashboard</h2>
+<p><strong>Route:</strong> <code>/dashboard/finance</code></p>
+<p>The Finance Dashboard gives a real-time overview of your financial position:</p>
+<table>
+<thead>
+<tr>
+<th>Card</th>
+<th>What it shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Total Receivable</strong></td>
+<td>Sum of all unpaid customer invoice balances</td>
+</tr>
+<tr>
+<td><strong>Total Payable</strong></td>
+<td>Sum of all outstanding vendor bill balances</td>
+</tr>
+<tr>
+<td><strong>Overdue AR</strong></td>
+<td>Count + total of overdue customer invoices</td>
+</tr>
+<tr>
+<td><strong>Overdue AP</strong></td>
+<td>Count + total of overdue vendor bills</td>
+</tr>
+<tr>
+<td><strong>Net Cash Flow (30d)</strong></td>
+<td>Payments received minus vendor payments and expenses in the last 30 days</td>
+</tr>
+<tr>
+<td><strong>Revenue MTD</strong></td>
+<td>Invoice payments received this calendar month</td>
+</tr>
+</tbody>
+</table>
+<p>Below the KPI strip you'll find:</p>
+<ul>
+<li><strong>Revenue vs Expenses</strong> stacked bar chart (last 12 months)</li>
+<li><strong>5 most recent invoices</strong> quick-view table</li>
+<li><strong>5 most recent vendor bills</strong> quick-view table</li>
+</ul>
+<hr />
+<h2>Invoices</h2>
+<p><strong>Route:</strong> <code>/dashboard/invoices</code></p>
+<p>Create and manage customer invoices for catering, corporate lunches, events, and ongoing accounts.</p>
+<h3>Creating an Invoice</h3>
+<ol>
+<li>Click <strong>New Invoice</strong></li>
+<li>Enter customer name (or select from the customer list)</li>
+<li>(Optional) open <strong>Agency / Organization</strong> details and set <strong>Department</strong></li>
+<li>Add line items (description, quantity, unit price)</li>
+<li>Set due date and payment terms</li>
+<li>(Optional) set a custom invoice number</li>
+<li>Click <strong>Save as Draft</strong> or <strong>Send</strong> to issue it immediately</li>
+</ol>
+<h3>Recording a Payment</h3>
+<ol>
+<li>Find the invoice in the table</li>
+<li>Click the green payment button on the row (card icon)</li>
+<li>Enter amount, payment method (Cash / Cheque / Bank Transfer / Mobile Money), optional reference number, and date paid</li>
+<li>Click <strong>Record</strong> — the invoice status updates automatically</li>
+</ol>
+<h3>More Actions Menu (•••)</h3>
+<ul>
+<li>Mark Sent (for drafts)</li>
+<li>Duplicate Invoice</li>
+<li>Print / Save PDF</li>
+<li>Copy Reminder</li>
+<li>Delete (permission-gated)</li>
+</ul>
+<h3>Payment Methods Supported</h3>
+<ul>
+<li><strong>Cash</strong> — direct cash payment</li>
+<li><strong>Cheque</strong> — enter cheque number and expected deposit date</li>
+<li><strong>Bank Transfer</strong> — enter reference/transaction number</li>
+<li><strong>Mobile Money</strong> — for digital payment apps</li>
+</ul>
+<h3>Payment History</h3>
+<p>Each invoice has a collapsible <strong>Payment History</strong> section showing every payment recorded, including reversals. This is the complete ledger for that invoice.</p>
+<h3>Creating a Credit Note from an Invoice</h3>
+<p>On any paid or partially-paid invoice, click <strong>Create Credit Note</strong> to open the credit note form pre-filled with the customer's details.</p>
+<h3>Invoice Status Flow</h3>
+<pre><code>draft → sent → partial → paid
+                       ↘ overdue (if past due date)
+         ↘ voided (any stage)
+</code></pre>
+<hr />
+<h2>Credit Notes</h2>
+<p><strong>Route:</strong> <code>/dashboard/credit-notes</code></p>
+<p>Credit notes reduce a customer's outstanding balance — used for price corrections, loyalty discounts, or returned goods.</p>
+<h3>Creating a Credit Note</h3>
+<ol>
+<li>Click <strong>New Credit Note</strong></li>
+<li>Use the searchable <strong>Invoice combobox</strong> to select the original invoice (optional but recommended)</li>
+<li>Set <strong>Department</strong> (optional)</li>
+<li>Add line items describing the adjustment</li>
+<li>Click <strong>Save</strong> (creates in Draft status)</li>
+</ol>
+<h3>Issuing a Credit Note</h3>
+<p>A credit note must be <strong>Issued</strong> before it can be applied. Click <strong>Issue</strong> in the action menu.</p>
+<h3>Applying to an Invoice</h3>
+<ol>
+<li>On an issued credit note, click <strong>Apply to Invoice</strong></li>
+<li>Select the target invoice</li>
+<li>Enter the amount to apply (can be partial)</li>
+<li>Click <strong>Apply</strong> — the invoice balance reduces accordingly</li>
+</ol>
+<h3>More Actions Menu (•••)</h3>
+<ul>
+<li>Issue Credit Note (draft only)</li>
+<li>Print / Save PDF</li>
+<li>Delete / Void (status + permission dependent)</li>
+</ul>
+<h3>Credit Note Status Flow</h3>
+<pre><code>draft → issued → applied (fully used)
+      ↘ voided
+</code></pre>
+<hr />
+<h2>Vendor Bills</h2>
+<p><strong>Route:</strong> <code>/dashboard/vendor-bills</code></p>
+<p>Vendor bills track what Bettencourt's owes to suppliers like Family Food International, Albadar Grocery, WJ Enterprise, etc.</p>
+<h3>Creating a Vendor Bill</h3>
+<ol>
+<li>Click <strong>New Vendor Bill</strong></li>
+<li>Select supplier from the dropdown</li>
+<li>Add line items (e.g., &quot;Chicken 50 lbs&quot;, &quot;Rice 100 lbs&quot;)</li>
+<li>Set issued date, due date, and <strong>Department</strong> (optional)</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<h3>Recording a Payment on a Bill</h3>
+<ol>
+<li>Click <strong>Pay</strong> on the bill row (when balance is due)</li>
+<li>Enter amount, method, and reference</li>
+<li>Bill status updates to <strong>Partially Paid</strong> or <strong>Paid</strong> automatically</li>
+</ol>
+<h3>More Actions Menu (•••)</h3>
+<ul>
+<li>Edit Vendor Bill</li>
+<li>Print / Save PDF</li>
+<li>Delete Vendor Bill (permission-gated)</li>
+</ul>
+<h3>Overdue Bills</h3>
+<p>Bills past their due date automatically show a red <strong>Overdue</strong> badge. The <strong>Overdue AP</strong> KPI on the Finance Dashboard always reflects the current overdue total.</p>
+<h3>Vendor Bill Status Flow</h3>
+<pre><code>draft → received → partial → paid
+                           ↘ overdue
+              ↘ voided
+</code></pre>
+<h3>Payment History</h3>
+<p>Each vendor bill has a full payment history ledger. Payments are never deleted — a reversal creates a negative entry.</p>
+<hr />
+<h2>Recurring Templates</h2>
+<p><strong>Route:</strong> <code>/dashboard/recurring</code></p>
+<p>Recurring templates auto-generate invoices, expenses, or vendor bills on a schedule.</p>
+<h3>Creating a Template</h3>
+<ol>
+<li>Click <strong>New Template</strong></li>
+<li>Choose type: <strong>Invoice</strong>, <strong>Expense</strong>, or <strong>Vendor Bill</strong></li>
+<li>Fill in the template data (customer/supplier, line items, amounts)</li>
+<li>Set frequency: Weekly / Bi-weekly / Monthly / Quarterly / Annually</li>
+<li>Set the next run date</li>
+</ol>
+<h3>Generating the Next Document</h3>
+<p>Click <strong>Generate Next</strong> on any active template. This creates the actual document from the template data and advances the next run date.</p>
+<h3>Pause / Resume</h3>
+<p>Templates can be <strong>paused</strong> (no generation) and <strong>resumed</strong> at any time. The next run date is preserved when paused.</p>
+<hr />
+<h2>Aging Report</h2>
+<p><strong>Route:</strong> <code>/dashboard/aging</code></p>
+<p>The Aging Report shows how long invoices and vendor bills have been outstanding.</p>
+<h3>Receivables Tab (Customers)</h3>
+<p>Unpaid customer invoices grouped by how overdue they are:</p>
+<table>
+<thead>
+<tr>
+<th>Bucket</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Current</td>
+<td>Not yet due</td>
+</tr>
+<tr>
+<td>1–30 days</td>
+<td>Up to one month overdue</td>
+</tr>
+<tr>
+<td>31–60 days</td>
+<td>1–2 months overdue</td>
+</tr>
+<tr>
+<td>61–90 days</td>
+<td>2–3 months overdue</td>
+</tr>
+<tr>
+<td>90+ days</td>
+<td>More than 3 months overdue</td>
+</tr>
+</tbody>
+</table>
+<h3>Payables Tab (Suppliers)</h3>
+<p>Same aging breakdown but for vendor bills — shows what Bettencourt's owes and for how long.</p>
+<p>Use the <strong>Export CSV</strong> button to download the aging report for accountant review.</p>
+<hr />
+<h2>Customer Statements</h2>
+<p><strong>Route:</strong> <code>/dashboard/customer-statements</code></p>
+<p>A customer statement shows every invoice, payment, and credit note for a specific customer in a date range, with a running balance.</p>
+<h3>Generating a Statement</h3>
+<ol>
+<li>Select a customer from the dropdown</li>
+<li>Set the date range (Start Date → End Date)</li>
+<li>The statement loads automatically</li>
+</ol>
+<h3>Statement Columns</h3>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Date</td>
+<td>Transaction date</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Invoice #, Payment, Credit Note #</td>
+</tr>
+<tr>
+<td>Reference</td>
+<td>Invoice number or payment reference</td>
+</tr>
+<tr>
+<td>Debit</td>
+<td>Amount owed (invoice issued)</td>
+</tr>
+<tr>
+<td>Credit</td>
+<td>Amount paid or credit applied</td>
+</tr>
+<tr>
+<td>Balance</td>
+<td>Running outstanding balance</td>
+</tr>
+</tbody>
+</table>
+<h3>Printing a Statement</h3>
+<p>Click <strong>Print Statement</strong> to open a print-ready PDF version — same format as the vendor statement PDF.</p>
+<hr />
+<h2>Tax Summary</h2>
+<p><strong>Route:</strong> <code>/dashboard/tax-summary</code></p>
+<p>The Tax Summary compares VAT collected on sales invoices vs VAT paid on purchases (vendor bills + expenses).</p>
+<h3>KPI Cards</h3>
+<ul>
+<li><strong>Tax Collected</strong> — VAT from paid invoices in the selected period</li>
+<li><strong>Tax Paid</strong> — VAT from vendor bills and expenses</li>
+<li><strong>Net Tax Liability</strong> — Collected minus Paid (what needs to be remitted)</li>
+</ul>
+<h3>Period Selector</h3>
+<p>Switch between Monthly, Quarterly, and Annual views. The bar chart shows month-by-month breakdown.</p>
+<hr />
+<h2>Budgets</h2>
+<p><strong>Route:</strong> <code>/dashboard/budgets</code></p>
+<p>Budgets let you set spending targets per category and track actual vs budgeted amounts.</p>
+<h3>Creating a Budget</h3>
+<ol>
+<li>Click <strong>New Budget</strong></li>
+<li>Name it (e.g., &quot;March 2026 Operating Budget&quot;)</li>
+<li>Set period: Monthly, Quarterly, or Annual</li>
+<li>Set start and end dates</li>
+<li>Add categories with:
+<ul>
+<li><strong>Category name</strong> (Food Cost, Utilities, Rent, etc.)</li>
+<li><strong>Budgeted amount</strong> (GYD)</li>
+<li><strong>Alert threshold</strong> (% — e.g., 85 means alert when 85% used)</li>
+</ul>
+</li>
+</ol>
+<h3>Budget vs Actual View</h3>
+<p>Click a budget to see the full comparison:</p>
+<ul>
+<li><strong>Progress bars</strong> (green = safe, amber = approaching limit, red = over budget)</li>
+<li><strong>Grouped bar chart</strong> — budgeted vs actual per category</li>
+<li><strong>Variance table</strong> — exact difference in GYD and percentage</li>
+</ul>
+<hr />
+<h2>Expenses &amp; Funding Sources</h2>
+<p><strong>Route:</strong> <code>/dashboard/expenses</code></p>
+<p>The expense page has been enhanced with <strong>Funding Sources</strong> — who provided the cash for each expense.</p>
+<h3>Funding Sources</h3>
+<p>Shakira's team uses multiple cash sources:</p>
+<ul>
+<li><strong>General Cash</strong> — main operating cash</li>
+<li><strong>Renatta</strong> — cash from Renatta</li>
+<li><strong>CEO</strong> — cash from CEO</li>
+<li><strong>Pastry Section</strong> — pastry department fund</li>
+<li><strong>Miss Bonita</strong> — cash from Miss Bonita</li>
+<li><strong>QuickServe</strong> — QuickServe location cash</li>
+</ul>
+<p>When recording an expense, select the appropriate <strong>Funding Source</strong> from the dropdown. This is optional but required for the Daily Summary report.</p>
+<h3>Managing Funding Sources</h3>
+<p>Click <strong>Manage Sources</strong> in the expense form to add, rename, or deactivate funding sources.</p>
+<h3>Daily Summary View</h3>
+<p>Switch to <strong>Daily Summary</strong> mode (toggle at top of page) to see Shakira's expense form layout:</p>
+<ul>
+<li>Select a date using the date picker</li>
+<li>Expenses appear <strong>grouped by funding source</strong></li>
+<li>Each section shows vendor, category, description, and amount</li>
+<li>Section subtotal per funding source</li>
+<li>Grand total at the bottom</li>
+</ul>
+<h3>Printing the Daily Summary</h3>
+<p>Click <strong>Print Daily Summary</strong> to generate a printable form matching Shakira's handwritten &quot;Bettencourt's Diner Expense Summary Form&quot; — with signature lines for Prepared By / Checked By / Authorized By.</p>
+<hr />
+<h2>Roles &amp; Permissions</h2>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Finance Dashboard</th>
+<th>Invoices / Bills / Credits</th>
+<th>Aging / Statements / Tax</th>
+<th>Budgets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Executive / Admin</strong></td>
+<td>Full access</td>
+<td>Full CRUD</td>
+<td>Full read + export</td>
+<td>Full CRUD</td>
+</tr>
+<tr>
+<td><strong>Accountant</strong></td>
+<td>Full access</td>
+<td>Create, read, update</td>
+<td>Full read + export</td>
+<td>Read only</td>
+</tr>
+<tr>
+<td><strong>Cashier / Warehouse</strong></td>
+<td>No access</td>
+<td>No access</td>
+<td>No access</td>
+<td>No access</td>
+</tr>
+</tbody>
+</table>
+<p>Accountants land on the Finance Dashboard by default when they log in.</p>
+<hr />
+<p><strong>Navigate to:</strong> Dashboard → Suppliers</p>
+<p>Manage your full list of suppliers and vendors.</p>
+<p>Your complete vendor list from the Vendor Register is already loaded in the system — 67 suppliers including Alabama Trading, Ansa McAl, Bank DIH Ltd, Royal Chicken-Mohamed Farms, Namilco, GPL, GT&amp;T, GWI, and all others.</p>
+<hr />
+<h2>Adding a New Supplier</h2>
+<ol>
+<li>Click <strong>New Supplier</strong></li>
+<li>Enter: Name, Contact Person, Phone, Email, Address</li>
+<li>Assign categories (e.g. Food &amp; Beverage, Utilities, Cleaning Supplies) to make expense filtering easier</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<hr />
+<h2>Editing a Supplier</h2>
+<p>Click a supplier's name or the edit icon to update their details (phone, address, contact person, etc.).</p>
+<hr />
+<h2>How Suppliers Are Used</h2>
+<ul>
+<li><strong>Purchase Orders</strong> — select the supplier when creating a new PO</li>
+<li><strong>Inventory Items</strong> — each item can have a preferred supplier for auto-generating POs</li>
+<li><strong>Expenses</strong> — supplier cards appear at the top of the Expenses page for one-click filtering</li>
+<li><strong>Stock Alerts</strong> — if an item has a preferred supplier set, you can auto-generate a PO directly from the alert</li>
+</ul>
+<hr />
+<h2>Vendor Detail Page</h2>
+<p>Click any supplier card to open the <strong>Vendor Detail page</strong> for that vendor. You can also reach it by clicking the vendor name badge in the Expenses table.</p>
+<h3>Summary Cards</h3>
+<p>Six cards at the top update automatically when you change the time period:</p>
+<table>
+<thead>
+<tr>
+<th>Card</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Period Spend</strong></td>
+<td>Total amount paid to this vendor in the selected period</td>
+</tr>
+<tr>
+<td><strong>vs. Previous Period</strong></td>
+<td>Whether spend went up (↑) or down (↓) compared to the prior equivalent window</td>
+</tr>
+<tr>
+<td><strong>All-Time Spend</strong></td>
+<td>Total amount paid since the first transaction</td>
+</tr>
+<tr>
+<td><strong>Avg Transaction</strong></td>
+<td>Average expense amount for the period</td>
+</tr>
+<tr>
+<td><strong>Last Purchase</strong></td>
+<td>When you last purchased from this vendor</td>
+</tr>
+<tr>
+<td><strong>Largest Expense</strong></td>
+<td>The single largest purchase in the selected period</td>
+</tr>
+</tbody>
+</table>
+<h3>Period Filter</h3>
+<p>Select from: <strong>Today</strong>, <strong>This Week</strong>, <strong>This Month</strong> (default), <strong>Last Month</strong>, <strong>This Quarter</strong>, <strong>Last Quarter</strong>, <strong>This Year</strong>, or <strong>All Time</strong>.</p>
+<h3>Charts</h3>
+<ul>
+<li><strong>Monthly Spend Trend</strong> — Bar chart showing the last 12 months of spend</li>
+<li><strong>Spend by Category</strong> — Horizontal bar chart showing which categories this vendor appears in for the selected period</li>
+</ul>
+<h3>Transaction Table</h3>
+<p>Full list of expenses for this vendor in the selected period.</p>
+<ul>
+<li>Use the <strong>search box</strong> to filter by description or reference number</li>
+<li>Use the <strong>Category filter</strong> to narrow by expense category</li>
+<li>Click the <strong>Date</strong> or <strong>Amount</strong> column headers to sort</li>
+<li>A ⚠️ warning icon appears next to possible duplicate transactions (same amount within 7 days)</li>
+<li>The footer shows the total count and sum for the filtered results</li>
+</ul>
+<h3>Actions</h3>
+<table>
+<thead>
+<tr>
+<th>Button</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Edit Vendor</strong></td>
+<td>Go back to Suppliers list to edit this vendor</td>
+</tr>
+<tr>
+<td><strong>+ Add Expense</strong></td>
+<td>Open a form to record a new expense for this vendor (vendor pre-filled)</td>
+</tr>
+<tr>
+<td><strong>View Statement</strong></td>
+<td>Preview a vendor statement in a popup modal</td>
+</tr>
+<tr>
+<td><strong>Print Statement</strong></td>
+<td>Generate and download a PDF vendor statement</td>
+</tr>
+<tr>
+<td><strong>Export CSV</strong></td>
+<td>Download the filtered transactions as a CSV file</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Tip:</strong> Press <code>Esc</code> to return to the Suppliers list.</p>
+</blockquote>
+<hr />
+<h2>Reports</h2>
+<p><strong>Navigate to:</strong> Dashboard → Reports</p>
+<p>The main reports hub with multiple sub-reports and charts.</p>
+<h3>Sales Report</h3>
+<p>Shows sales totals for any date range:</p>
+<ul>
+<li>Total revenue, number of orders, average order value</li>
+<li>Breakdown by payment method (cash vs. card vs. gift card)</li>
+<li>Sales by department/category</li>
+<li>Top-selling products</li>
+</ul>
+<p>Use the date preset buttons (Today / Last 7 Days / Last 30 Days / Custom) to select the period.</p>
+<h3>Report Types</h3>
+<p>The system generates 13 core report types:</p>
+<table>
+<thead>
+<tr>
+<th>Report</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Summary</td>
+<td>Overall sales totals and averages</td>
+</tr>
+<tr>
+<td>Sales by Day</td>
+<td>Daily revenue breakdown</td>
+</tr>
+<tr>
+<td>Department Totals</td>
+<td>Revenue by department/category</td>
+</tr>
+<tr>
+<td>Product Sales</td>
+<td>Individual product performance</td>
+</tr>
+<tr>
+<td>Cashier Activity</td>
+<td>Sales per cashier</td>
+</tr>
+<tr>
+<td>Sales by Payment</td>
+<td>Cash vs card vs gift card breakdown</td>
+</tr>
+<tr>
+<td>Hourly Sales</td>
+<td>Revenue by hour of day</td>
+</tr>
+<tr>
+<td>Z-Report</td>
+<td>End-of-day financial summary (register closure report)</td>
+</tr>
+<tr>
+<td>Voids</td>
+<td>All voided orders with reasons and authorizers</td>
+</tr>
+<tr>
+<td>Production</td>
+<td>Production vs sales comparison</td>
+</tr>
+<tr>
+<td>Weekly Trend</td>
+<td>Week-over-week revenue comparison</td>
+</tr>
+<tr>
+<td>Tips</td>
+<td>Tip amounts collected by cashier and payment method</td>
+</tr>
+<tr>
+<td>Customer Analytics</td>
+<td>New vs returning customers, lifetime value</td>
+</tr>
+</tbody>
+</table>
+<h3>Exporting</h3>
+<p>Look for the <strong>Export</strong> or <strong>Download CSV</strong> button on any report tab that supports it.</p>
+<hr />
+<h2>Analytics</h2>
+<p><strong>Navigate to:</strong> Dashboard → Analytics</p>
+<p>Advanced sales analytics with trend charts:</p>
+<ul>
+<li>Revenue trend over 30/60/90 days</li>
+<li>Hourly sales patterns (busiest times of day)</li>
+<li>Day-of-week performance (busiest days)</li>
+<li>ABC product analysis (A = top sellers, C = slow movers)</li>
+<li>Customer insights (new vs returning, frequency)</li>
+<li>Labor cost ratio vs. revenue</li>
+<li>Weekly comparison (this week vs last week)</li>
+</ul>
+<p>Great for spotting trends — busiest days, peak hours, which departments are growing.</p>
+<hr />
+<h2>Sales Journal</h2>
+<p><strong>Navigate to:</strong> Dashboard → Sales Journal</p>
+<p>A detailed, line-by-line record of every transaction — like an accounting journal. Each entry shows:</p>
+<ul>
+<li>Transaction date and time</li>
+<li>Order number</li>
+<li>Items sold</li>
+<li>Gross amount, discounts, taxes, net amount</li>
+<li>Payment method</li>
+</ul>
+<p>Useful for accounting and reconciling with your bank or payment processor.</p>
+<hr />
+<h2>Reconciliation</h2>
+<p><strong>Navigate to:</strong> Dashboard → Reconciliation</p>
+<p>Reconcile daily sales against cash counted and payment processor reports.</p>
+<ol>
+<li>Select the date to reconcile</li>
+<li>The system shows: Expected cash, card totals, gift card totals</li>
+<li>Enter your actual counts from the payment processor and physical cash count</li>
+<li>Any difference is flagged for review</li>
+</ol>
+<h3>Reconciliation Rules</h3>
+<p>Configure tolerance thresholds in <strong>Settings</strong> — set acceptable variance amounts before a discrepancy triggers a warning.</p>
+<hr />
+<h2>Variance Analysis</h2>
+<p><strong>Navigate to:</strong> Dashboard → Variance</p>
+<p>Compare expected stock levels (based on sales and production data) against actual stock (from physical counts):</p>
+<ul>
+<li><strong>Green</strong> — within tolerance</li>
+<li><strong>Red</strong> — significant variance requiring investigation</li>
+</ul>
+<p>Click any item to see its detailed movement history and identify where discrepancies occurred.</p>
+<hr />
+<h2>Profitability</h2>
+<p><strong>Navigate to:</strong> Dashboard → Profitability</p>
+<p>Shows profit margins by product and department:</p>
+<ul>
+<li>Revenue per product</li>
+<li>Estimated cost (based on inventory)</li>
+<li>Gross profit and margin %</li>
+<li>Food cost percentage</li>
+<li>ABC classification</li>
+</ul>
+<p>Helps identify which menu items are most profitable and which may need a price review. Filter by product or department view, and export to CSV.</p>
+<hr />
+<h2>P&amp;L Statement</h2>
+<p><strong>Navigate to:</strong> Dashboard → P&amp;L Statement</p>
+<p>A full Profit &amp; Loss statement for any period:</p>
+<table>
+<thead>
+<tr>
+<th>Line</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Revenue</td>
+<td>Total sales</td>
+</tr>
+<tr>
+<td>Cost of Goods Sold (COGS)</td>
+<td>Ingredient costs</td>
+</tr>
+<tr>
+<td><strong>Gross Profit</strong></td>
+<td>Revenue minus COGS</td>
+</tr>
+<tr>
+<td>Operating Expenses</td>
+<td>From the Expenses module (utilities, rent, etc.)</td>
+</tr>
+<tr>
+<td>Labor</td>
+<td>From time clock data</td>
+</tr>
+<tr>
+<td><strong>Net Profit / Loss</strong></td>
+<td>Gross Profit minus Expenses minus Labor</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Labor Cost</h2>
+<p><strong>Navigate to:</strong> Dashboard → Labor Cost</p>
+<p>Tracks labor costs based on time clock data:</p>
+<ul>
+<li>Staff hours worked per day/week</li>
+<li>Hourly rates and total wages</li>
+<li>Labor cost as a % of revenue</li>
+<li>Breakdown by role</li>
+<li>Labor trend over time</li>
+</ul>
+<p>This helps manage staffing costs relative to sales.</p>
+<hr />
+<h2>Tips Report</h2>
+<p><strong>Navigate to:</strong> Dashboard → Tips</p>
+<p>Track tip amounts across all orders:</p>
+<ul>
+<li>Tips by cashier</li>
+<li>Tips by payment method</li>
+<li>Total tips for the selected period</li>
+</ul>
+<hr />
+<h2>End of Day (EOD) Report</h2>
+<p><strong>Navigate to:</strong> Dashboard → End of Day</p>
+<p>A printable end-of-day summary designed for reconciliation and record-keeping:</p>
+<ul>
+<li>Total sales for the day</li>
+<li>Breakdown by payment method</li>
+<li>Cash drawer summary (opening float, drops, payouts, expected closing)</li>
+<li>Top items sold</li>
+<li>Shift summary (who worked, when)</li>
+<li>Department totals</li>
+</ul>
+<p><strong>To print:</strong> Click <strong>Print</strong> in the top right. Select a date using the date picker to view any past day.</p>
+<hr />
+<h2>Currency Rates</h2>
+<p><strong>Navigate to:</strong> Dashboard → Currency</p>
+<p>Bettencourt's operates in Guyana Dollars (GYD). This section lets you manage exchange rates for other currencies if customers pay in USD, CAD, etc.</p>
+<ul>
+<li>Set the current exchange rate for each supported currency</li>
+<li>Rates are used in the POS when processing foreign currency payments</li>
+</ul>
+<hr />
+<h2>Customers</h2>
+<p><strong>Navigate to:</strong> Dashboard → Customers</p>
+<h3>Adding a Customer</h3>
+<ol>
+<li>Click <strong>New Customer</strong></li>
+<li>Enter:
+<ul>
+<li>Name (required)</li>
+<li>Phone number (required)</li>
+<li>Email (optional)</li>
+<li>Date of birth (optional, for birthday offers)</li>
+<li>Address (optional, used for delivery orders)</li>
+</ul>
+</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<h3>Finding a Customer</h3>
+<p>Use the search bar to find customers by name or phone number.</p>
+<h3>Customer Profile</h3>
+<p>Click a customer's name to see their profile:</p>
+<ul>
+<li>Contact details</li>
+<li>Order history (all past orders linked to this customer)</li>
+<li>Loyalty points balance and tier</li>
+<li>Gift card balances</li>
+<li>Price list assignment (if any)</li>
+</ul>
+<h3>Linking a Customer to an Order</h3>
+<p>In New Sale, click <strong>Add Customer</strong> in the cart, search by name or phone, and select the customer before completing the order.</p>
+<hr />
+<h2>Customer Statements</h2>
+<p><strong>Navigate to:</strong> Dashboard → Customer Statements</p>
+<p>Generate a detailed financial statement for any customer showing all invoices, payments, and credit notes in a date range with a running balance.</p>
+<h3>Generating a Statement</h3>
+<ol>
+<li>Select a customer from the dropdown</li>
+<li>Set the date range (Start Date → End Date)</li>
+<li>The statement loads automatically</li>
+</ol>
+<h3>Statement Columns</h3>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Date</td>
+<td>Transaction date</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Invoice #, Payment, Credit Note #</td>
+</tr>
+<tr>
+<td>Reference</td>
+<td>Invoice number or payment reference</td>
+</tr>
+<tr>
+<td>Debit</td>
+<td>Amount owed (invoice issued)</td>
+</tr>
+<tr>
+<td>Credit</td>
+<td>Amount paid or credit applied</td>
+</tr>
+<tr>
+<td>Balance</td>
+<td>Running outstanding balance</td>
+</tr>
+</tbody>
+</table>
+<h3>Printing a Statement</h3>
+<p>Click <strong>Print Statement</strong> to open a print-ready PDF version.</p>
+<hr />
+<h2>Customer Payment Ledger</h2>
+<p>Each customer has a complete <strong>payment ledger</strong> showing every financial transaction:</p>
+<ul>
+<li>Payments received (applied and unapplied)</li>
+<li>Invoice charges</li>
+<li>Credit note applications</li>
+<li>Running balance</li>
+</ul>
+<p>Access the ledger from the customer profile or via the Finance section.</p>
+<h3>Unapplied Payments</h3>
+<p>If a customer pays without specifying which invoice the payment is for, the system records an <strong>unapplied payment</strong>. Later, use <strong>Allocate Payment</strong> to apply it to specific invoices.</p>
+<h3>Customer Balance Summary</h3>
+<p>View all customers with outstanding balances at a glance. Useful for accounts receivable management and follow-up on overdue accounts.</p>
+<hr />
+<h2>Customer Analytics</h2>
+<p><strong>Navigate to:</strong> Dashboard → Customer Analytics</p>
+<p>Insights into customer behaviour:</p>
+<ul>
+<li><strong>New vs Returning</strong> customers over time</li>
+<li><strong>Customer lifetime value</strong> — total spend per customer</li>
+<li><strong>Visit frequency</strong> — how often customers return</li>
+<li><strong>Top spenders</strong> — highest-value customers</li>
+</ul>
+<hr />
+<h2>Agencies &amp; Organizations</h2>
+<p><strong>Navigate to:</strong> Dashboard → Agencies (or via the quotation/invoice form)</p>
+<p>Agencies represent business clients, government departments, or organizations that place orders:</p>
+<ol>
+<li>Click <strong>New Agency</strong> (or create one directly from the quotation/invoice form)</li>
+<li>Enter: Agency Name, Contact Person, Position</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>Agencies can be linked to quotations and invoices. When selected, the agency name and contact person appear on the PDF alongside the individual customer name.</p>
+<hr />
+<h2>Loyalty Program</h2>
+<p><strong>Navigate to:</strong> Dashboard → Loyalty Program</p>
+<h3>How It Works</h3>
+<ul>
+<li>Customers earn points on every order (rate configured by admin)</li>
+<li>Points accumulate toward tiers: Bronze, Silver, Gold</li>
+<li>Each tier may have different earn rates or benefits</li>
+</ul>
+<h3>Viewing Members</h3>
+<p>The loyalty dashboard shows all enrolled customers, their points balance, tier, and last activity date.</p>
+<p>Click any member to see their full points history — every transaction that earned or redeemed points.</p>
+<h3>Managing Tiers</h3>
+<p>Click the <strong>Tiers</strong> tab to manage tier definitions:</p>
+<ul>
+<li>Tier name (e.g., Silver)</li>
+<li>Minimum points required</li>
+<li>Points multiplier (e.g., earn 1.5x points at Silver tier)</li>
+</ul>
+<h3>Redeeming Points</h3>
+<p>In New Sale, when a loyalty customer is linked to an order, a <strong>Redeem Points</strong> option appears at checkout. Enter the number of points to redeem.</p>
+<h3>Leaderboard</h3>
+<p>The loyalty leaderboard ranks customers by total points earned, showing your most engaged customers.</p>
+<hr />
+<h2>Discounts</h2>
+<p><strong>Navigate to:</strong> Dashboard → Discounts</p>
+<p>Create and manage saved discount presets used in New Sale.</p>
+<h3>Creating a Discount</h3>
+<ol>
+<li>Click <strong>New Discount</strong></li>
+<li>Enter:
+<ul>
+<li><strong>Name</strong> — what cashiers will see (e.g., &quot;Staff Discount&quot;, &quot;Senior 10%&quot;)</li>
+<li><strong>Type</strong> — Percentage or Fixed Amount</li>
+<li><strong>Value</strong> — e.g., 10 for 10%, or 500 for $500 off</li>
+<li><strong>Minimum Order</strong> — optional minimum cart total to qualify</li>
+<li><strong>Active</strong> — toggle on/off</li>
+</ul>
+</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>Discounts appear as quick-select buttons in the POS discount flow.</p>
+<h3>Promotional Codes</h3>
+<p>Discount rules can include promotional code validation. When a customer presents a promo code, the cashier enters it at checkout and the system validates eligibility before applying the discount.</p>
+<hr />
+<h2>Gift Cards</h2>
+<p><strong>Navigate to:</strong> Dashboard → Gift Cards</p>
+<h3>Issuing a Gift Card</h3>
+<ol>
+<li>Click <strong>Issue Gift Card</strong></li>
+<li>Enter or generate a unique code</li>
+<li>Enter the starting balance (e.g., $5,000 GYD)</li>
+<li>Process payment for the gift card amount in the POS</li>
+<li>Click <strong>Issue</strong></li>
+</ol>
+<p>The gift card is now active and can be used at any register.</p>
+<h3>Viewing Gift Cards</h3>
+<p>The list shows all issued gift cards with code, original balance, current balance, and status (Active / Depleted / Voided).</p>
+<p>Click any card to see its transaction history (purchases and redemptions).</p>
+<h3>Redeeming a Gift Card</h3>
+<p>In New Sale, choose <strong>Gift Card</strong> as a payment method and enter the card code. The system checks the balance and deducts accordingly.</p>
+<h3>Transferring Balance</h3>
+<p>Gift card balances can be transferred between cards if needed.</p>
+<hr />
+<h2>Price Lists</h2>
+<p>Assign customer-specific pricing for wholesale, VIP, or staff purchases. See the full guide: <a href="/docs/pricelists">Price Lists</a></p>
+<hr />
+<h2>Quotations</h2>
+<p><strong>Navigate to:</strong> Dashboard → Quotations</p>
+<p>Create professional price quotations for catering orders, events, or large corporate requests. Quotations are printed as a separate PDF with a QUOTATION stamp, validity countdown, Terms &amp; Conditions, and signature blocks.</p>
+<h3>Creating a Quotation</h3>
+<ol>
+<li>Click <strong>New Quotation</strong></li>
+<li>Choose customer type: <strong>Individual</strong> or <strong>Agency/Organization</strong></li>
+<li>Fill in customer name, phone, address, and <strong>Valid Until</strong> date</li>
+<li>(Optional) set <strong>Agency Name</strong>, <strong>Contact Person</strong>, and <strong>Department</strong> tag</li>
+<li>Add line items with description, quantity, and unit price</li>
+<li>Adjust tax rate, tax mode, and discount in the settings bar</li>
+<li>Add Terms &amp; Conditions and Notes (optional — T&amp;Cs pull from your default settings)</li>
+<li>Enter <strong>Prepared By</strong> (your name) — appears on the PDF</li>
+<li>Click <strong>Create</strong></li>
+</ol>
+<h3>Tax &amp; Discount Settings (Form)</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Options</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tax Rate</td>
+<td>Any %</td>
+<td>VAT percentage applied to all items</td>
+</tr>
+<tr>
+<td>Tax Mode</td>
+<td>Whole invoice / Per line / VAT-inclusive</td>
+<td>Whether one rate applies to everything, each line can be exempt, or prices already include VAT</td>
+</tr>
+<tr>
+<td>Discount Type</td>
+<td>Percent / Fixed</td>
+<td>Percentage discount or fixed GYD amount</td>
+</tr>
+<tr>
+<td>Discount Value</td>
+<td>Number</td>
+<td>The discount amount</td>
+</tr>
+</tbody>
+</table>
+<p>The live <strong>Totals</strong> section shows Subtotal → Discount → VAT → <strong>Total</strong> as you type.</p>
+<blockquote>
+<p><strong>Note:</strong>
+For VAT-inclusive pricing (Guyana standard), set Tax Mode to <strong>VAT-inclusive</strong>. The system extracts the tax component from each price using the formula: price × rate ÷ (1 + rate). The total stays the same — the receipt just shows the embedded VAT amount.</p>
+</blockquote>
+<h3>Quotation Statuses</h3>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Draft</strong></td>
+<td>Created but not sent</td>
+</tr>
+<tr>
+<td><strong>Sent</strong></td>
+<td>Marked as sent to customer</td>
+</tr>
+<tr>
+<td><strong>Accepted</strong></td>
+<td>Customer has accepted the quotation</td>
+</tr>
+<tr>
+<td><strong>Rejected</strong></td>
+<td>Customer declined</td>
+</tr>
+<tr>
+<td><strong>Expired</strong></td>
+<td>Past the valid until date</td>
+</tr>
+<tr>
+<td><strong>Converted</strong></td>
+<td>Turned into an invoice</td>
+</tr>
+<tr>
+<td><strong>Cancelled</strong></td>
+<td>Soft-deleted / cancelled</td>
+</tr>
+</tbody>
+</table>
+<h3>Workflow Actions</h3>
+<p>Each quotation row includes a <strong>More Actions</strong> menu (•••) for common workflow actions:</p>
+<ul>
+<li><strong>Print / Save PDF</strong> — opens a professional QUOTATION PDF in a new tab (ready to print or save)</li>
+<li><strong>Edit</strong> — modify the quotation</li>
+<li><strong>Mark Sent</strong> — moves status from Draft → Sent (only on drafts)</li>
+<li><strong>Accept</strong> — marks the quotation as accepted by the customer</li>
+<li><strong>Reject</strong> — marks the quotation as declined</li>
+<li><strong>Duplicate</strong> — creates a new draft copy with a fresh quotation number</li>
+<li><strong>Revise</strong> — creates a numbered revision (e.g. <code>-R2</code>, <code>-R3</code>) linked to the original</li>
+<li><strong>Convert to Invoice</strong> — converts to an invoice (available when Sent or Accepted)</li>
+<li><strong>Cancel</strong> — soft-deletes the quotation</li>
+</ul>
+<h3>Revisions</h3>
+<p>When you revise a quotation, the system creates a new draft linked to the original via <code>parentQuotationId</code>. Revision numbers increment automatically (QUO-0042-R2, QUO-0042-R3, etc.). The revision badge appears on the PDF header so the customer can see which version they are reviewing.</p>
+<h3>Quotation Expiry</h3>
+<p>Quotations with a <strong>Valid Until</strong> date that has passed are considered expired. The PDF shows a clear &quot;EXPIRED&quot; message and the validity countdown reflects this. The status badge on the dashboard list also shows the expired state.</p>
+<h3>Scheduled Sending</h3>
+<p>Set a <strong>Scheduled Send</strong> date when creating or editing a quotation. The system will flag the quotation for sending at the specified date and time.</p>
+<h3>PDF Output</h3>
+<p>The PDF includes:</p>
+<ul>
+<li>Brand-aware logo and company details (Foods Inc. or Home Style)</li>
+<li>QUOTATION stamp badge with quotation number and revision tag (if applicable)</li>
+<li>Validity countdown (&quot;Valid for X more days&quot; or &quot;EXPIRED&quot;)</li>
+<li>Bill To section with customer name, agency, contact person, phone, and address</li>
+<li>&quot;Prepared by&quot; attribution</li>
+<li>Itemized line table with quantities, unit cost, and line totals</li>
+<li>Tax column (when per-line tax mode is used)</li>
+<li>Subtotal, discount (shown in red), VAT, and total breakdown in a highlighted box</li>
+<li>Notes section (italic, red text)</li>
+<li>Terms &amp; Conditions section</li>
+<li>Signature blocks for &quot;Received By&quot; and &quot;Authorized By&quot;</li>
+<li>&quot;This is a quotation only — not a tax invoice&quot; footer disclaimer</li>
+<li><strong>Ink Saver</strong> toggle — switch the PDF to greyscale for lower printing costs</li>
+</ul>
+<hr />
+<h2>Invoices</h2>
+<p><strong>Navigate to:</strong> Dashboard → Invoices</p>
+<p>Manage formal invoices for catering, corporate orders, or accounts receivable. Invoices support VAT, discounts, payment terms, cheque tracking, and full payment history.</p>
+<h3>Creating an Invoice</h3>
+<ol>
+<li>Click <strong>New Invoice</strong></li>
+<li>Fill in customer details (name, phone, address)</li>
+<li>Set <strong>Issued Date</strong> and <strong>Due Date</strong></li>
+<li>(Optional) set a custom invoice number and open <strong>Agency / Organization</strong> details</li>
+<li>Add line items</li>
+<li>Adjust tax rate, discount, payment terms, and <strong>Department</strong></li>
+<li>Add <strong>Prepared By</strong> name (optional)</li>
+<li>Click <strong>Create</strong></li>
+</ol>
+<h3>Aging Summary Cards</h3>
+<p>At the top of the page, four cards show:</p>
+<ul>
+<li><strong>Outstanding</strong> — total unpaid balance</li>
+<li><strong>Overdue</strong> — unpaid past due date (shown in red if &gt; 0)</li>
+<li><strong>Paid This Month</strong> — cash collected this month</li>
+<li><strong>Drafts</strong> — count of draft invoices</li>
+</ul>
+<h3>Invoice Statuses</h3>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Draft</strong></td>
+<td>Not yet sent</td>
+</tr>
+<tr>
+<td><strong>Sent</strong></td>
+<td>Sent to customer</td>
+</tr>
+<tr>
+<td><strong>Outstanding</strong></td>
+<td>Past due and unpaid</td>
+</tr>
+<tr>
+<td><strong>Paid</strong></td>
+<td>Fully paid</td>
+</tr>
+<tr>
+<td><strong>Overpaid</strong></td>
+<td>Paid more than total</td>
+</tr>
+<tr>
+<td><strong>Cancelled</strong></td>
+<td>Voided/cancelled</td>
+</tr>
+</tbody>
+</table>
+<h3>Recording a Payment</h3>
+<ol>
+<li>Click an invoice row to open the detail panel</li>
+<li>In the <strong>Record Payment</strong> card at the bottom, enter:
+<ul>
+<li><strong>Amount Paid</strong> — partial or full payment</li>
+<li><strong>Payment Method</strong> — Cash, Cheque, Bank Transfer, or Mobile Money</li>
+<li><strong>Cheque Number</strong> — optional</li>
+<li><strong>Receipt Number</strong> — optional</li>
+<li><strong>Date Paid</strong> — defaults to today</li>
+<li><strong>Cheque Deposit Date</strong> — if applicable</li>
+</ul>
+</li>
+<li>Click <strong>Record Payment</strong></li>
+</ol>
+<h3>Payment History &amp; Reversals</h3>
+<p>Each invoice has a collapsible <strong>Payment History</strong> section showing every payment recorded, including reversals. Payments are never deleted — a reversal creates a negative entry for a complete audit trail.</p>
+<h3>Unapplied Payments</h3>
+<p>If a customer pays without specifying an invoice, record an <strong>unapplied payment</strong> from the customer's payment ledger. Later, allocate it to specific invoices as needed.</p>
+<h3>Creating a Credit Note from an Invoice</h3>
+<p>On any paid or partially-paid invoice, click <strong>Create Credit Note</strong> to open the credit note form pre-filled with the customer's details.</p>
+<h3>Converting a Quotation to an Invoice</h3>
+<p>From the Quotations page, click <strong>Convert to Invoice</strong> on any Sent or Accepted quotation. The system creates a new invoice pre-filled with the quotation's customer details, line items, tax settings, and discount. The original quotation status changes to &quot;Converted&quot; with a link to the generated invoice.</p>
+<h3>More Actions Menu (•••)</h3>
+<ul>
+<li><strong>Print / Save PDF</strong> — professional INVOICE PDF with company letterhead</li>
+<li><strong>Edit Invoice</strong> — modify the invoice</li>
+<li><strong>Mark as Sent</strong> — moves Draft → Sent</li>
+<li><strong>Duplicate</strong> — creates a new draft copy of the invoice</li>
+<li><strong>Copy Reminder</strong> — copies a payment reminder message to clipboard</li>
+<li><strong>Delete</strong> — permission-gated</li>
+</ul>
+<h3>PDF Output</h3>
+<p>The invoice PDF includes:</p>
+<ul>
+<li>Dark header band with logo, INVOICE stamp, number, issued/due dates, payment terms, and status badge</li>
+<li>Bill To section with customer details</li>
+<li>Itemized line table</li>
+<li>Subtotal, discount, VAT breakdown, total, amount paid, and <strong>Balance Due</strong></li>
+<li>Payment history table (date, method, reference, amount) if payments have been recorded</li>
+<li>Payment Instructions (bank name, account, reference) — if configured in Settings → Documents</li>
+<li>Notes section</li>
+<li>Footer with generation timestamp</li>
+</ul>
+<hr />
+<h2>Document Settings</h2>
+<p><strong>Navigate to:</strong> Settings → Documents</p>
+<p>Configure invoice and quotation defaults:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Default Tax Rate</td>
+<td>Pre-fills the tax rate on new documents</td>
+</tr>
+<tr>
+<td>Default Tax Mode</td>
+<td>Whole invoice, per-line, or VAT-inclusive</td>
+</tr>
+<tr>
+<td>Default Payment Terms</td>
+<td>Due on Receipt / Net 15 / Net 30 / Net 60</td>
+</tr>
+<tr>
+<td>Default Discount Type</td>
+<td>Percent or fixed</td>
+</tr>
+<tr>
+<td>Company TIN</td>
+<td>Appears on PDFs</td>
+</tr>
+<tr>
+<td>Bank Name / Account / Branch</td>
+<td>Payment instructions on invoice PDFs</td>
+</tr>
+<tr>
+<td>Payment Instructions</td>
+<td>Free-text payment notes</td>
+</tr>
+<tr>
+<td>Default Quotation Terms</td>
+<td>Pre-fills T&amp;Cs on new quotations</td>
+</tr>
+<tr>
+<td>Invoice Footer Note</td>
+<td>Custom footer text on invoice PDFs</td>
+</tr>
+<tr>
+<td>Quotation Footer Note</td>
+<td>Custom footer text on quotation PDFs</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><strong>Navigate to:</strong> Dashboard → Settings</p>
+<blockquote>
+<p>Settings are restricted to <strong>Managers and Administrators</strong> only.</p>
+</blockquote>
+<hr />
+<h2>Products Tab</h2>
+<p>Manage all products sold at the POS.</p>
+<h3>Adding a Product</h3>
+<ol>
+<li>Click <strong>New Product</strong></li>
+<li>Enter:
+<ul>
+<li>Name</li>
+<li>Price (GYD)</li>
+<li>Department/Category</li>
+<li>Tax rate</li>
+<li>Barcode (optional — for scanner input)</li>
+<li>Modifier groups (if applicable)</li>
+<li>Recipe/components (for combo products)</li>
+</ul>
+</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<h3>Editing a Product</h3>
+<p>Click the product name → change any fields → click <strong>Save</strong>. Price changes take effect immediately on the POS.</p>
+<h3>Deactivating a Product</h3>
+<p>Toggle the <strong>Active</strong> switch off. Inactive products are hidden from the POS grid but remain in order history and reports.</p>
+<h3>Combo Products</h3>
+<p>Combo products bundle multiple items at a package price:</p>
+<ol>
+<li>Create a new product</li>
+<li>In the <strong>Components</strong> section, add the individual products and quantities that make up the combo</li>
+<li>Set the combo price (typically less than buying components individually)</li>
+<li>The POS shows it as one item; production tracking splits it into components automatically</li>
+</ol>
+<hr />
+<h2>Categories (Departments) Tab</h2>
+<p>Organize products into departments (e.g., Chicken, Fish, Pastry, Beverages).</p>
+<h3>Adding a Category</h3>
+<ol>
+<li>Click <strong>New Category</strong></li>
+<li>Enter a name and sort order (controls order of tabs in the POS)</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<hr />
+<h2>Modifiers Tab</h2>
+<p>Modifier groups let customers customize products (e.g., &quot;Spice Level: Mild / Medium / Hot&quot;).</p>
+<h3>Creating a Modifier Group</h3>
+<ol>
+<li>Click <strong>New Group</strong></li>
+<li>Enter the group name</li>
+<li>Set:
+<ul>
+<li><strong>Min selections</strong> — 0 = optional</li>
+<li><strong>Max selections</strong> — 1 = single choice, 3+ = multi-select</li>
+</ul>
+</li>
+<li>Add modifier options (name + price)</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<h3>Linking Modifiers to Products</h3>
+<p>Open a product → find the Modifier Groups field → add the groups that apply.</p>
+<hr />
+<h2>Users Tab</h2>
+<p>Manage staff accounts.</p>
+<h3>Adding a New User</h3>
+<ol>
+<li>Click <strong>New User</strong></li>
+<li>Enter: Name, Email, Role, PIN (4–8 digits)</li>
+<li>Click <strong>Save</strong></li>
+<li>The user can log in immediately</li>
+</ol>
+<h3>Built-in Roles</h3>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Access</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Cashier</strong></td>
+<td>POS, orders, time clock</td>
+</tr>
+<tr>
+<td><strong>Admin</strong></td>
+<td>Cashier abilities + reports, settings, inventory</td>
+</tr>
+<tr>
+<td><strong>Executive</strong></td>
+<td>Full access including all financial reports and user management</td>
+</tr>
+<tr>
+<td><strong>Kitchen/Checkoff</strong></td>
+<td>KDS and production access only</td>
+</tr>
+<tr>
+<td><strong>Warehouse</strong></td>
+<td>Inventory and purchase order access only</td>
+</tr>
+<tr>
+<td><strong>Accountant</strong></td>
+<td>Reports and expenses access only</td>
+</tr>
+</tbody>
+</table>
+<h3>Custom Roles</h3>
+<p>For more granular control, create custom roles:</p>
+<ol>
+<li>Go to <strong>Settings → Roles</strong></li>
+<li>Click <strong>New Role</strong></li>
+<li>Name the role and select permissions from 30+ resource categories (e.g., orders.read, products.write, invoices.create, reports.view)</li>
+<li>Save the role and assign it to users</li>
+</ol>
+<p>Custom roles allow you to create combinations not covered by the built-in roles — for example, a &quot;Shift Supervisor&quot; who can access POS, orders, cash control, and limited reports but not full settings.</p>
+<h3>Resetting a PIN</h3>
+<p>Click a user's name → change the PIN field → Save.</p>
+<hr />
+<h2>Registers Tab</h2>
+<p>Manage POS registers (terminals).</p>
+<ol>
+<li>Click <strong>New Register</strong></li>
+<li>Enter a name (e.g., &quot;Meals POS&quot;, &quot;Pastry Counter&quot;)</li>
+<li>Assign a location</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<hr />
+<h2>Tax Rates Tab</h2>
+<p>Define sales tax rates.</p>
+<ol>
+<li>Click <strong>New Rate</strong></li>
+<li>Enter a name (e.g., &quot;VAT 16%&quot;) and the rate percentage</li>
+<li>Set as default if it applies to most products</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<hr />
+<h2>Receipt Configuration Tab</h2>
+<p>Customize what prints on customer receipts:</p>
+<ul>
+<li>Business name</li>
+<li>Tagline / slogan</li>
+<li>Address lines</li>
+<li>Phone number</li>
+<li>Footer message (e.g., &quot;Thank you for choosing Bettencourt's!&quot;)</li>
+<li>Promotional message (printed at the bottom of the receipt)</li>
+</ul>
+<hr />
+<h2>Document Settings Tab</h2>
+<p>Configure defaults for invoices and quotations. See <a href="/docs/commerce">Quotations &amp; Invoices → Document Settings</a> for the full list of options including tax rates, payment terms, TIN, bank details, and footer notes.</p>
+<hr />
+<h2>Tables Tab</h2>
+<p>Add and manage dine-in tables:</p>
+<ol>
+<li>Add tables with a name/number and capacity</li>
+<li>Tables appear in the POS when order type is set to Dine In</li>
+<li>See <a href="/docs/floor-plan">Floor Plans &amp; Table Layout</a> for visual table management</li>
+</ol>
+<hr />
+<h2>Currency &amp; Exchange Rates</h2>
+<p><strong>Navigate to:</strong> Settings → Currency</p>
+<p>Guyana operates in GYD. If you accept foreign currency payments (USD, CAD, etc.), set exchange rates here. The POS will convert foreign amounts to GYD at the configured rate.</p>
+<hr />
+<h2>Workspace Preferences</h2>
+<p><strong>Navigate to:</strong> Dashboard → Settings → My Workspace (or Settings → Users → select yourself)</p>
+<p>Each user can choose a <strong>default landing page</strong> — the first page they see after logging in.</p>
+<p>Available options: Dashboard, New Sale, Orders, Kitchen Display, Inventory, Reports, Cash Control, Invoices.</p>
+<p>The preference is saved per user and per device. Cashiers on a fixed register might set New Sale as their default; kitchen staff might prefer Kitchen Display.</p>
+<hr />
+<h2>Locations</h2>
+<p><strong>Navigate to:</strong> Dashboard → Locations (under System)</p>
+<p>Manage your store locations. Each location has its own registers, cash sessions, and inventory.</p>
+<ul>
+<li>View current location details (name, address)</li>
+<li>Contact KareTech Solutions to add a new location</li>
+</ul>
+<hr />
+<h2>Printers</h2>
+<p><strong>Navigate to:</strong> Dashboard → Settings → Printers</p>
+<p>Configure receipt printers and print routing (which departments print to which printer). See the full guide: <a href="/docs/printers">Receipt Printers &amp; Print Routing</a></p>
+<hr />
+<h2>Webhooks</h2>
+<p><strong>Navigate to:</strong> Dashboard → System → Webhooks</p>
+<p>Connect the POS to external systems (accounting software, Slack, Zapier, etc.) by sending automatic POST requests when events happen. See the full guide: <a href="/docs/webhooks">Webhooks</a></p>
+<hr />
+<h2>Notifications (SMS / WhatsApp)</h2>
+<p><strong>Navigate to:</strong> Dashboard → System → Notifications</p>
+<p>Send automatic SMS or WhatsApp messages to customers when their order is ready, when they earn loyalty points, or when a refund is processed. See the full guide: <a href="/docs/notifications">Notifications</a></p>
+<hr />
+<h2>Backup</h2>
+<p><strong>Navigate to:</strong> Dashboard → System → Backup</p>
+<p>Manage database backups and restore from snapshots. See the full guide: <a href="/docs/backup">Backup &amp; Restore</a></p>
+<hr />
+<p><strong>Navigate to:</strong> Dashboard → Settings → Printers</p>
+<blockquote>
+<p>Printer management is restricted to <strong>Managers and Administrators</strong>.</p>
+</blockquote>
+<p>Bettencourt POS supports ESC/POS thermal printers connected over your local network. Print routing lets you send different departments to different printers — for example, food orders to the kitchen printer and beverages to the bar printer, while the receipt printer handles customer receipts.</p>
+<hr />
+<h2>Adding a Printer</h2>
+<ol>
+<li>Click <strong>New Printer</strong></li>
+<li>Fill in the fields:</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Name</strong></td>
+<td>A recognisable label (e.g., &quot;Kitchen Printer&quot;, &quot;Bar Printer&quot;, &quot;Main Receipt&quot;)</td>
+</tr>
+<tr>
+<td><strong>Connection Type</strong></td>
+<td>Select <strong>Network</strong> for a network-connected printer</td>
+</tr>
+<tr>
+<td><strong>IP Address / Hostname</strong></td>
+<td>The printer's IP address on your local network (e.g., <code>192.168.1.50</code>)</td>
+</tr>
+<tr>
+<td><strong>Paper Width</strong></td>
+<td><strong>80mm</strong> (most thermal printers) or <strong>58mm</strong> for narrow receipt rolls</td>
+</tr>
+<tr>
+<td><strong>Auto Cut</strong></td>
+<td>Toggle on to automatically cut paper after each print</td>
+</tr>
+<tr>
+<td><strong>Location</strong></td>
+<td>The store location this printer belongs to</td>
+</tr>
+</tbody>
+</table>
+<ol start="3">
+<li>Click <strong>Save</strong></li>
+</ol>
+<blockquote>
+<p><strong>Note:</strong>
+To find your printer's IP address, print a self-test page from the printer (usually by holding the Feed button on power-up). The IP address is printed on the test sheet.</p>
+</blockquote>
+<hr />
+<h2>Setting Up Print Routes</h2>
+<p>Print routes define which product department prints to which printer. Without a route, all items print to whichever printer the POS uses by default.</p>
+<h3>Assigning Departments to a Printer</h3>
+<ol>
+<li>Open a printer from the list</li>
+<li>In the <strong>Print Routes</strong> section, click <strong>Edit Routes</strong></li>
+<li>Select one or more departments (e.g., &quot;Chicken&quot;, &quot;Fish&quot;, &quot;Beverages&quot;)</li>
+<li>Click <strong>Save Routes</strong></li>
+</ol>
+<p>Each department can only be routed to one printer at a time.</p>
+<h3>Common Routing Example</h3>
+<table>
+<thead>
+<tr>
+<th>Printer</th>
+<th>Departments Routed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kitchen Printer</td>
+<td>Chicken, Fish, Pastry, Specials</td>
+</tr>
+<tr>
+<td>Bar Printer</td>
+<td>Beverages, Juices</td>
+</tr>
+<tr>
+<td>Main Receipt</td>
+<td>(used for customer receipts — no department routes needed)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Test Print</h2>
+<p>To verify a printer is reachable and printing correctly:</p>
+<ol>
+<li>Open the printer from the list</li>
+<li>Click <strong>Test Print</strong></li>
+<li>The printer should immediately print a short test page showing the printer name, connection type, paper width, and timestamp</li>
+</ol>
+<hr />
+<h2>Troubleshooting</h2>
+<h3>Printer Not Responding</h3>
+<ol>
+<li>Confirm the printer is powered on and connected to the same network as the POS</li>
+<li>Try pinging the printer's IP address from any device on the network</li>
+<li>Check that the IP address entered in the POS matches what is printed on the printer's test page</li>
+<li>Some printers require a static IP — check your router's DHCP reservations</li>
+</ol>
+<h3>Garbled Output or Strange Characters</h3>
+<ul>
+<li>Confirm the printer supports <strong>ESC/POS</strong> command set (most modern thermal printers do)</li>
+<li>Try switching the <strong>Paper Width</strong> setting to match your actual paper roll (58mm vs 80mm)</li>
+</ul>
+<h3>Kitchen Printer Not Printing Orders</h3>
+<ul>
+<li>Confirm the relevant departments have a route assigned to the kitchen printer (Settings → Printers → open the printer → Print Routes)</li>
+<li>Confirm the printer's <strong>Active</strong> toggle is on</li>
+<li>Run a <strong>Test Print</strong> to verify the printer is reachable</li>
+</ul>
+<hr />
+<h2>QZ Tray (Browser Printing)</h2>
+<p>For environments where the POS runs in a standard web browser on a Windows machine, <strong>QZ Tray</strong> enables direct communication between the browser and USB or network printers without a print dialog.</p>
+<p>QZ Tray must be installed on each Windows terminal that needs direct printing. Contact KareTech Solutions to arrange installation and configuration.</p>
+<hr />
+<p><strong>Navigate to:</strong> Dashboard → Price Lists</p>
+<blockquote>
+<p>Price list management requires <strong>Admin</strong> or <strong>Executive</strong> role.</p>
+</blockquote>
+<p>Price lists let you offer different prices to different customers. Use them for wholesale pricing, VIP discounts, staff pricing, or any scenario where certain customers pay differently from the standard menu price.</p>
+<hr />
+<h2>How Pricing Works</h2>
+<p>When a customer is linked to an order at the POS, the system checks for a price list assignment:</p>
+<ol>
+<li><strong>Customer has a price list</strong> → uses the price list price for each product</li>
+<li><strong>Product not in the price list</strong> → falls back to the standard product price</li>
+<li><strong>No customer linked</strong> → always uses the standard product price</li>
+</ol>
+<hr />
+<h2>Creating a Price List</h2>
+<ol>
+<li>Click <strong>New Price List</strong></li>
+<li>Enter a <strong>Name</strong> (e.g., &quot;Wholesale&quot;, &quot;VIP&quot;, &quot;Staff Pricing&quot;)</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<h3>Adding Products to a Price List</h3>
+<ol>
+<li>Open the price list</li>
+<li>Click <strong>Add Items</strong></li>
+<li>Search and select products</li>
+<li>Set the custom price for each product (in GYD)</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>You can add as many or as few products as needed. Only products explicitly added get custom pricing; everything else uses the standard price.</p>
+<hr />
+<h2>Assigning a Price List to a Customer</h2>
+<ol>
+<li>Go to <strong>Customers</strong></li>
+<li>Open a customer profile</li>
+<li>In the <strong>Price List</strong> field, select the desired price list</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>Once assigned, the POS automatically applies that customer's prices whenever they are linked to an order.</p>
+<hr />
+<h2>Removing a Price List Assignment</h2>
+<ol>
+<li>Open the customer profile</li>
+<li>Clear the <strong>Price List</strong> field</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>The customer will revert to standard pricing on their next order.</p>
+<hr />
+<h2>Common Use Cases</h2>
+<table>
+<thead>
+<tr>
+<th>Price List</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wholesale</td>
+<td>Reduced prices for bulk buyers or business accounts</td>
+</tr>
+<tr>
+<td>VIP</td>
+<td>Loyalty reward pricing for top-tier customers</td>
+</tr>
+<tr>
+<td>Staff</td>
+<td>Discounted meals for employees</td>
+</tr>
+<tr>
+<td>Corporate</td>
+<td>Negotiated rates for corporate catering clients</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Tips</h2>
+<ul>
+<li>Price lists stack with loyalty discounts — a VIP customer with a price list AND loyalty points can benefit from both</li>
+<li>Review price lists periodically to ensure they reflect current costs and margins</li>
+<li>You can create multiple price lists but each customer can only be assigned one at a time</li>
+</ul>
+<hr />
+<p><strong>Navigate to:</strong> Dashboard → Tables</p>
+<blockquote>
+<p>Floor plan configuration requires <strong>Admin</strong> or <strong>Executive</strong> role.</p>
+</blockquote>
+<p>The floor plan gives you a visual overview of your dining area. See which tables are occupied, reserved, or available at a glance, and manage dine-in orders directly from the layout.</p>
+<hr />
+<h2>Setting Up Floors</h2>
+<p>If your location has multiple dining areas (e.g., main floor, patio, upstairs), create a floor for each:</p>
+<ol>
+<li>Go to <strong>Tables</strong></li>
+<li>Click <strong>New Floor</strong></li>
+<li>Enter a <strong>Name</strong> (e.g., &quot;Main Floor&quot;, &quot;Patio&quot;, &quot;Private Room&quot;)</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>Switch between floors using the tabs at the top of the table layout.</p>
+<hr />
+<h2>Adding Tables</h2>
+<ol>
+<li>Select the floor</li>
+<li>Click <strong>Add Table</strong></li>
+<li>Enter:
+<ul>
+<li><strong>Table Name/Number</strong> (e.g., &quot;T1&quot;, &quot;Patio 3&quot;, &quot;VIP Booth&quot;)</li>
+<li><strong>Capacity</strong> (number of seats)</li>
+</ul>
+</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>Tables appear on the layout with their name and capacity. You can add tables in bulk using the <strong>Batch Add</strong> option.</p>
+<hr />
+<h2>Table Status</h2>
+<p>Each table shows a colour-coded status:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Colour</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Available</strong></td>
+<td>Green</td>
+<td>Ready for seating</td>
+</tr>
+<tr>
+<td><strong>Occupied</strong></td>
+<td>Red</td>
+<td>Active order in progress</td>
+</tr>
+<tr>
+<td><strong>Reserved</strong></td>
+<td>Blue</td>
+<td>Reserved for an upcoming booking</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Managing Tables During Service</h2>
+<h3>Assigning an Order to a Table</h3>
+<p>When creating a <strong>Dine In</strong> order at the POS:</p>
+<ol>
+<li>Select order type <strong>Dine In</strong></li>
+<li>Choose a table from the dropdown (or click a table on the floor plan)</li>
+<li>Complete the order as usual</li>
+</ol>
+<p>The table status changes to <strong>Occupied</strong> and shows the order total.</p>
+<h3>Moving an Order Between Tables</h3>
+<p>If a party needs to move:</p>
+<ol>
+<li>Click the occupied table</li>
+<li>Click <strong>Move Order</strong></li>
+<li>Select the new table</li>
+<li>The order transfers and table statuses update automatically</li>
+</ol>
+<h3>Clearing a Table</h3>
+<p>After a party leaves and the bill is settled:</p>
+<ol>
+<li>Click the occupied table</li>
+<li>Click <strong>Clear Table</strong></li>
+<li>The table returns to <strong>Available</strong> status</li>
+</ol>
+<hr />
+<h2>Tips</h2>
+<ul>
+<li>Set up your tables to match the physical layout of your restaurant for easy reference during busy service</li>
+<li>Use meaningful table names that staff recognise (e.g., &quot;Window 1&quot;, &quot;Corner Booth&quot;)</li>
+<li>Review table capacity settings to ensure reservation sizing works correctly</li>
+</ul>
+<hr />
+<h2>Time Clock</h2>
+<p><strong>Navigate to:</strong> Dashboard → Time Clock</p>
+<p>All staff clock in and out through the time clock.</p>
+<h3>Clocking In/Out</h3>
+<ol>
+<li>Find your name in the staff list</li>
+<li>Click <strong>Clock In</strong> when starting your shift</li>
+<li>Click <strong>Clock Out</strong> when ending your shift</li>
+</ol>
+<h3>Manager View</h3>
+<p>Managers can:</p>
+<ul>
+<li>View all staff clock records with date range filters</li>
+<li>Edit clock-in and clock-out times for corrections (e.g., if a staff member forgot to clock out)</li>
+<li>View total hours worked per staff member for any period</li>
+<li>Time clock data feeds directly into the <strong>Labor Cost</strong> report (Reports → Labor Cost)</li>
+</ul>
+<h3>Wage Tracking</h3>
+<p>Each staff member can have an hourly rate set in their user profile. Combined with time clock data, the system calculates:</p>
+<ul>
+<li>Total wages per employee for any period</li>
+<li>Overall labour cost as a percentage of revenue</li>
+<li>Labour breakdown by role (see Reports → Labor Cost)</li>
+</ul>
+<hr />
+<h2>Shift Handoffs</h2>
+<p>When one manager hands off to another during the day:</p>
+<ol>
+<li>The outgoing manager clicks <strong>Initiate Handoff</strong> from the shift view</li>
+<li>Select the incoming manager</li>
+<li>The incoming manager receives a handoff notification</li>
+<li>Click <strong>Accept Handoff</strong> to take over the shift</li>
+</ol>
+<p>Handoffs are logged with timestamps and both managers' names, creating a clear chain of responsibility for the cash drawer throughout the day.</p>
+<hr />
+<h2>Audit Log</h2>
+<p><strong>Navigate to:</strong> Dashboard → Audit Log</p>
+<p>A complete, read-only history of all system changes. The audit log cannot be edited or deleted.</p>
+<h3>What Is Tracked</h3>
+<ul>
+<li>Logins and logouts</li>
+<li>Orders created, voided, and refunded</li>
+<li>Product and price changes</li>
+<li>Settings changes</li>
+<li>User account changes (created, edited, PIN resets)</li>
+<li>Cash session events (opens, closes, drops, payouts, no-sale)</li>
+<li>Invoice and quotation changes</li>
+<li>Payment recordings and reversals</li>
+<li>Financial audit events (invoice lifecycle, credit note applications)</li>
+</ul>
+<h3>Filtering</h3>
+<p>Use the filters to narrow the audit log:</p>
+<ul>
+<li><strong>User</strong> — which staff member performed the action</li>
+<li><strong>Action type</strong> — login, order, product, payment, etc.</li>
+<li><strong>Entity type</strong> — filter by specific record types (order, invoice, product, etc.)</li>
+<li><strong>Date range</strong> — from/to date picker</li>
+</ul>
+<p>The audit log is the first place to check for discrepancies, suspicious activity, or investigating till variances.</p>
+<hr />
+<h2>Menu Schedules</h2>
+<p><strong>Navigate to:</strong> Settings → Menu Schedules</p>
+<p>Control which products are available at different times of day.</p>
+<h3>Creating a Schedule</h3>
+<ol>
+<li>Click <strong>New Schedule</strong></li>
+<li>Enter a name (e.g., &quot;Breakfast&quot;, &quot;Lunch&quot;, &quot;Dinner&quot;)</li>
+<li>Set the active days (Mon-Sun)</li>
+<li>Set the time range (e.g., 06:00 to 11:00)</li>
+<li>Select the products or categories available during this window</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>When a schedule is active, the POS only shows products matching the current time window. Products outside any active schedule remain hidden.</p>
+<hr />
+<h2>Custom Roles &amp; Permissions</h2>
+<p><strong>Navigate to:</strong> Settings → Roles</p>
+<p>Beyond the six built-in roles (Cashier, Admin, Executive, Kitchen, Warehouse, Accountant), you can create custom roles with granular permissions across 30+ resource categories.</p>
+<p>See <a href="/docs/settings#custom-roles">Settings → Custom Roles</a> for the full guide.</p>
+<hr />
+<h2>Notifications</h2>
+<p><strong>Navigate to:</strong> Dashboard → System → Notifications</p>
+<p>Full documentation: <a href="/docs/notifications">Notifications</a></p>
+<p>Quick reference: Twilio credentials in Settings tab, edit templates with variables ({{customerName}}, {{orderNumber}}), view Log tab for message status.</p>
+<hr />
+<h2>Webhooks</h2>
+<p><strong>Navigate to:</strong> Dashboard → System → Webhooks</p>
+<p>Full documentation: <a href="/docs/webhooks">Webhooks</a></p>
+<p>Quick reference: add endpoint URL + select events, view delivery history (status code, response, duration), optional secret for HMAC verification.</p>
+<hr />
+<p><strong>Navigate to:</strong> Dashboard → System → Webhooks</p>
+<blockquote>
+<p><strong>For Shakira:</strong> Webhooks are an advanced feature used to connect your POS to tools like QuickBooks, Slack, or Zapier. KareTech Solutions can set these up for you.</p>
+</blockquote>
+<p>Webhooks let the POS automatically send data to another system whenever something happens — an order completes, stock runs low, a refund is processed. The POS sends an HTTP POST request with event details in JSON format to any URL you configure.</p>
+<hr />
+<h2>Adding a Webhook Endpoint</h2>
+<ol>
+<li>Click <strong>Add Endpoint</strong></li>
+<li>Enter a <strong>Name</strong> (e.g., &quot;QuickBooks Sales Feed&quot;, &quot;Slack Inventory Alerts&quot;)</li>
+<li>Paste the <strong>URL</strong> provided by the external service</li>
+<li>Select one or more <strong>Events</strong> to subscribe to</li>
+<li>Optionally enter a <strong>Secret</strong> — a shared key used to verify payloads (see Security below)</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>The endpoint is immediately active and will receive events in real time.</p>
+<hr />
+<h2>Available Events</h2>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>When it fires</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>order.completed</code></td>
+<td>An order is fully paid</td>
+</tr>
+<tr>
+<td><code>order.voided</code></td>
+<td>An order is voided after payment</td>
+</tr>
+<tr>
+<td><code>order.refunded</code></td>
+<td>A refund is processed</td>
+</tr>
+<tr>
+<td><code>inventory.low_stock</code></td>
+<td>An inventory item drops below its reorder point</td>
+</tr>
+<tr>
+<td><code>inventory.out_of_stock</code></td>
+<td>An inventory item reaches zero</td>
+</tr>
+<tr>
+<td><code>cash_session.opened</code></td>
+<td>A cash shift is opened</td>
+</tr>
+<tr>
+<td><code>cash_session.closed</code></td>
+<td>A cash shift is closed</td>
+</tr>
+<tr>
+<td><code>production.logged</code></td>
+<td>A production log entry is saved</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Delivery Log</h2>
+<p>The <strong>Delivery Log</strong> tab shows every send attempt for each endpoint:</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Event</strong></td>
+<td>Which event triggered the delivery</td>
+</tr>
+<tr>
+<td><strong>Status Code</strong></td>
+<td>HTTP response (200 = success, 5xx = server error, — = connection failed)</td>
+</tr>
+<tr>
+<td><strong>Duration</strong></td>
+<td>How long the request took in milliseconds</td>
+</tr>
+<tr>
+<td><strong>Result</strong></td>
+<td>Green = success, Red = failed</td>
+</tr>
+<tr>
+<td><strong>Timestamp</strong></td>
+<td>When it was sent</td>
+</tr>
+</tbody>
+</table>
+<p>Click any row to see the full request payload and the server's response body.</p>
+<p>If a delivery failed, fix the endpoint URL and test again using the <strong>Ping</strong> button on the endpoint card.</p>
+<hr />
+<h2>Webhook Security (Signatures)</h2>
+<p>When you set a <strong>Secret</strong> on an endpoint, every request includes an <code>X-Webhook-Signature</code> header containing an HMAC-SHA256 signature of the request body. The receiving system can verify this signature to confirm the request came from your POS and wasn't tampered with.</p>
+<p>Example signature header:</p>
+<pre><code>X-Webhook-Signature: sha256=abc123...
+</code></pre>
+<p>Most integration platforms (Zapier, Make, n8n) handle signature verification automatically when you paste the secret into their settings.</p>
+<hr />
+<h2>Toggling an Endpoint</h2>
+<p>Click the <strong>Active</strong> toggle next to any endpoint to pause deliveries without deleting the endpoint. Useful if an external system is temporarily down.</p>
+<hr />
+<h2>Example Payload</h2>
+<p>Every webhook payload follows this structure:</p>
+<pre><code class="language-json">{
+  &quot;event&quot;: &quot;order.completed&quot;,
+  &quot;timestamp&quot;: &quot;2026-03-08T14:30:00.000Z&quot;,
+  &quot;data&quot;: {
+    &quot;orderId&quot;: &quot;f1000000-...&quot;,
+    &quot;orderNumber&quot;: &quot;GT-042&quot;,
+    &quot;total&quot;: &quot;4400&quot;,
+    &quot;items&quot;: [
+      { &quot;name&quot;: &quot;Fried Rice and Baked Chicken&quot;, &quot;quantity&quot;: 2, &quot;unitPrice&quot;: &quot;2200&quot; }
+    ]
+  }
+}
+</code></pre>
+<hr />
+<p><strong>Navigate to:</strong> Dashboard → System → Notifications</p>
+<p>Send automated SMS or WhatsApp messages to customers when events happen — like when their takeaway order is ready, when they earn loyalty points, or when a refund is processed.</p>
+<p>The system uses <strong>Twilio</strong> as the SMS and WhatsApp provider. Credentials must be configured before messages will send.</p>
+<hr />
+<h2>How It Works</h2>
+<ol>
+<li><strong>Settings</strong> — Connect your Twilio account (Account SID, Auth Token, phone number)</li>
+<li><strong>Templates</strong> — Customize the message text for each event type</li>
+<li><strong>Automatic sending</strong> — The POS sends the right template when a matching event occurs</li>
+<li><strong>Log</strong> — Every message (sent or failed) is recorded for review</li>
+</ol>
+<hr />
+<h2>Setting Up Twilio (Admin Only)</h2>
+<blockquote>
+<p>If you don't have a Twilio account, contact KareTech Solutions. They can set one up for you.</p>
+</blockquote>
+<ol>
+<li>Go to <strong>Notifications → Settings</strong> tab</li>
+<li>Enter your <strong>Account SID</strong> and <strong>Auth Token</strong> (from <a href="https://twilio.com/console">twilio.com/console</a>)</li>
+<li>Enter your <strong>From Number</strong> — the Twilio phone number that sends SMS (e.g. <code>+15550001234</code>)</li>
+<li>Optionally enter a <strong>WhatsApp Number</strong> if you use Twilio's WhatsApp Business API</li>
+<li>Set a <strong>Daily Limit</strong> (default: 500) — the system stops sending if this count is reached in a day</li>
+<li>Toggle <strong>Active</strong> to enable</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<hr />
+<h2>Message Templates</h2>
+<p>Go to the <strong>Templates</strong> tab to see and edit all configured messages.</p>
+<h3>Available Events</h3>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>When the message sends</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>order.ready</code></td>
+<td>When staff marks an order as Ready for pickup</td>
+</tr>
+<tr>
+<td><code>loyalty.earned</code></td>
+<td>When a customer earns loyalty points</td>
+</tr>
+<tr>
+<td><code>loyalty.redeemed</code></td>
+<td>When a customer redeems loyalty points at checkout</td>
+</tr>
+<tr>
+<td><code>order.refunded</code></td>
+<td>When a refund is processed for a customer's order</td>
+</tr>
+</tbody>
+</table>
+<h3>Template Variables</h3>
+<p>Use these placeholders in message text — they are filled in automatically:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Replaced with</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{{customerName}}</code></td>
+<td>Customer's first name</td>
+</tr>
+<tr>
+<td><code>{{orderNumber}}</code></td>
+<td>Order reference number (e.g. GT-042)</td>
+</tr>
+<tr>
+<td><code>{{total}}</code></td>
+<td>Order total in GYD</td>
+</tr>
+<tr>
+<td><code>{{points}}</code></td>
+<td>Points earned or redeemed</td>
+</tr>
+<tr>
+<td><code>{{totalPoints}}</code></td>
+<td>Customer's new running points total</td>
+</tr>
+<tr>
+<td><code>{{refundAmount}}</code></td>
+<td>Amount refunded in GYD</td>
+</tr>
+</tbody>
+</table>
+<h3>Editing a Template</h3>
+<ol>
+<li>Click the template name</li>
+<li>Edit the message body — use variables in double curly braces</li>
+<li>Set the <strong>Channel</strong>: SMS, WhatsApp, or Both</li>
+<li>Toggle <strong>Active</strong> — inactive templates never send</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<h3>Example Template</h3>
+<pre><code>Hi {{customerName}}, your order #{{orderNumber}} is ready for pickup at Bettencourt's! 🍽️
+</code></pre>
+<blockquote>
+<p>SMS messages are limited to 160 characters per segment. Longer messages are split and charged as multiple segments.</p>
+</blockquote>
+<hr />
+<h2>Notification Log</h2>
+<p>The <strong>Log</strong> tab records every notification the system has attempted:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Delivered</strong></td>
+<td>Successfully received by the customer's phone (confirmed by carrier)</td>
+</tr>
+<tr>
+<td><strong>Sent</strong></td>
+<td>Dispatched to Twilio — delivery confirmation pending</td>
+</tr>
+<tr>
+<td><strong>Failed</strong></td>
+<td>Error from Twilio (e.g., invalid phone number, daily limit reached)</td>
+</tr>
+<tr>
+<td><strong>Pending</strong></td>
+<td>Queued but not yet sent</td>
+</tr>
+</tbody>
+</table>
+<h3>Troubleshooting a Failed Notification</h3>
+<ol>
+<li>Open the <strong>Log</strong> tab and find the entry for the customer</li>
+<li>Click the row to expand and see the <strong>Error Message</strong> from Twilio</li>
+<li>Common causes:
+<ul>
+<li>Phone number not in international format (should start with country code, e.g. <code>+592...</code>)</li>
+<li>Daily message limit reached — increase the limit in Settings</li>
+<li>Twilio account suspended or out of credit</li>
+<li>Customer's carrier blocking the message</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h2>SMS vs WhatsApp</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>SMS</th>
+<th>WhatsApp</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Requires</strong></td>
+<td>Twilio From Number</td>
+<td>Twilio WhatsApp Business number</td>
+</tr>
+<tr>
+<td><strong>Cost</strong></td>
+<td>Per message (varies by country)</td>
+<td>Per session (24-hour window)</td>
+</tr>
+<tr>
+<td><strong>Character limit</strong></td>
+<td>160 per segment</td>
+<td>4,096 characters</td>
+</tr>
+<tr>
+<td><strong>Delivery</strong></td>
+<td>Works on any phone</td>
+<td>Requires customer has WhatsApp</td>
+</tr>
+<tr>
+<td><strong>Best for</strong></td>
+<td>Broad reach</td>
+<td>Richer messages, media</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Menu Board (TV Display)</h2>
+<p><strong>Access at:</strong> <a href="https://pos.karetechsolutions.com/menu-board">pos.karetechsolutions.com/menu-board</a></p>
+<p>This is a <strong>public page</strong> (no login required) designed to be displayed on a TV screen facing customers.</p>
+<h3>Features</h3>
+<ul>
+<li>Shows all active products grouped by department</li>
+<li>Products display name and price</li>
+<li>Automatically refreshes every 60 seconds to reflect price changes</li>
+<li><strong>Fullscreen button</strong> (top right) — click to go full screen on a TV</li>
+<li><strong>Auto-scroll</strong> — the page slowly scrolls so customers see all items; it pauses when touched or hovered</li>
+</ul>
+<h3>Setting Up on a TV</h3>
+<ol>
+<li>Open a browser on the TV or connected device</li>
+<li>Go to <a href="https://pos.karetechsolutions.com/menu-board">pos.karetechsolutions.com/menu-board</a></li>
+<li>Click the fullscreen button</li>
+<li>The display stays current as long as the browser tab is open</li>
+</ol>
+<hr />
+<h2>Online Ordering</h2>
+<p><strong>Access at:</strong> <a href="https://pos.karetechsolutions.com/order">pos.karetechsolutions.com/order</a></p>
+<p>A <strong>public page</strong> (no login required) that customers can use from their phone or computer to place orders for pickup or delivery.</p>
+<h3>How It Works (Customer View)</h3>
+<ol>
+<li>Customer visits the order page</li>
+<li>Browses the menu — organized by department with category filter pills at top</li>
+<li>Adds items to their cart</li>
+<li>At checkout:
+<ul>
+<li>Selects <strong>Pickup</strong> or <strong>Delivery</strong></li>
+<li>Enters name and phone number</li>
+<li>For delivery: enters delivery address</li>
+<li>Reviews order and adds special instructions per item</li>
+</ul>
+</li>
+<li>Clicks <strong>Place Order</strong></li>
+<li>Gets an order number confirmation</li>
+</ol>
+<p>The order appears in the POS system as a new order for staff to fulfill.</p>
+<h3>Managing Online Orders in the POS</h3>
+<p>Online orders appear in the <strong>Orders</strong> list tagged as &quot;Pickup&quot; or &quot;Delivery&quot;. The KDS also shows them for kitchen staff.</p>
+<h3>Sharing with Customers</h3>
+<p>Send customers to <strong><a href="https://pos.karetechsolutions.com/order">pos.karetechsolutions.com/order</a></strong> — or add a link/button on your WhatsApp or Facebook page.</p>
+<hr />
+<p><strong>Navigate to:</strong> Dashboard → Reservations / Dashboard → Waitlist</p>
+<blockquote>
+<p>Reservations and waitlist features require <strong>Admin</strong> or <strong>Executive</strong> role.</p>
+</blockquote>
+<hr />
+<h2>Reservations</h2>
+<h3>Creating a Reservation</h3>
+<ol>
+<li>Go to <strong>Reservations</strong></li>
+<li>Click <strong>New Reservation</strong></li>
+<li>Fill in the details:</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Customer Name</strong></td>
+<td>Guest name for the reservation</td>
+</tr>
+<tr>
+<td><strong>Phone</strong></td>
+<td>Contact number</td>
+</tr>
+<tr>
+<td><strong>Date</strong></td>
+<td>Reservation date</td>
+</tr>
+<tr>
+<td><strong>Time</strong></td>
+<td>Expected arrival time</td>
+</tr>
+<tr>
+<td><strong>Party Size</strong></td>
+<td>Number of guests</td>
+</tr>
+<tr>
+<td><strong>Table</strong></td>
+<td>Optionally pre-assign a table</td>
+</tr>
+<tr>
+<td><strong>Notes</strong></td>
+<td>Special requests (dietary needs, celebrations, etc.)</td>
+</tr>
+</tbody>
+</table>
+<ol start="4">
+<li>Click <strong>Save</strong></li>
+</ol>
+<h3>Viewing Upcoming Reservations</h3>
+<p>The reservation list shows all upcoming bookings sorted by date and time. Each entry displays the customer name, party size, time, assigned table (if any), and status.</p>
+<h3>Managing Reservations</h3>
+<ul>
+<li><strong>Edit</strong> — change details (time, party size, table assignment)</li>
+<li><strong>Cancel</strong> — remove the reservation</li>
+<li><strong>Seat</strong> — when the guest arrives, seat them at their assigned table (or choose a different one)</li>
+</ul>
+<hr />
+<h2>Waitlist</h2>
+<p>The waitlist manages walk-in customers waiting for a table during busy periods.</p>
+<h3>Adding to the Waitlist</h3>
+<ol>
+<li>Go to <strong>Waitlist</strong></li>
+<li>Click <strong>Add to Waitlist</strong></li>
+<li>Enter the customer's <strong>Name</strong>, <strong>Phone</strong>, <strong>Party Size</strong>, and any <strong>Notes</strong></li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>The customer joins the queue with a timestamp. The list shows their position and estimated wait.</p>
+<h3>Seating from the Waitlist</h3>
+<p>When a table becomes available:</p>
+<ol>
+<li>Find the next customer on the waitlist</li>
+<li>Click <strong>Seat</strong> to assign them a table</li>
+<li>The entry is removed from the waitlist</li>
+</ol>
+<h3>Position Lookup</h3>
+<p>If a customer asks about their position, use the search field to find them by name or phone number. Their current position in the queue is displayed.</p>
+<hr />
+<h2>Integration with Floor Plan</h2>
+<p>Reservations and the waitlist work together with the floor plan (see <a href="/docs/floor-plan">Floor Plans &amp; Table Layout</a>):</p>
+<ul>
+<li>Reserved tables show a &quot;Reserved&quot; badge on the floor plan</li>
+<li>Occupied tables cannot be double-booked</li>
+<li>Seating a reservation or waitlist entry automatically marks the table as occupied</li>
+</ul>
+<hr />
+<p><strong>Navigate to:</strong> Dashboard → Orders (filter by Delivery type)</p>
+<hr />
+<h2>Delivery Orders</h2>
+<h3>Creating a Delivery Order at the POS</h3>
+<ol>
+<li>Start a <strong>New Sale</strong></li>
+<li>Set order type to <strong>Delivery</strong></li>
+<li>Link or create a customer (the delivery address is pulled from the customer profile)</li>
+<li>Add items to the cart</li>
+<li>Process payment</li>
+<li>The order is tagged as <strong>Delivery</strong> and appears in Orders and on the Kitchen Display</li>
+</ol>
+<h3>Delivery Address</h3>
+<p>When order type is set to <strong>Delivery</strong>, the system pulls the address from the linked customer profile. If the customer has no address on file, you will be prompted to enter one.</p>
+<p>To update a customer's delivery address:</p>
+<ol>
+<li>Go to <strong>Customers</strong></li>
+<li>Open the profile</li>
+<li>Update the <strong>Address</strong> field</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<hr />
+<h2>Tracking Delivery Status</h2>
+<p>Delivery orders show a <strong>fulfilment status</strong> badge alongside the payment status:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Preparing</strong></td>
+<td>Kitchen is working on the order</td>
+</tr>
+<tr>
+<td><strong>Ready</strong></td>
+<td>Order is prepared and waiting for pickup/dispatch</td>
+</tr>
+<tr>
+<td><strong>Dispatched</strong></td>
+<td>Order has left the premises</td>
+</tr>
+<tr>
+<td><strong>Delivered</strong></td>
+<td>Order has been delivered to the customer</td>
+</tr>
+</tbody>
+</table>
+<p>Update the status from the order detail view as the order progresses.</p>
+<hr />
+<h2>Platform Integration</h2>
+<p>For businesses receiving orders from external delivery platforms, the system can display platform orders alongside regular POS orders.</p>
+<h3>Viewing Platform Orders</h3>
+<ol>
+<li>Go to <strong>Orders</strong></li>
+<li>Filter by <strong>Delivery</strong> type</li>
+<li>Platform orders are tagged with the platform name</li>
+</ol>
+<h3>Processing a Platform Order</h3>
+<p>Platform orders appear in the same workflow as regular orders. They show on the Kitchen Display and follow the same preparation and status-tracking flow.</p>
+<hr />
+<h2>Tips</h2>
+<ul>
+<li>Always verify the delivery address before dispatching</li>
+<li>Use the <strong>Notes</strong> field on orders for special delivery instructions (gate code, landmark, etc.)</li>
+<li>Track delivery times in the order history to identify bottlenecks</li>
+</ul>
+<hr />
+<h2>What Is the Desktop App?</h2>
+<p>The Bettencourt POS desktop app is a standalone Windows application built with Tauri. It provides the same interface as the browser version but runs as a native application with offline capability.</p>
+<hr />
+<h2>When to Use the Desktop App</h2>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Best Option</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reliable internet connection</td>
+<td>Browser (Chrome recommended)</td>
+</tr>
+<tr>
+<td>Intermittent internet</td>
+<td>Desktop app (queues transactions offline)</td>
+</tr>
+<tr>
+<td>Dedicated POS terminal (no browser distractions)</td>
+<td>Desktop app</td>
+</tr>
+<tr>
+<td>Multiple tabs/services needed alongside POS</td>
+<td>Browser</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Installation</h2>
+<ol>
+<li>Download the installer from the link provided by KareTech Solutions</li>
+<li>Run the installer on your Windows machine</li>
+<li>Follow the setup wizard</li>
+<li>The app will launch and connect to your POS server automatically</li>
+</ol>
+<blockquote>
+<p><strong>Note:</strong>
+The desktop app connects to the same server as the browser version. All data stays in sync — orders placed on the desktop app appear everywhere, and vice versa.</p>
+</blockquote>
+<hr />
+<h2>Offline Mode</h2>
+<p>When internet connectivity drops:</p>
+<ul>
+<li>The app switches to <strong>offline mode</strong> automatically</li>
+<li>You can continue taking orders and processing cash payments</li>
+<li>A yellow sync indicator appears in the top bar</li>
+<li>Once connectivity returns, all queued transactions sync automatically</li>
+</ul>
+<p><strong>What works offline:</strong></p>
+<ul>
+<li>Taking new orders (cash payment)</li>
+<li>Viewing the product catalogue</li>
+<li>Viewing recent order history (locally cached)</li>
+</ul>
+<p><strong>What requires connectivity:</strong></p>
+<ul>
+<li>Card payment processing</li>
+<li>Real-time inventory updates</li>
+<li>Kitchen display synchronisation</li>
+<li>Reports and analytics</li>
+</ul>
+<hr />
+<h2>Updates</h2>
+<p>The desktop app checks for updates on startup. When a new version is available, it downloads and installs automatically. No action is required from the user.</p>
+<hr />
+<h2>Support</h2>
+<p>If the desktop app fails to connect or behaves unexpectedly:</p>
+<ol>
+<li>Check your internet connection</li>
+<li>Restart the application</li>
+<li>If the issue persists, try the browser version at <strong>pos.karetechsolutions.com</strong> to confirm the server is accessible</li>
+<li>Contact KareTech Solutions for further assistance</li>
+</ol>
+<hr />
+<blockquote>
+<p><strong>Note:</strong>
+This page is for developers integrating external systems with Bettencourt POS. For day-to-day usage, see the relevant feature pages in this manual.</p>
+</blockquote>
+<hr />
+<h2>Overview</h2>
+<p>Bettencourt POS exposes an RPC-based API built on oRPC (OpenAPI-compatible Remote Procedure Call). All API calls go through a single endpoint with structured request/response payloads.</p>
+<p><strong>Base URL:</strong> <code>https://pos.karetechsolutions.com</code></p>
+<hr />
+<h2>Authentication</h2>
+<h3>PIN Login (Staff)</h3>
+<pre><code>POST /api/auth/pin-login
+Content-Type: application/json
+
+{ &quot;pin&quot;: &quot;1234&quot;, &quot;organizationId&quot;: &quot;...&quot; }
+</code></pre>
+<p>Returns a session cookie. Rate-limited to <strong>5 failed attempts per IP</strong> with a <strong>60-second lockout</strong>.</p>
+<h3>Email Login (Managers)</h3>
+<p>Standard email/password authentication via the login page. Returns a session cookie used for subsequent API calls.</p>
+<p>All API requests must include the session cookie (<code>credentials: &quot;include&quot;</code> for fetch, or <code>Cookie</code> header).</p>
+<hr />
+<h2>API Endpoint</h2>
+<p>All business logic is accessed via:</p>
+<pre><code>POST /api/trpc/&lt;router&gt;.&lt;procedure&gt;
+Content-Type: application/json
+</code></pre>
+<h3>Major Router Groups</h3>
+<table>
+<thead>
+<tr>
+<th>Router</th>
+<th>Purpose</th>
+<th>Key Procedures</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>pos</strong></td>
+<td>Point of sale operations</td>
+<td>getProducts, checkout</td>
+</tr>
+<tr>
+<td><strong>orders</strong></td>
+<td>Order management</td>
+<td>list, getById, voidOrder, refund</td>
+</tr>
+<tr>
+<td><strong>cash</strong></td>
+<td>Cash sessions</td>
+<td>openSession, closeSession, createDrop, createPayout</td>
+</tr>
+<tr>
+<td><strong>products</strong></td>
+<td>Product catalogue</td>
+<td>list, create, update, delete</td>
+</tr>
+<tr>
+<td><strong>inventory</strong></td>
+<td>Stock management</td>
+<td>getStockLevels, getLedger, logWaste</td>
+</tr>
+<tr>
+<td><strong>invoices</strong></td>
+<td>Accounts receivable</td>
+<td>list, create, recordPayment, getPaymentHistory</td>
+</tr>
+<tr>
+<td><strong>quotations</strong></td>
+<td>Proposals</td>
+<td>list, create, convertToInvoice, revise</td>
+</tr>
+<tr>
+<td><strong>credit-notes</strong></td>
+<td>Credit memos</td>
+<td>create, applyToInvoice, void</td>
+</tr>
+<tr>
+<td><strong>vendor-bills</strong></td>
+<td>Accounts payable</td>
+<td>list, create, recordPayment</td>
+</tr>
+<tr>
+<td><strong>customers</strong></td>
+<td>Customer database</td>
+<td>list, search, create, getCustomerStatement</td>
+</tr>
+<tr>
+<td><strong>loyalty</strong></td>
+<td>Loyalty program</td>
+<td>earnPoints, redeem, getLeaderboard</td>
+</tr>
+<tr>
+<td><strong>giftcards</strong></td>
+<td>Gift cards</td>
+<td>issue, redeem, getBalance</td>
+</tr>
+<tr>
+<td><strong>reports</strong></td>
+<td>Reporting</td>
+<td>getReport, getEodReport</td>
+</tr>
+<tr>
+<td><strong>analytics</strong></td>
+<td>Business intelligence</td>
+<td>getRevenueTrend, getAbcAnalysis</td>
+</tr>
+<tr>
+<td><strong>timeclock</strong></td>
+<td>Staff time tracking</td>
+<td>clockIn, clockOut, getHistory</td>
+</tr>
+<tr>
+<td><strong>audit</strong></td>
+<td>Audit trail</td>
+<td>list (with filtering)</td>
+</tr>
+<tr>
+<td><strong>webhooks</strong></td>
+<td>Integration endpoints</td>
+<td>listEndpoints, createEndpoint</td>
+</tr>
+<tr>
+<td><strong>notifications</strong></td>
+<td>SMS/WhatsApp alerts</td>
+<td>send, listTemplates</td>
+</tr>
+<tr>
+<td><strong>settings</strong></td>
+<td>Configuration</td>
+<td>getOrganization, updatePosSettings</td>
+</tr>
+<tr>
+<td><strong>kitchen</strong></td>
+<td>Kitchen display</td>
+<td>getActiveTickets, updateItemStatus</td>
+</tr>
+<tr>
+<td><strong>production</strong></td>
+<td>Production logs</td>
+<td>logProduction, getProductionVsSalesReport</td>
+</tr>
+<tr>
+<td><strong>recurring</strong></td>
+<td>Recurring templates</td>
+<td>createTemplate, generateNext</td>
+</tr>
+<tr>
+<td><strong>printers</strong></td>
+<td>Print management</td>
+<td>list, create, testPrint, setRoutes</td>
+</tr>
+<tr>
+<td><strong>discounts</strong></td>
+<td>Discount rules</td>
+<td>list, create, validatePromo</td>
+</tr>
+<tr>
+<td><strong>pricelists</strong></td>
+<td>Dynamic pricing</td>
+<td>list, create, assignCustomerPricelist</td>
+</tr>
+<tr>
+<td><strong>agencies</strong></td>
+<td>Agency/org management</td>
+<td>list, create, update</td>
+</tr>
+<tr>
+<td><strong>tables</strong></td>
+<td>Table/floor management</td>
+<td>list, updateTableStatus, clearTable</td>
+</tr>
+<tr>
+<td><strong>reservations</strong></td>
+<td>Booking management</td>
+<td>list, create, update</td>
+</tr>
+<tr>
+<td><strong>waitlist</strong></td>
+<td>Walk-in queue</td>
+<td>list, create, lookupPosition</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Webhooks</h2>
+<p>For event-driven integration, use webhooks instead of polling. See <a href="/docs/webhooks">Webhooks</a> for setup instructions.</p>
+<p><strong>Available events:</strong></p>
+<ul>
+<li><code>order.completed</code>, <code>order.voided</code>, <code>order.refunded</code></li>
+<li><code>inventory.low_stock</code>, <code>inventory.out_of_stock</code></li>
+<li><code>cash_session.opened</code>, <code>cash_session.closed</code></li>
+<li><code>production.logged</code></li>
+</ul>
+<p>Each webhook delivery includes an <code>X-Webhook-Signature</code> header (HMAC-SHA256) if a secret is configured.</p>
+<hr />
+<h2>Health Check</h2>
+<pre><code>GET /health
+</code></pre>
+<p>Returns <code>200 OK</code> when the server is running. Use this for uptime monitoring.</p>
+<hr />
+<h2>Rate Limiting</h2>
+<ul>
+<li>PIN login: 5 attempts per IP, 60-second lockout</li>
+<li>General API: no hard rate limit, but excessive requests may be throttled</li>
+</ul>
+<hr />
+<h2>Support</h2>
+<p>For API integration assistance, contact KareTech Solutions. Custom webhook events or API extensions can be arranged as part of your service agreement.</p>
+<hr />
+<p><strong>Navigate to:</strong> Dashboard → System → Backup</p>
+<blockquote>
+<p>Backup management requires <strong>Admin</strong> or <strong>Executive</strong> role.</p>
+</blockquote>
+<p>Bettencourt POS automatically backs up your data every night at midnight (Guyana time). You can also create manual backups at any time and restore from any saved snapshot.</p>
+<hr />
+<h2>Backup Status</h2>
+<p>The status card at the top shows:</p>
+<ul>
+<li><strong>Health indicator</strong> (green/yellow/red dot):
+<ul>
+<li><strong>Green</strong> — last backup is less than 25 hours old (healthy)</li>
+<li><strong>Yellow</strong> — last backup is 25 to 48 hours old (attention needed)</li>
+<li><strong>Red</strong> — no backups or last backup is older than 48 hours (action required)</li>
+</ul>
+</li>
+<li><strong>Last backup timestamp</strong></li>
+<li><strong>Next scheduled backup</strong> — midnight tonight (Guyana time)</li>
+</ul>
+<hr />
+<h2>Creating a Manual Backup</h2>
+<ol>
+<li>Click <strong>Backup Now</strong></li>
+<li>Wait for the backup to complete (usually a few seconds)</li>
+<li>The new backup appears in the history table</li>
+</ol>
+<blockquote>
+<p><strong>Note:</strong>
+Create a manual backup before making major changes such as bulk product updates, price changes, or data imports.</p>
+</blockquote>
+<hr />
+<h2>Backup History</h2>
+<p>The history table shows all available backups with:</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>File</strong></td>
+<td>Backup filename (with &quot;pre-restore&quot; badge if it was created automatically before a restore)</td>
+</tr>
+<tr>
+<td><strong>Created</strong></td>
+<td>Date and time the backup was created</td>
+</tr>
+<tr>
+<td><strong>Size</strong></td>
+<td>File size (e.g., 2.3 MB)</td>
+</tr>
+<tr>
+<td><strong>Contents</strong></td>
+<td>Summary of records (e.g., &quot;342 orders, 89 products, 45 customers&quot;)</td>
+</tr>
+<tr>
+<td><strong>Actions</strong></td>
+<td>Download or Restore buttons</td>
+</tr>
+</tbody>
+</table>
+<p>Up to <strong>7 regular backups</strong> are kept (oldest are automatically removed). Pre-restore snapshots are kept until manually removed.</p>
+<hr />
+<h2>Downloading a Backup</h2>
+<p>Click the <strong>Download</strong> button on any backup row to save the <code>.json.gz</code> file to your computer. Keep downloaded backups in a safe location as an additional off-site copy.</p>
+<hr />
+<h2>Restoring from a Backup</h2>
+<blockquote>
+<p><strong>Note:</strong>
+Restoring a backup <strong>replaces all current data</strong> with the backup contents. This action cannot be undone (though a pre-restore snapshot is saved automatically).</p>
+</blockquote>
+<h3>Restore from History</h3>
+<ol>
+<li>Click <strong>Restore</strong> on the desired backup row</li>
+<li>Review the confirmation dialog (shows backup date and contents summary)</li>
+<li>Click <strong>Yes, Restore</strong></li>
+<li>Wait for the restore to complete</li>
+<li>Refresh your browser when prompted</li>
+</ol>
+<h3>Restore from File</h3>
+<p>If you have a previously downloaded <code>.json.gz</code> backup file:</p>
+<ol>
+<li>Scroll to <strong>Restore from File</strong></li>
+<li>Click <strong>Choose File</strong> and select your <code>.json.gz</code> backup</li>
+<li>Click <strong>Restore from File</strong></li>
+<li>Confirm in the dialog</li>
+<li>Refresh your browser when prompted</li>
+</ol>
+<p>In both cases, a <strong>pre-restore snapshot</strong> of your current data is created automatically before the restore begins, so you can roll back if needed.</p>
+<hr />
+<h2>Best Practices</h2>
+<ul>
+<li>Verify the health indicator is green each morning</li>
+<li>Download a backup before any major data changes</li>
+<li>Keep at least one recent backup downloaded to an external location (USB drive or cloud storage)</li>
+<li>After restoring, verify key data (recent orders, customer records, inventory levels) to confirm the restore was successful</li>
+</ul>
+<hr />
+<h3>How do I process a refund?</h3>
+<p>Go to <strong>Orders</strong> → find the completed order → click <strong>Refund</strong>. Enter the refund amount (full or partial) and a reason. The refund is recorded and reflected in reports.</p>
+<h3>What do I do about a till variance?</h3>
+<p>At the end of your shift, enter the actual cash count during shift close. The system compares Expected vs Actual and records the variance (overage or shortage). Report significant variances to your manager.</p>
+<h3>How do I void a paid order?</h3>
+<p>Go to <strong>Orders</strong> → find the order → click <strong>Void Order</strong>. Only Admins and Executives can void. Enter a reason. The void is permanent and logged in the audit trail.</p>
+<h3>How do I hide a sold-out product?</h3>
+<p>Go to <strong>Settings → Products</strong> → find the product → toggle <strong>Active</strong> off. The product disappears from the POS grid but remains in order history.</p>
+<h3>How do I add a new staff member?</h3>
+<p>Go to <strong>Settings → Users → New User</strong>. Enter name, email, role, and PIN (4-8 digits). They can log in immediately.</p>
+<h3>How do I reset a staff member's PIN?</h3>
+<p>Go to <strong>Settings → Users</strong> → click the user → change the PIN field → Save.</p>
+<h3>How do I view past sales?</h3>
+<p>Go to <strong>Reports → Sales Report</strong> → use the date picker to select any past period. Filter by department, payment method, or cashier.</p>
+<h3>How do I print the End of Day summary?</h3>
+<p>Go to <strong>Reports → End of Day</strong> → select the date → click <strong>Print</strong>. You can print any past day's summary.</p>
+<h3>How can I find which cashier handled a specific order?</h3>
+<p>Go to <strong>Orders</strong> → open the order → the &quot;Served by&quot; field shows which cashier processed it.</p>
+<h3>How do I check a gift card balance?</h3>
+<p>Go to <strong>Gift Cards</strong> → search by the gift card code. The card shows original balance, current balance, and full transaction history.</p>
+<h3>Why isn't a customer earning loyalty points?</h3>
+<p>Go to <strong>Loyalty Program</strong> → search for the customer → check their points history. Ensure the customer was linked to the order before checkout (Add Customer in the cart). Points only accrue on completed orders.</p>
+<h3>How do I change a product price?</h3>
+<p>Go to <strong>Settings → Products</strong> → click the product → update the price → Save. The new price takes effect immediately on the POS.</p>
+<h3>How can I see who opened or closed the cash drawer?</h3>
+<p>Go to <strong>Cash Control → Shift History</strong> for shift opens/closes. For no-sale drawer openings, check the <strong>Audit Log</strong> (filter by &quot;no-sale&quot;).</p>
+<h3>How do I see a breakdown of expenses by supplier?</h3>
+<p>Go to <strong>Expenses</strong> → click a supplier card at the top to filter all expenses from that supplier. Or click a vendor badge in the table to open the Vendor Detail page with charts and analytics.</p>
+<h3>The POS is not loading — what should I do?</h3>
+<ol>
+<li>Press F5 to refresh the browser</li>
+<li>Check your internet connection</li>
+<li>Try a different browser (Chrome recommended)</li>
+<li>If using the desktop app, check the sync indicator</li>
+<li>Contact KareTech Solutions if the issue persists</li>
+</ol>
+<h3>Can I use the system on a tablet or phone?</h3>
+<p>Yes. The interface is responsive and works on screens 10 inches and larger. For the best experience on a dedicated terminal, use the desktop app or a full browser on a laptop/desktop.</p>
+<h3>What is the Ctrl+K shortcut?</h3>
+<p>Ctrl+K opens the <strong>Command Palette</strong> — a quick search that lets you jump to any page in the system instantly. Type &quot;Orders&quot;, &quot;Inventory&quot;, &quot;Reports&quot;, etc.</p>
+<h3>I entered my PIN wrong too many times. What now?</h3>
+<p>After 5 failed PIN attempts, there is a 60-second lockout per IP. Wait 60 seconds and try again. Alternatively, use email login (managers only). If you have forgotten your PIN, ask a manager to reset it in Settings → Users.</p>
+<h3>An SMS notification shows &quot;Failed&quot; — what happened?</h3>
+<p>Go to <strong>Notifications → Log</strong> tab → search for the phone number. Common causes: phone number not in international format, daily sending limit reached, Twilio account suspended, or carrier blocking. Verify the phone format starts with +592 for Guyana.</p>
+<h3>How do I connect the POS to my accounting software?</h3>
+<p>Go to <strong>System → Webhooks</strong> → add an endpoint with the URL from your accounting platform. Select the events to send (order completed, payment recorded, etc.). Contact KareTech Solutions for custom integration setup.</p>
+<h3>How do I set my default startup page?</h3>
+<p>Go to <strong>Settings → My Workspace</strong> → select your preferred landing page from the dropdown (Dashboard, New Sale, Orders, Kitchen Display, etc.).</p>
+<h3>How do I display the menu on a TV?</h3>
+<p>Navigate to <strong>pos.karetechsolutions.com/menu-board</strong> on a browser connected to your TV → click the fullscreen button. The menu refreshes automatically.</p>
+<h3>How do I share the online ordering link?</h3>
+<p>Your online ordering page is at <strong>pos.karetechsolutions.com/order</strong>. Share this link via WhatsApp, Facebook, or print it as a QR code for in-store display.</p>
+<hr />
+<h2>New Features FAQ</h2>
+<h3>How do I create a recurring invoice?</h3>
+<p>Go to <strong>Finance → Recurring Templates → New Template</strong>. Choose type &quot;Invoice&quot;, fill in the customer and line items, set the frequency (weekly, monthly, etc.), and set the next run date. Click <strong>Generate Next</strong> each cycle to create the actual invoice from the template.</p>
+<h3>How do I assign a price list to a customer?</h3>
+<p>Go to <strong>Customers</strong> → open the customer profile → select a price list in the <strong>Price List</strong> field → Save. The customer will automatically receive their custom prices at the POS. See <a href="/docs/pricelists">Price Lists</a>.</p>
+<h3>What are combo products and how do they work?</h3>
+<p>Combo products bundle multiple items at a package price (e.g., &quot;Lunch Deal: Main + Side + Drink&quot;). Create one in <strong>Settings → Products</strong> by adding components. The POS shows it as a single item at the combo price, while production tracking splits it into individual components for the kitchen.</p>
+<h3>How do I set up receipt printers?</h3>
+<p>Go to <strong>Settings → Printers → New Printer</strong>. Enter the printer name, IP address, and paper width. Then set up <strong>Print Routes</strong> to control which departments print to which printer. See <a href="/docs/printers">Printers</a> for the full guide.</p>
+<h3>Can I use the system offline?</h3>
+<p>Yes, with the <strong>desktop app</strong> (Tauri). It runs as a standalone Windows application and continues taking cash orders when internet drops. Transactions sync automatically when connectivity returns. See <a href="/docs/desktop-app">Desktop App</a>.</p>
+<h3>How do I generate a customer statement?</h3>
+<p>Go to <strong>Finance → Customer Statements</strong> → select the customer → set a date range. The statement shows all invoices, payments, and credit notes with a running balance. Click <strong>Print Statement</strong> for a PDF.</p>
+<h3>How do I back up my data?</h3>
+<p>Go to <strong>System → Backup</strong>. The system backs up automatically every night at midnight. You can also click <strong>Backup Now</strong> for an immediate snapshot. Download any backup as a <code>.json.gz</code> file for off-site storage. See <a href="/docs/backup">Backup &amp; Restore</a>.</p>
+<p><strong>Q: How do I create a recurring invoice?</strong></p>
+<p>Go to <strong>Finance → Recurring Templates → New Template</strong>. Choose &quot;Invoice&quot; as the type, fill in the customer and line items, then set the frequency (weekly, monthly, quarterly, etc.). Click <strong>Generate Next</strong> each time you need to create the next invoice from the template.</p>
+<hr />
+<p><strong>Q: How do I give a customer special pricing (wholesale, VIP)?</strong></p>
+<p>Go to <strong>Price Lists → New Price List</strong>, add products with custom prices, then assign the price list to the customer in their profile. Whenever that customer is linked to an order at the POS, their special prices apply automatically.</p>
+<hr />
+<p><strong>Q: What are combo products and how do they work?</strong></p>
+<p>Combo products are menu items made of multiple components (e.g., &quot;Fried Rice &amp; Chicken Meal&quot; = rice + chicken + drink). They sell as one item at one price, but the kitchen checkoff board splits them into individual components for preparation tracking.</p>
+<hr />
+<p><strong>Q: How do I set up receipt printers?</strong></p>
+<p>Go to <strong>Settings → Printers → New Printer</strong>. Enter the printer's name, IP address, and paper width. Then set up print routes to direct different departments (meals, beverages, etc.) to specific printers. See <a href="/docs/printers">Printers</a> for the full guide.</p>
+<hr />
+<p><strong>Q: Can I use the system offline?</strong></p>
+<p>Yes. The desktop app (Tauri) supports offline mode. You can continue taking cash orders when the internet is down. Transactions sync automatically when connectivity returns. See <a href="/docs/desktop-app">Desktop App</a> for details.</p>
+<hr />
+<p><strong>Q: How do I generate a customer statement?</strong></p>
+<p>Go to <strong>Finance → Customer Statements</strong>, select the customer from the dropdown, set the date range, and the statement loads automatically. Click <strong>Print Statement</strong> for a PDF version.</p>
+<hr />
+<p><strong>Q: How do I back up my data?</strong></p>
+<p>Go to <strong>System → Backup</strong>. Backups run automatically every night at midnight. You can also click <strong>Backup Now</strong> for a manual backup, and download any backup to your computer. See <a href="/docs/backup">Backup</a> for the full guide.</p>
+<hr />
+<p><strong>Q: How do I make a reservation?</strong></p>
+<p>Go to <strong>Reservations → New Reservation</strong>. Enter the customer name, phone, date, time, party size, and any special notes. See <a href="/docs/reservations">Reservations</a> for the full guide.</p>
+<hr />
+
+<footer style="text-align:center; margin-top:64px; padding-top:16px; border-top:1px solid #e2e8f0; color:#999; font-size:0.85em;">
+Bettencourt POS User Manual — April 2026 — KareTech Solutions
+</footer>
+</body>
+</html>
