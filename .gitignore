@@ -61,3 +61,7 @@ apps/desktop/src-tauri/icons/*.ico
 apps/desktop/src-tauri/icons/*.icns
 # Claude Code worktrees
 .claude/worktrees/
+
+# Generated PDF build artifacts
+docs/*.html
+docs/user-manual-combined.md
