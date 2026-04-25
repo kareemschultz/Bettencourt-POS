@@ -10,8 +10,8 @@
 
 Bettencourt POS is a cloud-based point-of-sale and business management system purpose-built for Bettencourt Foods Inc. and the Home Style restaurant brand. It is a comprehensive system covering daily sales operations, kitchen management, inventory control, financial accounting, customer loyalty, and reporting.
 
-**System URL:** [pos.karetechsolutions.com](https://pos.karetechsolutions.com)
-**User Manual:** [pos.karetechsolutions.com/manual/](https://pos.karetechsolutions.com/manual/)
+**System URL:** [pos.bettencourtgy.com](https://pos.bettencourtgy.com)
+**User Manual:** [pos.bettencourtgy.com/manual/](https://pos.bettencourtgy.com/manual/)
 **Technology:** React, Hono.js, PostgreSQL, hosted on KareTech managed infrastructure
 
 ---
@@ -157,7 +157,7 @@ Administrators manage all user accounts at **Settings → Users**:
 | Item | Details |
 |------|---------|
 | **Hosting** | KareTech Solutions managed infrastructure (Hetzner Cloud, Germany) |
-| **Domain** | pos.karetechsolutions.com (SSL encrypted) |
+| **Domain** | pos.bettencourtgy.com (SSL encrypted) |
 | **Database** | PostgreSQL (managed by KareTech) |
 | **Backups** | Automated nightly backups, retained for 7 days, plus manual backup capability |
 | **Uptime** | Monitored by KareTech Solutions |
@@ -201,8 +201,8 @@ All infrastructure is managed by KareTech Solutions. No server access or technic
 
 | Resource | Location |
 |----------|----------|
-| **User Manual** | [pos.karetechsolutions.com/manual/](https://pos.karetechsolutions.com/manual/) |
-| **FAQ** | [pos.karetechsolutions.com/manual/docs/faq](https://pos.karetechsolutions.com/manual/docs/faq) |
+| **User Manual** | [pos.bettencourtgy.com/manual/](https://pos.bettencourtgy.com/manual/) |
+| **FAQ** | [pos.bettencourtgy.com/manual/docs/faq](https://pos.bettencourtgy.com/manual/docs/faq) |
 | **Role-specific guides** | Each section of the manual is tagged by role |
 | **On-site training** | Available from KareTech Solutions on request |
 | **Remote training** | Available via video call |
