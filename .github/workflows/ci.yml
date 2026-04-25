@@ -97,7 +97,7 @@ jobs:
 
       - name: Verify public FQDN health
         env:
-          PUBLIC_HEALTH_URL: https://pos.karetechsolutions.com/health
+          PUBLIC_HEALTH_URL: https://pos.bettencourtgy.com/health
         run: |
           echo "Checking public endpoint: $PUBLIC_HEALTH_URL"
           for i in $(seq 1 12); do
