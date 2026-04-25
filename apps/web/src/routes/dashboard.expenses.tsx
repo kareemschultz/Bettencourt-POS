@@ -1931,9 +1931,9 @@ export default function ExpensesPage() {
 									</Button>
 								</PopoverTrigger>
 								<PopoverContent
-								className="w-[--radix-popover-trigger-width] p-0"
-								onWheel={(e) => e.stopPropagation()}
-							>
+									className="w-[--radix-popover-trigger-width] p-0"
+									onWheel={(e) => e.stopPropagation()}
+								>
 									<Command>
 										<div className="flex items-center border-border border-b px-3">
 											<input

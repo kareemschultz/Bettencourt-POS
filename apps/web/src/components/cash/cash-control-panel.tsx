@@ -560,7 +560,7 @@ export function CashControlPanel({
 													onChange={(e) => {
 														const qty = Math.max(
 															0,
-															Number.parseInt(e.target.value) || 0,
+															Number.parseInt(e.target.value, 10) || 0,
 														);
 														setDenomCounts((prev) => ({
 															...prev,

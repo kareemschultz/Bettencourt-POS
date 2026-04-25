@@ -203,7 +203,6 @@ export default function OnlineOrderPage() {
 		deliveryAddress,
 		cart,
 		placeOrderMutation,
-		tableId,
 		tableName,
 	]);
 

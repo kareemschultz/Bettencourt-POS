@@ -125,9 +125,9 @@ export default function BackupPage() {
 		mutationFn: () => apiPost("/api/backups/trigger"),
 		onSuccess: (res) => {
 			if (res.error) {
-				toast.error("Backup failed: " + res.error);
+				toast.error(`Backup failed: ${res.error}`);
 			} else {
-				toast.success("Backup created: " + res.filename);
+				toast.success(`Backup created: ${res.filename}`);
 				queryClient.invalidateQueries({ queryKey: ["backups"] });
 			}
 		},
@@ -153,7 +153,7 @@ export default function BackupPage() {
 		},
 		onSuccess: (res) => {
 			if (res.error) {
-				toast.error("Restore failed: " + res.error);
+				toast.error(`Restore failed: ${res.error}`);
 			} else {
 				toast.success("Restore complete — data restored. Please refresh.");
 				queryClient.invalidateQueries({ queryKey: ["backups"] });
@@ -174,7 +174,7 @@ export default function BackupPage() {
 		},
 		onSuccess: (res) => {
 			if (res.error) {
-				toast.error("Restore failed: " + res.error);
+				toast.error(`Restore failed: ${res.error}`);
 			} else {
 				toast.success(
 					"Restore complete — data restored from file. Please refresh.",

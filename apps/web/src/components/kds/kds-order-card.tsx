@@ -41,7 +41,7 @@ function groupByCourse(items: KdsItem[]) {
 	for (const item of items) {
 		const course = item.courseNumber ?? 1;
 		if (!groups.has(course)) groups.set(course, []);
-		groups.get(course)!.push(item);
+		groups.get(course)?.push(item);
 	}
 	return Array.from(groups.entries()).sort(([a], [b]) => a - b);
 }

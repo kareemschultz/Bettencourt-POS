@@ -4,7 +4,6 @@ import {
 	Banknote,
 	Clock,
 	CreditCard,
-	Download,
 	ExternalLink,
 	Filter,
 	MapPin,
@@ -1081,8 +1080,8 @@ export function OrdersTable({
 				orderId={viewingOrderId}
 				open={!!viewingOrderId}
 				onClose={() => setViewingOrderId(null)}
-				onVoid={(id) => setViewingOrderId(null)}
-				onRefund={(id) => setViewingOrderId(null)}
+				onVoid={(_id) => setViewingOrderId(null)}
+				onRefund={(_id) => setViewingOrderId(null)}
 				canVoid={canVoid}
 				userId={userId}
 			/>

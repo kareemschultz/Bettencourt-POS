@@ -93,7 +93,7 @@ export function useWebSocket({
 				socketRef.current = null;
 			}
 		};
-	}, [channelKey, enabled, maxBackoffMs, stableChannels]);
+	}, [enabled, maxBackoffMs, stableChannels]);
 
 	return {
 		status,

@@ -338,7 +338,7 @@ app.get("/uploads/*", async (c) => {
 	const filePath = resolve(
 		join(env.UPLOADS_DIR, reqPath.replace(/^\/uploads/, "")),
 	);
-	if (!filePath.startsWith(uploadsBase + "/") && filePath !== uploadsBase) {
+	if (!filePath.startsWith(`${uploadsBase}/`) && filePath !== uploadsBase) {
 		return c.json({ error: "Not found" }, 404);
 	}
 	try {
