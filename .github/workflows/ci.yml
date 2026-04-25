@@ -83,8 +83,8 @@ jobs:
         run: |
           echo "Waiting for server to be healthy..."
           for i in $(seq 1 12); do
-            status=$(docker inspect --format='{{.State.Status}}' kt-bettencourt-pos 2>/dev/null || echo "not-found")
-            if [ "$status" = "running" ] && docker logs kt-bettencourt-pos 2>&1 | grep -q "Started server"; then
+            status=$(docker inspect --format='{{.State.Status}}' bettencourt-pos 2>/dev/null || echo "not-found")
+            if [ "$status" = "running" ] && docker logs bettencourt-pos 2>&1 | grep -q "Started server"; then
               echo "Health check passed on attempt $i"
               exit 0
             fi

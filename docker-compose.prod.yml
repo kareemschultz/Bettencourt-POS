@@ -3,7 +3,7 @@ name: bettencourt-pos
 services:
   app:
     build: .
-    container_name: kt-bettencourt-pos
+    container_name: bettencourt-pos
     restart: unless-stopped
     environment:
       NODE_ENV: production
