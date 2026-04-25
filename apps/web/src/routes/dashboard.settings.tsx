@@ -3302,7 +3302,7 @@ function DocumentSettingsTab() {
 	useEffect(() => {
 		if (data && !loaded) {
 			setForm({
-				defaultTaxRate: String(data.defaultTaxRate ?? "16.5"),
+				defaultTaxRate: String(data.defaultTaxRate ?? "14"),
 				defaultTaxMode: data.defaultTaxMode ?? "invoice",
 				defaultPaymentTerms: data.defaultPaymentTerms ?? "due_on_receipt",
 				defaultDiscountType: data.defaultDiscountType ?? "percent",

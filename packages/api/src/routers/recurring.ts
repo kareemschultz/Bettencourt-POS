@@ -547,7 +547,7 @@ const generateNext = permissionProcedure("invoices.create")
 							taxMode: ((data.taxMode as string | undefined) ?? "invoice") as
 								| "invoice"
 								| "line",
-							taxRate: (data.taxRate as string | undefined) ?? "16.5",
+							taxRate: (data.taxRate as string | undefined) ?? "14",
 							paymentTerms:
 								(data.paymentTerms as string | undefined) ?? "due_on_receipt",
 							notes: (data.notes as string | null) ?? null,

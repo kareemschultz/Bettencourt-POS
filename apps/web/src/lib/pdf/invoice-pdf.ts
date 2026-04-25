@@ -239,6 +239,12 @@ function buildInvoiceHtml(
 		invoice.agencyName && invoice.departmentDetails
 			? escHtml(invoice.departmentDetails).replace(/\n/g, "<br>")
 			: null,
+		invoice.agencyName && invoice.customerName
+			? escHtml(invoice.customerName)
+			: null,
+		invoice.agencyName && invoice.contactPersonName
+			? `Order Placed By: ${escHtml(invoice.contactPersonName)}`
+			: null,
 		!invoice.agencyName && invoice.contactPersonName
 			? `${escHtml(invoice.contactPersonName)}${invoice.contactPersonPosition ? `, ${escHtml(invoice.contactPersonPosition)}` : ""}`
 			: null,

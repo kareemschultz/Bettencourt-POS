@@ -116,7 +116,7 @@ const emptyCNForm: CNForm = {
 	department: "",
 };
 
-const TAX_RATE = 16.5;
+const TAX_RATE = 14;
 const CN_STATUS_FILTERS = [
 	"All",
 	"Draft",

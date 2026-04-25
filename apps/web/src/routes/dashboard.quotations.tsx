@@ -804,6 +804,38 @@ export default function QuotationsPage() {
 											{selectedQuotation.agencyName}
 										</p>
 									)}
+									{selectedQuotation.agencyName &&
+										(
+											selectedQuotation as unknown as {
+												division?: string | null;
+											}
+										).division && (
+											<p className="text-muted-foreground text-xs">
+												{
+													(
+														selectedQuotation as unknown as {
+															division?: string | null;
+														}
+													).division
+												}
+											</p>
+										)}
+									{selectedQuotation.agencyName &&
+										(
+											selectedQuotation as unknown as {
+												departmentDetails?: string | null;
+											}
+										).departmentDetails && (
+											<p className="whitespace-pre-line text-muted-foreground text-xs">
+												{
+													(
+														selectedQuotation as unknown as {
+															departmentDetails?: string | null;
+														}
+													).departmentDetails
+												}
+											</p>
+										)}
 									{selectedQuotation.customerAddress && (
 										<p className="text-muted-foreground">
 											{selectedQuotation.customerAddress}

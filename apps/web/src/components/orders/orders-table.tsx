@@ -215,7 +215,7 @@ ${data.notes ? `<p style="background:#fefce8;border:1px solid #fde047;border-rad
 <table class="totals">
   <tr><td style="color:#666">Subtotal</td><td style="text-align:right">${fmt(data.subtotal)}</td></tr>
   ${Number(data.discountTotal ?? 0) > 0 ? `<tr><td style="color:#dc2626">Discount</td><td style="text-align:right;color:#dc2626">-${fmt(data.discountTotal)}</td></tr>` : ""}
-  ${Number(data.taxTotal ?? 0) > 0 ? `<tr><td style="color:#666">Tax (16.5% VAT)</td><td style="text-align:right">${fmt(data.taxTotal)}</td></tr>` : ""}
+  ${Number(data.taxTotal ?? 0) > 0 ? `<tr><td style="color:#666">Tax (14% VAT)</td><td style="text-align:right">${fmt(data.taxTotal)}</td></tr>` : ""}
   <tr class="grand"><td>Total</td><td style="text-align:right">${fmt(data.total)}</td></tr>
 </table>
 ${data.status === "voided" ? `<div class="void-box"><strong style="color:#dc2626">Order Voided</strong><br>Reason: ${escapeHtml(data.voidReason) || "—"}<br>Authorized by: ${escapeHtml(data.voidAuthorizedByName) || "—"}</div>` : ""}
@@ -624,7 +624,7 @@ function OrderDetailDialog({
 												)}
 												{Number(data.taxTotal ?? 0) > 0 && (
 													<div className="flex justify-between text-muted-foreground text-xs">
-														<span>Tax (16.5% VAT)</span>
+														<span>Tax (14% VAT)</span>
 														<span className="font-mono">
 															{formatGYD(Number(data.taxTotal))}
 														</span>

@@ -1104,6 +1104,46 @@ export default function InvoicesPage() {
 													)}
 												</span>
 											)}
+											{(
+												selectedInvoice as unknown as {
+													division?: string | null;
+												}
+											).division && (
+												<span>
+													<span className="text-muted-foreground">
+														Division:{" "}
+													</span>
+													<span className="font-medium">
+														{
+															(
+																selectedInvoice as unknown as {
+																	division?: string;
+																}
+															).division
+														}
+													</span>
+												</span>
+											)}
+											{(
+												selectedInvoice as unknown as {
+													departmentDetails?: string | null;
+												}
+											).departmentDetails && (
+												<span className="whitespace-pre-line">
+													<span className="text-muted-foreground">
+														Details:{" "}
+													</span>
+													<span className="font-medium">
+														{
+															(
+																selectedInvoice as unknown as {
+																	departmentDetails?: string;
+																}
+															).departmentDetails
+														}
+													</span>
+												</span>
+											)}
 										</div>
 									)}
 									<Table>

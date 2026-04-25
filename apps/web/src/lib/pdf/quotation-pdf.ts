@@ -200,7 +200,7 @@ function buildQuotationHtml(
       <td>${renderRichDescription(item.description)}</td>
       <td class="right-td">${item.quantity}</td>
       <td class="right-td">${fmtGYD(item.unitPrice)}</td>
-      ${quot.taxMode === "line" ? `<td class="right-td">${item.taxExempt ? "Exempt" : `${quot.taxRate ?? "16.5"}%`}</td>` : ""}
+      ${quot.taxMode === "line" ? `<td class="right-td">${item.taxExempt ? "Exempt" : `${quot.taxRate ?? "14"}%`}</td>` : ""}
       <td class="right-td">${fmtGYD(item.total)}</td>
     </tr>`,
 		)
@@ -225,6 +225,10 @@ function buildQuotationHtml(
 		quot.agencyName && quot.division ? escHtml(quot.division) : null,
 		quot.agencyName && quot.departmentDetails
 			? escHtml(quot.departmentDetails).replace(/\n/g, "<br>")
+			: null,
+		quot.agencyName && quot.customerName ? escHtml(quot.customerName) : null,
+		quot.agencyName && quot.contactPersonName
+			? `Order Placed By: ${escHtml(quot.contactPersonName)}`
 			: null,
 		!quot.agencyName && quot.contactPersonName
 			? `${escHtml(quot.contactPersonName)}${quot.contactPersonPosition ? `, ${escHtml(quot.contactPersonPosition)}` : ""}`

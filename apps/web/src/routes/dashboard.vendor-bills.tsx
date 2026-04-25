@@ -140,7 +140,7 @@ const emptyPaymentForm: PaymentForm = {
 	notes: "",
 };
 
-const TAX_RATE = 16.5;
+const TAX_RATE = 14;
 const PAYMENT_METHODS = [
 	"Cash",
 	"Cheque",
