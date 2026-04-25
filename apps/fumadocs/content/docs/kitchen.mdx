@@ -1,31 +1,41 @@
 ---
 title: Kitchen Display & Tables
-description: Kitchen Display System (KDS) for managing tickets, and table layout for dine-in
+description: Kitchen display system for order management, table layout, and dine-in service
 ---
 
 ## Kitchen Display System (KDS)
 
 **Navigate to:** Dashboard → Kitchen Display
 
-The KDS is designed to be shown on a screen in the kitchen. It displays all active orders in real time.
+The Kitchen Display shows all active orders as tickets in real time.
 
-### How It Works
+### Layout
 
-- Each order appears as a **ticket** showing: order number, time received, items, and any special notes
-- Tickets are colour-coded by wait time:
-  - **Gray/White** — fresh order
-  - **Yellow** — waiting more than a few minutes
-  - **Red** — waiting too long
-- Click an individual item to mark it as **prepared** (it dims/checks off)
-- When all items on a ticket are prepared, click **Mark Ready** — the ticket turns green and the server is notified
+Each ticket shows: order number, time received, all items with special notes, and modifiers as grey chips.
 
-### Filtering by Department
+### Department Filter
 
-Use the department filter at the top to show only your station (e.g., "Meals", "Pastry").
+Use the filter tabs at the top to view only orders for a specific department (e.g., "Meals", "Pastry", "Beverages").
+
+### Colour Coding
+
+| Colour | Meaning |
+|--------|---------|
+| Grey/White | Fresh order |
+| Yellow | Waiting longer than expected |
+| Red | Too long — needs immediate attention |
+
+### Marking Items
+
+Click an item to mark it prepared (dims/checks off). When all items done, click **Mark Ready** — ticket turns green.
+
+### Course-Based Ordering
+
+For multi-course meals, items are grouped by course. Kitchen staff can fire items by course.
 
 ### Auto-Refresh
 
-The KDS automatically refreshes every few seconds. No manual refresh needed.
+The KDS refreshes automatically every few seconds.
 
 ---
 
@@ -33,15 +43,19 @@ The KDS automatically refreshes every few seconds. No manual refresh needed.
 
 **Navigate to:** Dashboard → Tables
 
-View and manage your dine-in table layout.
+### Table Status
 
-- See which tables are **occupied** and which are **free**
-- Assign orders to specific tables
-- Move an order from one table to another
-- Tables link to New Sale for dine-in orders
+| Status | Colour | Meaning |
+|--------|--------|---------|
+| Available | Green | Ready for seating |
+| Occupied | Red | Active order in progress |
+| Reserved | Blue | Booked for upcoming reservation |
 
-### Setting Up Tables
+### Managing Tables
 
-Tables are configured in **Settings → Tables**:
-1. Add tables with a name/number and seating capacity
-2. Tables then appear in the POS when order type is set to **Dine In**
+- Assign orders to tables when creating Dine In orders
+- Move orders between tables
+- Clear tables after service
+- Configure tables in Settings → Tables
+
+See [Floor Plans & Table Layout](/docs/floor-plan) for visual table management.

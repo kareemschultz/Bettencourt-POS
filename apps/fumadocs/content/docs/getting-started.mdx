@@ -1,94 +1,64 @@
 ---
 title: Getting Started
-description: How to log in, navigate the dashboard, and understand your role
+description: Logging in, navigating the dashboard, and understanding your role
 ---
 
 ## Logging In
 
-Go to **[pos.karetechsolutions.com](https://pos.karetechsolutions.com)** in any web browser.
+### PIN Login (All Staff)
 
-### PIN Login (Quick — for cashiers & kitchen staff)
+1. Open **pos.karetechsolutions.com** in your browser (or launch the desktop app)
+2. Enter your **PIN** (4–8 digits assigned by your manager)
+3. Click **Log In**
 
-1. On the login screen, enter your 4–8 digit PIN
-2. Tap **Login**
+<Callout type="warn">
+After **5 failed PIN attempts**, your IP is locked out for 60 seconds. Wait and try again, or use email login if you are a manager.
+</Callout>
 
-> If your PIN doesn't work, ask the manager to check it in **Settings → Users**.
+### Email Login (Managers & Administrators)
 
-### Email Login (For managers and administrators)
-
-1. Click **Sign in with Email** on the login screen
+1. Click **Sign in with Email**
 2. Enter your email address and password
-3. Click **Sign In**
-
-### Logging Out
-
-Click your name at the bottom of the left sidebar, then click **Sign Out**.
+3. Click **Log In**
 
 ---
 
-## Dashboard (Home)
+## Dashboard Overview
 
-After logging in, you see the **Dashboard** — your daily overview.
+After logging in, you land on your default start page (configurable in Settings → My Workspace).
 
-**What you see depends on your role:**
+### Sidebar Navigation
 
-- **Executive/Admin** — Today's revenue, order count, hourly sales chart, top sellers, payment breakdown, and quick-action cards
-- **Cashier** — Quick link to open the POS, recent orders, and time clock
-- **Kitchen/Checkoff** — Links to Kitchen Display and Production, active ticket count
+Organised into groups: Operations, Inventory, Finance, Insights, Customers, Sales, System. The sidebar only shows sections your role has access to.
 
-**Sidebar Navigation:**
-Use the left sidebar to move between sections. Navigation is organized into groups:
+### Command Palette (Ctrl+K)
 
-| Group | What's inside |
-|-------|---------------|
-| **Operations** | New Sale, Orders, Kitchen Display, Production, Time Clock |
-| **Inventory** | Stock, Stock Alerts, Waste & Shrinkage, Variance Report, Suppliers, Labels |
-| **Finance** | Cash Control, Expenses, Discounts, P&L, Sales Journal, Reconciliation, Currency Rates |
-| **Insights** | Reports, Analytics, EOD Report, Labor Cost, Profitability |
-| **Customers** | Customers, Loyalty Program, Gift Cards |
-| **Sales** | Quotations, Invoices |
-| **System** | Settings, Locations, Webhooks, Notifications, Audit Log |
-
-> The sidebar only shows groups and sections your role can access. Cashiers see far fewer options than managers.
-
-### Quick Navigation — Ctrl+K Command Palette
-
-Press **Ctrl+K** (or **Cmd+K** on Mac) anywhere in the dashboard to open the **command palette** — a fast search that jumps to any page instantly.
-
-1. Press **Ctrl+K** — palette opens with a search box
-2. Type any page name (e.g., "inventory", "cash", "kitchen")
-3. Arrow keys or click to highlight → **Enter** to navigate
-
-The palette only shows pages your role can access, same as the sidebar.
+Press **Ctrl+K** to open a quick search. Type any page name to jump there instantly.
 
 ---
 
 ## Staff Roles
 
-| Role | Access |
-|------|--------|
-| **Cashier** | New Sale, Orders, Time Clock |
-| **Kitchen / Checkoff** | Kitchen Display, Production, Time Clock |
-| **Warehouse Clerk** | Inventory, Stock Alerts, Purchase Orders, Suppliers, Labels |
-| **Accountant** | Reports, Analytics, Expenses, P&L, Labor Cost, Reconciliation |
-| **Admin / Manager** | All of the above + Settings, Cash Control, user management |
-| **Executive / Owner** | Full access — all pages and financial data |
-
-### Default Landing Page
-
-Each user can set their preferred startup page in **Settings → My Workspace**. The default is the Dashboard, but cashiers may prefer to start directly on New Sale, and kitchen staff on the Kitchen Display.
-
-### PIN Security
-
-After **5 failed PIN attempts** from the same device, the system locks out that IP address for 60 seconds. This is automatic and cannot be bypassed. If a legitimate user is locked out, they should wait 60 seconds or use email login instead.
+| Role | Access | Default Start Page |
+|------|--------|-------------------|
+| **Cashier** | POS, orders, time clock | New Sale |
+| **Kitchen / Checkoff** | KDS and production | Kitchen Display |
+| **Warehouse** | Inventory, purchase orders | Inventory |
+| **Accountant** | Reports, expenses, invoices | Finance Dashboard |
+| **Admin / Manager** | All above + settings, products, users | Dashboard |
+| **Executive / Owner** | Full unrestricted access | Dashboard |
+| **Custom Roles** | Tailored permissions | As configured |
 
 ---
 
-## Sync & Offline Status
+## Desktop App
 
-A small indicator at the top of the sidebar shows connection status:
-- **Green dot** — connected and synced
-- **Yellow dot** — syncing in progress
-- **Red dot** — connection lost (offline mode)
+For dedicated terminals or intermittent internet, the **desktop app** provides offline capability. See [Desktop App](/docs/desktop-app).
 
-When offline, the system continues operating with locally cached data. Orders placed offline are synced automatically when the connection is restored.
+---
+
+## Sync Status Indicator
+
+- **Green** — fully connected
+- **Yellow** — connection intermittent
+- **Red** — offline (desktop app only)

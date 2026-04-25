@@ -1,0 +1,94 @@
+---
+title: Backup & Restore
+description: Manage database backups, download snapshots, and restore data when needed
+---
+
+**Navigate to:** Dashboard → System → Backup
+
+> Backup management requires **Admin** or **Executive** role.
+
+Bettencourt POS automatically backs up your data every night at midnight (Guyana time). You can also create manual backups at any time and restore from any saved snapshot.
+
+---
+
+## Backup Status
+
+The status card at the top shows:
+
+- **Health indicator** (green/yellow/red dot):
+  - **Green** — last backup is less than 25 hours old (healthy)
+  - **Yellow** — last backup is 25 to 48 hours old (attention needed)
+  - **Red** — no backups or last backup is older than 48 hours (action required)
+- **Last backup timestamp**
+- **Next scheduled backup** — midnight tonight (Guyana time)
+
+---
+
+## Creating a Manual Backup
+
+1. Click **Backup Now**
+2. Wait for the backup to complete (usually a few seconds)
+3. The new backup appears in the history table
+
+<Callout type="info">
+Create a manual backup before making major changes such as bulk product updates, price changes, or data imports.
+</Callout>
+
+---
+
+## Backup History
+
+The history table shows all available backups with:
+
+| Column | Description |
+|--------|-------------|
+| **File** | Backup filename (with "pre-restore" badge if it was created automatically before a restore) |
+| **Created** | Date and time the backup was created |
+| **Size** | File size (e.g., 2.3 MB) |
+| **Contents** | Summary of records (e.g., "342 orders, 89 products, 45 customers") |
+| **Actions** | Download or Restore buttons |
+
+Up to **7 regular backups** are kept (oldest are automatically removed). Pre-restore snapshots are kept until manually removed.
+
+---
+
+## Downloading a Backup
+
+Click the **Download** button on any backup row to save the `.json.gz` file to your computer. Keep downloaded backups in a safe location as an additional off-site copy.
+
+---
+
+## Restoring from a Backup
+
+<Callout type="warn">
+Restoring a backup **replaces all current data** with the backup contents. This action cannot be undone (though a pre-restore snapshot is saved automatically).
+</Callout>
+
+### Restore from History
+
+1. Click **Restore** on the desired backup row
+2. Review the confirmation dialog (shows backup date and contents summary)
+3. Click **Yes, Restore**
+4. Wait for the restore to complete
+5. Refresh your browser when prompted
+
+### Restore from File
+
+If you have a previously downloaded `.json.gz` backup file:
+
+1. Scroll to **Restore from File**
+2. Click **Choose File** and select your `.json.gz` backup
+3. Click **Restore from File**
+4. Confirm in the dialog
+5. Refresh your browser when prompted
+
+In both cases, a **pre-restore snapshot** of your current data is created automatically before the restore begins, so you can roll back if needed.
+
+---
+
+## Best Practices
+
+- Verify the health indicator is green each morning
+- Download a backup before any major data changes
+- Keep at least one recent backup downloaded to an external location (USB drive or cloud storage)
+- After restoring, verify key data (recent orders, customer records, inventory levels) to confirm the restore was successful

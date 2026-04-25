@@ -15,10 +15,18 @@
 		"customers",
 		"commerce",
 		"settings",
+		"printers",
+		"pricelists",
+		"floor-plan",
 		"staff",
 		"webhooks",
 		"notifications",
 		"public-pages",
+		"reservations",
+		"delivery",
+		"desktop-app",
+		"api-reference",
+		"backup",
 		"faq"
 	]
 }

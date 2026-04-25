@@ -1,0 +1,77 @@
+---
+title: Reservations & Waitlist
+description: Manage table reservations, walk-in waitlists, and seating flow
+---
+
+**Navigate to:** Dashboard → Reservations / Dashboard → Waitlist
+
+> Reservations and waitlist features require **Admin** or **Executive** role.
+
+---
+
+## Reservations
+
+### Creating a Reservation
+
+1. Go to **Reservations**
+2. Click **New Reservation**
+3. Fill in the details:
+
+| Field | Description |
+|-------|-------------|
+| **Customer Name** | Guest name for the reservation |
+| **Phone** | Contact number |
+| **Date** | Reservation date |
+| **Time** | Expected arrival time |
+| **Party Size** | Number of guests |
+| **Table** | Optionally pre-assign a table |
+| **Notes** | Special requests (dietary needs, celebrations, etc.) |
+
+4. Click **Save**
+
+### Viewing Upcoming Reservations
+
+The reservation list shows all upcoming bookings sorted by date and time. Each entry displays the customer name, party size, time, assigned table (if any), and status.
+
+### Managing Reservations
+
+- **Edit** — change details (time, party size, table assignment)
+- **Cancel** — remove the reservation
+- **Seat** — when the guest arrives, seat them at their assigned table (or choose a different one)
+
+---
+
+## Waitlist
+
+The waitlist manages walk-in customers waiting for a table during busy periods.
+
+### Adding to the Waitlist
+
+1. Go to **Waitlist**
+2. Click **Add to Waitlist**
+3. Enter the customer's **Name**, **Phone**, **Party Size**, and any **Notes**
+4. Click **Save**
+
+The customer joins the queue with a timestamp. The list shows their position and estimated wait.
+
+### Seating from the Waitlist
+
+When a table becomes available:
+
+1. Find the next customer on the waitlist
+2. Click **Seat** to assign them a table
+3. The entry is removed from the waitlist
+
+### Position Lookup
+
+If a customer asks about their position, use the search field to find them by name or phone number. Their current position in the queue is displayed.
+
+---
+
+## Integration with Floor Plan
+
+Reservations and the waitlist work together with the floor plan (see [Floor Plans & Table Layout](/docs/floor-plan)):
+
+- Reserved tables show a "Reserved" badge on the floor plan
+- Occupied tables cannot be double-booked
+- Seating a reservation or waitlist entry automatically marks the table as occupied

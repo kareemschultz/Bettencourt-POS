@@ -1,0 +1,71 @@
+---
+title: Desktop App (Offline Terminal)
+description: Use Bettencourt POS as a standalone desktop application with offline capability
+---
+
+## What Is the Desktop App?
+
+The Bettencourt POS desktop app is a standalone Windows application built with Tauri. It provides the same interface as the browser version but runs as a native application with offline capability.
+
+---
+
+## When to Use the Desktop App
+
+| Scenario | Best Option |
+|----------|------------|
+| Reliable internet connection | Browser (Chrome recommended) |
+| Intermittent internet | Desktop app (queues transactions offline) |
+| Dedicated POS terminal (no browser distractions) | Desktop app |
+| Multiple tabs/services needed alongside POS | Browser |
+
+---
+
+## Installation
+
+1. Download the installer from the link provided by KareTech Solutions
+2. Run the installer on your Windows machine
+3. Follow the setup wizard
+4. The app will launch and connect to your POS server automatically
+
+<Callout type="info">
+The desktop app connects to the same server as the browser version. All data stays in sync — orders placed on the desktop app appear everywhere, and vice versa.
+</Callout>
+
+---
+
+## Offline Mode
+
+When internet connectivity drops:
+
+- The app switches to **offline mode** automatically
+- You can continue taking orders and processing cash payments
+- A yellow sync indicator appears in the top bar
+- Once connectivity returns, all queued transactions sync automatically
+
+**What works offline:**
+- Taking new orders (cash payment)
+- Viewing the product catalogue
+- Viewing recent order history (locally cached)
+
+**What requires connectivity:**
+- Card payment processing
+- Real-time inventory updates
+- Kitchen display synchronisation
+- Reports and analytics
+
+---
+
+## Updates
+
+The desktop app checks for updates on startup. When a new version is available, it downloads and installs automatically. No action is required from the user.
+
+---
+
+## Support
+
+If the desktop app fails to connect or behaves unexpectedly:
+
+1. Check your internet connection
+2. Restart the application
+3. If the issue persists, try the browser version at **pos.karetechsolutions.com** to confirm the server is accessible
+4. Contact KareTech Solutions for further assistance

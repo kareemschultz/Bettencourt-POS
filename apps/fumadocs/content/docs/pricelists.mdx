@@ -1,0 +1,78 @@
+---
+title: Price Lists & Dynamic Pricing
+description: Create customer-specific pricing tiers for wholesale, VIP, or staff purchases
+---
+
+**Navigate to:** Dashboard → Price Lists
+
+> Price list management requires **Admin** or **Executive** role.
+
+Price lists let you offer different prices to different customers. Use them for wholesale pricing, VIP discounts, staff pricing, or any scenario where certain customers pay differently from the standard menu price.
+
+---
+
+## How Pricing Works
+
+When a customer is linked to an order at the POS, the system checks for a price list assignment:
+
+1. **Customer has a price list** → uses the price list price for each product
+2. **Product not in the price list** → falls back to the standard product price
+3. **No customer linked** → always uses the standard product price
+
+---
+
+## Creating a Price List
+
+1. Click **New Price List**
+2. Enter a **Name** (e.g., "Wholesale", "VIP", "Staff Pricing")
+3. Click **Save**
+
+### Adding Products to a Price List
+
+1. Open the price list
+2. Click **Add Items**
+3. Search and select products
+4. Set the custom price for each product (in GYD)
+5. Click **Save**
+
+You can add as many or as few products as needed. Only products explicitly added get custom pricing; everything else uses the standard price.
+
+---
+
+## Assigning a Price List to a Customer
+
+1. Go to **Customers**
+2. Open a customer profile
+3. In the **Price List** field, select the desired price list
+4. Click **Save**
+
+Once assigned, the POS automatically applies that customer's prices whenever they are linked to an order.
+
+---
+
+## Removing a Price List Assignment
+
+1. Open the customer profile
+2. Clear the **Price List** field
+3. Click **Save**
+
+The customer will revert to standard pricing on their next order.
+
+---
+
+## Common Use Cases
+
+| Price List | Purpose |
+|-----------|---------|
+| Wholesale | Reduced prices for bulk buyers or business accounts |
+| VIP | Loyalty reward pricing for top-tier customers |
+| Staff | Discounted meals for employees |
+| Corporate | Negotiated rates for corporate catering clients |
+
+---
+
+## Tips
+
+- Price lists stack with loyalty discounts — a VIP customer with a price list AND loyalty points can benefit from both
+- Review price lists periodically to ensure they reflect current costs and margins
+- You can create multiple price lists but each customer can only be assigned one at a time

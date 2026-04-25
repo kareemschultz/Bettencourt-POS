@@ -22,6 +22,11 @@ The POS opens with an empty cart ready to go. If you have an order in progress, 
 - Category tabs run across the top of the product grid
 - Click a category tab to filter to those products
 - Use the **Search** bar above the grid to find a product by name
+- Products with a stacked layers icon are **combo products** (e.g., a meal deal with multiple components)
+
+### Menu Schedules
+
+Products may be restricted to certain times of day (e.g., breakfast items only show before 11:00 AM). Menu schedules are configured by managers in Settings → Menu Schedules. The POS automatically shows only products available for the current time window.
 
 ---
 
@@ -30,6 +35,12 @@ The POS opens with an empty cart ready to go. If you have an order in progress, 
 - Click any product button to add it once
 - Click again to add another unit
 - If a product has **modifiers** (e.g., spice level, size, add-ons), a popup appears — select your options and click **Add to Cart**
+
+### Combo Products
+
+Combo products bundle multiple items together (e.g., "Lunch Special: Main + Side + Drink"). When you add a combo:
+- The combo appears as a single line item in the cart at the combo price
+- Production tracking automatically splits the combo into its individual components for the kitchen
 
 ---
 
@@ -46,25 +57,34 @@ In the cart on the right:
 ## Applying a Discount
 
 1. With items in the cart, click **Discount**
-2. Choose from your saved discount presets, or enter a custom amount (percentage or fixed $)
+2. Choose from your saved discount presets (e.g., Staff Discount 10%, Senior 10%), or enter a custom amount (percentage or fixed GYD)
 3. The discount appears in the cart total
 
-> Discounts may require manager approval if they exceed the cashier's limit.
+> Discounts exceeding the cashier's limit require **supervisor approval** — a dialog prompts for a manager PIN.
 
 ---
 
 ## Supervisor Approval
 
-If an action requires manager authorization (e.g., a large discount), a dialog asks for a manager PIN or email login.
+Certain actions require manager authorization:
+- Discounts exceeding the cashier's configured limit
+- Price overrides on products
+- Voiding items after they have been sent to the kitchen
+
+When required, a dialog appears asking for a **Manager PIN** or email login. Once approved, the action proceeds and is logged in the audit trail.
 
 ---
 
 ## Selecting Order Type
 
 At the top of the cart, select the order type:
-- **Dine In** — for table orders
+- **Walk-in / Dine In** — for table orders (select a table from the dropdown or floor plan)
 - **Takeaway** — for counter pickup
-- **Delivery** — prompts for customer name, phone, and address
+- **Delivery** — prompts for customer name, phone, and delivery address
+
+### Table Assignment (Dine In)
+
+When order type is **Dine In**, select a table from the dropdown. The table status changes to "Occupied" on the floor plan. See [Floor Plans & Table Layout](/docs/floor-plan) for more on table management.
 
 ---
 
@@ -73,7 +93,7 @@ At the top of the cart, select the order type:
 1. Review the cart items and total
 2. Click **Charge**
 3. The payment dialog opens — choose method(s):
-   - **Cash** — enter the amount the customer hands you; the system shows the change due
+   - **Cash** — enter the amount the customer hands you; the system shows the change due. Quick-cash buttons for common GYD denominations: **$100, $500, $1,000, $2,000, $5,000**
    - **Card** — confirm the amount, process on your physical card terminal
    - **Gift Card** — enter the gift card number; it deducts from the card balance
    - **Split Payment** — click **Add Payment** to split across multiple methods
@@ -81,11 +101,15 @@ At the top of the cart, select the order type:
 
 The order is saved and a receipt preview appears.
 
+### VAT Display
+
+Guyana uses VAT-inclusive pricing. The cart shows "Incl. VAT: $X" as an informational line — it does not change the total. This can be toggled per terminal via the VAT display setting.
+
 ---
 
 ## Printing a Receipt
 
-After payment, click **Print** on the receipt preview.
+After payment, click **Print** on the receipt preview. Receipts print to the configured receipt printer (see [Printers](/docs/printers)).
 
 ---
 
@@ -116,4 +140,7 @@ Click **Hold** (at the bottom of the cart) to save the order without charging. R
 
 ## Linking a Customer to an Order
 
-Click **Add Customer** in the cart, search by name or phone, and select the customer. Their loyalty points update automatically when the order completes.
+Click **Add Customer** in the cart, search by name or phone, and select the customer. Benefits:
+- Loyalty points earned automatically when the order completes
+- If the customer has a **price list** assigned, their custom prices apply immediately
+- Delivery address is pulled from the customer profile for delivery orders

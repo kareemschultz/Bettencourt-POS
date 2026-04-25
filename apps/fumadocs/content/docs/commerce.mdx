@@ -12,24 +12,29 @@ Create professional price quotations for catering orders, events, or large corpo
 ### Creating a Quotation
 
 1. Click **New Quotation**
-2. Fill in customer name, phone, address, and **Valid Until** date
-3. (Optional) open **Agency / Organization** and set a **Department** tag for reporting
-4. Add line items with description, quantity, and unit price
-5. Adjust tax rate, tax mode, and discount in the settings bar
-6. Add Terms & Conditions and Notes (optional)
-7. Enter **Prepared By** (your name) — appears on the PDF
-8. Click **Create**
+2. Choose customer type: **Individual** or **Agency/Organization**
+3. Fill in customer name, phone, address, and **Valid Until** date
+4. (Optional) set **Agency Name**, **Contact Person**, and **Department** tag
+5. Add line items with description, quantity, and unit price
+6. Adjust tax rate, tax mode, and discount in the settings bar
+7. Add Terms & Conditions and Notes (optional — T&Cs pull from your default settings)
+8. Enter **Prepared By** (your name) — appears on the PDF
+9. Click **Create**
 
 ### Tax & Discount Settings (Form)
 
 | Field | Options | Description |
 |-------|---------|-------------|
 | Tax Rate | Any % | VAT percentage applied to all items |
-| Tax Mode | Whole invoice / Per line | Whether one rate applies to everything or each line item can be exempt |
+| Tax Mode | Whole invoice / Per line / VAT-inclusive | Whether one rate applies to everything, each line can be exempt, or prices already include VAT |
 | Discount Type | Percent / Fixed | Percentage discount or fixed GYD amount |
 | Discount Value | Number | The discount amount |
 
 The live **Totals** section shows Subtotal → Discount → VAT → **Total** as you type.
+
+<Callout type="info">
+For VAT-inclusive pricing (Guyana standard), set Tax Mode to **VAT-inclusive**. The system extracts the tax component from each price using the formula: price × rate ÷ (1 + rate). The total stays the same — the receipt just shows the embedded VAT amount.
+</Callout>
 
 ### Quotation Statuses
 
@@ -37,33 +42,54 @@ The live **Totals** section shows Subtotal → Discount → VAT → **Total** as
 |--------|-------------|
 | **Draft** | Created but not sent |
 | **Sent** | Marked as sent to customer |
-| **Accepted** | Customer has accepted |
+| **Accepted** | Customer has accepted the quotation |
 | **Rejected** | Customer declined |
 | **Expired** | Past the valid until date |
 | **Converted** | Turned into an invoice |
+| **Cancelled** | Soft-deleted / cancelled |
 
-### More Actions Menu (•••)
+### Workflow Actions
 
-Each quotation row includes a **More Actions** menu for common workflow actions:
+Each quotation row includes a **More Actions** menu (•••) for common workflow actions:
 
 - **Print / Save PDF** — opens a professional QUOTATION PDF in a new tab (ready to print or save)
 - **Edit** — modify the quotation
 - **Mark Sent** — moves status from Draft → Sent (only on drafts)
-- **Duplicate** — creates a new draft copy
+- **Accept** — marks the quotation as accepted by the customer
+- **Reject** — marks the quotation as declined
+- **Duplicate** — creates a new draft copy with a fresh quotation number
 - **Revise** — creates a numbered revision (e.g. `-R2`, `-R3`) linked to the original
-- **To Invoice** — converts to an invoice (available when Sent or Accepted)
+- **Convert to Invoice** — converts to an invoice (available when Sent or Accepted)
+- **Cancel** — soft-deletes the quotation
+
+### Revisions
+
+When you revise a quotation, the system creates a new draft linked to the original via `parentQuotationId`. Revision numbers increment automatically (QUO-0042-R2, QUO-0042-R3, etc.). The revision badge appears on the PDF header so the customer can see which version they are reviewing.
+
+### Quotation Expiry
+
+Quotations with a **Valid Until** date that has passed are considered expired. The PDF shows a clear "EXPIRED" message and the validity countdown reflects this. The status badge on the dashboard list also shows the expired state.
+
+### Scheduled Sending
+
+Set a **Scheduled Send** date when creating or editing a quotation. The system will flag the quotation for sending at the specified date and time.
 
 ### PDF Output
 
 The PDF includes:
-- Bettencourt's Food Inc. logo and company details
-- QUOTATION stamp badge with quotation number
-- Validity countdown ("Valid for X more days")
-- Itemized line table with quantities and prices
-- Subtotal, discount, VAT, and total breakdown
-- Terms & Conditions section (if set)
-- Signature blocks for Authorized By and Accepted By
-- "This is a quotation only — not a tax invoice" footer
+- Brand-aware logo and company details (Foods Inc. or Home Style)
+- QUOTATION stamp badge with quotation number and revision tag (if applicable)
+- Validity countdown ("Valid for X more days" or "EXPIRED")
+- Bill To section with customer name, agency, contact person, phone, and address
+- "Prepared by" attribution
+- Itemized line table with quantities, unit cost, and line totals
+- Tax column (when per-line tax mode is used)
+- Subtotal, discount (shown in red), VAT, and total breakdown in a highlighted box
+- Notes section (italic, red text)
+- Terms & Conditions section
+- Signature blocks for "Received By" and "Authorized By"
+- "This is a quotation only — not a tax invoice" footer disclaimer
+- **Ink Saver** toggle — switch the PDF to greyscale for lower printing costs
 
 ---
 
@@ -71,7 +97,7 @@ The PDF includes:
 
 **Navigate to:** Dashboard → Invoices
 
-Manage formal invoices for catering, corporate orders, or accounts receivable. Invoices support VAT, discounts, payment terms, and cheque tracking.
+Manage formal invoices for catering, corporate orders, or accounts receivable. Invoices support VAT, discounts, payment terms, cheque tracking, and full payment history.
 
 ### Creating an Invoice
 
@@ -83,12 +109,6 @@ Manage formal invoices for catering, corporate orders, or accounts receivable. I
 6. Adjust tax rate, discount, payment terms, and **Department**
 7. Add **Prepared By** name (optional)
 8. Click **Create**
-
-You can edit the invoice number later when editing an invoice.
-
-### Tax & Discount Settings
-
-Same as quotations — Tax Rate, Tax Mode, Discount Type/Value, and Payment Terms (Due on Receipt / Net 15 / Net 30 / Net 60).
 
 ### Aging Summary Cards
 
@@ -114,11 +134,28 @@ At the top of the page, four cards show:
 1. Click an invoice row to open the detail panel
 2. In the **Record Payment** card at the bottom, enter:
    - **Amount Paid** — partial or full payment
+   - **Payment Method** — Cash, Cheque, Bank Transfer, or Mobile Money
    - **Cheque Number** — optional
    - **Receipt Number** — optional
    - **Date Paid** — defaults to today
    - **Cheque Deposit Date** — if applicable
 3. Click **Record Payment**
+
+### Payment History & Reversals
+
+Each invoice has a collapsible **Payment History** section showing every payment recorded, including reversals. Payments are never deleted — a reversal creates a negative entry for a complete audit trail.
+
+### Unapplied Payments
+
+If a customer pays without specifying an invoice, record an **unapplied payment** from the customer's payment ledger. Later, allocate it to specific invoices as needed.
+
+### Creating a Credit Note from an Invoice
+
+On any paid or partially-paid invoice, click **Create Credit Note** to open the credit note form pre-filled with the customer's details.
+
+### Converting a Quotation to an Invoice
+
+From the Quotations page, click **Convert to Invoice** on any Sent or Accepted quotation. The system creates a new invoice pre-filled with the quotation's customer details, line items, tax settings, and discount. The original quotation status changes to "Converted" with a link to the generated invoice.
 
 ### More Actions Menu (•••)
 
@@ -126,6 +163,8 @@ At the top of the page, four cards show:
 - **Edit Invoice** — modify the invoice
 - **Mark as Sent** — moves Draft → Sent
 - **Duplicate** — creates a new draft copy of the invoice
+- **Copy Reminder** — copies a payment reminder message to clipboard
+- **Delete** — permission-gated
 
 ### PDF Output
 
@@ -134,23 +173,28 @@ The invoice PDF includes:
 - Bill To section with customer details
 - Itemized line table
 - Subtotal, discount, VAT breakdown, total, amount paid, and **Balance Due**
+- Payment history table (date, method, reference, amount) if payments have been recorded
 - Payment Instructions (bank name, account, reference) — if configured in Settings → Documents
 - Notes section
 - Footer with generation timestamp
 
-### Document Settings
+---
 
-Configure invoice and quotation defaults at **Settings → Documents**:
+## Document Settings
+
+**Navigate to:** Settings → Documents
+
+Configure invoice and quotation defaults:
 
 | Setting | Description |
 |---------|-------------|
 | Default Tax Rate | Pre-fills the tax rate on new documents |
-| Default Tax Mode | Whole invoice or per-line |
-| Default Payment Terms | Pre-fills payment terms |
+| Default Tax Mode | Whole invoice, per-line, or VAT-inclusive |
+| Default Payment Terms | Due on Receipt / Net 15 / Net 30 / Net 60 |
 | Default Discount Type | Percent or fixed |
 | Company TIN | Appears on PDFs |
 | Bank Name / Account / Branch | Payment instructions on invoice PDFs |
 | Payment Instructions | Free-text payment notes |
-| Default Quotation Terms | Pre-fills T&C on new quotations |
+| Default Quotation Terms | Pre-fills T&Cs on new quotations |
 | Invoice Footer Note | Custom footer text on invoice PDFs |
 | Quotation Footer Note | Custom footer text on quotation PDFs |

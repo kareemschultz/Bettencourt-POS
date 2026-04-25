@@ -1,6 +1,6 @@
 ---
 title: Settings
-description: Manage products, categories, modifiers, users, registers, tax rates, receipts, and locations
+description: Manage products, categories, modifiers, users, roles, registers, tax rates, receipts, printers, and locations
 ---
 
 **Navigate to:** Dashboard → Settings
@@ -21,24 +21,32 @@ Manage all products sold at the POS.
    - Price (GYD)
    - Department/Category
    - Tax rate
+   - Barcode (optional — for scanner input)
    - Modifier groups (if applicable)
+   - Recipe/components (for combo products)
 3. Click **Save**
 
 ### Editing a Product
 
-Click the product name → change any fields → click **Save**.
+Click the product name → change any fields → click **Save**. Price changes take effect immediately on the POS.
 
 ### Deactivating a Product
 
-Toggle the **Active** switch off. Inactive products are hidden from the POS grid but remain in order history.
+Toggle the **Active** switch off. Inactive products are hidden from the POS grid but remain in order history and reports.
+
+### Combo Products
+
+Combo products bundle multiple items at a package price:
+1. Create a new product
+2. In the **Components** section, add the individual products and quantities that make up the combo
+3. Set the combo price (typically less than buying components individually)
+4. The POS shows it as one item; production tracking splits it into components automatically
 
 ---
 
 ## Categories (Departments) Tab
 
 Organize products into departments (e.g., Chicken, Fish, Pastry, Beverages).
-
-### Adding a Category
 
 1. Click **New Category**
 2. Enter a name and sort order (controls order of tabs in the POS)
@@ -50,34 +58,25 @@ Organize products into departments (e.g., Chicken, Fish, Pastry, Beverages).
 
 Modifier groups let customers customize products (e.g., "Spice Level: Mild / Medium / Hot").
 
-### Creating a Modifier Group
-
 1. Click **New Group**
 2. Enter the group name
-3. Set:
-   - **Min selections** — 0 = optional
-   - **Max selections** — 1 = single choice, 3+ = multi-select
+3. Set **Min selections** (0 = optional) and **Max selections** (1 = single choice, 3+ = multi-select)
 4. Add modifier options (name + price)
 5. Click **Save**
 
-### Linking Modifiers to Products
-
-Open a product → find the Modifier Groups field → add the groups that apply.
+Link modifiers to products: open a product → find the Modifier Groups field → add the groups that apply.
 
 ---
 
 ## Users Tab
 
-Manage staff accounts.
-
 ### Adding a New User
 
 1. Click **New User**
 2. Enter: Name, Email, Role, PIN (4–8 digits)
-3. Click **Save**
-4. The user can log in immediately
+3. Click **Save** — user can log in immediately
 
-### Roles
+### Built-in Roles
 
 | Role | Access |
 |------|--------|
@@ -88,6 +87,14 @@ Manage staff accounts.
 | **Warehouse** | Inventory and purchase order access only |
 | **Accountant** | Reports and expenses access only |
 
+### Custom Roles
+
+For more granular control, create custom roles:
+1. Go to **Settings → Roles**
+2. Click **New Role**
+3. Name the role and select permissions from 30+ resource categories
+4. Save the role and assign it to users
+
 ### Resetting a PIN
 
 Click a user's name → change the PIN field → Save.
@@ -95,8 +102,6 @@ Click a user's name → change the PIN field → Save.
 ---
 
 ## Registers Tab
-
-Manage POS registers (terminals).
 
 1. Click **New Register**
 2. Enter a name (e.g., "Meals POS", "Pastry Counter")
@@ -107,8 +112,6 @@ Manage POS registers (terminals).
 
 ## Tax Rates Tab
 
-Define sales tax rates.
-
 1. Click **New Rate**
 2. Enter a name (e.g., "VAT 16%") and the rate percentage
 3. Set as default if it applies to most products
@@ -118,64 +121,58 @@ Define sales tax rates.
 
 ## Receipt Configuration Tab
 
-Customize what prints on customer receipts:
-- Business name
-- Tagline / slogan
-- Address lines
-- Phone number
-- Footer message (e.g., "Thank you for choosing Bettencourt's!")
-- Promotional message (printed at the bottom)
+Customize receipts: Business name, Tagline, Address, Phone, Footer message, Promotional message.
+
+---
+
+## Document Settings Tab
+
+Configure defaults for invoices and quotations. See [Quotations & Invoices → Document Settings](/docs/commerce) for the full list of options.
 
 ---
 
 ## Tables Tab
 
-Add and manage dine-in tables:
+Add and manage dine-in tables. See [Floor Plans & Table Layout](/docs/floor-plan) for visual table management.
 
-1. Add tables with a name/number and capacity
-2. Tables appear in the POS when order type is set to Dine In
+---
+
+## Currency & Exchange Rates
+
+Set exchange rates for USD, CAD, and other foreign currencies used for payments.
 
 ---
 
 ## Workspace Preferences
 
-**Navigate to:** Dashboard → Settings → My Workspace (or Settings → Users → select yourself)
-
-Each user can choose a **default landing page** — the first page they see after logging in.
-
-Available options: Dashboard, New Sale, Orders, Kitchen Display, Inventory, Reports, Cash Control, Invoices.
-
-The preference is saved per user and per device. Cashiers on a fixed register might set New Sale as their default; kitchen staff might prefer Kitchen Display.
+Each user can choose a **default landing page** in Settings → My Workspace.
 
 ---
 
 ## Locations
 
-**Navigate to:** Dashboard → Locations (under System)
+Manage store locations. Each location has its own registers and cash sessions.
 
-Manage your store locations. Bettencourt's currently operates from a single location, but the system supports multiple branches.
+---
 
-- View current location details (name, address)
-- Each location has its own registers and cash sessions
+## Printers
 
-> Contact KareTech Solutions to add a new location.
+Configure receipt printers and print routing. See [Receipt Printers & Print Routing](/docs/printers).
 
 ---
 
 ## Webhooks
 
-**Navigate to:** Dashboard → System → Webhooks
-
-Connect the POS to external systems (accounting software, Slack, Zapier, etc.) by sending automatic POST requests when events happen.
-
-See the full guide: [Webhooks](/docs/webhooks)
+See [Webhooks](/docs/webhooks).
 
 ---
 
 ## Notifications (SMS / WhatsApp)
 
-**Navigate to:** Dashboard → System → Notifications
+See [Notifications](/docs/notifications).
 
-Send automatic SMS or WhatsApp messages to customers when their order is ready, when they earn loyalty points, or when a refund is processed.
+---
 
-See the full guide: [Notifications](/docs/notifications)
+## Backup
+
+See [Backup & Restore](/docs/backup).

@@ -1,159 +1,98 @@
 ---
-title: FAQ
-description: Frequently asked questions for Bettencourt's POS staff
+title: Frequently Asked Questions
+description: Quick answers to the most common questions about Bettencourt POS
 ---
 
-## Frequently Asked Questions
+### How do I process a refund?
+Go to **Orders** → find the completed order → click **Refund**. Enter the refund amount and a reason.
 
-**Q: A customer wants a refund. How do I process it?**
+### What do I do about a till variance?
+At shift close, enter the actual cash count. The system compares Expected vs Actual and records the variance. Report significant variances to your manager.
 
-Go to **Orders** → find the order → click **Refund**. Enter the amount to refund and confirm. The refund is logged against the original payment method.
+### How do I void a paid order?
+Go to **Orders** → find the order → click **Void Order**. Only Admins and Executives can void. Enter a reason.
 
----
+### How do I hide a sold-out product?
+Go to **Settings → Products** → toggle **Active** off.
 
-**Q: The till is short (or over). What do I do?**
+### How do I add a new staff member?
+Go to **Settings → Users → New User**. Enter name, email, role, and PIN.
 
-When closing the shift, enter the actual cash count. The system records the variance. Report discrepancies to the manager. The Audit Log and no-sale event log can help explain what happened.
+### How do I reset a staff member's PIN?
+Go to **Settings → Users** → click the user → change the PIN field → Save.
 
----
+### How do I view past sales?
+Go to **Reports → Sales Report** → use the date picker to select any past period.
 
-**Q: How do I void an order that's already been paid?**
+### How do I print the End of Day summary?
+Go to **Reports → End of Day** → select the date → click **Print**.
 
-Go to **Orders** → open the order → click **Void Order** → confirm. Only managers can void completed orders.
+### How can I find which cashier handled an order?
+Go to **Orders** → open the order → the "Served by" field shows the cashier.
 
----
+### How do I check a gift card balance?
+Go to **Gift Cards** → search by the gift card code.
 
-**Q: A product is sold out. How do I hide it from the POS?**
+### Why isn't a customer earning loyalty points?
+Ensure the customer was linked to the order before checkout. Points only accrue on completed orders.
 
-Go to **Settings → Products** → find the product → toggle **Active** to off. It disappears from the POS grid immediately.
+### How do I change a product price?
+Go to **Settings → Products** → click the product → update the price → Save. Takes effect immediately.
 
----
+### How can I see who opened the cash drawer?
+Go to **Cash Control → Shift History** for shifts. Check the **Audit Log** for no-sale drawer openings.
 
-**Q: How do I add a new staff member?**
+### How do I see expenses by supplier?
+Go to **Expenses** → click a supplier card to filter, or click a vendor badge to open the Vendor Detail page.
 
-Go to **Settings → Users → New User**. Set their name, email, role, and PIN. They can log in immediately.
+### The POS is not loading — what should I do?
+1. Press F5 to refresh. 2. Check internet. 3. Try Chrome. 4. Contact KareTech Solutions.
 
----
+### Can I use the system on a tablet?
+Yes. Works on screens 10 inches and larger. Desktop app recommended for dedicated terminals.
 
-**Q: How do I reset a staff member's PIN?**
+### What is Ctrl+K?
+Opens the **Command Palette** — quick search to jump to any page.
 
-Go to **Settings → Users** → click the user's name → change the PIN → Save.
+### I entered my PIN wrong too many times
+Wait 60 seconds (5-attempt lockout). Or use email login (managers only).
 
----
+### An SMS notification shows "Failed"
+Go to **Notifications → Log** tab. Common causes: wrong phone format (needs +592), daily limit reached, or carrier blocking.
 
-**Q: How do I see yesterday's sales?**
+### How do I connect to accounting software?
+Go to **System → Webhooks** → add an endpoint. Contact KareTech for custom integration.
 
-Go to **Reports → Sales Report**. Use the date picker to select yesterday.
+### How do I set my default startup page?
+Go to **Settings → My Workspace** → select your preferred landing page.
 
----
+### How do I display the menu on a TV?
+Navigate to **pos.karetechsolutions.com/menu-board** → click fullscreen.
 
-**Q: How do I print the end-of-day summary?**
-
-Go to **End of Day** and click **Print**.
-
----
-
-**Q: How do I see which cashier processed a specific order?**
-
-Open the order in **Orders** — the "Served by" field shows the cashier's name.
-
----
-
-**Q: How do I track a gift card balance?**
-
-Go to **Gift Cards**, search by card code, and click it to see the current balance and transaction history.
-
----
-
-**Q: A customer says their loyalty points are wrong.**
-
-Go to **Loyalty Program**, find the customer, and click their name to see the full points history. Each transaction that earned or redeemed points is listed.
-
----
-
-**Q: How do I change a product's price?**
-
-Go to **Settings → Products** → click the product → change the price → Save. The new price takes effect in the POS immediately.
+### How do I share the online ordering link?
+Your link: **pos.karetechsolutions.com/order**. Share via WhatsApp or print as QR code.
 
 ---
 
-**Q: How do I see what staff member opened/closed the cash drawer?**
+## New Features FAQ
 
-Go to **Cash Control → Shift History** and click a shift to see who opened and closed it. For no-sale events, check the **Audit Log**.
+### How do I create a recurring invoice?
+Go to **Finance → Recurring Templates → New Template**. Set type, customer, items, frequency, and next run date.
 
----
+### How do I assign a price list to a customer?
+Go to **Customers** → open the profile → select a price list → Save. See [Price Lists](/docs/pricelists).
 
-**Q: How do I see the full expense breakdown for a specific supplier?**
+### What are combo products?
+Combo products bundle items at a package price. Create in **Settings → Products** by adding components. See [Settings](/docs/settings).
 
-Go to **Expenses** → click the supplier's summary card at the top of the page. The table below filters instantly to show only that supplier's entries.
+### How do I set up receipt printers?
+Go to **Settings → Printers → New Printer**. See [Printers](/docs/printers).
 
----
+### Can I use the system offline?
+Yes, with the **desktop app**. See [Desktop App](/docs/desktop-app).
 
-**Q: The POS isn't loading. What should I try?**
+### How do I generate a customer statement?
+Go to **Finance → Customer Statements** → select customer → set date range → **Print Statement**.
 
-1. Refresh the page (press F5 or Ctrl+R)
-2. Check your internet connection
-3. Try a different browser
-4. If nothing works, contact KareTech Solutions
-
----
-
-**Q: Can I use the POS on a tablet or phone?**
-
-Yes. The system is mobile-responsive and works on tablets. The New Sale screen is designed for 10" and larger screens for the best experience.
-
----
-
-**Q: Is there a faster way to navigate between sections?**
-
-Yes — press **Ctrl+K** (or **Cmd+K** on Mac) from anywhere in the dashboard. Start typing the page name and press **Enter** to jump to it instantly. Only sections your role can access are shown.
-
----
-
-**Q: My PIN is locked out. What do I do?**
-
-After 5 failed PIN attempts from the same device, the system blocks further attempts for 60 seconds. Wait 60 seconds and try again. If you have forgotten your PIN, a manager can reset it under **Settings → Users**.
-
----
-
-**Q: A customer didn't receive their SMS notification. How do I check?**
-
-Go to **System → Notifications → Log** tab and search for their phone number. The log shows whether the message was delivered, failed, or had an error. Common cause: a typo in the phone number.
-
----
-
-**Q: How do I connect the POS to QuickBooks or another system?**
-
-Go to **System → Webhooks** and add a new endpoint with the URL your integration service provides (e.g., a Zapier webhook URL). Select the events to forward (e.g., `order.completed`). Contact KareTech Solutions for help setting this up.
-
----
-
-**Q: How do I set my default startup page?**
-
-Go to **Settings → My Workspace** and choose your preferred landing page from the dropdown. Options include Dashboard, New Sale, Orders, Kitchen Display, and more. The setting is saved per user.
-
----
-
-**Q: How do I set up the menu board TV?**
-
-Open a browser on the TV, go to [pos.karetechsolutions.com/menu-board](https://pos.karetechsolutions.com/menu-board), and click the fullscreen button.
-
----
-
-**Q: Customers want to order online. Where do they go?**
-
-Send them to [pos.karetechsolutions.com/order](https://pos.karetechsolutions.com/order) — or add a link on your WhatsApp or Facebook page.
-
----
-
-## Getting Help
-
-**KareTech Solutions**
-- Developer: Kareem Schultz
-- Website: [karetechsolutions.com](https://karetechsolutions.com)
-- System URL: [pos.karetechsolutions.com](https://pos.karetechsolutions.com)
-
-**If something is wrong with the system:**
-1. Write down exactly what you were doing and what happened
-2. Note the date and time
-3. Contact Kareem with that information so he can investigate quickly
+### How do I back up my data?
+Go to **System → Backup**. Automatic nightly + on-demand. See [Backup](/docs/backup).

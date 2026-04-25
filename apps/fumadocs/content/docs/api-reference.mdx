@@ -1,0 +1,119 @@
+---
+title: API Reference (Developer)
+description: Technical reference for integrating with the Bettencourt POS API
+---
+
+<Callout type="info">
+This page is for developers integrating external systems with Bettencourt POS. For day-to-day usage, see the relevant feature pages in this manual.
+</Callout>
+
+---
+
+## Overview
+
+Bettencourt POS exposes an RPC-based API built on oRPC (OpenAPI-compatible Remote Procedure Call). All API calls go through a single endpoint with structured request/response payloads.
+
+**Base URL:** `https://pos.karetechsolutions.com`
+
+---
+
+## Authentication
+
+### PIN Login (Staff)
+
+```
+POST /api/auth/pin-login
+Content-Type: application/json
+
+{ "pin": "1234", "organizationId": "..." }
+```
+
+Returns a session cookie. Rate-limited to **5 failed attempts per IP** with a **60-second lockout**.
+
+### Email Login (Managers)
+
+Standard email/password authentication via the login page. Returns a session cookie used for subsequent API calls.
+
+All API requests must include the session cookie (`credentials: "include"` for fetch, or `Cookie` header).
+
+---
+
+## API Endpoint
+
+All business logic is accessed via:
+
+```
+POST /api/trpc/<router>.<procedure>
+Content-Type: application/json
+```
+
+### Major Router Groups
+
+| Router | Purpose | Key Procedures |
+|--------|---------|---------------|
+| **pos** | Point of sale operations | getProducts, checkout |
+| **orders** | Order management | list, getById, voidOrder, refund |
+| **cash** | Cash sessions | openSession, closeSession, createDrop, createPayout |
+| **products** | Product catalogue | list, create, update, delete |
+| **inventory** | Stock management | getStockLevels, getLedger, logWaste |
+| **invoices** | Accounts receivable | list, create, recordPayment, getPaymentHistory |
+| **quotations** | Proposals | list, create, convertToInvoice, revise |
+| **credit-notes** | Credit memos | create, applyToInvoice, void |
+| **vendor-bills** | Accounts payable | list, create, recordPayment |
+| **customers** | Customer database | list, search, create, getCustomerStatement |
+| **loyalty** | Loyalty program | earnPoints, redeem, getLeaderboard |
+| **giftcards** | Gift cards | issue, redeem, getBalance |
+| **reports** | Reporting | getReport, getEodReport |
+| **analytics** | Business intelligence | getRevenueTrend, getAbcAnalysis |
+| **timeclock** | Staff time tracking | clockIn, clockOut, getHistory |
+| **audit** | Audit trail | list (with filtering) |
+| **webhooks** | Integration endpoints | listEndpoints, createEndpoint |
+| **notifications** | SMS/WhatsApp alerts | send, listTemplates |
+| **settings** | Configuration | getOrganization, updatePosSettings |
+| **kitchen** | Kitchen display | getActiveTickets, updateItemStatus |
+| **production** | Production logs | logProduction, getProductionVsSalesReport |
+| **recurring** | Recurring templates | createTemplate, generateNext |
+| **printers** | Print management | list, create, testPrint, setRoutes |
+| **discounts** | Discount rules | list, create, validatePromo |
+| **pricelists** | Dynamic pricing | list, create, assignCustomerPricelist |
+| **agencies** | Agency/org management | list, create, update |
+| **tables** | Table/floor management | list, updateTableStatus, clearTable |
+| **reservations** | Booking management | list, create, update |
+| **waitlist** | Walk-in queue | list, create, lookupPosition |
+
+---
+
+## Webhooks
+
+For event-driven integration, use webhooks instead of polling. See [Webhooks](/docs/webhooks) for setup instructions.
+
+**Available events:**
+- `order.completed`, `order.voided`, `order.refunded`
+- `inventory.low_stock`, `inventory.out_of_stock`
+- `cash_session.opened`, `cash_session.closed`
+- `production.logged`
+
+Each webhook delivery includes an `X-Webhook-Signature` header (HMAC-SHA256) if a secret is configured.
+
+---
+
+## Health Check
+
+```
+GET /health
+```
+
+Returns `200 OK` when the server is running. Use this for uptime monitoring.
+
+---
+
+## Rate Limiting
+
+- PIN login: 5 attempts per IP, 60-second lockout
+- General API: no hard rate limit, but excessive requests may be throttled
+
+---
+
+## Support
+
+For API integration assistance, contact KareTech Solutions. Custom webhook events or API extensions can be arranged as part of your service agreement.

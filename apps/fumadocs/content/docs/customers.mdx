@@ -1,6 +1,6 @@
 ---
 title: Customers & Loyalty
-description: Manage customer profiles, loyalty points, discounts, and gift cards
+description: Customer profiles, loyalty program, gift cards, discount presets, agencies, and customer analytics
 ---
 
 ## Customers
@@ -10,28 +10,28 @@ description: Manage customer profiles, loyalty points, discounts, and gift cards
 ### Adding a Customer
 
 1. Click **New Customer**
-2. Enter:
-   - Name (required)
-   - Phone number (required)
-   - Email (optional)
-   - Date of birth (optional, for birthday offers)
+2. Enter: Name (required), Phone (required), Email (optional), Date of Birth (optional), Address (optional)
 3. Click **Save**
-
-### Finding a Customer
-
-Use the search bar to find customers by name or phone number.
 
 ### Customer Profile
 
-Click a customer's name to see their profile:
-- Contact details
-- Order history
-- Loyalty points balance and tier
-- Gift card balances
+Click a customer to view: contact details, order history, loyalty points balance and tier, gift card balances, price list assignment, and all quotations/invoices linked to this customer.
 
-### Linking a Customer to an Order
+### Customer Statements
 
-In New Sale, click **Add Customer** in the cart, search by name or phone, and select the customer before completing the order.
+Generate a financial statement: open the customer profile → Click **View Statement** → select date range → the statement shows invoices, payments, and credit notes with a running balance. Click **Print Statement** for PDF.
+
+### Customer Payment Ledger
+
+Complete payment history across all invoices, including unapplied payments and allocations.
+
+---
+
+## Agencies / Organizations
+
+**Navigate to:** Dashboard → Agencies
+
+Agencies represent businesses that place orders. Create agencies with name, contact person, position, phone, and address. Agencies can be selected when creating quotations and invoices.
 
 ---
 
@@ -39,72 +39,26 @@ In New Sale, click **Add Customer** in the cart, search by name or phone, and se
 
 **Navigate to:** Dashboard → Loyalty Program
 
-### How It Works
-
-- Customers earn points on every order (rate configured by admin)
-- Points accumulate toward tiers: Bronze, Silver, Gold
-- Each tier may have different earn rates or benefits
-
-### Viewing Members
-
-The loyalty dashboard shows all enrolled customers, their points balance, tier, and last activity date.
-
-Click any member to see their full points history — every transaction that earned or redeemed points.
-
-### Managing Tiers
-
-Click the **Tiers** tab to manage tier definitions:
-- Tier name (e.g., Silver)
-- Minimum points required
-- Points multiplier (e.g., earn 1.5× points at Silver tier)
-
-### Redeeming Points
-
-In New Sale, when a loyalty customer is linked to an order, a **Redeem Points** option appears at checkout. Enter the number of points to redeem.
+Customers earn points on orders. Tiers: Bronze (1x), Silver (1.5x at 500+ points), Gold (2x at 1,000+ points). Redeem points at checkout.
 
 ---
 
 ## Discounts
 
-**Navigate to:** Dashboard → Discounts
+**Navigate to:** Dashboard → Customers → Discounts
 
-Create and manage saved discount presets used in New Sale.
-
-### Creating a Discount
-
-1. Click **New Discount**
-2. Enter:
-   - **Name** — what cashiers will see (e.g., "Staff Discount", "Senior 10%")
-   - **Type** — Percentage or Fixed Amount
-   - **Value** — e.g., 10 for 10%, or 500 for $500 off
-   - **Minimum Order** — optional minimum cart total to qualify
-   - **Active** — toggle on/off
-3. Click **Save**
-
-Discounts appear as quick-select buttons in the POS discount flow.
+Create named discount presets (e.g., "Staff Discount 10%") with type (Percentage/Fixed), value, and optional minimum order threshold. Appear as quick-select buttons at POS.
 
 ---
 
 ## Gift Cards
 
-**Navigate to:** Dashboard → Gift Cards
+**Navigate to:** Dashboard → Customers → Gift Cards
 
-### Issuing a Gift Card
+Issue cards with unique code and starting balance. Redeem via Gift Card payment method at checkout. View transaction history per card.
 
-1. Click **Issue Gift Card**
-2. Enter or generate a unique code
-3. Enter the starting balance (e.g., $5,000 GYD)
-4. Process payment for the gift card amount in the POS
-5. Click **Issue**
+---
 
-The gift card is now active and can be used at any register.
+## Price Lists
 
-### Viewing Gift Cards
-
-The list shows all issued gift cards with code, original balance, current balance, and status (Active / Depleted / Voided).
-
-Click any card to see its transaction history (purchases and redemptions).
-
-### Redeeming a Gift Card
-
-In New Sale, choose **Gift Card** as a payment method and enter the card code. The system checks the balance and deducts accordingly.
+Assign customer-specific pricing for wholesale, VIP, or staff purchases. See [Price Lists & Dynamic Pricing](/docs/pricelists).

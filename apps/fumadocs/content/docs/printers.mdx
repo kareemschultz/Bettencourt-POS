@@ -1,0 +1,95 @@
+---
+title: Receipt Printers & Print Routing
+description: Set up network printers, route departments to specific printers, and troubleshoot printing issues
+---
+
+**Navigate to:** Dashboard → Settings → Printers
+
+> Printer management is restricted to **Managers and Administrators**.
+
+Bettencourt POS supports ESC/POS thermal printers connected over your local network. Print routing lets you send different departments to different printers — for example, food orders to the kitchen printer and beverages to the bar printer, while the receipt printer handles customer receipts.
+
+---
+
+## Adding a Printer
+
+1. Click **New Printer**
+2. Fill in the fields:
+
+| Field | Description |
+|-------|-------------|
+| **Name** | A recognisable label (e.g., "Kitchen Printer", "Bar Printer", "Main Receipt") |
+| **Connection Type** | Select **Network** for a network-connected printer |
+| **IP Address / Hostname** | The printer's IP address on your local network (e.g., `192.168.1.50`) |
+| **Paper Width** | **80mm** (most thermal printers) or **58mm** for narrow receipt rolls |
+| **Auto Cut** | Toggle on to automatically cut paper after each print |
+| **Location** | The store location this printer belongs to |
+
+3. Click **Save**
+
+<Callout type="info">
+To find your printer's IP address, print a self-test page from the printer (usually by holding the Feed button on power-up). The IP address is printed on the test sheet.
+</Callout>
+
+---
+
+## Setting Up Print Routes
+
+Print routes define which product department prints to which printer. Without a route, all items print to whichever printer the POS uses by default.
+
+### Assigning Departments to a Printer
+
+1. Open a printer from the list
+2. In the **Print Routes** section, click **Edit Routes**
+3. Select one or more departments (e.g., "Chicken", "Fish", "Beverages")
+4. Click **Save Routes**
+
+Each department can only be routed to one printer at a time.
+
+### Common Routing Example
+
+| Printer | Departments Routed |
+|---------|-------------------|
+| Kitchen Printer | Chicken, Fish, Pastry, Specials |
+| Bar Printer | Beverages, Juices |
+| Main Receipt | (used for customer receipts — no department routes needed) |
+
+---
+
+## Test Print
+
+To verify a printer is reachable and printing correctly:
+
+1. Open the printer from the list
+2. Click **Test Print**
+3. The printer should immediately print a short test page showing the printer name, connection type, paper width, and timestamp
+
+---
+
+## Troubleshooting
+
+### Printer Not Responding
+
+1. Confirm the printer is powered on and connected to the same network as the POS
+2. Try pinging the printer's IP address from any device on the network
+3. Check that the IP address entered in the POS matches what is printed on the printer's test page
+4. Some printers require a static IP — check your router's DHCP reservations
+
+### Garbled Output or Strange Characters
+
+- Confirm the printer supports **ESC/POS** command set (most modern thermal printers do)
+- Try switching the **Paper Width** setting to match your actual paper roll (58mm vs 80mm)
+
+### Kitchen Printer Not Printing Orders
+
+- Confirm the relevant departments have a route assigned to the kitchen printer (Settings → Printers → open the printer → Print Routes)
+- Confirm the printer's **Active** toggle is on
+- Run a **Test Print** to verify the printer is reachable
+
+---
+
+## QZ Tray (Browser Printing)
+
+For environments where the POS runs in a standard web browser on a Windows machine, **QZ Tray** enables direct communication between the browser and USB or network printers without a print dialog.
+
+QZ Tray must be installed on each Windows terminal that needs direct printing. Contact KareTech Solutions to arrange installation and configuration.
