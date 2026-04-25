@@ -12,14 +12,27 @@ Create professional price quotations for catering orders, events, or large corpo
 ### Creating a Quotation
 
 1. Click **New Quotation**
-2. Choose customer type: **Individual** or **Agency/Organization**
+2. Choose customer type: **Individual** or **Agency / Ministry**
 3. Fill in customer name, phone, address, and **Valid Until** date
-4. (Optional) set **Agency Name**, **Contact Person**, and **Department** tag
-5. Add line items with description, quantity, and unit price
-6. Adjust tax rate, tax mode, and discount in the settings bar
-7. Add Terms & Conditions and Notes (optional — T&Cs pull from your default settings)
-8. Enter **Prepared By** (your name) — appears on the PDF
-9. Click **Create**
+4. Add line items with description, quantity, and unit price
+5. Adjust tax rate, tax mode, and discount in the settings bar
+6. Add Terms & Conditions and Notes (optional — T&Cs pull from your default settings)
+7. Enter **Prepared By** (your name) — appears on the PDF
+8. Click **Create**
+
+### Government / Agency Quotations
+
+When the **Agency / Ministry** tab is selected, additional structured fields appear:
+
+| Field | Description |
+|-------|-------------|
+| **Agency / Ministry Name** | Auto-complete from the agency directory |
+| **Department** | e.g. Procurement Department |
+| **Division** | e.g. Corporate Operations & Services Division (optional) |
+| **Department Details** | Free-text area for supervisor name, title, and additional departmental context |
+| **Order Placed By** | The contact person who submitted the request |
+
+All government fields print in the "Prepared For" section of the PDF. When the quotation is converted to an invoice, all agency fields carry over automatically — no re-entry needed.
 
 ### Tax & Discount Settings (Form)
 
@@ -36,15 +49,24 @@ The live **Totals** section shows Subtotal → Discount → VAT → **Total** as
 For VAT-inclusive pricing (Guyana standard), set Tax Mode to **VAT-inclusive**. The system extracts the tax component from each price using the formula: price × rate ÷ (1 + rate). The total stays the same — the receipt just shows the embedded VAT amount.
 </Callout>
 
+### Quotation Lifecycle
+
+```
+draft → sent → accepted  → converted (to invoice)
+                         → (stays accepted)
+              → rejected
+              → expired   (automatic, past valid-until date)
+```
+
 ### Quotation Statuses
 
 | Status | Description |
 |--------|-------------|
 | **Draft** | Created but not sent |
 | **Sent** | Marked as sent to customer |
-| **Accepted** | Customer has accepted the quotation |
-| **Rejected** | Customer declined |
-| **Expired** | Past the valid until date |
+| **Accepted** | Customer accepted — green badge; ready to convert to invoice |
+| **Rejected** | Customer declined — red badge |
+| **Expired** | Past the valid-until date — set automatically on next list load |
 | **Converted** | Turned into an invoice |
 | **Cancelled** | Soft-deleted / cancelled |
 
@@ -55,34 +77,59 @@ Each quotation row includes a **More Actions** menu (•••) for common workf
 - **Print / Save PDF** — opens a professional QUOTATION PDF in a new tab (ready to print or save)
 - **Edit** — modify the quotation
 - **Mark Sent** — moves status from Draft → Sent (only on drafts)
-- **Accept** — marks the quotation as accepted by the customer
-- **Reject** — marks the quotation as declined
+- **Accept** — marks the quotation as accepted by the customer (also available as a one-click button on sent quotations)
+- **Reject** — marks the quotation as declined (also available as a one-click button on sent quotations)
 - **Duplicate** — creates a new draft copy with a fresh quotation number
 - **Revise** — creates a numbered revision (e.g. `-R2`, `-R3`) linked to the original
 - **Convert to Invoice** — converts to an invoice (available when Sent or Accepted)
 - **Cancel** — soft-deletes the quotation
 
+### Accept / Reject Workflow
+
+Once a quotation is in **Sent** status, one-click **Accept** (green) and **Reject** (red) buttons appear in the action panel when you open the quotation:
+
+1. Open the quotation detail
+2. Click **Accept** or **Reject**
+3. The status badge and PDF header tag update immediately (ACCEPTED / REJECTED)
+4. Accepted quotations can be converted to invoices in one click from the same panel
+
 ### Revisions
 
 When you revise a quotation, the system creates a new draft linked to the original via `parentQuotationId`. Revision numbers increment automatically (QUO-0042-R2, QUO-0042-R3, etc.). The revision badge appears on the PDF header so the customer can see which version they are reviewing.
 
-### Quotation Expiry
+### Auto-Expire
 
-Quotations with a **Valid Until** date that has passed are considered expired. The PDF shows a clear "EXPIRED" message and the validity countdown reflects this. The status badge on the dashboard list also shows the expired state.
+Quotations with a **Valid Until** date that has passed are automatically marked **Expired** the next time the quotations list is loaded — no manual action required. The PDF shows a clear "EXPIRED" message and the validity countdown reflects this. The status badge on the dashboard list also shows the expired state.
+
+Expired quotations cannot be accepted. To revive an expired quotation: use **Duplicate** or **Revise**, update the Valid Until date, and re-send.
 
 ### Scheduled Sending
 
 Set a **Scheduled Send** date when creating or editing a quotation. The system will flag the quotation for sending at the specified date and time.
+
+### Rich Item Descriptions
+
+Line item descriptions in quotations support basic formatting that renders in the PDF output:
+
+| Syntax | Output |
+|--------|--------|
+| `**bold text**` | **Bold** |
+| `__underlined text__` | Underlined |
+| Lines starting with `- ` or `•` | Bullet list |
+| Line breaks in the description field | Preserved in PDF |
+
+This is useful for catering quotations where items need multi-line specifications (e.g., menu choices, preparation notes, service inclusions).
 
 ### PDF Output
 
 The PDF includes:
 - Brand-aware logo and company details (Foods Inc. or Home Style)
 - QUOTATION stamp badge with quotation number and revision tag (if applicable)
+- **Status tag** in the header — ACCEPTED (green), REJECTED (red), EXPIRED, or REVISION, depending on current status
 - Validity countdown ("Valid for X more days" or "EXPIRED")
 - Bill To section with customer name, agency, contact person, phone, and address
 - "Prepared by" attribution
-- Itemized line table with quantities, unit cost, and line totals
+- Itemized line table with quantities, unit cost, and line totals — rich descriptions render with bold/underline/bullets
 - Tax column (when per-line tax mode is used)
 - Subtotal, discount (shown in red), VAT, and total breakdown in a highlighted box
 - Notes section (italic, red text)
@@ -102,13 +149,16 @@ Manage formal invoices for catering, corporate orders, or accounts receivable. I
 ### Creating an Invoice
 
 1. Click **New Invoice**
-2. Fill in customer details (name, phone, address)
-3. Set **Issued Date** and **Due Date**
-4. (Optional) set a custom invoice number and open **Agency / Organization** details
-5. Add line items
-6. Adjust tax rate, discount, payment terms, and **Department**
-7. Add **Prepared By** name (optional)
-8. Click **Create**
+2. Choose customer type: **Individual** or **Agency / Ministry**
+3. Fill in customer details (name, phone, address)
+4. Set **Issued Date** and **Due Date**
+5. (Optional) set a custom invoice number
+6. Add line items
+7. Adjust tax rate, discount, payment terms
+8. Add **Prepared By** name (optional)
+9. Click **Create**
+
+For government invoices, the same Agency / Ministry fields available on quotations are present here (Agency / Ministry Name, Department, Division, Department Details, Order Placed By). These fields print in the "Prepared For" section of the invoice PDF.
 
 ### Aging Summary Cards
 
@@ -155,7 +205,7 @@ On any paid or partially-paid invoice, click **Create Credit Note** to open the 
 
 ### Converting a Quotation to an Invoice
 
-From the Quotations page, click **Convert to Invoice** on any Sent or Accepted quotation. The system creates a new invoice pre-filled with the quotation's customer details, line items, tax settings, and discount. The original quotation status changes to "Converted" with a link to the generated invoice.
+From the Quotations page, click **Convert to Invoice** on any Sent or Accepted quotation. The system creates a new invoice pre-filled with the quotation's customer details, line items, tax settings, and discount. For government quotations, all agency fields (Agency / Ministry Name, Department, Division, Department Details, Order Placed By) carry over automatically. The original quotation status changes to "Converted" with a link to the generated invoice.
 
 ### More Actions Menu (•••)
 

@@ -85,6 +85,10 @@ Administrators manage all user accounts at **Settings → Users**:
 ### Finance & Accounting
 - **Invoices** — create, send, record payments (cash, cheque, bank transfer, mobile money), payment history with reversals, unapplied payment allocation
 - **Quotations** — professional PDFs with validity countdown, revisions, convert to invoice
+  - Accept/Reject workflow with one-click buttons and status badges (ACCEPTED / REJECTED / EXPIRED)
+  - Auto-expiry when validity date passes
+  - Government/Agency mode: structured fields for Ministry, Department, Division, Department Details, and Order Placed By — all fields carry over automatically on conversion to invoice
+  - Rich item descriptions with bold, underline, and bullet list formatting in PDF output
 - **Credit Notes** — issue and apply to invoices, partial or full
 - **Vendor Bills** — accounts payable tracking with payment recording
 - **Recurring Templates** — auto-generate invoices, expenses, or vendor bills on schedule
@@ -229,6 +233,8 @@ The following modules have been designed, built, and deployed as part of the Bet
 4. Inventory management with purchase orders, goods receipts, and stock alerts
 5. Cash control with shift management and reconciliation
 6. Complete finance suite (invoices, quotations, credit notes, vendor bills, recurring templates)
+   - Quotation Accept/Reject workflow, auto-expiry, government agency fields (Ministry, Department, Division, Department Details)
+   - All government fields carry through quotation → invoice conversion automatically
 7. Expense tracking with funding sources and daily summary forms
 8. Aging reports, customer statements, and tax summary
 9. Budget management with category tracking and alerts

@@ -31,6 +31,40 @@ Below the KPI strip you'll find:
 
 ---
 
+## Quotations
+
+**Route:** `/dashboard/quotations` — see [Quotations & Invoices](/docs/commerce) for full documentation.
+
+Key points relevant to the Finance workflow:
+
+### Quotation Lifecycle
+```
+draft → sent → accepted  → converted (to invoice)
+              → rejected
+              → expired   (automatic, past valid-until date)
+```
+
+### Accept / Reject
+When a quotation is in **Sent** status, **Accept** (green) and **Reject** (red) buttons appear in the detail view. The PDF header tag updates immediately (ACCEPTED / REJECTED / EXPIRED) to reflect the current status.
+
+### Auto-Expire
+Quotations past their **Valid Until** date are automatically marked Expired the next time the list is loaded. Expired quotations cannot be accepted — use **Duplicate** or **Revise** to issue a fresh copy.
+
+### Government / Agency Quotations
+When the **Agency / Ministry** tab is selected on a quotation or invoice, additional fields appear:
+
+| Field | Description |
+|-------|-------------|
+| **Agency / Ministry Name** | Auto-complete from the agency directory |
+| **Department** | e.g. Procurement Department |
+| **Division** | e.g. Corporate Operations & Services Division (optional) |
+| **Department Details** | Free-text for supervisor name, title, and context |
+| **Order Placed By** | Contact person who submitted the request |
+
+All fields print in the "Prepared For" section of the PDF and carry over automatically when converting a quotation to an invoice.
+
+---
+
 ## Invoices
 
 **Route:** `/dashboard/invoices`
@@ -39,12 +73,14 @@ Create and manage customer invoices for catering, corporate lunches, events, and
 
 ### Creating an Invoice
 1. Click **New Invoice**
-2. Enter customer name (or select from the customer list)
-3. (Optional) open **Agency / Organization** details and set **Department**
+2. Choose customer type: **Individual** or **Agency / Ministry**
+3. Enter customer name (or select from the customer list)
 4. Add line items (description, quantity, unit price)
 5. Set due date and payment terms
 6. (Optional) set a custom invoice number
 7. Click **Save as Draft** or **Send** to issue it immediately
+
+For government invoices, select the **Agency / Ministry** tab to access the full set of agency fields (Agency / Ministry Name, Department, Division, Department Details, Order Placed By). These print in the "Prepared For" section of the invoice PDF.
 
 ### Recording a Payment
 1. Find the invoice in the table
