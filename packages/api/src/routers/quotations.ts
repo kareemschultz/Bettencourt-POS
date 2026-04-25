@@ -60,6 +60,20 @@ const list = permissionProcedure("quotations.read")
 	)
 	.handler(async ({ input: rawInput, context }) => {
 		const orgId = requireOrganizationId(context);
+
+		// Auto-expire quotations past their validUntil date
+		await db
+			.update(schema.quotation)
+			.set({ status: "expired" })
+			.where(
+				and(
+					eq(schema.quotation.organizationId, orgId),
+					sql`${schema.quotation.status} IN ('draft', 'sent')`,
+					sql`${schema.quotation.validUntil} IS NOT NULL`,
+					sql`${schema.quotation.validUntil} < NOW()`,
+				),
+			);
+
 		const search = rawInput?.search;
 		const status = rawInput?.status;
 		const limit = rawInput?.limit ?? 50;
@@ -511,6 +525,65 @@ const markSent = permissionProcedure("quotations.update")
 		return { success: true };
 	});
 
+// ── accept ─────────────────────────────────────────────────────────────
+
+const accept = permissionProcedure("quotations.update")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		await db
+			.update(schema.quotation)
+			.set({ status: "accepted" })
+			.where(
+				and(
+					eq(schema.quotation.id, input.id),
+					eq(schema.quotation.organizationId, orgId),
+					eq(schema.quotation.status, "sent"),
+				),
+			);
+		return { success: true };
+	});
+
+// ── reject ─────────────────────────────────────────────────────────────
+
+const reject = permissionProcedure("quotations.update")
+	.input(z.object({ id: z.string().uuid() }))
+	.handler(async ({ input, context }) => {
+		const orgId = requireOrganizationId(context);
+		await db
+			.update(schema.quotation)
+			.set({ status: "rejected" })
+			.where(
+				and(
+					eq(schema.quotation.id, input.id),
+					eq(schema.quotation.organizationId, orgId),
+					eq(schema.quotation.status, "sent"),
+				),
+			);
+		return { success: true };
+	});
+
+// ── expireOverdue ──────────────────────────────────────────────────────
+// Bulk-expires quotations whose validUntil date has passed.
+
+const expireOverdue = permissionProcedure("quotations.update")
+	.input(z.object({}).optional())
+	.handler(async ({ context }) => {
+		const orgId = requireOrganizationId(context);
+		await db
+			.update(schema.quotation)
+			.set({ status: "expired" })
+			.where(
+				and(
+					eq(schema.quotation.organizationId, orgId),
+					sql`${schema.quotation.status} IN ('draft', 'sent')`,
+					sql`${schema.quotation.validUntil} IS NOT NULL`,
+					sql`${schema.quotation.validUntil} < NOW()`,
+				),
+			);
+		return { success: true };
+	});
+
 // ── router export ──────────────────────────────────────────────────────
 
 export const quotationsRouter = {
@@ -523,4 +596,7 @@ export const quotationsRouter = {
 	duplicate,
 	revise,
 	markSent,
+	accept,
+	reject,
+	expireOverdue,
 };

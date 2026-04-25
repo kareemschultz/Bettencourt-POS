@@ -96,6 +96,58 @@ function fmtGYD(amount: number): string {
 	}).format(amount);
 }
 
+/**
+ * Render a line-item description with rich formatting support.
+ * Supported syntax:
+ *   **bold text**       → <strong>bold text</strong>
+ *   __underline text__  → <u>underline text</u>
+ *   Lines starting with - or •  → bullet list
+ *   Newlines (\n)       → <br> or list separation
+ */
+function renderRichDescription(raw: string): string {
+	const escaped = raw
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;");
+
+	const lines = escaped.split("\n");
+	let html = "";
+	let inList = false;
+
+	for (const line of lines) {
+		const trimmed = line.trim();
+		const isBullet = /^[-•]\s+/.test(trimmed);
+
+		if (isBullet) {
+			if (!inList) {
+				html += '<ul class="desc-list">';
+				inList = true;
+			}
+			const text = trimmed.replace(/^[-•]\s+/, "");
+			html += `<li>${applyInlineFormatting(text)}</li>`;
+		} else {
+			if (inList) {
+				html += "</ul>";
+				inList = false;
+			}
+			if (trimmed) {
+				html += `<div class="desc-line">${applyInlineFormatting(trimmed)}</div>`;
+			}
+		}
+	}
+	if (inList) html += "</ul>";
+	return html;
+}
+
+function applyInlineFormatting(text: string): string {
+	// **bold** → <strong>
+	let result = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+	// __underline__ → <u>
+	result = result.replace(/__(.+?)__/g, "<u>$1</u>");
+	return result;
+}
+
 function buildQuotationHtml(
 	quot: QuotationPdfRow,
 	settings: QuotationDocSettings,
@@ -142,7 +194,7 @@ function buildQuotationHtml(
 		.map(
 			(item) => `
     <tr>
-      <td>${escHtml(item.description)}</td>
+      <td>${renderRichDescription(item.description)}</td>
       <td class="right-td">${item.quantity}</td>
       <td class="right-td">${fmtGYD(item.unitPrice)}</td>
       ${quot.taxMode === "line" ? `<td class="right-td">${item.taxExempt ? "Exempt" : `${quot.taxRate ?? "16.5"}%`}</td>` : ""}
@@ -241,6 +293,19 @@ function buildQuotationHtml(
     letter-spacing: 0.06em;
     vertical-align: middle;
   }
+  .status-tag {
+    display: inline-block;
+    border-radius: 4px;
+    padding: 1px 8px;
+    font-size: 0.78em;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    vertical-align: middle;
+    margin-left: 4px;
+  }
+  .status-accepted { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+  .status-rejected { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+  .status-expired  { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
 
   .doc-title {
     font-size: 2.6em;
@@ -326,6 +391,21 @@ function buildQuotationHtml(
     border-bottom: 1px solid #efefef;
   }
   .items-table tbody td.right-td { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ── RICH DESCRIPTIONS ── */
+  .desc-line strong { color: #222; }
+  .desc-list {
+    margin: 4px 0 2px 0;
+    padding-left: 18px;
+    list-style: disc;
+  }
+  .desc-list li {
+    margin-bottom: 2px;
+    font-size: 0.92em;
+    color: #555;
+    line-height: 1.5;
+  }
+  .desc-line + .desc-list { margin-top: 4px; }
 
   /* ── TABLE TOTALS ── */
   #table-totals {
@@ -477,7 +557,12 @@ function buildQuotationHtml(
       </div>
     </div>
     <div class="header-right">
-      ${isRevision ? `<div class="quotation-badge-wrapper"><span class="revision-tag">REVISION</span></div>` : ""}
+      <div class="quotation-badge-wrapper">
+        ${isRevision ? `<span class="revision-tag">REVISION</span>` : ""}
+        ${quot.status === "accepted" ? `<span class="status-tag status-accepted">ACCEPTED</span>` : ""}
+        ${quot.status === "rejected" ? `<span class="status-tag status-rejected">REJECTED</span>` : ""}
+        ${quot.status === "expired" || (quot.validUntil && new Date(quot.validUntil).getTime() < Date.now()) ? `<span class="status-tag status-expired">EXPIRED</span>` : ""}
+      </div>
       <div class="doc-title">QUOTATION</div>
       <table id="entity-details" cellspacing="0">
         <tr><th>Quotation #</th><td>${escHtml(quot.quotationNumber)}</td></tr>

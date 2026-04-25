@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	ArrowRightLeft,
 	Building2,
+	CheckCircle2,
 	ChevronDown,
 	Copy,
 	Edit2,
@@ -15,6 +16,7 @@ import {
 	Trash2,
 	User,
 	X,
+	XCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -284,6 +286,30 @@ export default function QuotationsPage() {
 				toast.success("Quotation marked as sent");
 			},
 			onError: () => toast.error("Failed to mark as sent"),
+		}),
+	);
+
+	const acceptMut = useMutation(
+		orpc.quotations.accept.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.quotations.list.queryOptions({ input: {} }).queryKey,
+				});
+				toast.success("Quotation accepted");
+			},
+			onError: () => toast.error("Failed to accept quotation"),
+		}),
+	);
+
+	const rejectMut = useMutation(
+		orpc.quotations.reject.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: orpc.quotations.list.queryOptions({ input: {} }).queryKey,
+				});
+				toast.success("Quotation rejected");
+			},
+			onError: () => toast.error("Failed to reject quotation"),
 		}),
 	);
 
@@ -614,6 +640,28 @@ export default function QuotationsPage() {
 																	Mark Sent
 																</DropdownMenuItem>
 															)}
+															{q.status === "sent" && canUpdate && (
+																<>
+																	<DropdownMenuItem
+																		onClick={() =>
+																			acceptMut.mutate({ id: q.id })
+																		}
+																		className="text-emerald-600 focus:text-emerald-600"
+																	>
+																		<CheckCircle2 className="mr-2 size-3.5" />
+																		Accept
+																	</DropdownMenuItem>
+																	<DropdownMenuItem
+																		onClick={() =>
+																			rejectMut.mutate({ id: q.id })
+																		}
+																		className="text-destructive focus:text-destructive"
+																	>
+																		<XCircle className="mr-2 size-3.5" />
+																		Reject
+																	</DropdownMenuItem>
+																</>
+															)}
 															{canCreate && (
 																<DropdownMenuItem
 																	onClick={() =>
@@ -841,6 +889,35 @@ export default function QuotationsPage() {
 											<Send className="size-3" />
 											Mark Sent
 										</Button>
+									)}
+									{canUpdate && selectedQuotation.status === "sent" && (
+										<>
+											<Button
+												size="sm"
+												type="button"
+												className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+												onClick={() =>
+													acceptMut.mutate({ id: selectedQuotation.id })
+												}
+												disabled={acceptMut.isPending}
+											>
+												<CheckCircle2 className="size-3" />
+												Accept
+											</Button>
+											<Button
+												size="sm"
+												variant="outline"
+												type="button"
+												className="gap-1 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400"
+												onClick={() =>
+													rejectMut.mutate({ id: selectedQuotation.id })
+												}
+												disabled={rejectMut.isPending}
+											>
+												<XCircle className="size-3" />
+												Reject
+											</Button>
+										</>
 									)}
 									{canCreate && (
 										<Button
