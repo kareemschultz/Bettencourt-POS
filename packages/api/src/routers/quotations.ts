@@ -164,6 +164,8 @@ const create = permissionProcedure("quotations.create")
 			parentQuotationId: z.string().uuid().optional(),
 			preparedBy: z.string().optional(),
 			department: z.string().optional(),
+			division: z.string().optional(),
+			departmentDetails: z.string().optional(),
 			brand: z.enum(["foods_inc", "home_style"]).optional(),
 		}),
 	)
@@ -202,6 +204,8 @@ const create = permissionProcedure("quotations.create")
 				parentQuotationId: input.parentQuotationId ?? null,
 				preparedBy: input.preparedBy ?? null,
 				department: input.department ?? null,
+				division: input.division ?? null,
+				departmentDetails: input.departmentDetails ?? null,
 				brand: input.brand ?? "foods_inc",
 			})
 			.returning();
@@ -236,6 +240,8 @@ const update = permissionProcedure("quotations.update")
 			termsAndConditions: z.string().optional(),
 			preparedBy: z.string().optional(),
 			department: z.string().optional(),
+			division: z.string().optional(),
+			departmentDetails: z.string().optional(),
 			brand: z.enum(["foods_inc", "home_style"]).optional(),
 		}),
 	)
@@ -287,6 +293,9 @@ const update = permissionProcedure("quotations.update")
 			updates.termsAndConditions = input.termsAndConditions;
 		if (input.preparedBy !== undefined) updates.preparedBy = input.preparedBy;
 		if (input.department !== undefined) updates.department = input.department;
+		if (input.division !== undefined) updates.division = input.division;
+		if (input.departmentDetails !== undefined)
+			updates.departmentDetails = input.departmentDetails;
 		if (input.brand !== undefined) updates.brand = input.brand;
 
 		await db
@@ -363,6 +372,13 @@ const convertToInvoice = permissionProcedure("invoices.create")
 				customerName: quot.customerName,
 				customerAddress: quot.customerAddress,
 				customerPhone: quot.customerPhone,
+				agencyName: quot.agencyName,
+				contactPersonName: quot.contactPersonName,
+				contactPersonPosition: quot.contactPersonPosition,
+				department: quot.department,
+				division: quot.division,
+				departmentDetails: quot.departmentDetails,
+				preparedBy: quot.preparedBy,
 				items: quot.items as object[],
 				subtotal: quot.subtotal,
 				taxTotal: quot.taxTotal,

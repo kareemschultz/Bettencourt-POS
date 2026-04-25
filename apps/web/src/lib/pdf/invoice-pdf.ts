@@ -24,6 +24,9 @@ export type InvoicePdfRow = {
 	agencyName?: string | null;
 	contactPersonName?: string | null;
 	contactPersonPosition?: string | null;
+	department?: string | null;
+	division?: string | null;
+	departmentDetails?: string | null;
 	issuedDate?: string | null;
 	createdAt: string;
 	dueDate?: string | null;
@@ -229,12 +232,21 @@ function buildInvoiceHtml(
 		: escHtml(invoice.customerName);
 
 	const clientSubLines = [
-		invoice.agencyName ? escHtml(invoice.customerName) : null,
-		invoice.contactPersonName
+		invoice.agencyName && invoice.department
+			? escHtml(invoice.department)
+			: null,
+		invoice.agencyName && invoice.division ? escHtml(invoice.division) : null,
+		invoice.agencyName && invoice.departmentDetails
+			? escHtml(invoice.departmentDetails).replace(/\n/g, "<br>")
+			: null,
+		!invoice.agencyName && invoice.contactPersonName
 			? `${escHtml(invoice.contactPersonName)}${invoice.contactPersonPosition ? `, ${escHtml(invoice.contactPersonPosition)}` : ""}`
-			: invoice.contactPersonPosition
-				? escHtml(invoice.contactPersonPosition)
-				: null,
+			: null,
+		!invoice.agencyName &&
+		invoice.contactPersonPosition &&
+		!invoice.contactPersonName
+			? escHtml(invoice.contactPersonPosition)
+			: null,
 		invoice.customerPhone ? escHtml(invoice.customerPhone) : null,
 		invoice.customerAddress ? escHtml(invoice.customerAddress) : null,
 	]
@@ -542,6 +554,7 @@ function buildInvoiceHtml(
       <div class="doc-title">INVOICE</div>
       <table id="entity-details" cellspacing="0">
         <tr><th>Invoice #</th><td>${escHtml(invoice.invoiceNumber)}</td></tr>
+        ${invoice.agencyName && invoice.contactPersonName ? `<tr><th>Order Placed By</th><td>${escHtml(invoice.contactPersonName)}</td></tr>` : ""}
         <tr><th>Invoice Date</th><td>${issuedStr}</td></tr>
         ${dueStr ? `<tr><th>Due Date</th><td>${dueStr}</td></tr>` : ""}
         <tr><th>Terms</th><td>${escHtml(TERMS_LABEL[invoice.paymentTerms ?? "due_on_receipt"] ?? invoice.paymentTerms ?? "Due on Receipt")}</td></tr>

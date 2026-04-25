@@ -88,6 +88,8 @@ export const invoice = pgTable(
 		brand: text("brand").notNull().default("foods_inc"),
 		preparedBy: text("prepared_by"),
 		department: text("department"),
+		division: text("division"),
+		departmentDetails: text("department_details"),
 		createdBy: text("created_by")
 			.notNull()
 			.references(() => user.id),
@@ -166,6 +168,8 @@ export const quotation = pgTable(
 		brand: text("brand").notNull().default("foods_inc"),
 		preparedBy: text("prepared_by"),
 		department: text("department"),
+		division: text("division"),
+		departmentDetails: text("department_details"),
 		createdBy: text("created_by")
 			.notNull()
 			.references(() => user.id),

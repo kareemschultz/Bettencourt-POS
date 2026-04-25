@@ -141,6 +141,8 @@ const create = permissionProcedure("invoices.create")
 			preparedBy: z.string().optional(),
 			invoiceNumber: z.string().optional(),
 			department: z.string().optional(),
+			division: z.string().optional(),
+			departmentDetails: z.string().optional(),
 			brand: z.enum(["foods_inc", "home_style"]).optional(),
 		}),
 	)
@@ -181,6 +183,8 @@ const create = permissionProcedure("invoices.create")
 				paymentTerms: input.paymentTerms ?? "due_on_receipt",
 				preparedBy: input.preparedBy ?? null,
 				department: input.department ?? null,
+				division: input.division ?? null,
+				departmentDetails: input.departmentDetails ?? null,
 				brand: input.brand ?? "foods_inc",
 			})
 			.returning();
@@ -216,6 +220,8 @@ const update = permissionProcedure("invoices.update")
 			paymentTerms: z.string().optional(),
 			preparedBy: z.string().optional(),
 			department: z.string().optional(),
+			division: z.string().optional(),
+			departmentDetails: z.string().optional(),
 			brand: z.enum(["foods_inc", "home_style"]).optional(),
 		}),
 	)
@@ -268,6 +274,9 @@ const update = permissionProcedure("invoices.update")
 			updates.paymentTerms = input.paymentTerms;
 		if (input.preparedBy !== undefined) updates.preparedBy = input.preparedBy;
 		if (input.department !== undefined) updates.department = input.department;
+		if (input.division !== undefined) updates.division = input.division;
+		if (input.departmentDetails !== undefined)
+			updates.departmentDetails = input.departmentDetails;
 		if (input.brand !== undefined) updates.brand = input.brand;
 
 		await db

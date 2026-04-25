@@ -106,6 +106,8 @@ interface InvoiceForm {
 	taxRate: string;
 	paymentTerms: string;
 	preparedBy: string;
+	division: string;
+	departmentDetails: string;
 	customInvoiceNumber: string;
 	brand: "foods_inc" | "home_style";
 }
@@ -140,6 +142,8 @@ const emptyForm: InvoiceForm = {
 	taxRate: "14",
 	paymentTerms: "due_on_receipt",
 	preparedBy: "",
+	division: "",
+	departmentDetails: "",
 	customInvoiceNumber: "",
 	brand: "foods_inc",
 };
@@ -155,6 +159,8 @@ type InvoiceRow = {
 	contactPersonName?: string | null;
 	contactPersonPosition?: string | null;
 	department?: string | null;
+	division?: string | null;
+	departmentDetails?: string | null;
 	items: unknown;
 	subtotal: string;
 	taxTotal: string;
@@ -446,6 +452,9 @@ export default function InvoicesPage() {
 				(inv as { contactPersonPosition?: string | null })
 					.contactPersonPosition ?? "",
 			department: (inv as { department?: string | null }).department ?? "",
+			division: (inv as { division?: string | null }).division ?? "",
+			departmentDetails:
+				(inv as { departmentDetails?: string | null }).departmentDetails ?? "",
 			issuedDate: inv.issuedDate
 				? (new Date(inv.issuedDate).toISOString().split("T")[0] ?? "")
 				: "",
@@ -530,6 +539,8 @@ export default function InvoicesPage() {
 			contactPersonName: form.contactPersonName || undefined,
 			contactPersonPosition: form.contactPersonPosition || undefined,
 			department: form.department || undefined,
+			division: form.division || undefined,
+			departmentDetails: form.departmentDetails || undefined,
 			issuedDate: form.issuedDate || undefined,
 			dueDate: form.dueDate || undefined,
 			notes: form.notes || undefined,
@@ -896,6 +907,15 @@ export default function InvoicesPage() {
 																					department?: string | null;
 																				}
 																			).department ?? "",
+																		division:
+																			(inv as { division?: string | null })
+																				.division ?? "",
+																		departmentDetails:
+																			(
+																				inv as {
+																					departmentDetails?: string | null;
+																				}
+																			).departmentDetails ?? "",
 																		brand:
 																			(inv as { brand?: string | null })
 																				.brand === "home_style"
@@ -1646,24 +1666,36 @@ export default function InvoicesPage() {
 										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
-										<Label className="text-xs">Supervisor Name</Label>
+										<Label className="text-xs">Department</Label>
 										<Input
-											placeholder="e.g. John Smith"
-											value={form.customerName}
+											placeholder="e.g. Procurement Department"
+											value={form.department}
 											onChange={(e) =>
-												setForm((f) => ({ ...f, customerName: e.target.value }))
+												setForm((f) => ({ ...f, department: e.target.value }))
 											}
 										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
-										<Label className="text-xs">Position / Title</Label>
+										<Label className="text-xs">Division (optional)</Label>
 										<Input
-											placeholder="e.g. Permanent Secretary"
-											value={form.contactPersonPosition}
+											placeholder="e.g. Corporate Operations Division"
+											value={form.division}
+											onChange={(e) =>
+												setForm((f) => ({ ...f, division: e.target.value }))
+											}
+										/>
+									</div>
+									<div className="col-span-2 flex flex-col gap-1.5">
+										<Label className="text-xs">Department Details</Label>
+										<textarea
+											className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+											placeholder="e.g. Supervisor: Ronda Barrow, Permanent Secretary"
+											rows={3}
+											value={form.departmentDetails}
 											onChange={(e) =>
 												setForm((f) => ({
 													...f,
-													contactPersonPosition: e.target.value,
+													departmentDetails: e.target.value,
 												}))
 											}
 										/>
@@ -1671,7 +1703,7 @@ export default function InvoicesPage() {
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Order Placed By</Label>
 										<Input
-											placeholder="Name of person who called"
+											placeholder="Contact person's name"
 											value={form.contactPersonName}
 											onChange={(e) =>
 												setForm((f) => ({
@@ -1773,6 +1805,7 @@ export default function InvoicesPage() {
 														onChange={(e) =>
 															updateItem(i, "quantity", Number(e.target.value))
 														}
+														onFocus={(e) => e.target.select()}
 													/>
 												</TableCell>
 												<TableCell className="p-1">
@@ -1785,6 +1818,7 @@ export default function InvoicesPage() {
 														onChange={(e) =>
 															updateItem(i, "unitPrice", Number(e.target.value))
 														}
+														onFocus={(e) => e.target.select()}
 													/>
 												</TableCell>
 												<TableCell className="p-1 text-right font-medium text-xs">

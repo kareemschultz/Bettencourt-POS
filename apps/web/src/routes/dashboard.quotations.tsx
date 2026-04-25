@@ -103,6 +103,8 @@ interface QuotationForm {
 	termsAndConditions: string;
 	preparedBy: string;
 	department: string;
+	division: string;
+	departmentDetails: string;
 	brand: "foods_inc" | "home_style";
 }
 
@@ -135,6 +137,8 @@ const emptyForm: QuotationForm = {
 	termsAndConditions: "",
 	preparedBy: "",
 	department: "",
+	division: "",
+	departmentDetails: "",
 	brand: "foods_inc",
 };
 
@@ -174,6 +178,8 @@ type QuotationRow = {
 	preparedBy: string | null;
 	parentQuotationId: string | null;
 	department?: string | null;
+	division?: string | null;
+	departmentDetails?: string | null;
 	brand?: string | null;
 };
 
@@ -379,6 +385,8 @@ export default function QuotationsPage() {
 			preparedBy: q.preparedBy ?? "",
 			department: q.department ?? "",
 			brand: q.brand === "home_style" ? "home_style" : "foods_inc",
+			division: q.division ?? "",
+			departmentDetails: q.departmentDetails ?? "",
 			noteMode:
 				q.notes && !PREDEFINED_NOTES_QUOT.includes(q.notes)
 					? "custom"
@@ -454,6 +462,8 @@ export default function QuotationsPage() {
 			termsAndConditions: form.termsAndConditions || undefined,
 			preparedBy: form.preparedBy || undefined,
 			department: form.department || undefined,
+			division: form.division || undefined,
+			departmentDetails: form.departmentDetails || undefined,
 			brand: form.brand,
 		};
 
@@ -1165,24 +1175,36 @@ export default function QuotationsPage() {
 										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
-										<Label className="text-xs">Supervisor Name</Label>
+										<Label className="text-xs">Department</Label>
 										<Input
-											placeholder="e.g. John Smith"
-											value={form.customerName}
+											placeholder="e.g. Procurement Department"
+											value={form.department}
 											onChange={(e) =>
-												setForm((f) => ({ ...f, customerName: e.target.value }))
+												setForm((f) => ({ ...f, department: e.target.value }))
 											}
 										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
-										<Label className="text-xs">Position / Title</Label>
+										<Label className="text-xs">Division (optional)</Label>
 										<Input
-											placeholder="e.g. Permanent Secretary"
-											value={form.contactPersonPosition}
+											placeholder="e.g. Corporate Operations Division"
+											value={form.division}
+											onChange={(e) =>
+												setForm((f) => ({ ...f, division: e.target.value }))
+											}
+										/>
+									</div>
+									<div className="col-span-2 flex flex-col gap-1.5">
+										<Label className="text-xs">Department Details</Label>
+										<textarea
+											className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+											placeholder="e.g. Supervisor: Ronda Barrow, Permanent Secretary"
+											rows={3}
+											value={form.departmentDetails}
 											onChange={(e) =>
 												setForm((f) => ({
 													...f,
-													contactPersonPosition: e.target.value,
+													departmentDetails: e.target.value,
 												}))
 											}
 										/>
@@ -1190,7 +1212,7 @@ export default function QuotationsPage() {
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">Order Placed By</Label>
 										<Input
-											placeholder="Name of person who called"
+											placeholder="Contact person's name"
 											value={form.contactPersonName}
 											onChange={(e) =>
 												setForm((f) => ({
@@ -1283,6 +1305,7 @@ export default function QuotationsPage() {
 														onChange={(e) =>
 															updateItem(i, "quantity", Number(e.target.value))
 														}
+														onFocus={(e) => e.target.select()}
 													/>
 												</TableCell>
 												<TableCell className="p-1">
@@ -1295,6 +1318,7 @@ export default function QuotationsPage() {
 														onChange={(e) =>
 															updateItem(i, "unitPrice", Number(e.target.value))
 														}
+														onFocus={(e) => e.target.select()}
 													/>
 												</TableCell>
 												<TableCell className="p-1 text-right font-medium text-xs">

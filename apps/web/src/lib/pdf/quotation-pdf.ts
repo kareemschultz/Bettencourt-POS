@@ -30,6 +30,9 @@ export type QuotationPdfRow = {
 	agencyName?: string | null;
 	contactPersonName?: string | null;
 	contactPersonPosition?: string | null;
+	department?: string | null;
+	division?: string | null;
+	departmentDetails?: string | null;
 };
 
 export type QuotationDocSettings = {
@@ -218,12 +221,17 @@ function buildQuotationHtml(
 		: escHtml(quot.customerName);
 
 	const clientSubLines = [
-		quot.agencyName ? escHtml(quot.customerName) : null,
-		quot.contactPersonName
+		quot.agencyName && quot.department ? escHtml(quot.department) : null,
+		quot.agencyName && quot.division ? escHtml(quot.division) : null,
+		quot.agencyName && quot.departmentDetails
+			? escHtml(quot.departmentDetails).replace(/\n/g, "<br>")
+			: null,
+		!quot.agencyName && quot.contactPersonName
 			? `${escHtml(quot.contactPersonName)}${quot.contactPersonPosition ? `, ${escHtml(quot.contactPersonPosition)}` : ""}`
-			: quot.contactPersonPosition
-				? escHtml(quot.contactPersonPosition)
-				: null,
+			: null,
+		!quot.agencyName && quot.contactPersonPosition && !quot.contactPersonName
+			? escHtml(quot.contactPersonPosition)
+			: null,
 		quot.customerPhone ? escHtml(quot.customerPhone) : null,
 		quot.customerAddress ? escHtml(quot.customerAddress) : null,
 	]
@@ -566,6 +574,7 @@ function buildQuotationHtml(
       <div class="doc-title">QUOTATION</div>
       <table id="entity-details" cellspacing="0">
         <tr><th>Quotation #</th><td>${escHtml(quot.quotationNumber)}</td></tr>
+        ${quot.agencyName && quot.contactPersonName ? `<tr><th>Order Placed By</th><td>${escHtml(quot.contactPersonName)}</td></tr>` : ""}
         <tr><th>Date</th><td>${createdStr}</td></tr>
         ${validStr ? `<tr><th>Valid Until</th><td>${validStr}</td></tr>` : ""}
         ${validityNote ? `<tr><th>Validity</th><td>${escHtml(validityNote)}</td></tr>` : ""}
